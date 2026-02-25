@@ -157,7 +157,7 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
   </div>
   <div>
     <span className="text-2xl font-black tracking-tighter text-white">{appName}</span>
-    <p className="text-xs text-slate-400 mt-0.5">Bridge learning to career success</p>
+    <p className="text-xs text-slate-400 mt-0.5">Pathways to Your Future</p>
   </div>
 </div>
 

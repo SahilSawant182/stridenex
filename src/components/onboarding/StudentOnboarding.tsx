@@ -10,6 +10,16 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { validateEmail, validateRequired } from "@/lib/validators";
+import {
+  sendMobileOTP,
+  verifyMobileOTP,
+  College,
+  sendEmailOTP,
+  verifyEmailOTP
+} from "@/services/onboarding.services";
+import Dropdown from "../ui/Dropdown";
+import { BASE_URL } from "@/services/api.services";
 
 interface StudentOnboardingProps {
   onSubmit?: (data: any) => Promise<void>;
@@ -26,39 +36,45 @@ export default function StudentOnboarding({
   const { apiKey, apiSecret } = useAuth();
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
+  const [colleges, setColleges] = useState<College[]>([]);
+  const [collegesLoading, setCollegesLoading] = useState(false);
+  const [collegesFetched, setCollegesFetched] = useState(false);
+  const [collegeError, setCollegeError] = useState("");
   const [skills, setSkills] = useState<string[]>([]);
-  const [skillInput, setSkillInput] = useState("");
   const [emailVerificationCode, setEmailVerificationCode] = useState("");
   const [mobileVerificationCode, setMobileVerificationCode] = useState("");
   const [emailOtpSent, setEmailOtpSent] = useState(false);
   const [mobileOtpSent, setMobileOtpSent] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  
+
   // Validation errors
-  const [emailError, setEmailError] = useState("");
-  const [mobileError, setMobileError] = useState("");
-  
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
   const [formData, setFormData] = useState({
-    email: "",
+    email: typeof window !== 'undefined' ? localStorage.getItem("userEmail") || "" : "",
     emailVerified: false,
     termsAccepted: false,
     privacyAccepted: false,
     mobileNo: "",
     mobileVerified: false,
-    firstName: "",
-    lastName: "",
+    firstName: typeof window !== 'undefined' ? localStorage.getItem("userFirstName") || "" : "",
+    lastName: typeof window !== 'undefined' ? localStorage.getItem("userLastName") || "" : "",
     college: "",
+    collegeName: "",
     department: "",
     academicYear: "",
     dateOfBirth: "",
   });
 
-  // Email validation
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
+  // Reset colleges fetched when leaving step 3
+  useEffect(() => {
+    if (currentStep !== 3) {
+      setCollegesFetched(false);
+      setColleges([]);
+      setCollegeError("");
+    }
+  }, [currentStep]);
 
   // Mobile validation - exactly 10 digits
   const validateMobile = (mobile: string): boolean => {
@@ -69,158 +85,262 @@ export default function StudentOnboarding({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    
-    // Clear validation errors on change
-    if (name === 'email') setEmailError("");
+
+    setFieldErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[name];
+      return newErrors;
+    });
+
     if (name === 'mobileNo') {
-      // Allow only digits and limit to 10
       const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
       setFormData(prev => ({
         ...prev,
         [name]: digitsOnly
       }));
       if (digitsOnly.length > 0 && digitsOnly.length < 10) {
-        setMobileError("Mobile number must be 10 digits");
-      } else {
-        setMobileError("");
+        setFieldErrors(prev => ({
+          ...prev,
+          mobileNo: "Mobile number must be 10 digits"
+        }));
       }
       return;
     }
-    
+
+    if (name === 'college') {
+      const selectedCollege = colleges.find(c => c.name === value);
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        collegeName: selectedCollege?.college_name || value
+      }));
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
   };
 
-  const handleAddSkill = () => {
-    if (skillInput.trim() && !skills.includes(skillInput.trim())) {
-      setSkills([...skills, skillInput.trim()]);
-      setSkillInput("");
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      handleAddSkill();
-    }
-  };
-
-  const handleRemoveSkill = (skillToRemove: string) => {
-    setSkills(skills.filter(skill => skill !== skillToRemove));
-  };
-
+  // ============ STEP 2: MOBILE VERIFICATION (REAL APIS) ============
   const handleSendEmailOTP = async () => {
-    // Validate email first
-    if (!validateEmail(formData.email)) {
-      setEmailError("Please enter a valid email address");
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.isValid) {
+      setFieldErrors(prev => ({
+        ...prev,
+        email: emailValidation.error || "Invalid email"
+      }));
       return;
     }
 
     setLoading(true);
     setError("");
+    setSuccess("");
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSuccess("Verification code sent to your email");
-      setEmailOtpSent(true);
-    } catch (err) {
-      setError("Failed to send verification code");
+      const response = await sendEmailOTP(formData.email);
+      console.log("Send email OTP response:", response);
+
+      if (response?.message?.status === "success") {
+        setSuccess(response.message.message || "OTP sent successfully");
+        setEmailOtpSent(true);
+      } else {
+        setError(response?.message?.message || "Failed to send OTP");
+      }
+    } catch (err: any) {
+      console.error("Error sending email OTP:", err);
+      setError(err?.response?.data?.message?.message || "Failed to send verification code");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyEmail = () => {
+  const handleVerifyEmail = async () => {
     setLoading(true);
     setError("");
+    setSuccess("");
+
     try {
-      if (emailVerificationCode === "123456") {
+      const response = await verifyEmailOTP(formData.email, emailVerificationCode);
+      console.log("Verify email response:", response);
+
+      // Success Response: {"message":"Email verified successfully"}
+      // Error Response: {"message":"Invalid OTP","data":{"success":false}}
+
+      if (response?.message === "Email verified successfully") {
         setFormData(prev => ({ ...prev, emailVerified: true }));
-        setSuccess("Email verified successfully");
+        setSuccess(response.message);
+        setError("");
       } else {
-        setError("Invalid verification code");
+        // Handle error case
+        setError(response?.message || "Invalid verification code");
       }
-    } catch (err) {
-      setError("Verification failed");
+    } catch (err: any) {
+      console.error("Error verifying email OTP:", err);
+      const errorMessage = err?.response?.data?.message || "Verification failed";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  // ============ STEP 2: MOBILE VERIFICATION ============
   const handleSendMobileOTP = async () => {
-    // Validate mobile first
     if (!validateMobile(formData.mobileNo)) {
-      setMobileError("Please enter a valid 10-digit mobile number");
+      setFieldErrors(prev => ({
+        ...prev,
+        mobileNo: "Please enter a valid 10-digit mobile number"
+      }));
       return;
     }
 
     setLoading(true);
     setError("");
+    setSuccess("");
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setSuccess("Verification code sent to your mobile");
-      setMobileOtpSent(true);
-    } catch (err) {
-      setError("Failed to send verification code");
+      const response = await sendMobileOTP(formData.mobileNo);
+      console.log("Send mobile OTP response:", response);
+
+      // Response: {"message":"OTP sent successfully"}
+      if (response?.message === "OTP sent successfully") {
+        setSuccess(response.message);
+        setMobileOtpSent(true);
+        if (response.data) {
+          console.log("OTP received:", response.data);
+        }
+      } else {
+        setError(response?.message || "Failed to send OTP");
+      }
+    } catch (err: any) {
+      console.error("Error sending mobile OTP:", err);
+      setError(err?.response?.data?.message || "Failed to send verification code");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyMobile = () => {
+  const handleVerifyMobile = async () => {
     setLoading(true);
     setError("");
+    setSuccess("");
+
     try {
-      if (mobileVerificationCode === "123456") {
+      const response = await verifyMobileOTP(formData.mobileNo, mobileVerificationCode);
+      console.log("Verify mobile response:", response);
+
+      // Success Response: {"message":"Mobile number verified successfully"}
+      // Error Response: {"message":"Invalid OTP","data":{"success":false}}
+
+      if (response?.message === "Mobile number verified successfully") {
         setFormData(prev => ({ ...prev, mobileVerified: true }));
-        setSuccess("Mobile number verified successfully");
+        setSuccess(response.message);
+        setError("");
       } else {
-        setError("Invalid verification code");
+        setError(response?.message || "Invalid verification code");
       }
-    } catch (err) {
-      setError("Verification failed");
+    } catch (err: any) {
+      console.error("Error verifying mobile OTP:", err);
+      setError(err?.response?.data?.message || "Verification failed");
     } finally {
       setLoading(false);
     }
+  };
+
+
+
+  // ============ STEP VALIDATIONS ============
+  const validateStep1 = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!formData.emailVerified) {
+      errors.email = "Please verify your email first";
+    }
+    if (!formData.termsAccepted) {
+      errors.terms = "You must accept the Terms and Conditions";
+    }
+    if (!formData.privacyAccepted) {
+      errors.privacy = "You must accept the Privacy Policy";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleContinueToStep2 = () => {
-    if (formData.termsAccepted && formData.privacyAccepted) {
+    if (validateStep1()) {
       setCurrentStep(2);
       setSuccess("");
       setEmailVerificationCode("");
       setEmailOtpSent(false);
+      setFieldErrors({});
     }
   };
 
+  const validateStep2 = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!formData.mobileVerified) {
+      errors.mobileNo = "Please verify your mobile number first";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleContinueToStep3 = () => {
-    setCurrentStep(3);
-    setSuccess("");
-    setMobileVerificationCode("");
-    setMobileOtpSent(false);
+    if (validateStep2()) {
+      setCurrentStep(3);
+      setSuccess("");
+      setMobileVerificationCode("");
+      setMobileOtpSent(false);
+      setFieldErrors({});
+    }
+  };
+
+  const validateStep3 = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    const collegeValidation = validateRequired(formData.college, "College");
+    if (!collegeValidation.isValid) {
+      errors.college = collegeValidation.error || "College is required";
+    }
+
+    const departmentValidation = validateRequired(formData.department, "Department");
+    if (!departmentValidation.isValid) {
+      errors.department = departmentValidation.error || "Department is required";
+    }
+
+    const yearValidation = validateRequired(formData.academicYear, "Academic year");
+    if (!yearValidation.isValid) {
+      errors.academicYear = yearValidation.error || "Academic year is required";
+    }
+
+    const dobValidation = validateRequired(formData.dateOfBirth, "Date of birth");
+    if (!dobValidation.isValid) {
+      errors.dateOfBirth = dobValidation.error || "Date of birth is required";
+    }
+
+    if (skills.length === 0) {
+      errors.skills = "Please add at least one course";
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateStep3()) {
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
-      if (!formData.college || 
-          !formData.department || !formData.academicYear || !formData.dateOfBirth) {
-        setError("Please fill in all required fields");
-        setLoading(false);
-        return;
-      }
-
-      if (skills.length === 0) {
-        setError("Please add at least one course");
-        setLoading(false);
-        return;
-      }
-
       const finalData = {
         ...formData,
         courses: skills,
@@ -258,10 +378,11 @@ export default function StudentOnboarding({
     setCurrentStep(1);
     setSuccess("");
     setError("");
+    setFieldErrors({});
   };
 
   const getStepTitle = () => {
-    switch(currentStep) {
+    switch (currentStep) {
       case 1: return "Verify your email";
       case 2: return "Verify your mobile number";
       case 3: return "Complete your profile";
@@ -270,7 +391,7 @@ export default function StudentOnboarding({
   };
 
   const getStepDescription = () => {
-    switch(currentStep) {
+    switch (currentStep) {
       case 1: return "Please verify your email address to get started.";
       case 2: return "We need to verify your mobile number for security.";
       case 3: return "Tell us about your academic background.";
@@ -278,6 +399,7 @@ export default function StudentOnboarding({
     }
   };
 
+  // ============ RENDER FUNCTIONS ============
   const renderStep1 = () => (
     <div className="space-y-4">
       <div>
@@ -291,15 +413,30 @@ export default function StudentOnboarding({
               name="email"
               type="email"
               value={formData.email}
-              onChange={handleChange}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSuccess('')
+                setError('')
+                if (value !== formData.email) {
+                  setEmailOtpSent(false);
+                  setEmailVerificationCode('');
+                  setFormData(prev => ({
+                    ...prev,
+                    email: value,
+                    emailVerified: false
+                  }));
+                }
+              }}
               placeholder="Enter your email address"
-              disabled={formData.emailVerified || loading}
-              className={emailError ? "border-red-500" : ""}
+              disabled={loading}   // ❌ removed emailVerified disable
+              className={fieldErrors.email ? "border-red-500" : ""}
               required
             />
-            {emailError && <p className="text-xs text-red-500 mt-1">{emailError}</p>}
+            {fieldErrors.email && <p className="text-xs text-red-500 mt-1">{fieldErrors.email}</p>}
           </div>
-          {!formData.emailVerified && !emailOtpSent && (
+
+          {/* Show Send OTP button when email is not verified */}
+          {!formData.emailVerified && (
             <Button
               type="button"
               onClick={handleSendEmailOTP}
@@ -312,67 +449,81 @@ export default function StudentOnboarding({
         </div>
       </div>
 
+      {/* Show OTP verification field only if OTP has been sent and email is not verified */}
       {emailOtpSent && !formData.emailVerified && (
-        <div>
-          <Label htmlFor="emailOtp" className="text-sm font-medium text-slate-700">
-            Verification Code <span className="text-red-500">*</span>
-          </Label>
-          <div className="flex gap-2 mt-1">
-            <Input
-              id="emailOtp"
-              value={emailVerificationCode}
-              onChange={(e) => setEmailVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="Enter 6-digit code"
-              maxLength={6}
-              className="flex-1"
-            />
-            <Button
-              type="button"
-              onClick={handleVerifyEmail}
-              disabled={emailVerificationCode.length !== 6 || loading}
-              variant="accent"
-            >
-              Verify
-            </Button>
+        <>
+          <div>
+            <Label htmlFor="emailOtp" className="text-sm font-medium text-slate-700">
+              Verification Code <span className="text-red-500">*</span>
+            </Label>
+            <div className="flex gap-2 mt-1">
+              <Input
+                id="emailOtp"
+                value={emailVerificationCode}
+                onChange={(e) => setEmailVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="Enter 6-digit code"
+                maxLength={6}
+                className="flex-1"
+                disabled={loading}
+              />
+              <Button
+                type="button"
+                onClick={handleVerifyEmail}
+                disabled={emailVerificationCode.length !== 6 || loading}
+                variant="accent"
+              >
+                Verify
+              </Button>
+            </div>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Use code: <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">123456</span>
-          </p>
-        </div>
+
+          {/* Resend OTP link */}
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={handleSendEmailOTP}
+              className="text-xs text-accent hover:underline"
+              disabled={loading}
+            >
+              Didn't receive OTP? Resend
+            </button>
+          </div>
+        </>
       )}
 
       {formData.emailVerified && (
         <>
-          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-            <p className="text-emerald-600 text-sm flex items-center gap-2">
-              <span className="text-emerald-600">✓</span> Email verified successfully
-            </p>
-          </div>
 
           <div className="space-y-3 pt-2">
-            <div className="flex items-center gap-2">
+            <div className="flex items-start gap-2">
               <Checkbox
                 id="terms"
                 checked={formData.termsAccepted}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) =>
                   setFormData(prev => ({ ...prev, termsAccepted: checked as boolean }))
                 }
               />
-              <Label htmlFor="terms" className="text-sm text-slate-700">
-                I accept the Terms and Conditions *
-              </Label>
+              <div className="flex-1">
+                <Label htmlFor="terms" className="text-sm text-slate-700">
+                  I accept the Terms and Conditions *
+                </Label>
+                {fieldErrors.terms && <p className="text-xs text-red-500 mt-1">{fieldErrors.terms}</p>}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-start gap-2">
               <Checkbox
                 id="privacy"
                 checked={formData.privacyAccepted}
-                onCheckedChange={(checked) => 
+                onCheckedChange={(checked) =>
                   setFormData(prev => ({ ...prev, privacyAccepted: checked as boolean }))
                 }
               />
-              <Label htmlFor="privacy" className="text-sm text-slate-700">
-                I agree to the Privacy Policy *
-              </Label>
+              <div className="flex-1">
+                <Label htmlFor="privacy" className="text-sm text-slate-700">
+                  I agree to the Privacy Policy *
+                </Label>
+                {fieldErrors.privacy && <p className="text-xs text-red-500 mt-1">{fieldErrors.privacy}</p>}
+              </div>
             </div>
           </div>
 
@@ -399,21 +550,37 @@ export default function StudentOnboarding({
         </Label>
         <div className="flex gap-2 mt-1">
           <div className="flex-1">
+
             <Input
               id="mobileNo"
               name="mobileNo"
               type="tel"
               value={formData.mobileNo}
-              onChange={handleChange}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                setSuccess("")
+                setError("")
+                if (value !== formData.mobileNo) {
+                  setMobileOtpSent(false);
+                  setMobileVerificationCode('');
+                  setFormData(prev => ({
+                    ...prev,
+                    mobileNo: value,
+                    mobileVerified: false
+                  }));
+                }
+              }}
               placeholder="Enter 10-digit mobile number"
-              disabled={formData.mobileVerified || loading}
-              className={mobileError ? "border-red-500" : ""}
+              disabled={loading}   // ❌ removed mobileVerified disable
+              className={fieldErrors.mobileNo ? "border-red-500" : ""}
               required
               maxLength={10}
             />
-            {mobileError && <p className="text-xs text-red-500 mt-1">{mobileError}</p>}
+            {fieldErrors.mobileNo && <p className="text-xs text-red-500 mt-1">{fieldErrors.mobileNo}</p>}
           </div>
-          {!formData.mobileVerified && !mobileOtpSent && (
+
+          {/* Show Send OTP button when mobile is not verified */}
+          {!formData.mobileVerified && (
             <Button
               type="button"
               onClick={handleSendMobileOTP}
@@ -426,43 +593,52 @@ export default function StudentOnboarding({
         </div>
       </div>
 
+      {/* Show OTP verification field only if OTP has been sent and mobile is not verified */}
       {mobileOtpSent && !formData.mobileVerified && (
-        <div>
-          <Label htmlFor="mobileOtp" className="text-sm font-medium text-slate-700">
-            Verification Code <span className="text-red-500">*</span>
-          </Label>
-          <div className="flex gap-2 mt-1">
-            <Input
-              id="mobileOtp"
-              value={mobileVerificationCode}
-              onChange={(e) => setMobileVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              placeholder="Enter 6-digit code"
-              maxLength={6}
-              className="flex-1"
-            />
-            <Button
-              type="button"
-              onClick={handleVerifyMobile}
-              disabled={mobileVerificationCode.length !== 6 || loading}
-              variant="accent"
-            >
-              Verify
-            </Button>
+        <>
+          <div>
+            <Label htmlFor="mobileOtp" className="text-sm font-medium text-slate-700">
+              Verification Code <span className="text-red-500">*</span>
+            </Label>
+            <div className="flex gap-2 mt-1">
+              <Input
+                id="mobileOtp"
+                value={mobileVerificationCode}
+                onChange={(e) => setMobileVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="Enter 6-digit code"
+                maxLength={6}
+                className="flex-1"
+                disabled={loading}
+              />
+              <Button
+                type="button"
+                onClick={handleVerifyMobile}
+                disabled={mobileVerificationCode.length !== 6 || loading}
+                variant="accent"
+              >
+                Verify
+              </Button>
+            </div>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Use code: <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded">123456</span>
-          </p>
-        </div>
+
+          {/* Resend OTP link */}
+          <div className="text-center">
+            <button
+              type="button"
+              onClick={handleSendMobileOTP}
+              className="text-xs text-accent hover:underline"
+              disabled={loading}
+            >
+              Didn't receive OTP? Resend
+            </button>
+          </div>
+        </>
       )}
 
+      {/* Show success message and continue button when mobile is verified */}
       {formData.mobileVerified && (
         <>
-          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-            <p className="text-emerald-600 text-sm flex items-center gap-2">
-              <span className="text-emerald-600">✓</span> Mobile number verified successfully
-            </p>
-          </div>
-
+          {/* Navigation buttons */}
           <div className="flex gap-3">
             <Button
               type="button"
@@ -488,53 +664,65 @@ export default function StudentOnboarding({
   const renderStep3 = () => (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="college" className="text-sm font-medium text-slate-700">College *</Label>
-          <select
-            id="college"
-            name="college"
-            value={formData.college}
-            onChange={handleChange}
-            className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent mt-1"
-            required
-          >
-            <option value="">Select college</option>
-            <option value="MIT">MIT</option>
-            <option value="Stanford">Stanford</option>
-            <option value="Harvard">Harvard</option>
-            <option value="Berkeley">UC Berkeley</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-        <div>
-          <Label htmlFor="department" className="text-sm font-medium text-slate-700">Department *</Label>
-          <select
-            id="department"
-            name="department"
-            value={formData.department}
-            onChange={handleChange}
-            className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent mt-1"
-            required
-          >
-            <option value="">Select department</option>
-            <option value="Computer Science">Computer Science</option>
-            <option value="Electrical Engineering">Electrical Engineering</option>
-            <option value="Mechanical Engineering">Mechanical Engineering</option>
-            <option value="Civil Engineering">Civil Engineering</option>
-            <option value="Business">Business</option>
-          </select>
-        </div>
+        {/* College Dropdown - Single select */}
+        <Dropdown
+          id="college"
+          label="College"
+          value={formData.college}
+          onChange={(value) => {
+            handleChange({
+              target: { name: 'college', value }
+            } as React.ChangeEvent<HTMLSelectElement>);
+          }}
+          endpoint={`${BASE_URL}method/stridenex_app.api_stridenex_app.student.masters.get_college`}
+          mapOptions={(data) =>
+            data
+              .filter((college: any) => college.is_active === 1 && college.status === "Active")
+              .map((college: any) => ({
+                value: college.name,
+                label: college.college_name
+              }))
+          }
+          required
+          error={fieldErrors.college}
+          placeholder="Select college"
+        />
+
+        {/* Department Dropdown - Single select */}
+        <Dropdown
+          id="department"
+          label="Department"
+          value={formData.department}
+          onChange={(value) => {
+            handleChange({
+              target: { name: 'department', value }
+            } as React.ChangeEvent<HTMLSelectElement>);
+          }}
+          endpoint={`${BASE_URL}method/stridenex_app.api_stridenex_app.student.masters.get_department`}
+          mapOptions={(data) =>
+            data.map((dept: any) => ({
+              value: dept.name,
+              label: dept.department_name
+            }))
+          }
+          required
+          error={fieldErrors.department}
+          placeholder="Select department"
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="academicYear" className="text-sm font-medium text-slate-700">Academic Year *</Label>
+          <Label htmlFor="academicYear" className="text-sm font-medium text-slate-700">
+            Academic Year <span className="text-red-500">*</span>
+          </Label>
           <select
             id="academicYear"
             name="academicYear"
             value={formData.academicYear}
             onChange={handleChange}
-            className="w-full h-10 rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent mt-1"
+            className={`w-full h-10 rounded-md border ${fieldErrors.academicYear ? "border-red-500" : "border-slate-200"
+              } bg-white px-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent mt-1`}
             required
           >
             <option value="">Select year</option>
@@ -544,74 +732,63 @@ export default function StudentOnboarding({
             <option value="4th Year">4th Year</option>
             <option value="5th Year">5th Year</option>
           </select>
+          {fieldErrors.academicYear && <p className="text-xs text-red-500 mt-1">{fieldErrors.academicYear}</p>}
         </div>
+
         <div>
-          <Label htmlFor="dateOfBirth" className="text-sm font-medium text-slate-700">Date of Birth *</Label>
+          <Label htmlFor="dateOfBirth" className="text-sm font-medium text-slate-700">
+            Date of Birth <span className="text-red-500">*</span>
+          </Label>
           <Input
             id="dateOfBirth"
             name="dateOfBirth"
             type="date"
-            placeholder="DD-MM-YYYY"
-            style={{ textTransform: "uppercase" }}
             value={formData.dateOfBirth}
+            style={{ textTransform: "uppercase" }}
             onChange={handleChange}
-            className="mt-1 focus:ring-accent focus:border-accent"
+            className={`mt-1 focus:ring-accent focus:border-accent ${fieldErrors.dateOfBirth ? "border-red-500" : ""
+              }`}
             required
           />
+          {fieldErrors.dateOfBirth && <p className="text-xs text-red-500 mt-1">{fieldErrors.dateOfBirth}</p>}
         </div>
       </div>
 
-      <div>
-        <Label htmlFor="skills" className="text-sm font-medium text-slate-700">Courses Type *</Label>
-        {skills.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mt-2 mb-2">
-            {skills.map((skill) => (
-              <Badge key={skill} variant="primary" className="text-xs bg-accent/10 text-accent border-accent/20">
-                {skill}
-                <button 
-                  type="button"
-                  onClick={() => handleRemoveSkill(skill)} 
-                  className="ml-1 hover:text-accent"
-                >
-                  ×
-                </button>
-              </Badge>
-            ))}
-          </div>
-        )}
-        <div className="relative mt-1">
-          <Input
-            value={skillInput}
-            onChange={(e) => setSkillInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Type a skill and press enter"
-            className="pr-8 focus:ring-accent focus:border-accent"
-          />
-          <button
-            type="button"
-            onClick={handleAddSkill}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-accent text-lg"
-          >
-            +
-          </button>
-        </div>
-        <p className="text-xs text-slate-400 mt-1">e.g., React, Python, JavaScript, SQL</p>
-      </div>
+      {/* Courses Type - Multi-select dropdown */}
+      <Dropdown
+        id="courses"
+        label="Courses Type"
+        value={skills} // skills array from your state
+        onChange={(selectedValues) => {
+          setSkills(selectedValues); // Update skills state with selected values
+        }}
+        endpoint={`${BASE_URL}method/stridenex_app.api_stridenex_app.student.masters.get_courses_type`}
+        mapOptions={(data) =>
+          data.map((course: any) => ({
+            value: course.name,
+            label: course.course_type
+          }))
+        }
+        required
+        error={fieldErrors.skills}
+        placeholder="Select courses"
+        multiSelect={true} // Enable multi-select
+      />
 
       <div className="flex gap-3 pt-4">
-        <Button 
-          type="button" 
-          variant="outline" 
+        <Button
+          type="button"
+          variant="outline"
           onClick={() => setCurrentStep(2)}
         >
           Back
         </Button>
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           variant="accent"
           className="flex-1"
           loading={loading}
-          disabled={loading || skills.length === 0}
+          disabled={loading}
         >
           Complete Registration
         </Button>
@@ -628,12 +805,14 @@ export default function StudentOnboarding({
       onSkip={handleSkip}
       showSkip={currentStep === 1}
     >
-      {/* Messages */}
+      {/* Success Message */}
       {success && (
         <Alert variant="success" className="mb-4">
           <AlertDescription>{success}</AlertDescription>
         </Alert>
       )}
+
+      {/* Error Message */}
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertDescription>{error}</AlertDescription>

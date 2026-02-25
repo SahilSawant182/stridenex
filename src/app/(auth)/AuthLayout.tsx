@@ -100,7 +100,7 @@ export default function AuthLayout({
               </div>
               <div>
                 <h1 className="text-3xl font-bold">{appName}</h1>
-                <p className="text-sm text-white/70 mt-1">Bridge learning to career success</p>
+                <p className="text-sm text-white/70 mt-1">Pathways to Your Future</p>
               </div>
             </div>
 
@@ -158,7 +158,7 @@ export default function AuthLayout({
               </div>
               <div>
                 <h2 className="text-xl font-bold text-navy">{appName}</h2>
-                <p className="text-xs text-slate-500">Bridge learning to career success</p>
+                <p className="text-xs text-slate-500">Pathways to Your Future</p>
               </div>
             </div>
 

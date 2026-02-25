@@ -26,7 +26,7 @@ export default function OnboardingLayout({
   showSkip = true,
   appName = "StrideNex"
 }: OnboardingLayoutProps) {
-  
+
   const getStepCompletion = () => {
     return Math.round((currentStep / totalSteps) * 100);
   };
@@ -39,7 +39,7 @@ export default function OnboardingLayout({
         <div className="absolute inset-0">
           <div className="absolute -top-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
           <div className="absolute bottom-0 -right-24 h-96 w-96 rounded-full bg-blue-400/20 blur-3xl"></div>
-          
+
           {/* Animated Background Pattern */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute inset-0" style={{
@@ -79,13 +79,17 @@ export default function OnboardingLayout({
         <div className="relative z-20 h-full flex flex-col justify-between p-12 text-white">
           {/* Logo */}
           <div>
-            <div className="flex items-center gap-3 mb-12">
-              <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                <div className="w-8 h-8 bg-white rounded-sm" />
+            <div className="flex items-center gap-4 mb-12">
+              <div className="w-16 h-16 bg-white rounded-xl shadow-lg flex items-center justify-center p-3">
+                <img
+                  src="/images/Social Media Logo Icon 1 A2.jpg"
+                  alt="Skill Bridge Logo"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">{appName}</h1>
-                <p className="text-xs text-white/60">Bridge learning to career success</p>
+                <h1 className="text-3xl font-bold">{appName}</h1>
+                <p className="text-sm text-white/70 mt-1">Pathways to Your Future</p>
               </div>
             </div>
 
@@ -143,12 +147,16 @@ export default function OnboardingLayout({
           <div className="w-full max-w-[560px]">
             {/* Mobile Branding */}
             <div className="lg:hidden flex items-center gap-3 mb-10">
-              <div className="bg-gradient-mixed p-2 rounded-lg">
-                <div className="w-6 h-6 bg-white rounded-sm" />
+              <div className="w-6 h-6 bg-white rounded-xl shadow-lg flex items-center justify-center p-3">
+                <img
+                  src="/images/Social Media Logo Icon 1 A2.jpg"
+                  alt="Skill Bridge Logo"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
                 <h2 className="text-xl font-bold text-navy">{appName}</h2>
-                <p className="text-xs text-slate-500">Bridge learning to career success</p>
+                <p className="text-xs text-slate-500">Pathways to Your Future</p>
               </div>
             </div>
 
@@ -163,7 +171,7 @@ export default function OnboardingLayout({
                 </span>
               </div>
               <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-gradient-to-r from-accent to-orange-600 rounded-full transition-all duration-500"
                   style={{ width: `${getStepCompletion()}%` }}
                 />

@@ -1,5 +1,6 @@
 "use client";
 
+import { BASE_URL } from "@/services/api.services";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useState, useEffect } from "react";
 
@@ -139,43 +140,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const logout = async () => {
-    try {
-      if (apiKey && apiSecret) {
-        await fetch(
-          "http://103.219.1.138:4412/api/method/logout",
-          {
-            method: "POST",
-            headers: {
-              Accept: "application/json",
-              "Content-Type": "application/json",
-              Authorization: `token ${apiKey}:${apiSecret}`,
-            },
-            credentials: "include",
-          }
-        );
-      }
-    } catch (error) {
-      console.error("Logout API error:", error);
+ const logout = async () => {
+  try {
+    if (apiKey && apiSecret) {
+      await fetch(
+        `${BASE_URL}method/stridenex_app.api_stridenex_app.app.logout`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: `token ${apiKey}:${apiSecret}`,
+          },
+          credentials: "include",
+        }
+      );
     }
+  } catch (error) {
+    console.error("Logout API error:", error);
+  }
 
-    // Clear state
-    setApiKey(null);
-    setApiSecret(null);
-    setCurrentUser(null);
-    setFullName(null);
-    setIsAuthenticated(false);
+  // Clear state
+  setApiKey(null);
+  setApiSecret(null);
+  setCurrentUser(null);
+  setFullName(null);
+  setIsAuthenticated(false);
 
-    // Clear localStorage
-    localStorage.removeItem("apiKey");
-    localStorage.removeItem("apiSecret");
-    localStorage.removeItem("posProfile");
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("fullName");
-    localStorage.removeItem("csrfToken");
+  // Clear localStorage
+  localStorage.removeItem("apiKey");
+  localStorage.removeItem("apiSecret");
+  localStorage.removeItem("posProfile");
+  localStorage.removeItem("currentUser");
+  localStorage.removeItem("fullName");
+  localStorage.removeItem("csrfToken");
 
-    router.push("/login");
-  };
+  router.push("/login");
+};
 
   return (
     <AuthContext.Provider 

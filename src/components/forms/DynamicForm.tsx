@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import DynamicField from "./DynamicField";
 import { FormField } from "@/types/doctypes.types";
 
@@ -9,6 +9,7 @@ interface Props {
   onSubmit: (data: any) => void;
   buttonLabel?: string;
   loading?: boolean;
+  onChange?: (data: any) => void; // Added onChange prop
 }
 
 export default function DynamicForm({
@@ -16,14 +17,24 @@ export default function DynamicForm({
   onSubmit,
   buttonLabel = "Submit",
   loading = false,
+  onChange, // Added onChange parameter
 }: Props) {
   const [formData, setFormData] = useState<Record<string, any>>({});
 
   const handleChange = (name: string, value: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData((prev) => {
+      const newData = {
+        ...prev,
+        [name]: value,
+      };
+      
+      // Call onChange prop whenever form data changes
+      if (onChange) {
+        onChange(newData);
+      }
+      
+      return newData;
+    });
   };
 
   // Group fields into rows based on layout property

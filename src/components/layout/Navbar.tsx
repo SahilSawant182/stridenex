@@ -16,7 +16,8 @@ import {
   Sparkles,
   GraduationCap,
   Building2,
-  Briefcase
+  Briefcase,
+  AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -78,6 +79,72 @@ const sectionVariants = {
   visible: { opacity: 1, y: 0 }
 };
 
+// Custom Modal Component
+const LogoutModal = ({ isOpen, onClose, onConfirm }: { isOpen: boolean; onClose: () => void; onConfirm: () => void }) => {
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999]"
+          />
+          
+          {/* Modal */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="fixed left-0 top-0 right-0 bottom-0 flex items-center justify-center pointer-events-none z-[9999]"
+          >
+            <div className="w-[90%] max-w-md bg-white rounded-2xl shadow-2xl pointer-events-auto">
+              <div className="p-8">
+                {/* Icon */}
+                <div className="mx-auto w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                  <AlertTriangle className="w-8 h-8 text-red-600" />
+                </div>
+                
+                {/* Title */}
+                <h3 className="text-xl font-bold text-center text-slate-900 mb-3">
+                  Confirm Logout
+                </h3>
+                
+                {/* Description */}
+                <p className="text-center text-slate-600 mb-6">
+                  Are you sure you want to logout? You'll need to login again to access your account.
+                </p>
+                
+                {/* Buttons */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={onClose}
+                    className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={onConfirm}
+                    className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                  >
+                    Logout
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
 export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -85,11 +152,12 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
   const [activeMegaMenu, setActiveMegaMenu] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 
   const megaMenuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
-  const userMenuRef = useRef<HTMLDivElement>(null); // Add ref for user menu
-  const userButtonRef = useRef<HTMLButtonElement>(null); // Add ref for user button
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const userButtonRef = useRef<HTMLButtonElement>(null);
 
   const { isAuthenticated, currentUser, logout } = useAuth();
 
@@ -103,17 +171,14 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Close mega menu if click outside
       if (megaMenuRef.current && !megaMenuRef.current.contains(event.target as Node)) {
         setActiveMegaMenu(null);
       }
 
-      // Close search if click outside
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setSearchOpen(false);
       }
 
-      // Close user menu if click outside - FIXED
       if (userMenuRef.current &&
         !userMenuRef.current.contains(event.target as Node) &&
         userButtonRef.current &&
@@ -149,6 +214,16 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
     setSearchOpen(false);
   };
 
+  const handleLogoutClick = () => {
+    setUserMenuOpen(false);
+    setLogoutModalOpen(true);
+  };
+
+  const handleConfirmLogout = async () => {
+    setLogoutModalOpen(false);
+    await logout();
+  };
+
   const navItems = Object.entries(navigationConfig).map(([key, value]) => ({
     key,
     ...value
@@ -170,6 +245,13 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
 
   return (
     <>
+      {/* Logout Confirmation Modal */}
+      <LogoutModal
+        isOpen={logoutModalOpen}
+        onClose={() => setLogoutModalOpen(false)}
+        onConfirm={handleConfirmLogout}
+      />
+
       <nav
         className={`fixed top-0 w-full z-50 transition-all duration-500 ${isScrolled
           ? 'bg-white/95 backdrop-blur-xl shadow-lg'
@@ -217,11 +299,11 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
                 <Search className="w-4 h-4" />
               </motion.button>
 
-              {/* Auth Buttons / User Menu - FIXED with refs */}
+              {/* Auth Buttons / User Menu */}
               {isAuthenticated ? (
                 <div className="relative">
                   <motion.button
-                    ref={userButtonRef} // Add ref here
+                    ref={userButtonRef}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -238,7 +320,7 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
                   <AnimatePresence>
                     {userMenuOpen && (
                       <motion.div
-                        ref={userMenuRef} // Add ref here
+                        ref={userMenuRef}
                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -282,7 +364,7 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
                           </button>
                           <hr className="my-2 border-slate-100" />
                           <button
-                            onClick={logout}
+                            onClick={handleLogoutClick}
                             className="flex w-full items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                           >
                             <LogOut className="w-4 h-4" />
@@ -534,7 +616,7 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
           )}
         </AnimatePresence>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu - FIXED: Show navigation + user menu when logged in */}
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div
@@ -570,7 +652,7 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
                   </button>
                 </div>
 
-                {/* Mobile Menu Items - Uncommented this section */}
+                {/* Mobile Navigation Items - ALWAYS SHOW THESE */}
                 {navItems.map((item) => {
                   const hasSections = item.sections && item.sections.length > 0;
 
@@ -648,32 +730,81 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
 
                 <hr className="border-slate-200" />
 
-                <div className="space-y-2">
-                  <button
-                    onClick={() => handleNavigation('/login')}
-                    className="w-full px-4 py-2 text-center text-primary font-semibold hover:bg-primary/5 rounded-lg transition-colors"
-                  >
-                    Login
-                  </button>
-                  <button
-                    onClick={() => handleNavigation('/signup')}
-                    className="w-full px-4 py-2 text-center bg-gradient-to-r from-primary to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
-                  >
-                    Join as Student
-                  </button>
-                  <button
-                    onClick={() => handleNavigation('/institutes/register')}
-                    className="w-full px-4 py-2 text-center bg-gradient-to-r from-accent to-orange-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
-                  >
-                    Register as Institute
-                  </button>
-                  <button
-                    onClick={() => handleNavigation('/industry/partner')}
-                    className="w-full px-4 py-2 text-center bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
-                  >
-                    Partner as Industry
-                  </button>
-                </div>
+                {/* User Menu Section - Show when authenticated */}
+                {isAuthenticated ? (
+                  <div className="space-y-2">
+                    <div className="px-3 py-2 bg-slate-50 rounded-lg mb-2">
+                      <p className="text-xs text-slate-500">Signed in as</p>
+                      <p className="text-sm font-semibold text-slate-900 truncate">
+                        {currentUser || 'User'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleNavigation('/profile')}
+                      className="w-full px-4 py-2.5 text-left text-slate-700 hover:bg-primary/5 rounded-lg transition-colors flex items-center gap-3"
+                    >
+                      <User className="w-5 h-5 text-primary" />
+                      <span>Profile</span>
+                    </button>
+                    <button
+                      onClick={() => handleNavigation('/dashboard')}
+                      className="w-full px-4 py-2.5 text-left text-slate-700 hover:bg-primary/5 rounded-lg transition-colors flex items-center gap-3"
+                    >
+                      <Briefcase className="w-5 h-5 text-primary" />
+                      <span>Dashboard</span>
+                    </button>
+                    <button
+                      onClick={() => handleNavigation('/settings')}
+                      className="w-full px-4 py-2.5 text-left text-slate-700 hover:bg-primary/5 rounded-lg transition-colors flex items-center gap-3"
+                    >
+                      <Settings className="w-5 h-5 text-primary" />
+                      <span>Settings</span>
+                    </button>
+                    <button
+                      onClick={() => handleNavigation('/help')}
+                      className="w-full px-4 py-2.5 text-left text-slate-700 hover:bg-primary/5 rounded-lg transition-colors flex items-center gap-3"
+                    >
+                      <HelpCircle className="w-5 h-5 text-primary" />
+                      <span>Help</span>
+                    </button>
+                    <hr className="my-2 border-slate-200" />
+                    <button
+                      onClick={handleLogoutClick}
+                      className="w-full px-4 py-2.5 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-3"
+                    >
+                      <LogOut className="w-5 h-5" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                ) : (
+                  /* Auth buttons for non-authenticated users */
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => handleNavigation('/login')}
+                      className="w-full px-4 py-2 text-center text-primary font-semibold hover:bg-primary/5 rounded-lg transition-colors"
+                    >
+                      Login
+                    </button>
+                    <button
+                      onClick={() => handleNavigation('/signup')}
+                      className="w-full px-4 py-2 text-center bg-gradient-to-r from-primary to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+                    >
+                      Join as Student
+                    </button>
+                    <button
+                      onClick={() => handleNavigation('/institutes/register')}
+                      className="w-full px-4 py-2 text-center bg-gradient-to-r from-accent to-orange-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+                    >
+                      Register as Institute
+                    </button>
+                    <button
+                      onClick={() => handleNavigation('/industry/partner')}
+                      className="w-full px-4 py-2 text-center bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+                    >
+                      Partner as Industry
+                    </button>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}

@@ -10,11 +10,12 @@ export default function StudentOnboardingPage() {
   const { isAuthenticated, apiKey, apiSecret } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      router.push("/login");
-    }
-  }, [isAuthenticated, router]);
+  // REMOVE THIS REDIRECT - Onboarding should be accessible without authentication
+  // useEffect(() => {
+  //   if (!isAuthenticated) {
+  //     router.push("/login");
+  //   }
+  // }, [isAuthenticated, router]);
 
   const handleSubmit = async (data: OnboardingData) => {
     try {
@@ -42,23 +43,10 @@ export default function StudentOnboardingPage() {
     }
   };
 
-  if (!isAuthenticated) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      {/* <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-navy mb-2">
-            Complete Your Profile
-          </h1>
-          <p className="text-slate-500">
-            Tell us more about yourself to personalize your learning journey
-          </p>
-        </div>
-      </div> */}
-        <StudentOnboarding onSubmit={handleSubmit} />
+      <StudentOnboarding onSubmit={handleSubmit} />
     </div>
   );
 }
