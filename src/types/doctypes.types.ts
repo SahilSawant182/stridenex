@@ -2,14 +2,22 @@ export interface FormField {
   fieldname: string;
   label: string;
   fieldtype: string;
-  placeholder?: string;
   required?: boolean;
-  options?: any[];
-  default?: string;
+  placeholder?: string;
   description?: string;
+  options?: string[];
   read_only?: boolean;
   hidden?: boolean;
-  layout?: 'full' | 'half';
+  layout?: 'half' | 'full';
+  apiEndpoint?: string;
+  apiParams?: Record<string, any>;
+  mapOptions?: (data: any) => Array<{ value: string; label: string }>;
+  multiSelect?: boolean;
+  inputClassName?: string;
+  maxLength?: number;
+  disabled?: boolean;
+  minDate?: string;
+  maxDate?: string;
 }
 
 export interface FormConfig {

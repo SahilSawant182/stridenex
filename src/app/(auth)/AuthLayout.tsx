@@ -152,13 +152,17 @@ export default function AuthLayout({
         <div className="w-full lg:w-1/2 flex flex-col justify-center items-center px-6 py-12 md:px-16 lg:px-24">
           <div className="w-full max-w-[440px]">
             {/* Mobile Branding */}
-            <div className="lg:hidden flex items-center gap-3 mb-10">
-              <div className="bg-gradient-mixed p-2 rounded-lg">
-                <div className="w-6 h-6 bg-white rounded-sm" />
+            <div className="lg:hidden flex items-center gap-4 mb-10">
+              <div className="w-14 h-14 flex items-center justify-center">
+                <img
+                  src="/images/Social Media Logo Icon 1 A2.jpg"
+                  alt="Skill Bridge Logo"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-navy">{appName}</h2>
-                <p className="text-xs text-slate-500">Pathways to Your Future</p>
+                <h2 className="text-2xl font-bold text-navy">{appName}</h2>
+                <p className="text-sm text-slate-500">Pathways to Your Future</p>
               </div>
             </div>
 

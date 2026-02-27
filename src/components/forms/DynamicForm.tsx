@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import DynamicField from "./DynamicField";
 import { FormField } from "@/types/doctypes.types";
 
@@ -9,7 +9,9 @@ interface Props {
   onSubmit: (data: any) => void;
   buttonLabel?: string;
   loading?: boolean;
-  onChange?: (data: any) => void; // Added onChange prop
+  onChange?: (data: any) => void;
+  onFieldData?: (fieldname: string, options: any[]) => void;
+  initialValues?: Record<string, any>;
 }
 
 export default function DynamicForm({
@@ -17,9 +19,25 @@ export default function DynamicForm({
   onSubmit,
   buttonLabel = "Submit",
   loading = false,
-  onChange, // Added onChange parameter
+  onChange,
+  initialValues = {},
 }: Props) {
   const [formData, setFormData] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    setFormData(prev => {
+      // Check if there are actual changes to avoid unnecessary updates
+      const hasChanges = Object.keys(initialValues).some(
+        key => initialValues[key] !== prev[key]
+      );
+
+      if (hasChanges) {
+        return { ...prev, ...initialValues };
+      }
+      return prev;
+    });
+  }, [initialValues]);
+
 
   const handleChange = (name: string, value: any) => {
     setFormData((prev) => {
@@ -27,12 +45,11 @@ export default function DynamicForm({
         ...prev,
         [name]: value,
       };
-      
-      // Call onChange prop whenever form data changes
+
       if (onChange) {
         onChange(newData);
       }
-      
+
       return newData;
     });
   };
@@ -47,14 +64,15 @@ export default function DynamicForm({
 
     fields.forEach((field) => {
       const fieldWidth = field.layout === 'half' ? 0.5 : 1;
-      
+
       if (currentRowWidth + fieldWidth > 1) {
         // Render current row and start new one
         if (currentRow.length > 0) {
           rows.push(
-            <div key={rows.length} className="grid grid-cols-2 gap-4">
+            // FIXED: Make grid responsive - 1 column on mobile, 2 columns on desktop
+            <div key={rows.length} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {currentRow.map((f) => (
-                <div key={f.fieldname} className={f.layout === 'half' ? 'col-span-1' : 'col-span-2'}>
+                <div key={f.fieldname} className={f.layout === 'half' ? 'md:col-span-1 col-span-1' : 'md:col-span-2 col-span-1'}>
                   <DynamicField
                     field={f}
                     value={formData[f.fieldname]}
@@ -76,9 +94,10 @@ export default function DynamicForm({
     // Render last row
     if (currentRow.length > 0) {
       rows.push(
-        <div key={rows.length} className="grid grid-cols-2 gap-4">
+        // FIXED: Make grid responsive - 1 column on mobile, 2 columns on desktop
+        <div key={rows.length} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {currentRow.map((f) => (
-            <div key={f.fieldname} className={f.layout === 'half' ? 'col-span-1' : 'col-span-2'}>
+            <div key={f.fieldname} className={f.layout === 'half' ? 'md:col-span-1 col-span-1' : 'md:col-span-2 col-span-1'}>
               <DynamicField
                 field={f}
                 value={formData[f.fieldname]}
@@ -102,7 +121,7 @@ export default function DynamicForm({
       className="space-y-4"
     >
       {renderFields()}
-      
+
       {/* Only render button if buttonLabel is not empty */}
       {buttonLabel && buttonLabel !== "" && (
         <button

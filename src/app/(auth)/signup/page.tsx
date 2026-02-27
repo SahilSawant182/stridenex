@@ -113,7 +113,7 @@ export default function SignupPage() {
       .then(response => response.json())
       .then(responseData => {
         console.log("API Response:", responseData);
-        if (responseData?.message?.status === 200) {
+        if (responseData?.message === "User created successfully") {
           localStorage.setItem("userEmail", data.email);
           localStorage.setItem("userFirstName", data.firstName);
           localStorage.setItem("userLastName", data.lastName);
@@ -122,7 +122,7 @@ export default function SignupPage() {
           router.push("/onboarding/student");
         } else {
           // Handle different error structures
-          const errorMsg = responseData?.message?.message ||
+          const errorMsg = responseData?.message ||
             responseData?.message?.error ||
             "Signup failed";
           setError(errorMsg);
@@ -166,9 +166,14 @@ export default function SignupPage() {
           />
           <Label htmlFor="terms" className="text-sm text-slate-600 leading-relaxed">
             I agree to the{" "}
-            <a href="/terms" className="text-accent hover:text-orange-600 font-medium">Terms of Service</a>{" "}
+            <a href="/legal/terms-of-use.pdf"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent hover:text-orange-600 font-medium">Terms of Use</a>{" "}
             and{" "}
-            <a href="/privacy" className="text-accent hover:text-orange-600 font-medium">Privacy Policy</a>
+            <a href="/legal/privacy-policy.pdf"
+              target="_blank"
+              rel="noopener noreferrer" className="text-accent hover:text-orange-600 font-medium">Privacy Policy</a>
           </Label>
         </div>
 

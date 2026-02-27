@@ -28,8 +28,11 @@ export default function OnboardingLayout({
 }: OnboardingLayoutProps) {
 
   const getStepCompletion = () => {
-    return Math.round((currentStep / totalSteps) * 100);
-  };
+  if (currentStep === 1) return 0;
+  if (currentStep === 2) return 33;
+  if (currentStep === 3) return 67;
+  return 0;
+};
 
   return (
     <div className="flex flex-col lg:flex-row w-screen h-screen overflow-hidden">

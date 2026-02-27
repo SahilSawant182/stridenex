@@ -46,57 +46,62 @@ export default function LoginPage() {
   ];
 
   const handleLogin = async (formData: any) => {
-    // Validate form using the reusable validator
-    const errors = validateLoginForm({
-      username: formData.username,
-      password: formData.password
-    });
+  // Validate form using the reusable validator
+  const errors = validateLoginForm({
+    username: formData.username,
+    password: formData.password
+  });
 
-    if (Object.keys(errors).length > 0) {
-      setError(Object.values(errors)[0]);
-      return;
-    }
+  if (Object.keys(errors).length > 0) {
+    setError(Object.values(errors)[0]);
+    return;
+  }
 
-    setLoading(true);
-    setError("");
+  setLoading(true);
+  setError("");
 
-    try {
-      const response = await fetch(
-        `${BASE_URL}method/stridenex_app.stridenex_app.api.login`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            usr: formData.username,
-            pwd: formData.password
-          }),
-        }
-      );
-
-      const data = await response.json();
-      const result = data.message;
-
-      if (response.ok && result?.message === "Logged In") {
-        const { api_key, api_secret } = result.key_details;
-        
-        await login(api_key, api_secret, {
-          email: result.user,
-          fullName: data.full_name || result.user.split('@')[0]
-        });
-
-        router.push("/portal/dashboard");
-      } else {
-        setError(result?.message || "Login failed");
+  try {
+    const response = await fetch(
+      `${BASE_URL}method/stridenex_app.api_stridenex_app.app.login`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          usr: formData.username,
+          pwd: formData.password
+        }),
       }
-    } catch (err) {
-      setError("An error occurred during login");
-      console.error(err);
-    } finally {
-      setLoading(false);
+    );
+
+    const data = await response.json();
+    console.log("Login response:", data); // For debugging
+
+    // Check if login was successful
+    if (data.message === "Logged In") {
+      const { api_key, api_secret } = data.key_details;
+      const fullName = data.full_name || formData.username.split('@')[0];
+      const email = data.user || formData.username;
+      
+      await login(api_key, api_secret, {
+        email: email,
+        fullName: fullName
+      });
+
+      router.push("/portal/dashboard");
+    } else {
+      // Handle error case
+      const errorMessage = data.message || "Login failed";
+      setError(errorMessage);
     }
-  };
+  } catch (err) {
+    setError("An error occurred during login");
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <AuthLayout
