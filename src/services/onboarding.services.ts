@@ -21,6 +21,26 @@ export interface College {
     tahsil: string | null;
 }
 
+export interface CreateStudentPayload {
+  first_name: string;
+  last_name: string;
+  mobile_no: string;
+  email_id: string;
+  stream: string;
+  courses_type: Array<{ course_type: string }>;
+  college: string;
+  course: string;
+  department: string;
+  academic_year: string;
+  semester: string;
+  date_of_birth: string;
+  skill: Array<{ skill: string }>;
+  career_interest: Array<{ career_interest: string }>;
+  github?: string;
+  linkedin?: string;
+  resume?: File | null;
+}
+
 export interface OtpResponse {
     message: string;
     data?: string;
@@ -97,4 +117,48 @@ export const verifyEmailOTP = async (email: string, otp: string): Promise<any> =
         console.error("Error verifying email OTP:", error);
         throw error;
     }
+};
+
+export const createStudent = async (payload: CreateStudentPayload) => {
+  try {
+    // Create FormData for file upload
+    const formData = new FormData();
+    
+    // Append all fields to FormData
+    Object.keys(payload).forEach(key => {
+      const value = payload[key as keyof CreateStudentPayload];
+      
+      if (key === 'resume' && value instanceof File) {
+        // Append file separately
+        formData.append('resume', value);
+      } else if (key === 'courses_type' || key === 'skill' || key === 'career_interest') {
+        // Append arrays as JSON strings
+        formData.append(key, JSON.stringify(value));
+      } else if (value !== null && value !== undefined) {
+        // Append other fields
+        formData.append(key, String(value));
+      }
+    });
+
+    // Log the FormData contents for debugging
+    console.log("Submitting FormData:");
+    for (let pair of formData.entries()) {
+      console.log(pair[0] + ': ' + pair[1]);
+    }
+
+    const response = await axios.post(
+      `${BASE_URL}method/stridenex_app.api_stridenex_app.student.student.create_student`,
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error creating student:", error);
+    throw error;
+  }
 };

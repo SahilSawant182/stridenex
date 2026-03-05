@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import DynamicField from "./DynamicField";
 import { FormField } from "@/types/doctypes.types";
 
@@ -22,15 +22,13 @@ export default function DynamicForm({
   onChange,
   initialValues = {},
 }: Props) {
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<Record<string, any>>(initialValues);
 
   useEffect(() => {
     setFormData(prev => {
-      // Check if there are actual changes to avoid unnecessary updates
       const hasChanges = Object.keys(initialValues).some(
         key => initialValues[key] !== prev[key]
       );
-
       if (hasChanges) {
         return { ...prev, ...initialValues };
       }
@@ -39,20 +37,24 @@ export default function DynamicForm({
   }, [initialValues]);
 
 
-  const handleChange = (name: string, value: any) => {
-    setFormData((prev) => {
-      const newData = {
-        ...prev,
-        [name]: value,
-      };
+ const handleChange = (name: string, value: any) => {
+  setFormData((prev) => {
+    const newData = {
+      ...prev,
+      [name]: value,
+    };
 
-      if (onChange) {
+    // Call onChange asynchronously to avoid render-time updates
+    if (onChange) {
+      // Use queueMicrotask or Promise.resolve().then instead of setTimeout
+      queueMicrotask(() => {
         onChange(newData);
-      }
+      });
+    }
 
-      return newData;
-    });
-  };
+    return newData;
+  });
+};
 
   // Group fields into rows based on layout property
   const renderFields = () => {
@@ -113,25 +115,25 @@ export default function DynamicForm({
   };
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSubmit(formData);
-      }}
-      className="space-y-4"
-    >
-      {renderFields()}
-
-      {/* Only render button if buttonLabel is not empty */}
-      {buttonLabel && buttonLabel !== "" && (
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-accent hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
-        >
-          {loading ? "Loading..." : buttonLabel}
-        </button>
-      )}
-    </form>
-  );
+  <div
+    onSubmit={(e) => {
+      e.preventDefault();
+      onSubmit(formData);
+    }}
+    className="space-y-4"
+  >
+    {renderFields()}
+    
+    {/* Only render button if buttonLabel is not empty */}
+    {buttonLabel && buttonLabel !== "" && (
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-full bg-accent hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+      >
+        {loading ? "Loading..." : buttonLabel}
+      </button>
+    )}
+  </div>
+);
 }

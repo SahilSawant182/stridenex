@@ -18,6 +18,7 @@ export interface FormField {
   disabled?: boolean;
   minDate?: string;
   maxDate?: string;
+  accept?: string;
 }
 
 export interface FormConfig {

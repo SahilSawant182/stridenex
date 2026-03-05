@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import OnboardingLayout from "./OnboardingLayout";
@@ -11,7 +11,8 @@ import {
   sendMobileOTP,
   verifyMobileOTP,
   sendEmailOTP,
-  verifyEmailOTP
+  verifyEmailOTP,
+  createStudent
 } from "@/services/onboarding.services";
 import DynamicForm from "@/components/forms/DynamicForm";
 import { FormField } from "@/types/doctypes.types";
@@ -26,6 +27,8 @@ interface StudentOnboardingProps {
 }
 
 type Step = 1 | 2 | 3;
+
+const API_BASE_URL = "https://devstridenex.quantcloud.in";
 
 export default function StudentOnboarding({
   onSubmit,
@@ -42,14 +45,21 @@ export default function StudentOnboarding({
   const [mobileOtpSent, setMobileOtpSent] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [emailTimer, setEmailTimer] = useState(0);
+  const [mobileTimer, setMobileTimer] = useState(0);
   const fetchedFieldsRef = useRef<Set<string>>(new Set());
-  const [departmentOptions, setDepartmentOptions] = useState<Array<{ value: string; label: string; academicYears: string }>>([]);
+  const [departmentOptions, setDepartmentOptions] = useState<Array<{
+    value: string;
+    label: string;
+    academicYears: string;
+    semester: string; // Add this
+  }>>([]);
 
   // Validation errors
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState({
-    email: typeof window !== 'undefined' ? localStorage.getItem("userEmail") || "" : "",
+    email: "",
     emailVerified: false,
     termsAccepted: false,
     privacyAccepted: false,
@@ -66,8 +76,45 @@ export default function StudentOnboarding({
     dateOfBirth: "",
     stream: "",
     course: "",
-    samester: "",
+    semester: "",
+    courses: [],
+    skills: [],
+    careerInterest: [],
+    gender: "",
+    resume: null,
+    linkedinUrl: "",
+    githubUrl: ""
   });
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("userEmail") || "";
+    setFormData(prev => ({
+      ...prev,
+      email: savedEmail,
+    }));
+  }, []);
+
+  console.log('form data', formData)
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (emailTimer > 0) {
+      interval = setInterval(() => {
+        setEmailTimer(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [emailTimer]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (mobileTimer > 0) {
+      interval = setInterval(() => {
+        setMobileTimer(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [mobileTimer]);
 
   // Step 1 fields
   const step1Fields: FormField[] = [
@@ -95,7 +142,6 @@ export default function StudentOnboarding({
   ];
 
   // Step 3 fields with dependent department dropdown
-  // Step 3 fields with dependent department dropdown
   const step3Fields: FormField[] = [
     {
       fieldname: "state",
@@ -104,13 +150,17 @@ export default function StudentOnboarding({
       required: true,
       placeholder: "Select State",
       layout: "half",
-      apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.masters.get_state`,
+      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiParams: {
+        doctype: "State"
+      },
       mapOptions: (data) => {
-        // Handle the response structure: { message: [...], data: [] }
-        const states = data.message || [];
-        return states.map((state: any) => ({
+        console.log("State data received in mapOptions:", data); // This should be the array
+
+        // 'data' is already the array, so just map it directly
+        return data.map((state: any) => ({
           value: state.name,
-          label: state.state_name
+          label: state.name
         }));
       }
     },
@@ -121,33 +171,74 @@ export default function StudentOnboarding({
       required: true,
       placeholder: "Select District",
       layout: "half",
-      // You can add district API here later
-      // apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.masters.get_district?state_name=${encodeURIComponent(formData.state)}`,
-      // mapOptions: (data) => {
-      //   const districts = data.message || [];
-      //   return districts.map((district: any) => ({
-      //     value: district.name,
-      //     label: district.district_name
-      //   }));
-      // },
-      // disabled: !formData.state
+      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiParams: formData.state ? {
+        doctype: "District",
+        fields: ["name", "district_name"], // Don't stringify - let axios handle it
+        filters: [["state", "=", formData.state]], // Removed is_active if not needed
+        order_by: "district_name asc",
+        limit_page_length: 1000
+      } : undefined,
+      mapOptions: (data) => {
+        console.log("District data in mapOptions:", data);
+        // data is the array from the response
+        return data.map((district: any) => ({
+          value: district.name,
+          label: district.district_name || district.name
+        }));
+      },
+      disabled: !formData.state
     },
+    {
+      fieldname: "stream",
+      label: "Stream",
+      fieldtype: "Data",
+      required: true,
+      placeholder: "Select Stream",
+      layout: "half",
+      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiParams: {
+        doctype: "Stream"
+      },
+      mapOptions: (data) => {
+        console.log("Stream data received in mapOptions:", data);
+        return data.map((stream: any) => ({
+          value: stream.name,
+          label: stream.name
+        }));
+      }
+    },
+
     {
       fieldname: "college",
       label: "College",
       fieldtype: "Data",
       required: true,
-      placeholder: "Select college",
+      placeholder: "Select College",
       layout: "half",
-      apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.student.masters.get_college`,
+      // Only enable when stream, state, and district are selected
+      apiEndpoint: (formData.stream && formData.state && formData.district)
+        ? `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.student.masters.get_colleges_by_stream`
+        : undefined,
+      apiParams: (formData.stream && formData.state && formData.district) ? {
+        stream: formData.stream,
+        state: formData.state,
+        district: formData.district
+      } : undefined,
       mapOptions: (data) => {
-        const colleges = data.data || [];
+        console.log("College data received in mapOptions:", data);
+
+        // Handle the response structure: { message: "...", data: [...] }
+        const colleges = data.data || data || [];
+
         return colleges.map((college: any) => ({
           value: college.name,
-          label: college.college_name
+          label: college.college_name || college.name
         }));
-      }
+      },
+      disabled: !(formData.stream && formData.state && formData.district) // Disable until all filters are selected
     },
+
     {
       fieldname: "department",
       label: "Department",
@@ -155,27 +246,32 @@ export default function StudentOnboarding({
       required: true,
       placeholder: "Select department",
       layout: "half",
-      apiEndpoint: formData.college
-        ? `${BASE_URL}method/stridenex_app.api_stridenex_app.student.masters.get_college_departments?college_name=${encodeURIComponent(formData.college)}`
-        : undefined,
+      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiParams: {
+        doctype: "College Department",
+        fields: ["name", "academic_years", "semester"]
+      },
       mapOptions: (data) => {
-        const departments = data.data || [];
-        console.log("Department API response:", departments);
+        console.log("Department data received in mapOptions:", data);
+
+        const departments = data.data || data || [];
 
         const deptOptions = departments.map((dept: any) => ({
-          value: dept.department,
-          label: dept.department,
-          academicYears: dept.academic_years
+          value: dept.name,
+          label: dept.name,
+          academicYears: dept.academic_years,
+          semester: dept.semester  // Make sure this is included
         }));
 
         console.log("Mapped department options:", deptOptions);
 
         setDepartmentOptions(deptOptions);
 
-        return deptOptions.map((option: any) => ({ value: option.value, label: option.label }));
+        return deptOptions.map(({ value, label }: { value: string; label: string }) => ({ value, label }));
       },
-      disabled: !formData.college
+      disabled: false
     },
+
     {
       fieldname: "academicYear",
       label: "Academic Year",
@@ -185,22 +281,7 @@ export default function StudentOnboarding({
       layout: "half",
       read_only: true
     },
-    {
-      fieldname: "stream",
-      label: "Stream",
-      fieldtype: "Data",
-      required: true,
-      placeholder: "Select Stream",
-      layout: "half",
-      // apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.student.masters.get_college`,
-      // mapOptions: (data) => {
-      //   const streams = data.data || [];
-      //   return streams.map((stream: any) => ({
-      //     value: stream.name,
-      //     label: stream.stream_name
-      //   }));
-      // }
-    },
+
     {
       fieldname: "course",
       label: "Course",
@@ -208,30 +289,53 @@ export default function StudentOnboarding({
       required: true,
       placeholder: "Select Course",
       layout: "half",
-      // apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.student.masters.get_college`,
-      // mapOptions: (data) => {
-      //   const courses = data.data || [];
-      //   return courses.map((course: any) => ({
-      //     value: course.name,
-      //     label: course.course_name
-      //   }));
-      // }
+      // Only enable when college is selected
+      apiEndpoint: formData.college
+        ? `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`
+        : undefined,
+      apiParams: formData.college ? {
+        doctype: "Courses",
+        filters: {
+          college: formData.college
+        }
+      } : undefined,
+      mapOptions: (data) => {
+        console.log("Course data received in mapOptions:", data);
+        const courses = data.data || data || [];
+
+        return courses.map((course: any) => ({
+          value: course.name,
+          label: course.course_name || course.name
+        }));
+      },
+      disabled: !formData.college
     },
     {
-      fieldname: "samester",
+      fieldname: "semester",
       label: "Semester",
       fieldtype: "Data",
       required: true,
       placeholder: "Select Semester",
       layout: "half",
-      // apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.student.masters.get_college`,
-      // mapOptions: (data) => {
-      //   const semesters = data.data || [];
-      //   return semesters.map((semester: any) => ({
-      //     value: semester.name,
-      //     label: semester.semester_name
-      //   }));
-      // }
+      apiEndpoint: formData.department
+        ? `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.student.masters.get_semester`
+        : undefined,
+      apiParams: formData.department ? {
+        semester: departmentOptions.find(d => d.value === formData.department)?.semester || ""
+      } : undefined,
+      mapOptions: (data) => {
+        console.log("Semester data received:", data);
+
+        // Handle the response structure: { message: "...", data: [...] }
+        const semesters = data.data || data || [];
+
+        // Map each semester object to { value, label } format
+        return semesters.map((sem: any) => ({
+          value: sem.name,
+          label: sem.name  // Use the name as both value and label
+        }));
+      },
+      disabled: !formData.department
     },
     {
       fieldname: "dateOfBirth",
@@ -243,21 +347,107 @@ export default function StudentOnboarding({
       inputClassName: "uppercase"
     },
     {
+      fieldname: "gender",
+      label: "Gender",
+      fieldtype: "Select",
+      required: false,
+      placeholder: "Select Gender",
+      layout: "half",
+      options: ["Male", "Female", "Other", "Prefer not to say"]
+    },
+    {
       fieldname: "courses",
       label: "Courses Type",
       fieldtype: "Data",
       required: true,
       placeholder: "Select courses",
-      layout: "half",
+      layout: "full",
       multiSelect: true,
-      apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.student.masters.get_courses_type`,
+      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiParams: {
+        doctype: "Course Type"  // Note the space in "Course Type"
+      },
       mapOptions: (data) => {
-        const courses = data.data || [];
+        console.log("Courses Type data received in mapOptions:", data);
+
+        // Handle the response structure (similar to state)
+        const courses = data.data || data || [];
+
         return courses.map((course: any) => ({
           value: course.name,
-          label: course.course_type
+          label: course.course_type || course.name
         }));
       }
+    },
+    {
+      fieldname: "skills",
+      label: "Skills",
+      fieldtype: "Data",
+      required: false,
+      placeholder: "Select skills",
+      layout: "full",
+      multiSelect: true, // This makes it multi-select
+      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiParams: {
+        doctype: "Student Skill" // Updated doctype
+      },
+      mapOptions: (data) => {
+        console.log("Skills data received:", data);
+        const items = data.data || data || [];
+        return items.map((item: any) => ({
+          value: item.name,
+          label: item.name || item.skill_name
+        }));
+      }
+    },
+    {
+      fieldname: "careerInterest",
+      label: "Career Interest",
+      fieldtype: "Data",
+      required: false,
+      placeholder: "Select career interests",
+      layout: "full",
+      multiSelect: true, // This makes it multi-select
+      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiParams: {
+        doctype: "Student Career Interest" // Updated doctype
+      },
+      mapOptions: (data) => {
+        console.log("Career Interest data received:", data);
+        const items = data.data || data || [];
+        return items.map((item: any) => ({
+          value: item.name,
+          label: item.name || item.career_interest_name
+        }));
+      }
+    },
+
+    {
+      fieldname: "resume",
+      label: "Resume (PDF only)",
+      fieldtype: "File",
+      required: false,
+      placeholder: "Upload your resume (PDF)",
+      layout: "full",
+      accept: ".pdf",
+    },
+    {
+      fieldname: "linkedinUrl",
+      label: "LinkedIn Profile URL",
+      fieldtype: "Data",
+      required: false,
+      placeholder: "https://linkedin.com/in/username",
+      layout: "half",
+      inputClassName: "font-mono text-sm"
+    },
+    {
+      fieldname: "githubUrl",
+      label: "GitHub Profile URL",
+      fieldtype: "Data",
+      required: false,
+      placeholder: "https://github.com/username",
+      layout: "half",
+      inputClassName: "font-mono text-sm"
     }
   ];
 
@@ -272,7 +462,7 @@ export default function StudentOnboarding({
       return;
     }
 
-    setLoading(true);
+    // setLoading(true);
     setError("");
     setSuccess("");
 
@@ -283,6 +473,7 @@ export default function StudentOnboarding({
       if (response?.message?.status === "success") {
         setSuccess(response.message.message || "OTP sent successfully");
         setEmailOtpSent(true);
+        setEmailTimer(120); // Start 2 minute timer
       } else {
         setError(response?.message?.message || "Failed to send OTP");
       }
@@ -290,12 +481,12 @@ export default function StudentOnboarding({
       console.error("Error sending email OTP:", err);
       setError(err?.response?.data?.message?.message || "Failed to send verification code");
     } finally {
-      setLoading(false);
+      // setLoading(false);
     }
   };
 
   const handleVerifyEmail = async () => {
-    setLoading(true);
+    // setLoading(true);
     setError("");
     setSuccess("");
 
@@ -315,7 +506,7 @@ export default function StudentOnboarding({
       const errorMessage = err?.response?.data?.message || "Verification failed";
       setError(errorMessage);
     } finally {
-      setLoading(false);
+      // setLoading(false);
     }
   };
 
@@ -334,7 +525,7 @@ export default function StudentOnboarding({
       return;
     }
 
-    setLoading(true);
+    // setLoading(true);
     setError("");
 
     try {
@@ -344,6 +535,7 @@ export default function StudentOnboarding({
       if (response?.message === "OTP sent successfully") {
         setSuccess(response.message);
         setMobileOtpSent(true);
+        setMobileTimer(120); // Start 2 minute timer
         if (response.data) {
           console.log("OTP received:", response.data);
         }
@@ -354,12 +546,12 @@ export default function StudentOnboarding({
       console.error("Error sending mobile OTP:", err);
       setError(err?.response?.data?.message || "Failed to send verification code");
     } finally {
-      setLoading(false);
+      // setLoading(false);
     }
   };
 
   const handleVerifyMobile = async () => {
-    setLoading(true);
+    // setLoading(true);
     setError("");
     setSuccess("");
 
@@ -378,7 +570,7 @@ export default function StudentOnboarding({
       console.error("Error verifying mobile OTP:", err);
       setError(err?.response?.data?.message || "Verification failed");
     } finally {
-      setLoading(false);
+      // setLoading(false);
     }
   };
 
@@ -389,13 +581,6 @@ export default function StudentOnboarding({
     if (!formData.emailVerified) {
       errors.email = "Please verify your email first";
     }
-    if (!formData.termsAccepted) {
-      errors.terms = "You must accept the Terms and Conditions";
-    }
-    if (!formData.privacyAccepted) {
-      errors.privacy = "You must accept the Privacy Policy";
-    }
-
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -431,7 +616,7 @@ export default function StudentOnboarding({
     }
   };
 
-  const validateStep3 = (): boolean => {
+  const validateStep3 = (): Record<string, string> => {
     const errors: Record<string, string> = {};
 
     const stateValidation = validateRequired(formData.state, "State");
@@ -459,7 +644,6 @@ export default function StudentOnboarding({
       errors.academicYear = yearValidation.error || "Academic year is required";
     }
 
-    // Add validation for new fields
     const streamValidation = validateRequired(formData.stream, "Stream");
     if (!streamValidation.isValid) {
       errors.stream = streamValidation.error || "Stream is required";
@@ -470,9 +654,9 @@ export default function StudentOnboarding({
       errors.course = courseValidation.error || "Course is required";
     }
 
-    const semesterValidation = validateRequired(formData.samester, "Semester");
+    const semesterValidation = validateRequired(formData.semester, "Semester");
     if (!semesterValidation.isValid) {
-      errors.samester = semesterValidation.error || "Semester is required";
+      errors.semester = semesterValidation.error || "Semester is required";
     }
 
     const dobValidation = validateRequired(formData.dateOfBirth, "Date of birth");
@@ -480,79 +664,120 @@ export default function StudentOnboarding({
       errors.dateOfBirth = dobValidation.error || "Date of birth is required";
     }
 
-    if (skills.length === 0) {
-      errors.skills = "Please add at least one course";
+    // Check if at least one course type is selected
+    if (formData.courses.length === 0) {
+      errors.courses = "Please select at least one course type";
     }
 
-    setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+    // Check if at least one skill is selected
+    if (formData.skills.length === 0) {
+      errors.skills = "Please select at least one skill";
+    }
+
+    // Check if at least one career interest is selected
+    if (formData.careerInterest.length === 0) {
+      errors.careerInterest = "Please select at least one career interest";
+    }
+    return errors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     console.log('handle submit')
     e.preventDefault();
 
-    // if (!validateStep3()) {
-    //   return;
-    // }
+    // Validate all fields
+    const validationErrors = validateStep3();
+
+    // If there are validation errors, show the first one and return
+    if (Object.keys(validationErrors).length > 0) {
+      // Set field errors to show under each field
+      setFieldErrors(validationErrors);
+
+      // Also show a general error message
+      const firstError = Object.values(validationErrors)[0];
+      setError(firstError);
+
+      // Scroll to the top to show the error
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
 
     setLoading(true);
-    setError("");
+    setError(""); // Clear any previous errors
+    setSuccess(""); // Clear any previous success messages
+    setFieldErrors({}); // Clear field errors
 
     try {
       // Format mobile number with country code
       const formattedMobile = `+91-${formData.mobileNo}`;
 
-      // Prepare the payload according to the API specification
+      // Format courses type as array of objects
+      const coursesTypeArray = (formData.courses || []).map((course: string) => ({
+        course_type: course
+      }));
+
+      // Format skills as array of objects
+      const skillsArray = (formData.skills || []).map((skill: string) => ({
+        skill: skill
+      }));
+
+      // Format career interests as array of objects
+      const careerInterestArray = (formData.careerInterest || []).map((interest: string) => ({
+        career_interest: interest
+      }));
+
+      // Extract just the number from academicYear (e.g., "2 Years" -> "2")
+      let academicYearValue = formData.academicYear || "1";
+      const numericMatch = academicYearValue.match(/\d+/);
+      academicYearValue = numericMatch ? numericMatch[0] : "1";
+
       const payload = {
         first_name: localStorage.getItem("userFirstName") || formData.firstName || "Test",
         last_name: localStorage.getItem("userLastName") || formData.lastName || "User",
         mobile_no: formattedMobile,
-        email_id: localStorage.getItem("userEmail") || formData.email,
-        // state: formData.state || "Maharashtra",
-        // district: formData.district || "Pune",
-        college: formData.college || "KIT",
-        department: formData.department || "Computer Science",
-        academic_year: formData.academicYear || "2025-2026",
-        course: formData.course || "Computer Science", // Static fallback
-        semester: formData.samester || "8", // Static fallback
-        date_of_birth: formData.dateOfBirth || "2005-01-25",
-        courses_type: skills.length > 0 ? skills.join(',') : "PG",
-        terms_and_conditions: formData.termsAccepted ? "accepted" : ""
+        email_id: localStorage.getItem("userEmail") || formData.email || "",
+        stream: formData.stream || "Engineering",
+        courses_type: coursesTypeArray.length > 0 ? coursesTypeArray : [{ course_type: "PG" }],
+        college: formData.college || "DRK",
+        course: formData.course || "BA",
+        department: formData.department || "Dispatch",
+        academic_year: academicYearValue,
+        semester: formData.semester || "1",
+        date_of_birth: formData.dateOfBirth || new Date().toISOString().split('T')[0],
+        skill: skillsArray.length > 0 ? skillsArray : [{ skill: "Creativity & innovation" }],
+        career_interest: careerInterestArray.length > 0 ? careerInterestArray : [{ career_interest: "Biotechnology / Genetics" }],
+        github: formData.githubUrl || "",
+        linkedin: formData.linkedinUrl || "",
+        resume: formData.resume || null
       };
 
       console.log("Submitting payload:", payload);
 
-      const response = await fetch(
-        `${BASE_URL}method/stridenex_app.api_stridenex_app.student.student.create_student`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify(payload),
-        }
-      );
+      // Call the createStudent service
+      const responseData = await createStudent(payload);
 
-      const responseData = await response.json();
       console.log("Registration response:", responseData);
 
-      // Check if registration was successful (adjust based on actual response structure)
-      if (response.ok || responseData?.message === "Student created successfully") {
-        setSuccess("Onboarding completed successfully!");
+      // Check if registration was successful (status 200)
+      if (responseData?.status === 200 || responseData?.message === "Student registered successfully") {
+        // Set success message (this will show in green Alert)
+        setSuccess(responseData?.message || "Student registered successfully!");
 
         // Clear onboarding-specific localStorage items
         localStorage.removeItem("userEmail");
         localStorage.removeItem("userFirstName");
         localStorage.removeItem("userLastName");
 
+        // Clear any errors
+        setError("");
+        setFieldErrors({});
+
         // Redirect to login page after a short delay
         setTimeout(() => {
           router.push("/login");
         }, 1500);
       } else {
-        // Handle error response
+        // Handle error response - this will show in red Alert
         const errorMsg = responseData?.message ||
           responseData?.error ||
           "Registration failed. Please try again.";
@@ -560,7 +785,13 @@ export default function StudentOnboarding({
       }
     } catch (err: any) {
       console.error("Error submitting onboarding data:", err);
-      setError(err?.message || "An error occurred during registration");
+
+      // Check if it's an axios error with response data
+      const errorMessage = err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        err?.message ||
+        "An error occurred during registration";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -609,6 +840,7 @@ export default function StudentOnboarding({
             onSubmit={() => { }}
             buttonLabel=""
             loading={loading}
+            initialValues={{ email: formData.email }} // Add this line
             onChange={(data) => {
               setSuccess('');
               setError('');
@@ -625,16 +857,28 @@ export default function StudentOnboarding({
           />
         </div>
 
-        {/* Show Send OTP button when email is not verified */}
-        {!formData.emailVerified && (
+        {/* Show Send OTP button or Resend button based on timer */}
+        {!formData.emailVerified && !emailOtpSent && (
           <Button
             type="button"
             onClick={handleSendEmailOTP}
-            disabled={!formData.email || loading}
+            disabled={!formData.email || emailTimer > 0} // Remove loading from disabled condition
             variant="accent"
-            className="mt-7 whitespace-nowrap" // mt-7 to align with input field
+            className="mt-7 whitespace-nowrap"
           >
-            Send OTP
+            {emailTimer > 0 ? `Resend in ${emailTimer}s` : "Send OTP"}
+          </Button>
+        )}
+
+        {emailOtpSent && !formData.emailVerified && (
+          <Button
+            type="button"
+            onClick={handleSendEmailOTP}
+            disabled={emailTimer > 0} // Remove loading from disabled condition
+            variant="accent"
+            className="mt-7 whitespace-nowrap"
+          >
+            {emailTimer > 0 ? `Resend in ${emailTimer}s` : "Resend OTP"}
           </Button>
         )}
       </div>
@@ -669,65 +913,28 @@ export default function StudentOnboarding({
           </div>
 
           {/* Resend OTP link */}
-          <div className="text-center">
+          {/* <div className="text-center">
             <button
               type="button"
               onClick={handleSendEmailOTP}
               className="text-xs text-accent hover:underline"
-              disabled={loading}
+              disabled={loading || emailTimer > 0}
             >
-              Didn't receive OTP? Resend
+              {emailTimer > 0 ? `Resend in ${emailTimer}s` : "Didn't receive OTP? Resend"}
             </button>
-          </div>
+          </div> */}
         </>
       )}
 
       {formData.emailVerified && (
-        <>
-          <div className="space-y-3 pt-2">
-            <div className="flex items-start gap-2">
-              <Checkbox
-                id="terms"
-                checked={formData.termsAccepted}
-                onCheckedChange={(checked) =>
-                  setFormData(prev => ({ ...prev, termsAccepted: checked as boolean }))
-                }
-              />
-              <div className="flex-1">
-                <Label htmlFor="terms" className="text-sm text-slate-700">
-                  I accept the Terms and Conditions *
-                </Label>
-                {fieldErrors.terms && <p className="text-xs text-red-500 mt-1">{fieldErrors.terms}</p>}
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
-              <Checkbox
-                id="privacy"
-                checked={formData.privacyAccepted}
-                onCheckedChange={(checked) =>
-                  setFormData(prev => ({ ...prev, privacyAccepted: checked as boolean }))
-                }
-              />
-              <div className="flex-1">
-                <Label htmlFor="privacy" className="text-sm text-slate-700">
-                  I agree to the Privacy Policy *
-                </Label>
-                {fieldErrors.privacy && <p className="text-xs text-red-500 mt-1">{fieldErrors.privacy}</p>}
-              </div>
-            </div>
-          </div>
-
-          {formData.termsAccepted && formData.privacyAccepted && (
-            <Button
-              type="button"
-              onClick={handleContinueToStep2}
-              variant="accent"
-              className="w-full"
-            >
-              Continue to Mobile Verification
-            </Button>
-          )}
-        </>
+        <Button
+          type="button"
+          onClick={handleContinueToStep2}
+          variant="accent"
+          className="w-full"
+        >
+          Continue to Mobile Verification
+        </Button>
       )}
     </div>
   );
@@ -770,16 +977,28 @@ export default function StudentOnboarding({
           />
         </div>
 
-        {/* Show Send OTP button when mobile is not verified */}
-        {!formData.mobileVerified && (
+        {/* Show Send OTP button or Resend button based on timer */}
+        {!formData.mobileVerified && !mobileOtpSent && (
           <Button
             type="button"
             onClick={handleSendMobileOTP}
-            disabled={!formData.mobileNo || formData.mobileNo.length !== 10 || loading}
+            disabled={!formData.mobileNo || formData.mobileNo.length !== 10 || loading || mobileTimer > 0}
             variant="accent"
             className="mt-7 whitespace-nowrap"
           >
-            Send OTP
+            {mobileTimer > 0 ? `Resend in ${mobileTimer}s` : "Send OTP"}
+          </Button>
+        )}
+
+        {mobileOtpSent && !formData.mobileVerified && (
+          <Button
+            type="button"
+            onClick={handleSendMobileOTP}
+            disabled={loading || mobileTimer > 0}
+            variant="accent"
+            className="mt-7 whitespace-nowrap"
+          >
+            {mobileTimer > 0 ? `Resend in ${mobileTimer}s` : "Resend OTP"}
           </Button>
         )}
       </div>
@@ -814,16 +1033,16 @@ export default function StudentOnboarding({
           </div>
 
           {/* Resend OTP link */}
-          <div className="text-center">
+          {/* <div className="text-center">
             <button
               type="button"
               onClick={handleSendMobileOTP}
               className="text-xs text-accent hover:underline"
-              disabled={loading}
+              disabled={loading || mobileTimer > 0}
             >
-              Didn't receive OTP? Resend
+              {mobileTimer > 0 ? `Resend in ${mobileTimer}s` : "Didn't receive OTP? Resend"}
             </button>
-          </div>
+          </div> */}
         </>
       )}
 
@@ -865,9 +1084,15 @@ export default function StudentOnboarding({
           academicYear: formData.academicYear,
           stream: formData.stream,
           course: formData.course,
-          samester: formData.samester,
+          semester: formData.semester,
           dateOfBirth: formData.dateOfBirth,
-          courses: skills
+          courses: formData.courses,
+          skills: formData.skills,
+          careerInterest: formData.careerInterest,
+          gender: formData.gender,
+          resume: formData.resume,
+          linkedinUrl: formData.linkedinUrl,
+          githubUrl: formData.githubUrl
         }}
 
         onChange={(data) => {
@@ -877,54 +1102,111 @@ export default function StudentOnboarding({
           if (data.state !== formData.state) {
             console.log("State changed from", formData.state, "to", data.state);
 
-            // Reset district and maybe college when state changes
             setFormData(prev => ({
               ...prev,
               state: data.state || prev.state,
               district: "", // Reset district
-              college: data.college || prev.college,
-              department: data.department || prev.department,
-              academicYear: data.academicYear || prev.academicYear,
+              college: "", // Reset college
+              department: "", // Reset department
+              academicYear: "", // Reset academic year
+              course: "", // Reset course
+              semester: "", // Reset semester
               stream: data.stream || prev.stream,
-              course: data.course || prev.course,
-              samester: data.samester || prev.samester,
-              dateOfBirth: data.dateOfBirth || prev.dateOfBirth
+              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
+              skills: data.skills || prev.skills,
+              careerInterest: data.careerInterest || prev.careerInterest,
+              gender: data.gender || prev.gender,
+              resume: data.resume || prev.resume,
+              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
+              githubUrl: data.githubUrl || prev.githubUrl
+            }));
+          }
+          // Check if district changed
+          else if (data.district !== formData.district) {
+            console.log("District changed from", formData.district, "to", data.district);
+
+            setFormData(prev => ({
+              ...prev,
+              district: data.district || prev.district,
+              college: "", // Reset college
+              department: "", // Reset department
+              academicYear: "", // Reset academic year
+              course: "", // Reset course
+              semester: "", // Reset semester
+              state: data.state || prev.state,
+              stream: data.stream || prev.stream,
+              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
+              skills: data.skills || prev.skills,
+              careerInterest: data.careerInterest || prev.careerInterest,
+              gender: data.gender || prev.gender,
+              resume: data.resume || prev.resume,
+              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
+              githubUrl: data.githubUrl || prev.githubUrl
+            }));
+          }
+          // Check if stream changed
+          else if (data.stream !== formData.stream) {
+            console.log("Stream changed from", formData.stream, "to", data.stream);
+
+            setFormData(prev => ({
+              ...prev,
+              stream: data.stream || prev.stream,
+              college: "", // Reset college
+              department: "", // Reset department
+              academicYear: "", // Reset academic year
+              course: "", // Reset course
+              semester: "", // Reset semester
+              state: data.state || prev.state,
+              district: data.district || prev.district,
+              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
+              skills: data.skills || prev.skills,
+              careerInterest: data.careerInterest || prev.careerInterest,
+              gender: data.gender || prev.gender,
+              resume: data.resume || prev.resume,
+              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
+              githubUrl: data.githubUrl || prev.githubUrl
             }));
           }
           // Check if college changed
           else if (data.college !== formData.college) {
             console.log("College changed from", formData.college, "to", data.college);
 
-            // Reset department and academic year when college changes
             setFormData(prev => ({
               ...prev,
+              college: data.college || prev.college,
+              department: "", // Reset department
+              academicYear: "", // Reset academic year
+              course: "", // Reset course
+              semester: "", // Reset semester
               state: data.state || prev.state,
               district: data.district || prev.district,
-              college: data.college || prev.college,
-              department: "",
-              academicYear: "",
               stream: data.stream || prev.stream,
-              course: data.course || prev.course,
-              samester: data.samester || prev.samester,
-              dateOfBirth: data.dateOfBirth || prev.dateOfBirth
+              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
+              skills: data.skills || prev.skills,
+              careerInterest: data.careerInterest || prev.careerInterest,
+              gender: data.gender || prev.gender,
+              resume: data.resume || prev.resume,
+              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
+              githubUrl: data.githubUrl || prev.githubUrl
             }));
 
-            // Clear any department-related errors
             setFieldErrors(prev => {
               const newErrors = { ...prev };
               delete newErrors.department;
               delete newErrors.academicYear;
+              delete newErrors.course;
+              delete newErrors.semester;
               return newErrors;
             });
 
-            // Remove department from fetched fields so it fetches again
             fetchedFieldsRef.current.delete('department');
+            fetchedFieldsRef.current.delete('course');
+            fetchedFieldsRef.current.delete('semester');
           }
           // Check if department changed
           else if (data.department !== formData.department && data.department) {
             console.log("Department changed from", formData.department, "to", data.department);
 
-            // Find the selected department in our stored options
             const selectedDept = departmentOptions.find(
               dept => dept.value === data.department
             );
@@ -934,18 +1216,75 @@ export default function StudentOnboarding({
             const academicYearValue = selectedDept ? `${selectedDept.academicYears} Years` : "";
             console.log("Setting academic year to:", academicYearValue);
 
-            // Update form data with department and its academic years
             setFormData(prev => ({
               ...prev,
+              department: data.department,
+              academicYear: academicYearValue,
+              semester: "", // Reset semester when department changes
+              course: data.course || prev.course,
               state: data.state || prev.state,
               district: data.district || prev.district,
               college: data.college || prev.college,
-              department: data.department,
-              academicYear: academicYearValue,
+              stream: data.stream || prev.stream,
+              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
+              skills: data.skills || prev.skills,
+              careerInterest: data.careerInterest || prev.careerInterest,
+              gender: data.gender || prev.gender,
+              resume: data.resume || prev.resume,
+              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
+              githubUrl: data.githubUrl || prev.githubUrl
+            }));
+
+            setFieldErrors(prev => {
+              const newErrors = { ...prev };
+              delete newErrors.semester;
+              return newErrors;
+            });
+          }
+          // Check if course changed
+          else if (data.course !== formData.course && data.course) {
+            console.log("Course changed from", formData.course, "to", data.course);
+
+            setFormData(prev => ({
+              ...prev,
+              course: data.course,
+              semester: "", // Reset semester when course changes
+              state: data.state || prev.state,
+              district: data.district || prev.district,
+              college: data.college || prev.college,
+              department: data.department || prev.department,
+              academicYear: data.academicYear || prev.academicYear,
+              stream: data.stream || prev.stream,
+              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
+              skills: data.skills || prev.skills,
+              careerInterest: data.careerInterest || prev.careerInterest,
+              gender: data.gender || prev.gender,
+              resume: data.resume || prev.resume,
+              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
+              githubUrl: data.githubUrl || prev.githubUrl
+            }));
+          }
+          // Check if semester changed
+          else if (data.semester !== formData.semester && data.semester) {
+            console.log("Semester changed from", formData.semester, "to", data.semester);
+
+            setFormData(prev => ({
+              ...prev,
+              semester: data.semester,
+              state: data.state || prev.state,
+              district: data.district || prev.district,
+              college: data.college || prev.college,
+              department: data.department || prev.department,
+              academicYear: data.academicYear || prev.academicYear,
               stream: data.stream || prev.stream,
               course: data.course || prev.course,
-              samester: data.samester || prev.samester,
-              dateOfBirth: data.dateOfBirth || prev.dateOfBirth
+              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
+              skills: data.skills || prev.skills,
+              careerInterest: data.careerInterest || prev.careerInterest,
+              gender: data.gender || prev.gender,
+              resume: data.resume || prev.resume,
+              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
+              githubUrl: data.githubUrl || prev.githubUrl
             }));
           }
           else {
@@ -959,14 +1298,26 @@ export default function StudentOnboarding({
               academicYear: data.academicYear || prev.academicYear,
               stream: data.stream || prev.stream,
               course: data.course || prev.course,
-              samester: data.samester || prev.samester,
-              dateOfBirth: data.dateOfBirth || prev.dateOfBirth
+              semester: data.semester || prev.semester,
+              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
+              courses: data.courses || prev.courses,
+              skills: data.skills || prev.skills,
+              careerInterest: data.careerInterest || prev.careerInterest,
+              gender: data.gender || prev.gender,
+              resume: data.resume || prev.resume,
+              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
+              githubUrl: data.githubUrl || prev.githubUrl
             }));
           }
 
-          // Update skills for multi-select
-          if (data.courses) {
-            setSkills(data.courses);
+          // Update skills for multi-select (if you have a separate skills field)
+          if (data.skills) {
+            setSkills(data.skills);
+          }
+
+          // Update career interest if it's separate
+          if (data.careerInterest) {
+            // Handle career interest state if you have one
           }
         }}
       />
@@ -1012,7 +1363,7 @@ export default function StudentOnboarding({
       {/* Error Message */}
       {error && (
         <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{String(error)}</AlertDescription>
         </Alert>
       )}
 

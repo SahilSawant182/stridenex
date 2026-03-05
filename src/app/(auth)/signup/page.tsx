@@ -10,6 +10,8 @@ import AuthLayout from "../AuthLayout";
 import { useAuth } from "@/context/AuthContext";
 import DynamicForm from "@/components/forms/DynamicForm";
 import { FormField } from "@/types/doctypes.types";
+import { Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
 
 export default function SignupPage() {
   const [bgImage, setBgImage] = useState<string | null>(null);
@@ -18,8 +20,10 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [formValues, setFormValues] = useState<any>(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const { isAuthenticated, login } = useAuth(); // Make sure login is available from your auth context
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -28,7 +32,27 @@ export default function SignupPage() {
     }
   }, [isAuthenticated, router]);
 
-  // ONLY 5 FIELDS
+  // Password validation function
+  const validatePasswordStrength = (password: string): { isValid: boolean; message: string } => {
+    if (password.length < 8) {
+      return { isValid: false, message: "Password must be at least 8 characters long" };
+    }
+    if (!/[A-Z]/.test(password)) {
+      return { isValid: false, message: "Password must contain at least one uppercase letter" };
+    }
+    if (!/[a-z]/.test(password)) {
+      return { isValid: false, message: "Password must contain at least one lowercase letter" };
+    }
+    if (!/[0-9]/.test(password)) {
+      return { isValid: false, message: "Password must contain at least one number" };
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      return { isValid: false, message: "Password must contain at least one special character" };
+    }
+    return { isValid: true, message: "" };
+  };
+
+  // Update the form fields with custom input for password fields
   const signupFields: FormField[] = [
     {
       fieldname: "firstName",
@@ -80,6 +104,13 @@ export default function SignupPage() {
     // Simple validation
     if (!data.firstName || !data.lastName || !data.email || !data.password || !data.confirmPassword) {
       setError("All fields are required");
+      return;
+    }
+
+    // Password strength validation
+    const passwordValidation = validatePasswordStrength(data.password);
+    if (!passwordValidation.isValid) {
+      setError(passwordValidation.message);
       return;
     }
 
@@ -136,6 +167,54 @@ export default function SignupPage() {
       });
   };
 
+  // Custom password input component for DynamicForm
+  const PasswordInput = ({ field, value, onChange, showPassword, toggleShow }: any) => (
+    <div className="relative">
+      <input
+        type={showPassword ? "text" : "password"}
+        placeholder={field.placeholder}
+        value={value || ""}
+        onChange={(e) => onChange(field.fieldname, e.target.value)}
+        className="w-full px-3 py-2 bg-white border rounded-lg focus:ring-2 focus:ring-accent focus:border-accent transition-all text-sm text-slate-900 placeholder:text-slate-400 border-slate-200 pr-10"
+        required={field.required}
+      />
+      <button
+        type="button"
+        onClick={toggleShow}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+      >
+        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+      </button>
+    </div>
+  );
+
+  // Override the Password field rendering in DynamicForm
+  const renderPasswordField = (field: FormField, value: any, onChange: any) => {
+    if (field.fieldname === "password") {
+      return (
+        <PasswordInput
+          field={field}
+          value={value}
+          onChange={onChange}
+          showPassword={showPassword}
+          toggleShow={() => setShowPassword(!showPassword)}
+        />
+      );
+    }
+    if (field.fieldname === "confirmPassword") {
+      return (
+        <PasswordInput
+          field={field}
+          value={value}
+          onChange={onChange}
+          showPassword={showConfirmPassword}
+          toggleShow={() => setShowConfirmPassword(!showConfirmPassword)}
+        />
+      );
+    }
+    return null;
+  };
+
   return (
     <AuthLayout
       title="Create Your Account"
@@ -147,16 +226,16 @@ export default function SignupPage() {
       bgImage={bgImage}
     >
       <div className="space-y-5">
-        {/* Form with 5 fields - no button */}
+        {/* Form with 5 fields */}
         <DynamicForm
           fields={signupFields}
-          onSubmit={() => { }} // Empty onSubmit
-          buttonLabel="" // No button from DynamicForm
+          onSubmit={() => { }}
+          buttonLabel=""
           loading={loading}
           onChange={handleFormChange}
         />
 
-        {/* Terms Checkbox - ABOVE the button */}
+        {/* Terms Checkbox */}
         <div className="flex items-start gap-3">
           <Checkbox
             id="terms"
@@ -166,14 +245,21 @@ export default function SignupPage() {
           />
           <Label htmlFor="terms" className="text-sm text-slate-600 leading-relaxed">
             I agree to the{" "}
-            <a href="/legal/terms-of-use.pdf"
+            <Link
+              href="/terms-of-use"
               target="_blank"
-              rel="noopener noreferrer"
-              className="text-accent hover:text-orange-600 font-medium">Terms of Use</a>{" "}
+              className="text-accent hover:text-orange-600 font-medium"
+            >
+              Terms of Use
+            </Link>{" "}
             and{" "}
-            <a href="/legal/privacy-policy.pdf"
+            <Link
+              href="/privacy-policy"
               target="_blank"
-              rel="noopener noreferrer" className="text-accent hover:text-orange-600 font-medium">Privacy Policy</a>
+              className="text-accent hover:text-orange-600 font-medium"
+            >
+              Privacy Policy
+            </Link>
           </Label>
         </div>
 

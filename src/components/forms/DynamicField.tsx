@@ -2,7 +2,7 @@
 
 import { FormField } from "@/types/doctypes.types";
 import { useState, useEffect, useRef } from "react";
-import { ChevronDown, X, Check } from "lucide-react";
+import { ChevronDown, X, Check, Eye, EyeOff } from "lucide-react";
 import axios from "axios";
 
 interface Props {
@@ -39,49 +39,103 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // useEffect(() => {
+  //   // Pre-fetch data for all dropdowns when component mounts
+  //   if (field.apiEndpoint && !fetched && !loading && !fetchError) {
+  //     fetchOptions();
+  //   }
+  // }, []);
+
   const fetchOptions = async () => {
     if (!field.apiEndpoint) return;
 
     setLoading(true);
     setFetchError("");
     try {
-      const response = await axios.get(field.apiEndpoint, { params: field.apiParams });
+      let response;
+      let responseData;
 
-      // Handle the consistent response structure: { message: string, data: array }
-      const responseData = response.data;
+      // Check if this is frappe.client.get_list (GET request with params)
+      if (field.apiEndpoint.includes('frappe.client.get_list')) {
+        response = await axios.get(field.apiEndpoint, {
+          params: field.apiParams || {},
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          }
+        });
+        responseData = response.data;
+      }
+      // Check if this is the master_data API (needs POST)
+      else if (field.apiEndpoint.includes('master.get_master_data')) {
+        response = await axios.post(field.apiEndpoint, field.apiParams || {}, {
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          }
+        });
+        responseData = response.data;
+      }
+      else {
+        // Regular GET request for other APIs
+        response = await axios.get(field.apiEndpoint, { params: field.apiParams });
+        responseData = response.data;
+      }
 
-      // Check if we have data array in the response
-      if (responseData.data && Array.isArray(responseData.data)) {
-        const mappedOptions = field.mapOptions ? field.mapOptions(responseData) :
-          responseData.data.map((item: any) => ({
-            value: item.name || item.value || item.department,
-            label: item.label || item.name || item.college_name || item.department
-          }));
-        setOptions(mappedOptions);
-        setFetched(true);
+      console.log(`API Response for ${field.fieldname}:`, responseData);
 
-        // If there's a message but empty data, show appropriate message
-        if (responseData.data.length === 0) {
-          setFetchError(responseData.message || "No options available");
-        }
+      // Handle different response structures
+      let data = [];
+
+      if (Array.isArray(responseData)) {
+        data = responseData;
+      } else if (responseData.data && Array.isArray(responseData.data)) {
+        data = responseData.data;
+      } else if (responseData.message && Array.isArray(responseData.message)) {
+        data = responseData.message;
       } else {
+        console.warn("Unexpected API response structure:", responseData);
         setOptions([]);
-        setFetchError(responseData.message || "No data available");
+        setFetchError("No data available");
+        setLoading(false);
+        return;
+      }
+
+      if (data.length > 0) {
+        let mappedOptions;
+
+        if (field.mapOptions) {
+          mappedOptions = field.mapOptions(data);
+        } else {
+          mappedOptions = data.map((item: any) => ({
+            value: item.name || item.value,
+            label: item.label || item.name || item.district_name
+          }));
+        }
+
+        console.log(`Mapped options for ${field.fieldname}:`, mappedOptions);
+        setOptions(mappedOptions);
+        setFetched(true); // Still set fetched to true, but we'll ignore it in handleDropdownClick
+      } else {
+        console.log(`No data found for ${field.fieldname}`);
+        setOptions([]);
+        setFetchError("No options available");
       }
     } catch (err: any) {
       console.error(`Error fetching ${field.label}:`, err);
-      setFetchError(err?.response?.data?.message || `Failed to load ${field.label}`);
+      setFetchError(err?.response?.data?.message || `Failed to load ${field.fieldname}`);
       setOptions([]);
     } finally {
       setLoading(false);
     }
   };
 
+
   const handleDropdownClick = () => {
     if (field.read_only || field.disabled) return;
 
-    // Always fetch when clicked, regardless of fetched state
-    // This ensures we get fresh data every time
+    // Always fetch when clicked to get fresh data
+    // This is especially important for dependent dropdowns
     if (!loading && !fetchError) {
       fetchOptions();
     }
@@ -142,6 +196,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
   if (field.hidden) return null;
 
   const renderField = () => {
+
     // API Dropdown (Single or Multi select)
     if (field.apiEndpoint) {
       return (
@@ -172,7 +227,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
               </div>
             ) : (
               <span className={`flex-1 truncate ${!value && !field.multiSelect ? "text-slate-400" : ""}`}>
-                {loading ? "Loading..." : fetchError ? "Failed to load" : field.multiSelect ? field.placeholder || "Select options" : getSelectedLabel()}
+                {fetchError ? "Failed to load" : field.multiSelect ? field.placeholder || "Select options" : getSelectedLabel()}
               </span>
             )}
             <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`} />
@@ -222,9 +277,9 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
           )}
 
           {/* Loading and error states */}
-          {loading && (
+          {/* {loading && (
             <p className="text-xs text-slate-400 mt-1">Fetching {field.label.toLowerCase()}...</p>
-          )}
+          )} */}
 
           {fetchError && !loading && (
             <div className="mt-1">
@@ -245,16 +300,27 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
     // Regular field types
     switch (field.fieldtype) {
       case "Password":
+        const [showPassword, setShowPassword] = useState(false);
+
         return (
-          <input
-            type="password"
-            placeholder={field.placeholder}
-            value={value || ""}
-            onChange={(e) => onChange(field.fieldname, e.target.value)}
-            className={baseInputClasses}
-            disabled={field.read_only}
-            required={field.required}
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder={field.placeholder}
+              value={value || ""}
+              onChange={(e) => onChange(field.fieldname, e.target.value)}
+              className={baseInputClasses + " pr-10"}
+              disabled={field.read_only}
+              required={field.required}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
         );
 
       case "Select":
@@ -369,6 +435,86 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
             required={field.required}
             maxLength={field.maxLength}
           />
+        );
+
+      case "File":
+        const fileInputRef = useRef<HTMLInputElement>(null);
+        const [fileName, setFileName] = useState<string>("");
+
+        const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            // Check if file is PDF
+            if (file.type !== 'application/pdf') {
+              alert('Please upload only PDF files');
+              if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+              }
+              return;
+            }
+
+            // Check file size (optional - limit to 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+              alert('File size should be less than 5MB');
+              if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+              }
+              return;
+            }
+
+            setFileName(file.name);
+            onChange(field.fieldname, file); // Store the File object
+          } else {
+            setFileName("");
+            onChange(field.fieldname, null);
+          }
+        };
+
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".pdf,application/pdf"
+                  onChange={handleFileChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  disabled={field.read_only}
+                />
+                <div className={`w-full px-3 py-2 bg-white border rounded-lg text-sm text-slate-900 flex items-center justify-between ${error ? "border-red-500" : "border-slate-200"} ${field.read_only ? "bg-slate-50 cursor-not-allowed" : "cursor-pointer hover:border-accent transition-colors"}`}>
+                  <span className={`truncate ${fileName ? "text-slate-900" : "text-slate-400"}`}>
+                    {fileName || field.placeholder || "Choose file..."}
+                  </span>
+                  <span className="text-xs bg-accent/10 text-accent px-2 py-1 rounded">
+                    Browse
+                  </span>
+                </div>
+              </div>
+            </div>
+            {fileName && (
+              <div className="flex items-center gap-2 text-xs text-emerald-600">
+                <span>✓</span>
+                <span className="truncate">{fileName}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFileName("");
+                    onChange(field.fieldname, null);
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = '';
+                    }
+                  }}
+                  className="text-red-500 hover:text-red-700 ml-auto"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
+            {field.description && (
+              <p className="text-xs text-slate-500 mt-1">{field.description}</p>
+            )}
+          </div>
         );
     }
   };
