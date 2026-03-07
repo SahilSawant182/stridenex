@@ -22,6 +22,7 @@ export default function SignupPage() {
   const [formValues, setFormValues] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const { isAuthenticated } = useAuth();
   const router = useRouter();

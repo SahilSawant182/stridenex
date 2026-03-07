@@ -12,6 +12,7 @@ interface Props {
   onChange?: (data: any) => void;
   onFieldData?: (fieldname: string, options: any[]) => void;
   initialValues?: Record<string, any>;
+  errors?: Record<string, string>; 
 }
 
 export default function DynamicForm({
@@ -21,6 +22,7 @@ export default function DynamicForm({
   loading = false,
   onChange,
   initialValues = {},
+  errors
 }: Props) {
   const [formData, setFormData] = useState<Record<string, any>>(initialValues);
 
@@ -71,7 +73,6 @@ export default function DynamicForm({
         // Render current row and start new one
         if (currentRow.length > 0) {
           rows.push(
-            // FIXED: Make grid responsive - 1 column on mobile, 2 columns on desktop
             <div key={rows.length} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {currentRow.map((f) => (
                 <div key={f.fieldname} className={f.layout === 'half' ? 'md:col-span-1 col-span-1' : 'md:col-span-2 col-span-1'}>
@@ -79,6 +80,7 @@ export default function DynamicForm({
                     field={f}
                     value={formData[f.fieldname]}
                     onChange={handleChange}
+                    error={errors?.[f.fieldname]} // ✅ Fixed: Added error prop
                   />
                 </div>
               ))}
@@ -96,7 +98,6 @@ export default function DynamicForm({
     // Render last row
     if (currentRow.length > 0) {
       rows.push(
-        // FIXED: Make grid responsive - 1 column on mobile, 2 columns on desktop
         <div key={rows.length} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {currentRow.map((f) => (
             <div key={f.fieldname} className={f.layout === 'half' ? 'md:col-span-1 col-span-1' : 'md:col-span-2 col-span-1'}>
@@ -104,6 +105,7 @@ export default function DynamicForm({
                 field={f}
                 value={formData[f.fieldname]}
                 onChange={handleChange}
+                error={errors?.[f.fieldname]} // ✅ Fixed: Added error prop
               />
             </div>
           ))}
@@ -115,25 +117,25 @@ export default function DynamicForm({
   };
 
   return (
-  <div
-    onSubmit={(e) => {
-      e.preventDefault();
-      onSubmit(formData);
-    }}
-    className="space-y-4"
-  >
-    {renderFields()}
-    
-    {/* Only render button if buttonLabel is not empty */}
-    {buttonLabel && buttonLabel !== "" && (
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full bg-accent hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
-      >
-        {loading ? "Loading..." : buttonLabel}
-      </button>
-    )}
-  </div>
-);
+    <div
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSubmit(formData);
+      }}
+      className="space-y-4"
+    >
+      {renderFields()}
+      
+      {/* Only render button if buttonLabel is not empty */}
+      {buttonLabel && buttonLabel !== "" && (
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-accent hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+        >
+          {loading ? "Loading..." : buttonLabel}
+        </button>
+      )}
+    </div>
+  );
 }

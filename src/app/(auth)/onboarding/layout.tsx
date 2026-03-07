@@ -8,4 +8,4 @@ export default function OnboardingLayout({
       {children}
     </div>
   );
-}
+} 

@@ -627,6 +627,7 @@ export default function IndustryOnboarding({
                     buttonLabel=""
                     loading={loading}
                     initialValues={formData}
+                    errors={fieldErrors}
                     onChange={(data) => {
                         setFormData(prev => ({
                             ...prev,
@@ -738,9 +739,13 @@ export default function IndustryOnboarding({
                 placeholder: "Select Taluka",
                 layout: "half",
                 apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-                apiParams: {
-                    doctype: "Tahsil"
-                },
+                apiParams: formData.state ? {
+                    doctype: "Tahsil",
+                    fields: ["name", "tahsil_name"],
+                    filters: [["district", "=", formData.district]],
+                    order_by: "tahsil_name asc",
+                    limit_page_length: 1000
+                } : undefined,
                 mapOptions: (data) => {
                     return data.map((tahsil: any) => ({
                         value: tahsil.name,
@@ -756,9 +761,13 @@ export default function IndustryOnboarding({
                 placeholder: "Select City",
                 layout: "half",
                 apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-                apiParams: {
-                    doctype: "City"
-                },
+                apiParams: formData.state ? {
+                    doctype: "City",
+                    fields: ["name", "city_name"],
+                    filters: [["tahsil", "=", formData.tahsil]],
+                    order_by: "city_name asc",
+                    limit_page_length: 1000
+                } : undefined,
                 mapOptions: (data) => {
                     return data.map((city: any) => ({
                         value: city.name,
@@ -802,6 +811,7 @@ export default function IndustryOnboarding({
                     buttonLabel=""
                     loading={loading}
                     initialValues={formData}
+                    errors={fieldErrors}
                     onChange={(data) => {
                         setFormData(prev => ({
                             ...prev,

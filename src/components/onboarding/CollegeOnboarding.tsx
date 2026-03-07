@@ -222,6 +222,20 @@ export default function CollegeOnboarding({
     }
   };
 
+  const removeContactPerson = (index: number) => {
+    if (contactPersons.length > 1) {
+      const updated = contactPersons.filter((_, i) => i !== index);
+      setContactPersons(updated);
+    }
+  };
+
+  const removeCourse = (index: number) => {
+    if (courses.length > 1) {
+      const updated = courses.filter((_, i) => i !== index);
+      setCourses(updated);
+    }
+  };
+
   const handleContactPersonChange = (index: number, field: keyof ContactPerson, value: string) => {
     const updated = [...contactPersons];
     updated[index] = { ...updated[index], [field]: value };
@@ -357,18 +371,18 @@ export default function CollegeOnboarding({
   const validateStep3 = (): boolean => {
     const errors: Record<string, string> = {};
 
+    // Validate streams - at least one must be selected
+    const validCourses = courses.filter(course => course.stream);
+    if (validCourses.length === 0) {
+      errors.courses = "Please select at least one stream";
+    }
+
     // Validate contact persons
     const invalidContact = contactPersons.some(
       person => !person.name || !person.designation || !person.contact_no
     );
     if (invalidContact) {
       errors.contactPersons = "All contact person fields are required";
-    }
-
-    // Validate courses
-    const invalidCourse = courses.some(course => !course.stream);
-    if (invalidCourse) {
-      errors.courses = "All course fields are required";
     }
 
     setFieldErrors(errors);
@@ -379,7 +393,7 @@ export default function CollegeOnboarding({
     if (validateStep1()) {
       setCurrentStep(2);
       setSuccess("");
-      setFieldErrors({});
+      // setFieldErrors({});
     }
   };
 
@@ -387,7 +401,7 @@ export default function CollegeOnboarding({
     if (validateStep2()) {
       setCurrentStep(3);
       setSuccess("");
-      setFieldErrors({});
+      // setFieldErrors({});
     }
   };
 
@@ -395,14 +409,14 @@ export default function CollegeOnboarding({
     setCurrentStep(1);
     setSuccess("");
     setError("");
-    setFieldErrors({});
+    // setFieldErrors({});
   };
 
   const goToStep2 = () => {
     setCurrentStep(2);
     setSuccess("");
     setError("");
-    setFieldErrors({});
+    // setFieldErrors({});
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -531,7 +545,7 @@ export default function CollegeOnboarding({
         fieldtype: "Data",
         required: true,
         placeholder: "Enter college name",
-        layout: "half"
+        layout: "full"
       },
       {
         fieldname: "email",
@@ -539,7 +553,7 @@ export default function CollegeOnboarding({
         fieldtype: "Data",
         required: true,
         placeholder: "Enter college email address",
-        layout: "half"
+        layout: "full"
       },
       {
         fieldname: "college_code",
@@ -547,8 +561,50 @@ export default function CollegeOnboarding({
         fieldtype: "Data",
         required: false,
         placeholder: "Enter registration number",
-        layout: "half"
+        layout: "full"
       },
+
+    ];
+
+    return (
+      <div className="space-y-4">
+        <DynamicForm
+          fields={step1Fields}
+          onSubmit={() => { }}
+          buttonLabel=""
+          loading={loading}
+          initialValues={formData}
+          errors={fieldErrors}
+          onChange={(data) => {
+            setFormData(prev => ({
+              ...prev,
+              ...data
+            }));
+            // Only clear errors for the specific field that was changed
+            const updatedErrors = { ...fieldErrors };
+            Object.keys(data).forEach(key => {
+              delete updatedErrors[key];
+            });
+            setFieldErrors(updatedErrors);
+            setError("");
+          }}
+        />
+
+        <Button
+          type="button"
+          onClick={handleContinueToStep2}
+          variant="accent"
+          className="w-full"
+          disabled={loading}
+        >
+          Continue to Location Details
+        </Button>
+      </div>
+    );
+  };
+
+  const renderStep2 = () => {
+    const step2Fields: FormField[] = [
       {
         fieldname: "country",
         label: "Country",
@@ -568,51 +624,6 @@ export default function CollegeOnboarding({
           }));
         }
       },
-      {
-        fieldname: "approvedStatus",
-        label: "Approved Status (Workflow)",
-        fieldtype: "Select",
-        required: true,
-        placeholder: "Select Approved Status",
-        layout: "half",
-        options: ["Pending", "Approved", "Rejected"]
-      }
-    ];
-
-    return (
-      <div className="space-y-4">
-        <DynamicForm
-          fields={step1Fields}
-          onSubmit={() => { }}
-          buttonLabel=""
-          loading={loading}
-          initialValues={formData}
-          onChange={(data) => {
-            setFormData(prev => ({
-              ...prev,
-              ...data
-            }));
-            setFieldErrors({});
-            setError("");
-          }}
-        />
-
-        {/* Only Continue button here - no Back button on step 1 */}
-        <Button
-          type="button"
-          onClick={handleContinueToStep2}
-          variant="accent"
-          className="w-full"
-          disabled={loading}
-        >
-          Continue to Location Details
-        </Button>
-      </div>
-    );
-  };
-
-  const renderStep2 = () => {
-    const step2Fields: FormField[] = [
       {
         fieldname: "state",
         label: "State",
@@ -664,9 +675,13 @@ export default function CollegeOnboarding({
         placeholder: "Select Taluka",
         layout: "half",
         apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-        apiParams: {
-          doctype: "Tahsil"
-        },
+        apiParams: formData.state ? {
+          doctype: "Tahsil",
+          fields: ["name", "tahsil_name"],
+          filters: [["district", "=", formData.district]],
+          order_by: "tahsil_name asc",
+          limit_page_length: 1000
+        } : undefined,
         mapOptions: (data) => {
           console.log("Taluka data received in mapOptions:", data);
           return data.map((tahsil: any) => ({
@@ -683,9 +698,13 @@ export default function CollegeOnboarding({
         placeholder: "Select City",
         layout: "half",
         apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-        apiParams: {
-          doctype: "City"
-        },
+        apiParams: formData.state ? {
+          doctype: "City",
+          fields: ["name", "city_name"],
+          filters: [["tahsil", "=", formData.tahsil]],
+          order_by: "city_name asc",
+          limit_page_length: 1000
+        } : undefined,
         mapOptions: (data) => {
           console.log("City data received in mapOptions:", data);
           return data.map((city: any) => ({
@@ -738,264 +757,251 @@ export default function CollegeOnboarding({
         fieldtype: "Data",
         required: false,
         placeholder: "https://www.college.edu",
-        layout: "full",
+        layout: "half",
         inputClassName: "font-mono text-sm"
       }
     ];
 
     return (
-      <div className="space-y-4">
-        <DynamicForm
-          fields={step2Fields}
-          onSubmit={() => { }}
-          buttonLabel=""
-          loading={loading}
-          initialValues={formData}
-          onChange={(data) => {
-            setFormData(prev => ({
-              ...prev,
-              ...data
-            }));
-            setFieldErrors({});
-            setError("");
-          }}
-        />
+    <div className="space-y-4">
+      <DynamicForm
+        fields={step2Fields}
+        onSubmit={() => {}}
+        buttonLabel=""
+        loading={loading}
+        initialValues={formData}
+        errors={fieldErrors}
+        onChange={(data) => {
+          setFormData(prev => ({
+            ...prev,
+            ...data
+          }));
+          // Only clear errors for the specific field that was changed
+          const updatedErrors = { ...fieldErrors };
+          Object.keys(data).forEach(key => {
+            delete updatedErrors[key];
+          });
+          setFieldErrors(updatedErrors);
+          setError("");
+        }}
+      />
 
-        {/* Buttons - Back is small, Continue is large (flex-1) like student onboarding */}
-        <div className="flex gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={goToStep1}
-          >
-            Back
-          </Button>
-          <Button
-            type="button"
-            onClick={handleContinueToStep3}
-            variant="accent"
-            className="flex-1"
-            disabled={loading}
-          >
-            Continue to Contact & Courses
-          </Button>
-        </div>
+      <div className="flex gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={goToStep1}
+        >
+          Back
+        </Button>
+        <Button
+          type="button"
+          onClick={handleContinueToStep3}
+          variant="accent"
+          className="flex-1"
+          disabled={loading}
+        >
+          Continue to Contact & Courses
+        </Button>
       </div>
-    );
+    </div>
+  );
+
   };
 
-  const renderStep3 = () => (
-    <div className="space-y-4">
-      {/* Is Active Checkbox */}
-      <div className="p-4 bg-slate-50 rounded-lg">
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="isActive"
-            checked={formData.isActive}
-            onCheckedChange={(checked) =>
-              setFormData(prev => ({ ...prev, isActive: checked as boolean }))
-            }
-          />
-          <Label htmlFor="isActive" className="text-sm font-medium text-slate-700 cursor-pointer">
-            Is Active
-          </Label>
-        </div>
-      </div>
+const renderStep3 = () => {
+  const step3Fields: FormField[] = [
+    {
+      fieldname: "streams",
+      label: "Streams",
+      fieldtype: "Data",
+      required: true,
+      placeholder: "Select streams",
+      layout: "full",
+      multiSelect: true,
+      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiParams: {
+        doctype: "Stream"
+      },
+      mapOptions: (data) => {
+        console.log("Stream data received:", data);
+        const items = data.data || data || [];
+        return items.map((item: any) => ({
+          value: item.name,
+          label: item.name
+        }));
+      }
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Streams Multiselect using DynamicForm */}
+      <DynamicForm
+        fields={step3Fields}
+        onSubmit={() => {}}
+        buttonLabel=""
+        loading={loading}
+        errors={fieldErrors}
+        initialValues={{
+          streams: courses.filter(c => c.stream).map(c => c.stream)
+        }}
+        onChange={(data) => {
+          // Update courses state from multiselect values
+          const selectedStreams = data.streams || [];
+          if (selectedStreams.length > 0) {
+            setCourses(selectedStreams.map((stream: string) => ({ stream })));
+          } else {
+            setCourses([{ stream: "" }]);
+          }
+          // Only clear the courses error if it exists
+          if (fieldErrors.courses) {
+            const updatedErrors = { ...fieldErrors };
+            delete updatedErrors.courses;
+            setFieldErrors(updatedErrors);
+          }
+          setError("");
+        }}
+      />
+
+      {fieldErrors.courses && (
+        <p className="text-xs text-red-500 mt-1">{fieldErrors.courses}</p>
+      )}
 
       {/* Contact Persons Table */}
-      <div className="mt-6">
-        <div className="flex items-center justify-between mb-3">
-          <Label className="text-sm font-medium text-slate-700">
-            Contact Persons
-          </Label>
-          <Button
-            type="button"
-            onClick={addContactPerson}
-            variant="accent"
-            className="h-8 px-3 text-xs"
-          >
-            + Add row
-          </Button>
-        </div>
+      <div className="mt-8">
+        <Label className="text-sm font-medium text-slate-700 mb-3 block">
+          Contact Persons
+        </Label>
 
         {/* Table Header */}
-        <div className="grid grid-cols-12 gap-2 mb-2 px-3 py-2 bg-slate-50 rounded-lg text-xs font-medium text-slate-600">
+        <div className="grid grid-cols-11 gap-2 mb-2 px-3 py-2 bg-slate-50 rounded-lg text-xs font-medium text-slate-600">
           <div className="col-span-1">No.</div>
-          <div className="col-span-3">Name *</div>
-          <div className="col-span-4">Designation *</div>
-          <div className="col-span-4">Contact No. *</div>
+          <div className="col-span-4">Name *</div>
+          <div className="col-span-3">Designation *</div>
+          <div className="col-span-3">Contact No. *</div>
         </div>
 
         {/* Table Rows */}
         {contactPersons.map((person, index) => (
-          <div key={index} className="grid grid-cols-12 gap-2 mb-2 items-center">
-            <div className="col-span-1 text-sm text-slate-600">{index + 1}</div>
-            <div className="col-span-3">
-              <Input
-                value={person.name}
-                onChange={(e) => handleContactPersonChange(index, 'name', e.target.value)}
-                placeholder="Name"
-                required
-                className="h-9 text-sm focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4]"
-              />
-            </div>
-            <div className="col-span-4">
-              {/* Designation dropdown */}
-              <div className="relative" ref={setDesignationRef(index)}>
-                <div
-                  onClick={() => !loadingDesignations && toggleDesignationDropdown(index)}
-                  className={`w-full h-9 px-3 rounded-md border ${designationError ? "border-red-500" : "border-slate-200"} bg-white text-sm text-slate-900 flex items-center justify-between cursor-pointer hover:border-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4] ${loadingDesignations ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  tabIndex={0}
-                >
-                  <span className={`truncate ${!person.designation ? "text-slate-400" : "text-slate-900"}`}>
-                    {loadingDesignations ? "Loading designations..." : getSelectedDesignationLabel(person.designation)}
-                  </span>
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${openDesignationDropdown === index ? "rotate-180" : ""}`} />
-                </div>
+          <div key={index} className="flex items-start gap-2 mb-2">
+            {/* Main row content - 11 columns */}
+            <div className="flex-1 grid grid-cols-11 gap-2">
+              <div className="col-span-1 text-sm text-slate-600 mt-2">{index + 1}</div>
+              <div className="col-span-4">
+                <Input
+                  value={person.name}
+                  onChange={(e) => handleContactPersonChange(index, 'name', e.target.value)}
+                  placeholder="Name"
+                  required
+                  className="h-9 text-sm focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4]"
+                />
+              </div>
+              <div className="col-span-3">
+                {/* Designation dropdown */}
+                <div className="relative" ref={setDesignationRef(index)}>
+                  <div
+                    onClick={() => !loadingDesignations && toggleDesignationDropdown(index)}
+                    className={`w-full h-9 px-3 rounded-md border ${designationError ? "border-red-500" : "border-slate-200"} bg-white text-sm text-slate-900 flex items-center justify-between cursor-pointer hover:border-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4] ${loadingDesignations ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    tabIndex={0}
+                  >
+                    <span className={`truncate ${!person.designation ? "text-slate-400" : "text-slate-900"}`}>
+                      {loadingDesignations ? "Loading designations..." : getSelectedDesignationLabel(person.designation)}
+                    </span>
+                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${openDesignationDropdown === index ? "rotate-180" : ""}`} />
+                  </div>
 
-                {/* Dropdown menu */}
-                {openDesignationDropdown === index && (
-                  <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-lg">
-                    <div className="py-1">
-                      {designationOptions.map((option) => (
-                        <div
-                          key={option.value}
-                          onClick={() => selectDesignation(index, option.value)}
-                          className={`px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors ${person.designation === option.value ? "bg-[#1152d4]/5" : ""}`}
-                        >
-                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${person.designation === option.value ? "border-[#1152d4]" : "border-slate-300"}`}>
-                            {person.designation === option.value && (
-                              <div className="w-2 h-2 rounded-full bg-[#1152d4]" />
-                            )}
+                  {/* Dropdown menu */}
+                  {openDesignationDropdown === index && (
+                    <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-lg">
+                      <div className="py-1">
+                        {designationOptions.map((option) => (
+                          <div
+                            key={option.value}
+                            onClick={() => selectDesignation(index, option.value)}
+                            className={`px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors ${person.designation === option.value ? "bg-[#1152d4]/5" : ""}`}
+                          >
+                            <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${person.designation === option.value ? "border-[#1152d4]" : "border-slate-300"}`}>
+                              {person.designation === option.value && (
+                                <div className="w-2 h-2 rounded-full bg-[#1152d4]" />
+                              )}
+                            </div>
+                            <span className={`flex-1 ${person.designation === option.value ? "text-[#1152d4] font-medium" : "text-slate-700"}`}>
+                              {option.label}
+                            </span>
                           </div>
-                          <span className={`flex-1 ${person.designation === option.value ? "text-[#1152d4] font-medium" : "text-slate-700"}`}>
-                            {option.label}
-                          </span>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Error and retry for designations */}
-                {designationError && (
-                  <div className="mt-1">
-                    <p className="text-xs text-red-500 inline">{designationError}. </p>
-                    <button
-                      type="button"
-                      onClick={retryFetchDesignations}
-                      className="text-xs text-[#1152d4] underline font-medium hover:no-underline"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                )}
+                  {/* Error and retry for designations */}
+                  {designationError && (
+                    <div className="mt-1">
+                      <p className="text-xs text-red-500 inline">{designationError}. </p>
+                      <button
+                        type="button"
+                        onClick={retryFetchDesignations}
+                        className="text-xs text-[#1152d4] underline font-medium hover:no-underline"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="col-span-3">
+                <Input
+                  type="tel"
+                  value={person.contact_no}
+                  onChange={(e) => handleContactPersonChange(index, 'contact_no', e.target.value)}
+                  placeholder="Contact number"
+                  required
+                  className="h-9 text-sm focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4]"
+                />
               </div>
             </div>
-            <div className="col-span-4">
-              <Input
-                type="tel"
-                value={person.contact_no}
-                onChange={(e) => handleContactPersonChange(index, 'contact_no', e.target.value)}
-                placeholder="Contact number"
-                required
-                className="h-9 text-sm focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4]"
-              />
-            </div>
+            
+            {/* Delete button - fixed width, outside the grid */}
+            {contactPersons.length > 1 && (
+              <div className="w-8 flex-shrink-0 mt-2">
+                <button
+                  type="button"
+                  onClick={() => removeContactPerson(index)}
+                  className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors"
+                  title="Remove row"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h18"></path>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
+                    <path d="M8 4V3c0-1 1-2 2-2h4c1 0 2 1 2 2v1"></path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
         ))}
+        
+        {/* Add row button for Contact Persons */}
+        <div className="flex justify-end mt-3">
+          <Button
+            type="button"
+            onClick={addContactPerson}
+            variant="outline"
+            className="h-8 px-4 text-xs border-accent/20 text-accent hover:bg-accent hover:text-white transition-colors"
+          >
+            + Add Contact Person
+          </Button>
+        </div>
+        
         {fieldErrors.contactPersons && (
           <p className="text-xs text-red-500 mt-1">{fieldErrors.contactPersons}</p>
         )}
       </div>
 
-      {/* Courses Table */}
-      <div className="mt-6">
-        <div className="flex items-center justify-between mb-3">
-          <Label className="text-sm font-medium text-slate-700">
-            Courses
-          </Label>
-          <Button
-            type="button"
-            onClick={addCourse}
-            variant="accent"
-            className="h-8 px-3 text-xs"
-          >
-            + Add row
-          </Button>
-        </div>
-
-        {/* Table Header */}
-        <div className="grid grid-cols-12 gap-2 mb-2 px-3 py-2 bg-slate-50 rounded-lg text-xs font-medium text-slate-600">
-          <div className="col-span-1">No.</div>
-          <div className="col-span-11">Stream</div>
-        </div>
-
-        {/* Table Rows */}
-        {courses.map((course, index) => (
-          <div key={index} className="grid grid-cols-12 gap-2 mb-2 items-center">
-            <div className="col-span-1 text-sm text-slate-600">{index + 1}</div>
-            <div className="col-span-11">
-              {/* Stream dropdown */}
-              <div className="relative" ref={setStreamRef(index)}>
-                <div
-                  onClick={() => !loadingStreams && toggleStreamDropdown(index)}
-                  className={`w-full h-9 px-3 rounded-md border ${streamError ? "border-red-500" : "border-slate-200"} bg-white text-sm text-slate-900 flex items-center justify-between cursor-pointer hover:border-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4] ${loadingStreams ? 'opacity-60 cursor-not-allowed' : ''}`}
-                  tabIndex={0}
-                >
-                  <span className={`truncate ${!course.stream ? "text-slate-400" : "text-slate-900"}`}>
-                    {loadingStreams ? "Loading streams..." : getSelectedStreamLabel(course.stream)}
-                  </span>
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${openStreamDropdown === index ? "rotate-180" : ""}`} />
-                </div>
-
-                {/* Dropdown menu */}
-                {openStreamDropdown === index && (
-                  <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-lg">
-                    <div className="py-1">
-                      {streamOptions.map((option) => (
-                        <div
-                          key={option.value}
-                          onClick={() => selectStream(index, option.value)}
-                          className={`px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors ${course.stream === option.value ? "bg-[#1152d4]/5" : ""}`}
-                        >
-                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${course.stream === option.value ? "border-[#1152d4]" : "border-slate-300"}`}>
-                            {course.stream === option.value && (
-                              <div className="w-2 h-2 rounded-full bg-[#1152d4]" />
-                            )}
-                          </div>
-                          <span className={`flex-1 ${course.stream === option.value ? "text-[#1152d4] font-medium" : "text-slate-700"}`}>
-                            {option.label}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Error and retry for streams */}
-                {streamError && (
-                  <div className="mt-1">
-                    <p className="text-xs text-red-500 inline">{streamError}. </p>
-                    <button
-                      type="button"
-                      onClick={retryFetchStreams}
-                      className="text-xs text-[#1152d4] underline font-medium hover:no-underline"
-                    >
-                      Retry
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-        {fieldErrors.courses && (
-          <p className="text-xs text-red-500 mt-1">{fieldErrors.courses}</p>
-        )}
-      </div>
-
-      {/* Action Buttons - Back is small, Complete Registration is large */}
+      {/* Action Buttons */}
       <div className="flex gap-3 pt-6">
         <Button
           type="button"
@@ -1017,6 +1023,7 @@ export default function CollegeOnboarding({
       </div>
     </div>
   );
+};
 
   return (
     <OnboardingLayout

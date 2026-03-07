@@ -19,6 +19,9 @@ export interface FormField {
   minDate?: string;
   maxDate?: string;
   accept?: string;
+  minLetters?: number;
+  allowCustom?: boolean;
+  customPlaceholder?: string;
 }
 
 export interface FormConfig {

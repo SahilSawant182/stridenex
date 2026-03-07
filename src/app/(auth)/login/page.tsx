@@ -19,6 +19,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [formValues, setFormValues] = useState<any>({});
+  const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const { isAuthenticated, login } = useAuth();
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function LoginPage() {
       router.push("/portal/dashboard");
     }
   }, [isAuthenticated, router]);
+  
 
   const loginFields: FormField[] = [
     {

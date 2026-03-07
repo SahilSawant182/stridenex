@@ -49,7 +49,9 @@ export default function MentorOnboarding({
         travelling_possible: "Yes",
         approved_status: "Pending",
         isActive: true,
-        domain: [], // Multi-select domain from DynamicForm
+        domain: [], // Multi-select domain
+        skills: [], // Multi-select skills
+        profileUrl: "",
         bank_name: "",
         account_number: "",
         ifsc_code: "",
@@ -64,19 +66,20 @@ export default function MentorOnboarding({
     const validateStep1 = (): boolean => {
         const errors: Record<string, string> = {};
 
-        // Validate personal information
-        if (!formData.first_name) {
+        if (!formData.first_name?.trim()) {
             errors.first_name = "First name is required";
         }
-        if (!formData.last_name) {
+        if (!formData.last_name?.trim()) {
             errors.last_name = "Last name is required";
         }
-        if (!formData.mobile_no) {
+        if (!formData.mobile_no?.trim()) {
             errors.mobile_no = "Mobile number is required";
         } else if (formData.mobile_no.length !== 10) {
             errors.mobile_no = "Mobile number must be 10 digits";
+        } else if (!/^\d+$/.test(formData.mobile_no)) {
+            errors.mobile_no = "Mobile number must contain only digits";
         }
-        if (!formData.email_id) {
+        if (!formData.email_id?.trim()) {
             errors.email_id = "Email ID is required";
         } else if (!/\S+@\S+\.\S+/.test(formData.email_id)) {
             errors.email_id = "Please enter a valid email address";
@@ -92,7 +95,6 @@ export default function MentorOnboarding({
     const validateStep2 = (): boolean => {
         const errors: Record<string, string> = {};
 
-        // Validate location
         if (!formData.state) {
             errors.state = "State is required";
         }
@@ -105,11 +107,8 @@ export default function MentorOnboarding({
         if (!formData.city) {
             errors.city = "City is required";
         }
-        if (!formData.travelling_possible) {
+        if (!formData.travelling_possible || formData.travelling_possible === "") {
             errors.travelling_possible = "Travelling possible is required";
-        }
-        if (!formData.approved_status) {
-            errors.approved_status = "Approved status is required";
         }
 
         setFieldErrors(errors);
@@ -124,6 +123,29 @@ export default function MentorOnboarding({
             errors.domain = "Please select at least one domain";
         }
 
+        // Skills validation - optional but if provided should be valid
+        if (formData.skills && formData.skills.length > 0) {
+            // Skills are optional, no validation needed
+        }
+
+        // Profile URL validation - optional but if provided should be valid URL
+        if (formData.profileUrl && formData.profileUrl.trim() !== "") {
+            const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+            if (!urlPattern.test(formData.profileUrl)) {
+                errors.profileUrl = "Please enter a valid URL (e.g., https://linkedin.com/in/username)";
+            }
+        }
+
+        // Validate profile description - minimum 50 characters
+        if (!formData.profile_description?.trim()) {
+            errors.profile_description = "Profile description is required";
+        } else {
+            const charCount = formData.profile_description.trim().length;
+            if (charCount < 50) {
+                errors.profile_description = `Please enter at least 50 characters (current: ${charCount} characters)`;
+            }
+        }
+
         setFieldErrors(errors);
         return Object.keys(errors).length === 0;
     };
@@ -132,7 +154,6 @@ export default function MentorOnboarding({
         if (validateStep1()) {
             setCurrentStep(2);
             setSuccess("");
-            setFieldErrors({});
         }
     };
 
@@ -140,7 +161,6 @@ export default function MentorOnboarding({
         if (validateStep2()) {
             setCurrentStep(3);
             setSuccess("");
-            setFieldErrors({});
         }
     };
 
@@ -148,14 +168,12 @@ export default function MentorOnboarding({
         setCurrentStep(1);
         setSuccess("");
         setError("");
-        setFieldErrors({});
     };
 
     const goToStep2 = () => {
         setCurrentStep(2);
         setSuccess("");
         setError("");
-        setFieldErrors({});
     };
 
     const getStepTitle = () => {
@@ -171,7 +189,7 @@ export default function MentorOnboarding({
         switch (currentStep) {
             case 1: return "Please provide your basic personal information.";
             case 2: return "Tell us about your location and availability.";
-            case 3: return "Add your domain expertise, bank details, and profile description.";
+            case 3: return "Add your domain expertise, skills, profile URL, and description.";
             default: return "";
         }
     };
@@ -196,16 +214,21 @@ export default function MentorOnboarding({
                 domain: domain
             }));
 
+            // Format skills as array of objects (if any)
+            const skillsArray = (formData.skills || []).map((skill: string) => ({
+                skill: skill
+            }));
+
             // Format mobile number with +91- prefix (remove any existing formatting)
             const cleanMobile = formData.mobile_no.replace(/\D/g, '');
             const formattedMobile = `+91-${cleanMobile}`;
 
             // Format the payload according to your API requirements
             const payload = {
-                first_name: formData.first_name,
-                last_name: formData.last_name,
+                first_name: formData.first_name.trim(),
+                last_name: formData.last_name.trim(),
                 mobile_no: formattedMobile,
-                email_id: formData.email_id,
+                email_id: formData.email_id.trim().toLowerCase(),
                 type: formData.type,
                 country: formData.country,
                 state: formData.state,
@@ -216,10 +239,12 @@ export default function MentorOnboarding({
                 approved_status: formData.approved_status,
                 is_active: formData.isActive ? 1 : 0,
                 domains: domainArray,
-                bank_name: formData.bank_name,
-                account_number: formData.account_number,
-                ifsc_code: formData.ifsc_code,
-                profile_description: formData.profile_description,
+                skills: skillsArray, // Add skills to payload
+                profile_url: formData.profileUrl?.trim() || "", // Add profile URL
+                bank_name: formData.bank_name?.trim() || "",
+                account_number: formData.account_number?.trim() || "",
+                ifsc_code: formData.ifsc_code?.trim() || "",
+                profile_description: formData.profile_description?.trim() || "",
                 terms_accepted: formData.terms_and_conditions ? 1 : 0
             };
 
@@ -304,7 +329,7 @@ export default function MentorOnboarding({
                 label: "Mobile No.",
                 fieldtype: "Data",
                 required: true,
-                placeholder: "Enter mobile number",
+                placeholder: "Enter 10-digit mobile number",
                 layout: "half",
                 maxLength: 10
             },
@@ -329,9 +354,10 @@ export default function MentorOnboarding({
                 },
                 mapOptions: (data) => {
                     console.log("Type data received:", data);
-                    return data.map((type: any) => ({
-                        value: type.name,
-                        label: type.name
+                    const items = data.data || data || [];
+                    return items.map((item: any) => ({
+                        value: item.name,
+                        label: item.name
                     }));
                 }
             }
@@ -345,12 +371,18 @@ export default function MentorOnboarding({
                     buttonLabel=""
                     loading={loading}
                     initialValues={formData}
+                    errors={fieldErrors}
                     onChange={(data) => {
                         setFormData(prev => ({
                             ...prev,
                             ...data
                         }));
-                        setFieldErrors({});
+                        // Only clear errors for fields that were changed
+                        const updatedErrors = { ...fieldErrors };
+                        Object.keys(data).forEach(key => {
+                            delete updatedErrors[key];
+                        });
+                        setFieldErrors(updatedErrors);
                         setError("");
                     }}
                 />
@@ -383,9 +415,10 @@ export default function MentorOnboarding({
                 },
                 mapOptions: (data) => {
                     console.log("Country data received:", data);
-                    return data.map((country: any) => ({
-                        value: country.name,
-                        label: country.name
+                    const items = data.data || data || [];
+                    return items.map((item: any) => ({
+                        value: item.name,
+                        label: item.name
                     }));
                 }
             },
@@ -402,9 +435,10 @@ export default function MentorOnboarding({
                 },
                 mapOptions: (data) => {
                     console.log("State data received:", data);
-                    return data.map((state: any) => ({
-                        value: state.name,
-                        label: state.name
+                    const items = data.data || data || [];
+                    return items.map((item: any) => ({
+                        value: item.name,
+                        label: item.name
                     }));
                 }
             },
@@ -425,9 +459,10 @@ export default function MentorOnboarding({
                 } : undefined,
                 mapOptions: (data) => {
                     console.log("District data received:", data);
-                    return data.map((district: any) => ({
-                        value: district.name,
-                        label: district.district_name || district.name
+                    const items = data.data || data || [];
+                    return items.map((item: any) => ({
+                        value: item.name,
+                        label: item.district_name || item.name
                     }));
                 },
                 disabled: !formData.state
@@ -440,16 +475,22 @@ export default function MentorOnboarding({
                 placeholder: "Select Taluka",
                 layout: "half",
                 apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-                apiParams: {
-                    doctype: "Tahsil"
-                },
+                apiParams: formData.district ? {
+                    doctype: "Tahsil",
+                    fields: ["name", "tahsil_name"],
+                    filters: [["district", "=", formData.district]],
+                    order_by: "tahsil_name asc",
+                    limit_page_length: 1000
+                } : undefined,
                 mapOptions: (data) => {
                     console.log("Taluka data received:", data);
-                    return data.map((tahsil: any) => ({
-                        value: tahsil.name,
-                        label: tahsil.name
+                    const items = data.data || data || [];
+                    return items.map((item: any) => ({
+                        value: item.name,
+                        label: item.tahsil_name || item.name
                     }));
-                }
+                },
+                disabled: !formData.district
             },
             {
                 fieldname: "city",
@@ -459,44 +500,31 @@ export default function MentorOnboarding({
                 placeholder: "Select City",
                 layout: "half",
                 apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-                apiParams: {
-                    doctype: "City"
-                },
+                apiParams: formData.tahsil ? {
+                    doctype: "City",
+                    fields: ["name", "city_name"],
+                    filters: [["tahsil", "=", formData.tahsil]],
+                    order_by: "city_name asc",
+                    limit_page_length: 1000
+                } : undefined,
                 mapOptions: (data) => {
                     console.log("City data received:", data);
-                    return data.map((city: any) => ({
-                        value: city.name,
-                        label: city.name
+                    const items = data.data || data || [];
+                    return items.map((item: any) => ({
+                        value: item.name,
+                        label: item.city_name || item.name
                     }));
-                }
+                },
+                disabled: !formData.tahsil
             },
             {
                 fieldname: "travelling_possible",
                 label: "Travelling Possible",
                 fieldtype: "Select",
                 required: true,
-                placeholder: "Select",
+                placeholder: "Select travelling possibility",
                 layout: "half",
                 options: ["Yes", "No", "Maybe"]
-            },
-            {
-                fieldname: "approved_status",
-                label: "Approved Status",
-                fieldtype: "Data",
-                required: true,
-                placeholder: "Select Approved Status",
-                layout: "half",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-                apiParams: {
-                    doctype: "Workflow State"
-                },
-                mapOptions: (data) => {
-                    console.log("Approved Status data received:", data);
-                    return data.map((status: any) => ({
-                        value: status.name,
-                        label: status.name
-                    }));
-                }
             }
         ];
 
@@ -508,12 +536,18 @@ export default function MentorOnboarding({
                     buttonLabel=""
                     loading={loading}
                     initialValues={formData}
+                    errors={fieldErrors}
                     onChange={(data) => {
                         setFormData(prev => ({
                             ...prev,
                             ...data
                         }));
-                        setFieldErrors({});
+                        // Only clear errors for fields that were changed
+                        const updatedErrors = { ...fieldErrors };
+                        Object.keys(data).forEach(key => {
+                            delete updatedErrors[key];
+                        });
+                        setFieldErrors(updatedErrors);
                         setError("");
                     }}
                 />
@@ -550,6 +584,8 @@ export default function MentorOnboarding({
                 placeholder: "Select Domain",
                 layout: "full",
                 multiSelect: true,
+                allowCustom: true, // This enables the "Others" feature
+                customPlaceholder: "Enter custom domain name", // Optional
                 apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: {
                     doctype: "Domain"
@@ -564,13 +600,44 @@ export default function MentorOnboarding({
                 }
             },
             {
+                fieldname: "skills",
+                label: "Skills",
+                fieldtype: "Data",
+                required: false,
+                placeholder: "Select skills (optional)",
+                layout: "full",
+                multiSelect: true,
+                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                apiParams: {
+                    doctype: "Student Skill"
+                },
+                mapOptions: (data) => {
+                    console.log("Skills data received:", data);
+                    const items = data.data || data || [];
+                    return items.map((item: any) => ({
+                        value: item.name,
+                        label: item.name || item.skill_name
+                    }));
+                }
+            },
+            {
+                fieldname: "profileUrl",
+                label: "Profile URL",
+                fieldtype: "Data",
+                required: false,
+                placeholder: "https://linkedin.com/in/username or https://portfolio.com",
+                layout: "full",
+                inputClassName: "font-mono text-sm"
+            },
+            {
                 fieldname: "profile_description",
                 label: "Profile Description",
                 fieldtype: "Text",
-                required: false,
-                placeholder: "Enter your profile description...",
+                required: true,
+                placeholder: "Tell us about your expertise, experience, and what you can offer as a mentor... (minimum 50 characters)",
                 layout: "full",
-                inputClassName: "min-h-[100px]"
+                inputClassName: "min-h-[150px]",
+                minLetters: 50
             }
         ];
 
@@ -582,74 +649,21 @@ export default function MentorOnboarding({
                     buttonLabel=""
                     loading={loading}
                     initialValues={formData}
+                    errors={fieldErrors}
                     onChange={(data) => {
                         setFormData(prev => ({
                             ...prev,
                             ...data
                         }));
-                        setFieldErrors({});
+                        // Only clear errors for fields that were changed
+                        const updatedErrors = { ...fieldErrors };
+                        Object.keys(data).forEach(key => {
+                            delete updatedErrors[key];
+                        });
+                        setFieldErrors(updatedErrors);
                         setError("");
                     }}
                 />
-
-                {/* Bank Details Section */}
-                <div className="mt-6">
-                    <h3 className="text-md font-medium text-slate-800 mb-3">Bank Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <Label htmlFor="bank_name" className="text-sm font-medium text-slate-700">
-                                Bank Name
-                            </Label>
-                            <Input
-                                id="bank_name"
-                                value={formData.bank_name}
-                                onChange={(e) => setFormData(prev => ({ ...prev, bank_name: e.target.value }))}
-                                placeholder="Enter bank name"
-                                className="mt-1 h-10 text-sm focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4]"
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor="account_number" className="text-sm font-medium text-slate-700">
-                                Account Number
-                            </Label>
-                            <Input
-                                id="account_number"
-                                value={formData.account_number}
-                                onChange={(e) => setFormData(prev => ({ ...prev, account_number: e.target.value }))}
-                                placeholder="Enter account number"
-                                className="mt-1 h-10 text-sm focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4]"
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor="ifsc_code" className="text-sm font-medium text-slate-700">
-                                IFSC Code
-                            </Label>
-                            <Input
-                                id="ifsc_code"
-                                value={formData.ifsc_code}
-                                onChange={(e) => setFormData(prev => ({ ...prev, ifsc_code: e.target.value }))}
-                                placeholder="Enter IFSC code"
-                                className="mt-1 h-10 text-sm focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4]"
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Is Active Checkbox */}
-                <div className="mt-4 p-4 bg-slate-50 rounded-lg">
-                    <div className="flex items-center space-x-2">
-                        <Checkbox
-                            id="isActive"
-                            checked={formData.isActive}
-                            onCheckedChange={(checked) =>
-                                setFormData(prev => ({ ...prev, isActive: checked as boolean }))
-                            }
-                        />
-                        <Label htmlFor="isActive" className="text-sm font-medium text-slate-700 cursor-pointer">
-                            Is Active
-                        </Label>
-                    </div>
-                </div>
 
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-6">

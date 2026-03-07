@@ -2,7 +2,7 @@
 
 import { FormField } from "@/types/doctypes.types";
 import { useState, useEffect, useRef } from "react";
-import { ChevronDown, X, Check, Eye, EyeOff } from "lucide-react";
+import { ChevronDown, X, Check, Eye, EyeOff, Search, Plus } from "lucide-react";
 import axios from "axios";
 
 interface Props {
@@ -12,13 +12,41 @@ interface Props {
   error?: string;
 }
 
+// Simple Button component
+const Button = ({ children, onClick, disabled, className, variant, ...props }: any) => {
+  const baseClasses = "px-4 py-2 text-sm rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-accent";
+  const variantClasses = variant === "outline" 
+    ? "border border-slate-200 hover:bg-slate-50" 
+    : "bg-accent text-white hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed";
+  
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`${baseClasses} ${variantClasses} ${className || ''}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+};
+
 export default function DynamicField({ field, value, onChange, error }: Props) {
   const [options, setOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [filteredOptions, setFilteredOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState("");
-  const [fetched, setFetched] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customValue, setCustomValue] = useState("");
+  const [initialFetchDone, setInitialFetchDone] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const customInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Check if this field should have "Others" option based on the allowCustom prop
+  const hasOthersOption = field.allowCustom === true;
 
   // Combine base classes with custom input classes
   const baseInputClasses =
@@ -26,25 +54,62 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
     "focus:ring-2 focus:ring-accent focus:border-accent " +
     "transition-all text-sm text-slate-900 placeholder:text-slate-400 " +
     (error ? "border-red-500" : "border-slate-200") + " " +
-    (field.inputClassName || ""); // Add custom classes here
+    (field.inputClassName || "");
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setSearchTerm("");
+        setShowCustomInput(false);
+        setCustomValue("");
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // useEffect(() => {
-  //   // Pre-fetch data for all dropdowns when component mounts
-  //   if (field.apiEndpoint && !fetched && !loading && !fetchError) {
-  //     fetchOptions();
-  //   }
-  // }, []);
+  useEffect(() => {
+    if (field.apiEndpoint && value && options.length === 0 && !loading) {
+      fetchOptions();
+    }
+  }, [value]);
+
+  // Focus search input when dropdown opens
+  useEffect(() => {
+    if (isOpen && searchInputRef.current && !showCustomInput) {
+      setTimeout(() => {
+        searchInputRef.current?.focus();
+      }, 100);
+    }
+    if (showCustomInput && customInputRef.current) {
+      setTimeout(() => {
+        customInputRef.current?.focus();
+      }, 100);
+    }
+  }, [isOpen, showCustomInput]);
+
+  // Filter options based on search term
+  useEffect(() => {
+    if (options.length > 0) {
+      const filtered = options.filter(option =>
+        option.label.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredOptions(filtered);
+    } else {
+      setFilteredOptions([]);
+    }
+  }, [searchTerm, options]);
+
+  // Special case: Only fetch Country options on mount
+  useEffect(() => {
+    // Only fetch for country field on initial mount
+    if (field.fieldname === "country" && field.apiEndpoint && !initialFetchDone && !loading && !fetchError) {
+      fetchOptions();
+      setInitialFetchDone(true);
+    }
+  }, []);
 
   const fetchOptions = async () => {
     if (!field.apiEndpoint) return;
@@ -55,7 +120,6 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
       let response;
       let responseData;
 
-      // Check if this is frappe.client.get_list (GET request with params)
       if (field.apiEndpoint.includes('frappe.client.get_list')) {
         response = await axios.get(field.apiEndpoint, {
           params: field.apiParams || {},
@@ -66,7 +130,6 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
         });
         responseData = response.data;
       }
-      // Check if this is the master_data API (needs POST)
       else if (field.apiEndpoint.includes('master.get_master_data')) {
         response = await axios.post(field.apiEndpoint, field.apiParams || {}, {
           headers: {
@@ -77,14 +140,12 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
         responseData = response.data;
       }
       else {
-        // Regular GET request for other APIs
         response = await axios.get(field.apiEndpoint, { params: field.apiParams });
         responseData = response.data;
       }
 
       console.log(`API Response for ${field.fieldname}:`, responseData);
 
-      // Handle different response structures
       let data = [];
 
       if (Array.isArray(responseData)) {
@@ -96,6 +157,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
       } else {
         console.warn("Unexpected API response structure:", responseData);
         setOptions([]);
+        setFilteredOptions([]);
         setFetchError("No data available");
         setLoading(false);
         return;
@@ -115,32 +177,44 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
 
         console.log(`Mapped options for ${field.fieldname}:`, mappedOptions);
         setOptions(mappedOptions);
-        setFetched(true); // Still set fetched to true, but we'll ignore it in handleDropdownClick
+        setFilteredOptions(mappedOptions);
       } else {
         console.log(`No data found for ${field.fieldname}`);
         setOptions([]);
+        setFilteredOptions([]);
         setFetchError("No options available");
       }
     } catch (err: any) {
       console.error(`Error fetching ${field.label}:`, err);
       setFetchError(err?.response?.data?.message || `Failed to load ${field.fieldname}`);
       setOptions([]);
+      setFilteredOptions([]);
     } finally {
       setLoading(false);
     }
   };
 
-
   const handleDropdownClick = () => {
     if (field.read_only || field.disabled) return;
 
-    // Always fetch when clicked to get fresh data
-    // This is especially important for dependent dropdowns
-    if (!loading && !fetchError) {
+    // For all dropdowns EXCEPT country, fetch on every click
+    // For country, if options are already loaded, don't fetch again
+    if (field.fieldname !== "country") {
+      // For dependent dropdowns (state, district, etc.), always fetch fresh data
       fetchOptions();
+    } else {
+      // For country, only fetch if options are empty
+      if (options.length === 0 && !loading && !fetchError) {
+        fetchOptions();
+      }
     }
 
     setIsOpen(!isOpen);
+    if (!isOpen) {
+      setSearchTerm("");
+      setShowCustomInput(false);
+      setCustomValue("");
+    }
   };
 
   const handleRetry = () => {
@@ -151,6 +225,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
   const handleSingleSelect = (selectedValue: string) => {
     onChange(field.fieldname, selectedValue);
     setIsOpen(false);
+    setSearchTerm("");
   };
 
   const handleMultiSelect = (selectedValue: string, e: React.MouseEvent) => {
@@ -165,6 +240,46 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
     }
 
     onChange(field.fieldname, newValues);
+    // Keep dropdown open for multi-select
+  };
+
+  const handleAddCustomValue = () => {
+    if (customValue.trim()) {
+      const currentValues = Array.isArray(value) ? value : [];
+      // Use the actual custom value text
+      const customOptionValue = customValue.trim();
+      
+      // Add to options list for display
+      const newOption = { 
+        value: customOptionValue, 
+        label: customValue.trim() 
+      };
+      
+      // Check if this custom value already exists in options
+      const exists = options.some(opt => opt.value === customOptionValue);
+      if (!exists) {
+        setOptions(prev => [...prev, newOption]);
+        setFilteredOptions(prev => [...prev, newOption]);
+      }
+      
+      // Add to selected values if not already selected
+      if (!currentValues.includes(customOptionValue)) {
+        onChange(field.fieldname, [...currentValues, customOptionValue]);
+      }
+      
+      setCustomValue("");
+      setShowCustomInput(false);
+    }
+  };
+
+  const handleCustomInputKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddCustomValue();
+    } else if (e.key === 'Escape') {
+      setShowCustomInput(false);
+      setCustomValue("");
+    }
   };
 
   const removeSelectedItem = (itemToRemove: string, e: React.MouseEvent) => {
@@ -193,14 +308,28 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
     return selected ? selected.label : field.placeholder || `Select ${field.label}`;
   };
 
+  const highlightMatch = (text: string, search: string) => {
+    if (!search) return text;
+    const parts = text.split(new RegExp(`(${search})`, 'gi'));
+    return (
+      <span>
+        {parts.map((part, i) => 
+          part.toLowerCase() === search.toLowerCase() ? 
+            <span key={i} className="bg-yellow-200 font-medium">{part}</span> : 
+            <span key={i}>{part}</span>
+        )}
+      </span>
+    );
+  };
+
   if (field.hidden) return null;
 
   const renderField = () => {
-
-    // API Dropdown (Single or Multi select)
+    // API Dropdown (Single or Multi select) with search
     if (field.apiEndpoint) {
       return (
         <div className="relative" ref={dropdownRef}>
+          {/* Dropdown trigger */}
           <div
             onClick={!field.disabled ? handleDropdownClick : undefined}
             className={`w-full min-h-10 px-3 py-2 rounded-md border ${error ? "border-red-500" : fetchError ? "border-red-500" : "border-slate-200"
@@ -233,54 +362,127 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
             <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`} />
           </div>
 
-          {/* Dropdown menu */}
+          {/* Dropdown menu with search and "Others" option */}
           {isOpen && !loading && !fetchError && (
-            <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-lg">
-              {options.length === 0 ? (
-                <div className="p-3 text-sm text-slate-400 text-center">No options available</div>
-              ) : (
-                <div className="py-1">
-                  {options.map((option) => (
-                    <div
-                      key={option.value}
-                      onClick={(e) => field.multiSelect ? handleMultiSelect(option.value, e) : handleSingleSelect(option.value)}
-                      className={`px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors ${isSelected(option.value)
-                        ? "bg-accent/5 text-accent font-medium"
-                        : "text-slate-700"
-                        }`}
-                    >
-                      {field.multiSelect ? (
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected(option.value)
-                          ? "bg-accent border-accent"
-                          : "border-slate-300"
-                          }`}>
-                          {isSelected(option.value) && (
-                            <Check className="w-3 h-3 text-white" />
-                          )}
-                        </div>
-                      ) : (
-                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected(option.value)
-                          ? "border-accent"
-                          : "border-slate-300"
-                          }`}>
-                          {isSelected(option.value) && (
-                            <div className="w-2 h-2 rounded-full bg-accent" />
-                          )}
-                        </div>
-                      )}
-                      <span className="flex-1">{option.label}</span>
+            <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg overflow-hidden">
+              {!showCustomInput ? (
+                <>
+                  {/* Search input */}
+                  <div className="p-2 border-b border-slate-200">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        ref={searchInputRef}
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Search..."
+                        className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                        onClick={(e) => e.stopPropagation()}
+                      />
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Options list */}
+                  <div className="max-h-60 overflow-y-auto">
+                    {filteredOptions.length === 0 ? (
+                      <div className="p-3 text-sm text-slate-400 text-center">
+                        {searchTerm ? "No matching options" : "No options available"}
+                      </div>
+                    ) : (
+                      <div className="py-1">
+                        {filteredOptions.map((option) => (
+                          <div
+                            key={option.value}
+                            onClick={(e) => field.multiSelect ? handleMultiSelect(option.value, e) : handleSingleSelect(option.value)}
+                            className={`px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors ${isSelected(option.value)
+                              ? "bg-accent/5 text-accent font-medium"
+                              : "text-slate-700"
+                              }`}
+                          >
+                            {field.multiSelect ? (
+                              <div className={`w-4 h-4 rounded border flex items-center justify-center ${isSelected(option.value)
+                                ? "bg-accent border-accent"
+                                : "border-slate-300"
+                                }`}>
+                                {isSelected(option.value) && (
+                                  <Check className="w-3 h-3 text-white" />
+                                )}
+                              </div>
+                            ) : (
+                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${isSelected(option.value)
+                                ? "border-accent"
+                                : "border-slate-300"
+                                }`}>
+                                {isSelected(option.value) && (
+                                  <div className="w-2 h-2 rounded-full bg-accent" />
+                                )}
+                              </div>
+                            )}
+                            <span className="flex-1">
+                              {searchTerm ? highlightMatch(option.label, searchTerm) : option.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* "Others" option for fields that allow custom values */}
+                    {hasOthersOption && (
+                      <div
+                        onClick={() => setShowCustomInput(true)}
+                        className="px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors border-t border-slate-200 text-accent font-medium"
+                      >
+                        <Plus className="w-4 h-4" />
+                        <span>Add Others (Custom Value)</span>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                /* Custom input for "Others" */
+                <div className="p-3">
+                  <p className="text-sm font-medium text-slate-700 mb-2">
+                    {field.customPlaceholder || "Enter custom value"}
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      ref={customInputRef}
+                      type="text"
+                      value={customValue}
+                      onChange={(e) => setCustomValue(e.target.value)}
+                      onKeyDown={handleCustomInputKeyDown}
+                      placeholder="Type here..."
+                      className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                      autoFocus
+                    />
+                    <Button
+                      onClick={handleAddCustomValue}
+                      disabled={!customValue.trim()}
+                    >
+                      Add
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setShowCustomInput(false);
+                        setCustomValue("");
+                      }}
+                      variant="outline"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Loading and error states */}
+          {/* Loading state - COMMENTED OUT AS REQUESTED */}
           {/* {loading && (
-            <p className="text-xs text-slate-400 mt-1">Fetching {field.label.toLowerCase()}...</p>
+            <p className="text-xs text-slate-400 mt-1">Loading options...</p>
           )} */}
 
+          {/* Error and retry */}
           {fetchError && !loading && (
             <div className="mt-1">
               <p className="text-xs text-red-500 inline">{fetchError}. </p>
@@ -297,11 +499,73 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
       );
     }
 
+    // Regular Select field (non-API) with search
+    if (field.fieldtype === "Select" && field.options && field.options.length > 0) {
+      return (
+        <div className="relative" ref={dropdownRef}>
+          <div
+            onClick={!field.disabled ? () => setIsOpen(!isOpen) : undefined}
+            className={`w-full min-h-10 px-3 py-2 rounded-md border ${error ? "border-red-500" : "border-slate-200"
+              } bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent cursor-pointer flex items-center justify-between hover:border-slate-300 transition-colors ${field.read_only || field.disabled ? "bg-slate-50 cursor-not-allowed opacity-60" : ""
+              }`}
+          >
+            <span className={`flex-1 truncate ${!value ? "text-slate-400" : ""}`}>
+              {value || field.placeholder || `Select ${field.label}`}
+            </span>
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`} />
+          </div>
+
+          {isOpen && (
+            <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg overflow-hidden">
+              {/* Search input for regular select */}
+              <div className="p-2 border-b border-slate-200">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search..."
+                    className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              </div>
+
+              <div className="max-h-60 overflow-y-auto">
+                {field.options
+                  .filter(opt => opt.toLowerCase().includes(searchTerm.toLowerCase()))
+                  .map((opt) => (
+                    <div
+                      key={opt}
+                      onClick={() => {
+                        onChange(field.fieldname, opt);
+                        setIsOpen(false);
+                        setSearchTerm("");
+                      }}
+                      className={`px-3 py-2 text-sm cursor-pointer hover:bg-slate-50 transition-colors ${value === opt ? "bg-accent/5 text-accent font-medium" : "text-slate-700"
+                        }`}
+                    >
+                      {searchTerm ? highlightMatch(opt, searchTerm) : opt}
+                    </div>
+                  ))}
+                {field.options.filter(opt => opt.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
+                  <div className="p-3 text-sm text-slate-400 text-center">
+                    No matching options
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
     // Regular field types
     switch (field.fieldtype) {
       case "Password":
         const [showPassword, setShowPassword] = useState(false);
-
         return (
           <div className="relative">
             <input
@@ -323,24 +587,6 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
           </div>
         );
 
-      case "Select":
-        return (
-          <select
-            value={value || ""}
-            onChange={(e) => onChange(field.fieldname, e.target.value)}
-            className={baseInputClasses}
-            disabled={field.read_only}
-            required={field.required}
-          >
-            <option value="">Select {field.label}</option>
-            {field.options?.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
-        );
-
       case "Check":
         return (
           <div className="flex items-center gap-2">
@@ -357,15 +603,32 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
 
       case "Text":
       case "Long Text":
+        const letterCount = value ? value.length : 0;
+        const minLetters = field.minLetters || 0;
         return (
-          <textarea
-            placeholder={field.placeholder}
-            value={value || ""}
-            onChange={(e) => onChange(field.fieldname, e.target.value)}
-            className={baseInputClasses + " min-h-[80px]"}
-            disabled={field.read_only}
-            required={field.required}
-          />
+          <div className="space-y-1">
+            <textarea
+              placeholder={field.placeholder}
+              value={value || ""}
+              onChange={(e) => onChange(field.fieldname, e.target.value)}
+              className={`${baseInputClasses} min-h-[100px] ${field.inputClassName || ''}`}
+              disabled={field.read_only}
+              required={field.required}
+              maxLength={field.maxLength}
+            />
+            {minLetters > 0 && (
+              <div className="flex justify-between items-center">
+                <p className={`text-xs ${letterCount >= minLetters ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  Characters: {letterCount} / {minLetters}
+                </p>
+                {letterCount < minLetters && (
+                  <p className="text-xs text-amber-600">
+                    {minLetters - letterCount} more characters needed
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         );
 
       case "Int":
@@ -444,7 +707,6 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
         const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
           const file = e.target.files?.[0];
           if (file) {
-            // Check if file is PDF
             if (file.type !== 'application/pdf') {
               alert('Please upload only PDF files');
               if (fileInputRef.current) {
@@ -453,7 +715,6 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
               return;
             }
 
-            // Check file size (optional - limit to 5MB)
             if (file.size > 5 * 1024 * 1024) {
               alert('File size should be less than 5MB');
               if (fileInputRef.current) {
@@ -463,7 +724,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
             }
 
             setFileName(file.name);
-            onChange(field.fieldname, file); // Store the File object
+            onChange(field.fieldname, file);
           } else {
             setFileName("");
             onChange(field.fieldname, null);
@@ -533,7 +794,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
 
       {renderField()}
 
-      {error && !fetchError && (
+      {error && (
         <p className="text-xs text-red-500 mt-1">{error}</p>
       )}
     </div>

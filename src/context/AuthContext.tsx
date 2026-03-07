@@ -26,6 +26,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [fullName, setFullName] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const router = useRouter();
+  const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   // Load from localStorage on mount
   useEffect(() => {
