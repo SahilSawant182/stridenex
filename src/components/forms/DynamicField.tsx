@@ -364,7 +364,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
 
           {/* Dropdown menu with search and "Others" option */}
           {isOpen && !loading && !fetchError && (
-            <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg overflow-hidden">
+             <div className="absolute z-[100] mt-1 w-full max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-lg">
               {!showCustomInput ? (
                 <>
                   {/* Search input */}

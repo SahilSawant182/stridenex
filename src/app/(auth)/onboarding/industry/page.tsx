@@ -47,5 +47,5 @@ export default function IndustryOnboardingPage() {
 //     return null;
 //   }
 
-//   return <IndustryOnboarding onSubmit={handleSubmit} />;
+  return <IndustryOnboarding onSubmit={handleSubmit} />;
 }

@@ -174,8 +174,8 @@ export default function StudentOnboarding({
       apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
       apiParams: formData.state ? {
         doctype: "District",
-        fields: ["name", "district_name"], // Don't stringify - let axios handle it
-        filters: [["state", "=", formData.state]], // Removed is_active if not needed
+        fields: ["name", "district_name"],
+        filters: [["state", "=", formData.state]],
         order_by: "district_name asc",
         limit_page_length: 1000
       } : undefined,
@@ -238,6 +238,59 @@ export default function StudentOnboarding({
       },
       disabled: !(formData.stream && formData.state && formData.district) // Disable until all filters are selected
     },
+    {
+      fieldname: "courses",
+      label: "Courses Type",
+      fieldtype: "Data",
+      required: true,
+      placeholder: "Select courses",
+      layout: "full",
+      multiSelect: true,
+      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiParams: {
+        doctype: "Course Type"  // Note the space in "Course Type"
+      },
+      mapOptions: (data) => {
+        console.log("Courses Type data received in mapOptions:", data);
+
+        // Handle the response structure (similar to state)
+        const courses = data.data || data || [];
+
+        return courses.map((course: any) => ({
+          value: course.name,
+          label: course.course_type || course.name
+        }));
+      }
+    },
+    {
+      fieldname: "course",
+      label: "Course",
+      fieldtype: "Data",
+      required: true,
+      placeholder: "Select Course",
+      layout: "half",
+      // Only enable when college is selected
+      apiEndpoint: formData.college
+        ? `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`
+        : undefined,
+      apiParams: formData.college ? {
+        doctype: "Courses",
+        fields: ["name", "course_name"], // Add fields if needed
+        filters: [["college", "=", formData.college]], // Use array format like district field
+        order_by: "course_name asc",
+        limit_page_length: 1000
+      } : undefined,
+      mapOptions: (data) => {
+        console.log("Course data received in mapOptions:", data);
+        const courses = data.data || data || [];
+
+        return courses.map((course: any) => ({
+          value: course.name,
+          label: course.course_name || course.name
+        }));
+      },
+      disabled: !formData.college
+    },
 
     {
       fieldname: "department",
@@ -276,40 +329,13 @@ export default function StudentOnboarding({
       fieldname: "academicYear",
       label: "Academic Year",
       fieldtype: "Data",
-      required: true,
+      required: false,
       placeholder: "Academic years",
       layout: "half",
       read_only: true
     },
 
-    {
-      fieldname: "course",
-      label: "Course",
-      fieldtype: "Data",
-      required: true,
-      placeholder: "Select Course",
-      layout: "half",
-      // Only enable when college is selected
-      apiEndpoint: formData.college
-        ? `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`
-        : undefined,
-      apiParams: formData.college ? {
-        doctype: "Courses",
-        filters: {
-          college: formData.college
-        }
-      } : undefined,
-      mapOptions: (data) => {
-        console.log("Course data received in mapOptions:", data);
-        const courses = data.data || data || [];
 
-        return courses.map((course: any) => ({
-          value: course.name,
-          label: course.course_name || course.name
-        }));
-      },
-      disabled: !formData.college
-    },
     {
       fieldname: "semester",
       label: "Semester",
@@ -355,30 +381,7 @@ export default function StudentOnboarding({
       layout: "half",
       options: ["Male", "Female", "Other", "Prefer not to say"]
     },
-    {
-      fieldname: "courses",
-      label: "Courses Type",
-      fieldtype: "Data",
-      required: true,
-      placeholder: "Select courses",
-      layout: "full",
-      multiSelect: true,
-      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-      apiParams: {
-        doctype: "Course Type"  // Note the space in "Course Type"
-      },
-      mapOptions: (data) => {
-        console.log("Courses Type data received in mapOptions:", data);
 
-        // Handle the response structure (similar to state)
-        const courses = data.data || data || [];
-
-        return courses.map((course: any) => ({
-          value: course.name,
-          label: course.course_type || course.name
-        }));
-      }
-    },
     {
       fieldname: "skills",
       label: "Skills",
@@ -638,12 +641,6 @@ export default function StudentOnboarding({
     if (!departmentValidation.isValid) {
       errors.department = departmentValidation.error || "Department is required";
     }
-
-    const yearValidation = validateRequired(formData.academicYear, "Academic year");
-    if (!yearValidation.isValid) {
-      errors.academicYear = yearValidation.error || "Academic year is required";
-    }
-
     const streamValidation = validateRequired(formData.stream, "Stream");
     if (!streamValidation.isValid) {
       errors.stream = streamValidation.error || "Stream is required";
@@ -682,7 +679,6 @@ export default function StudentOnboarding({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    console.log('handle submit')
     e.preventDefault();
 
     // Validate all fields
@@ -694,8 +690,8 @@ export default function StudentOnboarding({
       setFieldErrors(validationErrors);
 
       // Also show a general error message
-      const firstError = Object.values(validationErrors)[0];
-      setError(firstError);
+      // const firstError = Object.values(validationErrors)[0];
+      // setError(firstError);
 
       // Scroll to the top to show the error
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1069,280 +1065,179 @@ export default function StudentOnboarding({
     </div>
   );
 
-  const renderStep3 = () => (
-    <div className="space-y-4">
-      <DynamicForm
-        fields={step3Fields}
-        onSubmit={() => { }}
-        buttonLabel=""
-        loading={loading}
-        initialValues={{
-          state: formData.state,
-          district: formData.district,
-          college: formData.college,
-          department: formData.department,
-          academicYear: formData.academicYear,
-          stream: formData.stream,
-          course: formData.course,
-          semester: formData.semester,
-          dateOfBirth: formData.dateOfBirth,
-          courses: formData.courses,
-          skills: formData.skills,
-          careerInterest: formData.careerInterest,
-          gender: formData.gender,
-          resume: formData.resume,
-          linkedinUrl: formData.linkedinUrl,
-          githubUrl: formData.githubUrl
-        }}
+  const renderStep3 = () => {
+    // Helper function to update form data
+    const updateFormData = (newData: any, resetFields: string[] = []) => {
+      setFormData(prev => {
+        // Create base update with all fields from newData
+        const baseUpdate = {
+          state: newData.state ?? prev.state,
+          district: newData.district ?? prev.district,
+          college: newData.college ?? prev.college,
+          department: newData.department ?? prev.department,
+          academicYear: newData.academicYear ?? prev.academicYear,
+          stream: newData.stream ?? prev.stream,
+          course: newData.course ?? prev.course,
+          semester: newData.semester ?? prev.semester,
+          dateOfBirth: newData.dateOfBirth ?? prev.dateOfBirth,
+          courses: newData.courses ?? prev.courses,
+          skills: newData.skills ?? prev.skills,
+          careerInterest: newData.careerInterest ?? prev.careerInterest,
+          gender: newData.gender ?? prev.gender,
+          resume: newData.resume ?? prev.resume,
+          linkedinUrl: newData.linkedinUrl ?? prev.linkedinUrl,
+          githubUrl: newData.githubUrl ?? prev.githubUrl
+        };
 
-        onChange={(data) => {
-          console.log("Form data changed:", data);
+        // Reset specific fields to empty strings
+        const resetValues = resetFields.reduce((acc, field) => {
+          acc[field] = "";
+          return acc;
+        }, {} as Record<string, any>);
 
-          // Check if state changed
-          if (data.state !== formData.state) {
-            console.log("State changed from", formData.state, "to", data.state);
+        return {
+          ...prev,
+          ...baseUpdate,
+          ...resetValues
+        };
+      });
+    };
 
-            setFormData(prev => ({
-              ...prev,
-              state: data.state || prev.state,
-              district: "", // Reset district
-              college: "", // Reset college
-              department: "", // Reset department
-              academicYear: "", // Reset academic year
-              course: "", // Reset course
-              semester: "", // Reset semester
-              stream: data.stream || prev.stream,
-              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
-              skills: data.skills || prev.skills,
-              careerInterest: data.careerInterest || prev.careerInterest,
-              gender: data.gender || prev.gender,
-              resume: data.resume || prev.resume,
-              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
-              githubUrl: data.githubUrl || prev.githubUrl
-            }));
-          }
-          // Check if district changed
-          else if (data.district !== formData.district) {
-            console.log("District changed from", formData.district, "to", data.district);
+    return (
+      <div className="space-y-4">
+        <DynamicForm
+          fields={step3Fields}
+          onSubmit={() => { }}
+          buttonLabel=""
+          loading={loading}
+          initialValues={{
+            state: formData.state,
+            district: formData.district,
+            college: formData.college,
+            department: formData.department,
+            academicYear: formData.academicYear,
+            stream: formData.stream,
+            course: formData.course,
+            semester: formData.semester,
+            dateOfBirth: formData.dateOfBirth,
+            courses: formData.courses,
+            skills: formData.skills,
+            careerInterest: formData.careerInterest,
+            gender: formData.gender,
+            resume: formData.resume,
+            linkedinUrl: formData.linkedinUrl,
+            githubUrl: formData.githubUrl
+          }}
+          errors={fieldErrors}
+          onChange={(data) => {
+            console.log("Form data changed:", data);
 
-            setFormData(prev => ({
-              ...prev,
-              district: data.district || prev.district,
-              college: "", // Reset college
-              department: "", // Reset department
-              academicYear: "", // Reset academic year
-              course: "", // Reset course
-              semester: "", // Reset semester
-              state: data.state || prev.state,
-              stream: data.stream || prev.stream,
-              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
-              skills: data.skills || prev.skills,
-              careerInterest: data.careerInterest || prev.careerInterest,
-              gender: data.gender || prev.gender,
-              resume: data.resume || prev.resume,
-              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
-              githubUrl: data.githubUrl || prev.githubUrl
-            }));
-          }
-          // Check if stream changed
-          else if (data.stream !== formData.stream) {
-            console.log("Stream changed from", formData.stream, "to", data.stream);
-
-            setFormData(prev => ({
-              ...prev,
-              stream: data.stream || prev.stream,
-              college: "", // Reset college
-              department: "", // Reset department
-              academicYear: "", // Reset academic year
-              course: "", // Reset course
-              semester: "", // Reset semester
-              state: data.state || prev.state,
-              district: data.district || prev.district,
-              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
-              skills: data.skills || prev.skills,
-              careerInterest: data.careerInterest || prev.careerInterest,
-              gender: data.gender || prev.gender,
-              resume: data.resume || prev.resume,
-              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
-              githubUrl: data.githubUrl || prev.githubUrl
-            }));
-          }
-          // Check if college changed
-          else if (data.college !== formData.college) {
-            console.log("College changed from", formData.college, "to", data.college);
-
-            setFormData(prev => ({
-              ...prev,
-              college: data.college || prev.college,
-              department: "", // Reset department
-              academicYear: "", // Reset academic year
-              course: "", // Reset course
-              semester: "", // Reset semester
-              state: data.state || prev.state,
-              district: data.district || prev.district,
-              stream: data.stream || prev.stream,
-              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
-              skills: data.skills || prev.skills,
-              careerInterest: data.careerInterest || prev.careerInterest,
-              gender: data.gender || prev.gender,
-              resume: data.resume || prev.resume,
-              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
-              githubUrl: data.githubUrl || prev.githubUrl
-            }));
-
-            setFieldErrors(prev => {
-              const newErrors = { ...prev };
-              delete newErrors.department;
-              delete newErrors.academicYear;
-              delete newErrors.course;
-              delete newErrors.semester;
-              return newErrors;
-            });
-
-            fetchedFieldsRef.current.delete('department');
-            fetchedFieldsRef.current.delete('course');
-            fetchedFieldsRef.current.delete('semester');
-          }
-          // Check if department changed
-          else if (data.department !== formData.department && data.department) {
-            console.log("Department changed from", formData.department, "to", data.department);
-
-            const selectedDept = departmentOptions.find(
-              dept => dept.value === data.department
+            // Determine which field changed
+            const changedField = Object.keys(data).find(
+              key => data[key] !== formData[key as keyof typeof formData]
             );
 
-            console.log("Selected department:", selectedDept);
+            if (!changedField) return;
 
-            const academicYearValue = selectedDept ? `${selectedDept.academicYears} Years` : "";
-            console.log("Setting academic year to:", academicYearValue);
+            // Define field dependencies and what should reset when they change
+            const fieldDependencies: Record<string, string[]> = {
+              state: ["district", "college", "department", "academicYear", "course", "semester"],
+              district: ["college", "department", "academicYear", "course", "semester"],
+              stream: ["college", "department", "academicYear", "course", "semester"],
+              college: ["department", "academicYear", "course", "semester"],
+              department: ["semester"],
+              course: ["semester"]
+            };
 
-            setFormData(prev => ({
-              ...prev,
-              department: data.department,
-              academicYear: academicYearValue,
-              semester: "", // Reset semester when department changes
-              course: data.course || prev.course,
-              state: data.state || prev.state,
-              district: data.district || prev.district,
-              college: data.college || prev.college,
-              stream: data.stream || prev.stream,
-              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
-              skills: data.skills || prev.skills,
-              careerInterest: data.careerInterest || prev.careerInterest,
-              gender: data.gender || prev.gender,
-              resume: data.resume || prev.resume,
-              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
-              githubUrl: data.githubUrl || prev.githubUrl
-            }));
+            // Fields that need their errors cleared when parent changes
+            const errorDependencies: Record<string, string[]> = {
+              state: ["district", "college", "department", "course", "semester"],
+              district: ["college", "department", "course", "semester"],
+              stream: ["college", "department", "course", "semester"],
+              college: ["department", "course", "semester"],
+              department: ["semester"],
+              course: ["semester"]
+            };
 
+            // Get fields to reset
+            const fieldsToReset = fieldDependencies[changedField] || [];
+
+            // Update form data with resets
+            updateFormData(data, fieldsToReset);
+
+            // Clear errors for changed field and its dependencies
             setFieldErrors(prev => {
               const newErrors = { ...prev };
-              delete newErrors.semester;
+
+              // Clear error for the changed field
+              delete newErrors[changedField];
+
+              // Clear errors for dependent fields
+              if (errorDependencies[changedField]) {
+                errorDependencies[changedField].forEach(field => {
+                  delete newErrors[field];
+                });
+              }
+
               return newErrors;
             });
-          }
-          // Check if course changed
-          else if (data.course !== formData.course && data.course) {
-            console.log("Course changed from", formData.course, "to", data.course);
 
-            setFormData(prev => ({
-              ...prev,
-              course: data.course,
-              semester: "", // Reset semester when course changes
-              state: data.state || prev.state,
-              district: data.district || prev.district,
-              college: data.college || prev.college,
-              department: data.department || prev.department,
-              academicYear: data.academicYear || prev.academicYear,
-              stream: data.stream || prev.stream,
-              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
-              skills: data.skills || prev.skills,
-              careerInterest: data.careerInterest || prev.careerInterest,
-              gender: data.gender || prev.gender,
-              resume: data.resume || prev.resume,
-              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
-              githubUrl: data.githubUrl || prev.githubUrl
-            }));
-          }
-          // Check if semester changed
-          else if (data.semester !== formData.semester && data.semester) {
-            console.log("Semester changed from", formData.semester, "to", data.semester);
+            // Clear fetched fields ref for dependencies
+            if (changedField === "state" || changedField === "district" ||
+              changedField === "stream" || changedField === "college") {
+              fetchedFieldsRef.current.delete('department');
+              fetchedFieldsRef.current.delete('course');
+              fetchedFieldsRef.current.delete('semester');
+            } else if (changedField === "department") {
+              fetchedFieldsRef.current.delete('semester');
+            }
 
-            setFormData(prev => ({
-              ...prev,
-              semester: data.semester,
-              state: data.state || prev.state,
-              district: data.district || prev.district,
-              college: data.college || prev.college,
-              department: data.department || prev.department,
-              academicYear: data.academicYear || prev.academicYear,
-              stream: data.stream || prev.stream,
-              course: data.course || prev.course,
-              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
-              skills: data.skills || prev.skills,
-              careerInterest: data.careerInterest || prev.careerInterest,
-              gender: data.gender || prev.gender,
-              resume: data.resume || prev.resume,
-              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
-              githubUrl: data.githubUrl || prev.githubUrl
-            }));
-          }
-          else {
-            // Normal update for all fields
-            setFormData(prev => ({
-              ...prev,
-              state: data.state || prev.state,
-              district: data.district || prev.district,
-              college: data.college || prev.college,
-              department: data.department || prev.department,
-              academicYear: data.academicYear || prev.academicYear,
-              stream: data.stream || prev.stream,
-              course: data.course || prev.course,
-              semester: data.semester || prev.semester,
-              dateOfBirth: data.dateOfBirth || prev.dateOfBirth,
-              courses: data.courses || prev.courses,
-              skills: data.skills || prev.skills,
-              careerInterest: data.careerInterest || prev.careerInterest,
-              gender: data.gender || prev.gender,
-              resume: data.resume || prev.resume,
-              linkedinUrl: data.linkedinUrl || prev.linkedinUrl,
-              githubUrl: data.githubUrl || prev.githubUrl
-            }));
-          }
+            // Handle special case for department change
+            if (changedField === "department" && data.department) {
+              const selectedDept = departmentOptions.find(
+                dept => dept.value === data.department
+              );
 
-          // Update skills for multi-select (if you have a separate skills field)
-          if (data.skills) {
-            setSkills(data.skills);
-          }
+              if (selectedDept) {
+                const academicYearValue = `${selectedDept.academicYears} Years`;
 
-          // Update career interest if it's separate
-          if (data.careerInterest) {
-            // Handle career interest state if you have one
-          }
-        }}
-      />
+                // Update academic year separately
+                setFormData(prev => ({
+                  ...prev,
+                  academicYear: academicYearValue
+                }));
+              }
+            }
 
-      <div className="flex gap-3 pt-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setCurrentStep(2)}
-        >
-          Back
-        </Button>
-        <Button
-          type="submit"
-          variant="accent"
-          className="flex-1"
-          loading={loading}
-          disabled={loading}
-          onClick={handleSubmit}
-        >
-          Complete Registration
-        </Button>
+            // Update skills state if needed
+            if (data.skills) {
+              setSkills(data.skills);
+            }
+          }}
+        />
+
+        <div className="flex gap-3 pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setCurrentStep(2)}
+          >
+            Back
+          </Button>
+          <Button
+            type="submit"
+            variant="accent"
+            className="flex-1"
+            loading={loading}
+            disabled={loading}
+            onClick={handleSubmit}
+          >
+            Complete Registration
+          </Button>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <OnboardingLayout

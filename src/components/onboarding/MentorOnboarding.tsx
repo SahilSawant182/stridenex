@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import OnboardingLayout from "./OnboardingLayout";
@@ -12,11 +12,17 @@ import { BASE_URL } from "@/services/api.services";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ChevronDown, Plus, X } from "lucide-react";
 import axios from "axios";
 
 interface MentorOnboardingProps {
     onSubmit?: (data: any) => Promise<void>;
     onSkip?: () => void;
+}
+
+interface PlatformUrl {
+    platform: string;
+    url: string;
 }
 
 type Step = 1 | 2 | 3;
@@ -33,6 +39,18 @@ export default function MentorOnboarding({
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+
+    // Platform options state
+    const [platformOptions, setPlatformOptions] = useState<Array<{ value: string; label: string }>>([]);
+    const [loadingPlatforms, setLoadingPlatforms] = useState(false);
+    const [platformError, setPlatformError] = useState("");
+
+    // Platform URLs array
+    const [platformUrls, setPlatformUrls] = useState<PlatformUrl[]>([]);
+
+    // Dropdown open states
+    const [openPlatformDropdown, setOpenPlatformDropdown] = useState<number | null>(null);
+    const platformDropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     // Form data state
     const [formData, setFormData] = useState({
@@ -51,16 +69,101 @@ export default function MentorOnboarding({
         isActive: true,
         domain: [], // Multi-select domain
         skills: [], // Multi-select skills
-        profileUrl: "",
+        profile_description: "",
         bank_name: "",
         account_number: "",
         ifsc_code: "",
-        profile_description: "",
         terms_and_conditions: false
     });
 
     // Validation errors
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            platformDropdownRefs.current.forEach((ref, index) => {
+                if (ref && !ref.contains(event.target as Node) && openPlatformDropdown === index) {
+                    setOpenPlatformDropdown(null);
+                }
+            });
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [openPlatformDropdown]);
+
+    // Fetch platforms on mount
+    useEffect(() => {
+        fetchPlatforms();
+    }, []);
+
+    const fetchPlatforms = async () => {
+        setLoadingPlatforms(true);
+        setPlatformError("");
+        try {
+            const response = await fetch(
+                `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        doctype: "Platform List"
+                    })
+                }
+            );
+            const data = await response.json();
+
+            let options: Array<{ value: string; label: string }> = [];
+            if (Array.isArray(data)) {
+                options = data.map((item: any) => ({
+                    value: item.name,
+                    label: item.name
+                }));
+            } else if (data.data && Array.isArray(data.data)) {
+                options = data.data.map((item: any) => ({
+                    value: item.name,
+                    label: item.name
+                }));
+            }
+
+            setPlatformOptions(options);
+        } catch (err: any) {
+            console.error("Error fetching platforms:", err);
+            setPlatformError("Failed to load platforms");
+        } finally {
+            setLoadingPlatforms(false);
+        }
+    };
+
+    const addPlatformUrl = () => {
+        setPlatformUrls([...platformUrls, { platform: "", url: "" }]);
+    };
+
+    const removePlatformUrl = (index: number) => {
+        setPlatformUrls(platformUrls.filter((_, i) => i !== index));
+    };
+
+    const updatePlatformUrl = (index: number, field: keyof PlatformUrl, value: string) => {
+        const updated = [...platformUrls];
+        updated[index] = { ...updated[index], [field]: value };
+        setPlatformUrls(updated);
+    };
+
+    const togglePlatformDropdown = (index: number) => {
+        setOpenPlatformDropdown(openPlatformDropdown === index ? null : index);
+    };
+
+    const selectPlatform = (index: number, value: string) => {
+        updatePlatformUrl(index, 'platform', value);
+        setOpenPlatformDropdown(null);
+    };
+
+    const setPlatformRef = (index: number) => (el: HTMLDivElement | null) => {
+        platformDropdownRefs.current[index] = el;
+    };
 
     // ============ STEP FUNCTIONS ============
     const validateStep1 = (): boolean => {
@@ -123,17 +226,12 @@ export default function MentorOnboarding({
             errors.domain = "Please select at least one domain";
         }
 
-        // Skills validation - optional but if provided should be valid
-        if (formData.skills && formData.skills.length > 0) {
-            // Skills are optional, no validation needed
-        }
-
-        // Profile URL validation - optional but if provided should be valid URL
-        if (formData.profileUrl && formData.profileUrl.trim() !== "") {
-            const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
-            if (!urlPattern.test(formData.profileUrl)) {
-                errors.profileUrl = "Please enter a valid URL (e.g., https://linkedin.com/in/username)";
-            }
+        // Validate platform URLs
+        const invalidPlatform = platformUrls.some(
+            p => !p.platform || !p.url
+        );
+        if (invalidPlatform) {
+            errors.platformUrls = "All platform URL fields are required";
         }
 
         // Validate profile description - minimum 50 characters
@@ -189,7 +287,7 @@ export default function MentorOnboarding({
         switch (currentStep) {
             case 1: return "Please provide your basic personal information.";
             case 2: return "Tell us about your location and availability.";
-            case 3: return "Add your domain expertise, skills, profile URL, and description.";
+            case 3: return "Add your domain expertise, skills, platform URLs, and description.";
             default: return "";
         }
     };
@@ -219,7 +317,14 @@ export default function MentorOnboarding({
                 skill: skill
             }));
 
-            // Format mobile number with +91- prefix (remove any existing formatting)
+            // Format platform URLs
+            const validPlatformUrls = platformUrls.filter(p => p.platform && p.url);
+            const platformUrlsArray = validPlatformUrls.map(p => ({
+                platform: p.platform,
+                url: p.url
+            }));
+
+            // Format mobile number with +91- prefix
             const cleanMobile = formData.mobile_no.replace(/\D/g, '');
             const formattedMobile = `+91-${cleanMobile}`;
 
@@ -239,8 +344,8 @@ export default function MentorOnboarding({
                 approved_status: formData.approved_status,
                 is_active: formData.isActive ? 1 : 0,
                 domains: domainArray,
-                skills: skillsArray, // Add skills to payload
-                profile_url: formData.profileUrl?.trim() || "", // Add profile URL
+                skills: skillsArray,
+                mentor_platform_urls: platformUrlsArray, // Add platform URLs to payload
                 bank_name: formData.bank_name?.trim() || "",
                 account_number: formData.account_number?.trim() || "",
                 ifsc_code: formData.ifsc_code?.trim() || "",
@@ -584,8 +689,8 @@ export default function MentorOnboarding({
                 placeholder: "Select Domain",
                 layout: "full",
                 multiSelect: true,
-                allowCustom: true, // This enables the "Others" feature
-                customPlaceholder: "Enter custom domain name", // Optional
+                allowCustom: true,
+                customPlaceholder: "Enter custom domain name",
                 apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: {
                     doctype: "Domain"
@@ -621,15 +726,6 @@ export default function MentorOnboarding({
                 }
             },
             {
-                fieldname: "profileUrl",
-                label: "Profile URL",
-                fieldtype: "Data",
-                required: false,
-                placeholder: "https://linkedin.com/in/username or https://portfolio.com",
-                layout: "full",
-                inputClassName: "font-mono text-sm"
-            },
-            {
                 fieldname: "profile_description",
                 label: "Profile Description",
                 fieldtype: "Text",
@@ -642,7 +738,7 @@ export default function MentorOnboarding({
         ];
 
         return (
-            <div className="space-y-4">
+            <div className="space-y-6">
                 <DynamicForm
                     fields={step3Fields}
                     onSubmit={() => { }}
@@ -655,7 +751,6 @@ export default function MentorOnboarding({
                             ...prev,
                             ...data
                         }));
-                        // Only clear errors for fields that were changed
                         const updatedErrors = { ...fieldErrors };
                         Object.keys(data).forEach(key => {
                             delete updatedErrors[key];
@@ -664,6 +759,105 @@ export default function MentorOnboarding({
                         setError("");
                     }}
                 />
+
+                {/* Platform URLs Section */}
+                <div className="mt-6">
+                    <Label className="text-sm font-medium text-slate-700 mb-3 block">
+                        Profile URLs
+                    </Label>
+
+                    {platformUrls.map((item, index) => (
+                        <div key={index} className="flex items-start gap-3 mb-3">
+                            <div className="flex-1 grid grid-cols-2 gap-3">
+                                {/* Platform Dropdown */}
+                                <div className="relative" ref={setPlatformRef(index)}>
+                                    <div
+                                        onClick={() => !loadingPlatforms && togglePlatformDropdown(index)}
+                                        className={`w-full h-9 px-3 rounded-md border ${platformError ? "border-red-500" : "border-slate-200"} bg-white text-sm text-slate-900 flex items-center justify-between cursor-pointer hover:border-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4] ${loadingPlatforms ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                        tabIndex={0}
+                                    >
+                                        <span className={`truncate ${!item.platform ? "text-slate-400" : "text-slate-900"}`}>
+                                            {loadingPlatforms ? "Loading platforms..." : item.platform || "Select Platform"}
+                                        </span>
+                                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${openPlatformDropdown === index ? "rotate-180" : ""}`} />
+                                    </div>
+
+                                    {openPlatformDropdown === index && (
+                                        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-lg">
+                                            <div className="py-1">
+                                                {platformOptions.map((option) => (
+                                                    <div
+                                                        key={option.value}
+                                                        onClick={() => selectPlatform(index, option.value)}
+                                                        className={`px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors ${item.platform === option.value ? "bg-[#1152d4]/5" : ""}`}
+                                                    >
+                                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${item.platform === option.value ? "border-[#1152d4]" : "border-slate-300"}`}>
+                                                            {item.platform === option.value && (
+                                                                <div className="w-2 h-2 rounded-full bg-[#1152d4]" />
+                                                            )}
+                                                        </div>
+                                                        <span className={`flex-1 ${item.platform === option.value ? "text-[#1152d4] font-medium" : "text-slate-700"}`}>
+                                                            {option.label}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {platformError && (
+                                        <div className="mt-1">
+                                            <p className="text-xs text-red-500 inline">{platformError}. </p>
+                                            <button
+                                                type="button"
+                                                onClick={fetchPlatforms}
+                                                className="text-xs text-[#1152d4] underline font-medium hover:no-underline"
+                                            >
+                                                Retry
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* URL Input */}
+                                <Input
+                                    value={item.url}
+                                    onChange={(e) => updatePlatformUrl(index, 'url', e.target.value)}
+                                    placeholder="https://example.com/profile"
+                                    className="h-9 text-sm focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4] font-mono text-sm"
+                                />
+                            </div>
+
+                            {/* Remove button */}
+                            {platformUrls.length > 1 && (
+                                <button
+                                    type="button"
+                                    onClick={() => removePlatformUrl(index)}
+                                    className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors mt-0.5"
+                                    title="Remove URL"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            )}
+                        </div>
+                    ))}
+
+                    {/* Add Platform URL button */}
+                    <div className="flex justify-start mt-2">
+                        <Button
+                            type="button"
+                            onClick={addPlatformUrl}
+                            variant="outline"
+                            className="h-8 px-4 text-xs border-accent/20 text-accent hover:bg-accent hover:text-white transition-colors"
+                        >
+                            <Plus className="w-3 h-3 mr-1" /> Add Platform URL
+                        </Button>
+                    </div>
+
+                    {fieldErrors.platformUrls && (
+                        <p className="text-xs text-red-500 mt-2">{fieldErrors.platformUrls}</p>
+                    )}
+                </div>
 
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-6">
