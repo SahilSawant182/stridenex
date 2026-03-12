@@ -65,8 +65,8 @@ export default function AuthLayout({
         className="absolute bottom-20 right-20 w-80 h-80 bg-gradient-to-r from-accent/20 to-orange-600/20 rounded-full blur-3xl"
       />
 
-      <div className="flex w-full min-h-screen bg-white overflow-hidden shadow-2xl relative z-10">
-        {/* LEFT SIDE - Branding */}
+      <div className="flex w-full h-screen bg-white overflow-hidden shadow-2xl relative z-10">
+        {/* LEFT SIDE - Branding - Fixed, no scroll */}
         <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-16 overflow-hidden bg-gradient-to-br from-navy to-royal text-white">
           {/* Background Image */}
           {bgImage && (
@@ -87,7 +87,7 @@ export default function AuthLayout({
           <div className="absolute -top-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
           <div className="absolute bottom-0 right-0 h-96 w-96 rounded-full bg-blue-400/20 blur-3xl"></div>
 
-          {/* Content */}
+          {/* Content - Fixed height, no scroll needed */}
           <div className="relative z-20">
             {/* Logo */}
             <div className="flex items-center gap-4 mb-12">
@@ -148,87 +148,89 @@ export default function AuthLayout({
           </div>
         </div>
 
-        {/* RIGHT SIDE - Form */}
-        <div className="w-full lg:w-1/2 flex flex-col justify-center items-center px-6 py-12 md:px-16 lg:px-24">
-          <div className="w-full max-w-[440px]">
-            {/* Mobile Branding */}
-            <div className="lg:hidden flex items-center gap-4 mb-10">
-              <div className="w-14 h-14 flex items-center justify-center">
-                <img
-                  src="/images/Social Media Logo Icon 1 A2.jpg"
-                  alt="Skill Bridge Logo"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-              <div>
-                <h2 className="text-2xl font-bold text-navy">{appName}</h2>
-                <p className="text-sm text-slate-500">Pathways to Your Future</p>
-              </div>
-            </div>
-
-            {/* Header */}
-            <div className="mb-8">
-              <h3 className="text-3xl font-bold text-navy mb-2">{title}</h3>
-              <p className="text-slate-500">{subtitle}</p>
-            </div>
-
-            {/* Form Content */}
-            {children}
-
-            {/* Divider */}
-            {showSocial && (
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200" />
+        {/* RIGHT SIDE - Form - Scrollable */}
+        <div className="w-full lg:w-1/2 overflow-y-auto">
+          <div className="flex flex-col justify-center items-center px-6 py-12 md:px-16 lg:px-24 min-h-full">
+            <div className="w-full max-w-[440px]">
+              {/* Mobile Branding */}
+              <div className="lg:hidden flex items-center gap-4 mb-10">
+                <div className="w-14 h-14 flex items-center justify-center">
+                  <img
+                    src="/images/Social Media Logo Icon 1 A2.jpg"
+                    alt="Skill Bridge Logo"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="bg-white px-4 text-slate-400">
-                    Or continue with
-                  </span>
+                <div>
+                  <h2 className="text-2xl font-bold text-navy">{appName}</h2>
+                  <p className="text-sm text-slate-500">Pathways to Your Future</p>
                 </div>
               </div>
-            )}
 
-            {/* Social Icons */}
-            {showSocial && (
-              <div className="flex justify-center gap-3">
-                <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center hover:bg-gradient-to-r hover:from-primary hover:to-purple-600 hover:text-white transition-all text-slate-600 group">
-                  <span className="text-sm font-medium">G</span>
-                </button>
-                <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center hover:bg-gradient-to-r hover:from-accent hover:to-orange-600 hover:text-white transition-all text-slate-600 group">
-                  <span className="text-sm font-medium">f</span>
-                </button>
-                <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center hover:bg-gradient-to-r hover:from-emerald-600 hover:to-emerald-500 hover:text-white transition-all text-slate-600 group">
-                  <span className="text-sm font-medium">in</span>
-                </button>
+              {/* Header */}
+              <div className="mb-8">
+                <h3 className="text-3xl font-bold text-navy mb-2">{title}</h3>
+                <p className="text-slate-500">{subtitle}</p>
               </div>
-            )}
 
-            {/* Alternate Link */}
-            <p className="mt-6 text-center text-sm text-slate-500">
-              {alternateText}{" "}
-              <Link
-                href={alternateLinkHref}
-                className="font-semibold text-accent hover:text-orange-600 transition-colors"
-              >
-                {alternateLinkText}
-                <ArrowRight className="inline-block w-3 h-3 ml-1" />
-              </Link>
-            </p>
+              {/* Form Content */}
+              {children}
 
-            {/* Footer Links */}
-            <div className="mt-6 flex justify-center gap-4 text-xs text-slate-400">
-              <Link href="/privacy" className="hover:text-slate-600 transition-colors">
-                Privacy
-              </Link>
-              <span>•</span>
-              <Link href="/terms" className="hover:text-slate-600 transition-colors">
-                Terms
-              </Link>
-              <span>•</span>
-              <Link href="/help" className="hover:text-slate-600 transition-colors">
-                Help
-              </Link>
+              {/* Divider */}
+              {showSocial && (
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="bg-white px-4 text-slate-400">
+                      Or continue with
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Social Icons */}
+              {showSocial && (
+                <div className="flex justify-center gap-3">
+                  <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center hover:bg-gradient-to-r hover:from-primary hover:to-purple-600 hover:text-white transition-all text-slate-600 group">
+                    <span className="text-sm font-medium">G</span>
+                  </button>
+                  <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center hover:bg-gradient-to-r hover:from-accent hover:to-orange-600 hover:text-white transition-all text-slate-600 group">
+                    <span className="text-sm font-medium">f</span>
+                  </button>
+                  <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center hover:bg-gradient-to-r hover:from-emerald-600 hover:to-emerald-500 hover:text-white transition-all text-slate-600 group">
+                    <span className="text-sm font-medium">in</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Alternate Link */}
+              <p className="mt-6 text-center text-sm text-slate-500">
+                {alternateText}{" "}
+                <Link
+                  href={alternateLinkHref}
+                  className="font-semibold text-accent hover:text-orange-600 transition-colors"
+                >
+                  {alternateLinkText}
+                  <ArrowRight className="inline-block w-3 h-3 ml-1" />
+                </Link>
+              </p>
+
+              {/* Footer Links */}
+              <div className="mt-6 flex justify-center gap-4 text-xs text-slate-400">
+                <Link href="/privacy" className="hover:text-slate-600 transition-colors">
+                  Privacy
+                </Link>
+                <span>•</span>
+                <Link href="/terms" className="hover:text-slate-600 transition-colors">
+                  Terms
+                </Link>
+                <span>•</span>
+                <Link href="/help" className="hover:text-slate-600 transition-colors">
+                  Help
+                </Link>
+              </div>
             </div>
           </div>
         </div>

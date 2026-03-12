@@ -514,173 +514,173 @@ export default function CollegeOnboarding({
 
   const renderStep2 = () => {
     const step2Fields: FormField[] = [
-        {
-            fieldname: "country",
-            label: "Country",
-            fieldtype: "Data",
-            required: true,
-            placeholder: "Select Country",
-            layout: "half",
-            apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-            apiParams: { doctype: "Country" },
-            mapOptions: (data) => data.map((country: any) => ({
-                value: country.name,
-                label: country.name
-            }))
-        },
-        {
-            fieldname: "state",
-            label: "State",
-            fieldtype: "Data",
-            required: true,
-            placeholder: "Select State",
-            layout: "half",
-            apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-            apiParams: { doctype: "State" },
-            mapOptions: (data) => data.map((state: any) => ({
-                value: state.name,
-                label: state.name
-            }))
-        },
-        {
-            fieldname: "district",
-            label: "District",
-            fieldtype: "Data",
-            required: true,
-            placeholder: "Select District",
-            layout: "half",
-            apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-            apiParams: formData.state ? {
-                doctype: "District",
-                fields: ["name", "district_name"],
-                filters: [["state", "=", formData.state]],
-                order_by: "district_name asc",
-                limit_page_length: 1000
-            } : undefined,
-            mapOptions: (data) => data.map((district: any) => ({
-                value: district.name,
-                label: district.district_name || district.name
-            })),
-            disabled: !formData.state
-        },
-        {
-            fieldname: "tahsil",
-            label: "Taluka",
-            fieldtype: "Data",
-            required: true,
-            placeholder: "Select Taluka",
-            layout: "half",
-            apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-            apiParams: formData.state ? {
-                doctype: "Tahsil",
-                fields: ["name", "tahsil_name"],
-                filters: [["district", "=", formData.district]],
-                order_by: "tahsil_name asc",
-                limit_page_length: 1000
-            } : undefined,
-            mapOptions: (data) => data.map((tahsil: any) => ({
-                value: tahsil.name,
-                label: tahsil.name
-            }))
-        },
-        {
-            fieldname: "city",
-            label: "City",
-            fieldtype: "Data",
-            required: true,
-            placeholder: "Select City",
-            layout: "half",
-            apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-            apiParams: formData.state ? {
-                doctype: "City",
-                fields: ["name", "city_name"],
-                filters: [["tahsil", "=", formData.tahsil]],
-                order_by: "city_name asc",
-                limit_page_length: 1000
-            } : undefined,
-            mapOptions: (data) => data.map((city: any) => ({
-                value: city.name,
-                label: city.name
-            }))
-        },
-        {
-            fieldname: "university",
-            label: "University",
-            fieldtype: "Data",
-            required: true,
-            placeholder: "Select University",
-            layout: "half",
-            apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-            apiParams: { doctype: "University" },
-            mapOptions: (data) => data.map((university: any) => ({
-                value: university.name,
-                label: university.name
-            }))
-        },
-        {
-            fieldname: "college_type",
-            label: "College Type",
-            fieldtype: "Data",
-            required: true,
-            placeholder: "Select College Type",
-            layout: "half",
-            apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-            apiParams: { doctype: "College Type" },
-            mapOptions: (data) => data.map((collegeType: any) => ({
-                value: collegeType.name,
-                label: collegeType.name
-            }))
-        },
-        {
-            fieldname: "website",
-            label: "Website",
-            fieldtype: "Data",
-            required: false,
-            placeholder: "https://www.college.edu",
-            layout: "half",
-            inputClassName: "font-mono text-sm"
-        }
+      {
+        fieldname: "country",
+        label: "Country",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Select Country",
+        layout: "half",
+        apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiParams: { doctype: "Country" },
+        mapOptions: (data) => data.map((country: any) => ({
+          value: country.name,
+          label: country.name
+        }))
+      },
+      {
+        fieldname: "state",
+        label: "State",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Select State",
+        layout: "half",
+        apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiParams: { doctype: "State" },
+        mapOptions: (data) => data.map((state: any) => ({
+          value: state.name,
+          label: state.name
+        }))
+      },
+      {
+        fieldname: "district",
+        label: "District",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Select District",
+        layout: "half",
+        apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiParams: formData.state ? {
+          doctype: "District",
+          fields: ["name", "district_name"],
+          filters: [["state", "=", formData.state]],
+          order_by: "district_name asc",
+          limit_page_length: 1000
+        } : undefined,
+        mapOptions: (data) => data.map((district: any) => ({
+          value: district.name,
+          label: district.district_name || district.name
+        })),
+        disabled: !formData.state
+      },
+      {
+        fieldname: "tahsil",
+        label: "Taluka",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Select Taluka",
+        layout: "half",
+        apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiParams: formData.state ? {
+          doctype: "Tahsil",
+          fields: ["name", "tahsil_name"],
+          filters: [["district", "=", formData.district]],
+          order_by: "tahsil_name asc",
+          limit_page_length: 1000
+        } : undefined,
+        mapOptions: (data) => data.map((tahsil: any) => ({
+          value: tahsil.name,
+          label: tahsil.name
+        }))
+      },
+      {
+        fieldname: "city",
+        label: "City",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Select City",
+        layout: "half",
+        apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiParams: formData.state ? {
+          doctype: "City",
+          fields: ["name", "city_name"],
+          filters: [["tahsil", "=", formData.tahsil]],
+          order_by: "city_name asc",
+          limit_page_length: 1000
+        } : undefined,
+        mapOptions: (data) => data.map((city: any) => ({
+          value: city.name,
+          label: city.name
+        }))
+      },
+      {
+        fieldname: "university",
+        label: "University",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Select University",
+        layout: "half",
+        apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiParams: { doctype: "University" },
+        mapOptions: (data) => data.map((university: any) => ({
+          value: university.name,
+          label: university.name
+        }))
+      },
+      {
+        fieldname: "college_type",
+        label: "College Type",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Select College Type",
+        layout: "half",
+        apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiParams: { doctype: "College Type" },
+        mapOptions: (data) => data.map((collegeType: any) => ({
+          value: collegeType.name,
+          label: collegeType.name
+        }))
+      },
+      {
+        fieldname: "website",
+        label: "Website",
+        fieldtype: "Data",
+        required: false,
+        placeholder: "https://www.college.edu",
+        layout: "half",
+        inputClassName: "font-mono text-sm"
+      }
     ];
 
     return (
-        <div className="space-y-4">
-            <DynamicForm
-                fields={step2Fields}
-                onSubmit={() => {}}
-                buttonLabel=""
-                loading={loading}
-                initialValues={formData}
-                errors={fieldErrors}
-                onChange={(data) => {
-                    setFormData(prev => ({ ...prev, ...data }));
-                    const updatedErrors = { ...fieldErrors };
-                    Object.keys(data).forEach(key => delete updatedErrors[key]);
-                    setFieldErrors(updatedErrors);
-                    setError("");
-                }}
-            />
-            
-            <div className="flex gap-3">
-                <Button
-                    type="button"
-                    variant="outline"
-                    onClick={goToStep1}
-                >
-                    Back
-                </Button>
-                <Button
-                    type="button"
-                    onClick={handleContinueToStep3}
-                    variant="accent"
-                    className="flex-1"
-                    disabled={loading}
-                >
-                    Continue to Contact & Courses
-                </Button>
-            </div>
+      <div className="space-y-4">
+        <DynamicForm
+          fields={step2Fields}
+          onSubmit={() => { }}
+          buttonLabel=""
+          loading={loading}
+          initialValues={formData}
+          errors={fieldErrors}
+          onChange={(data) => {
+            setFormData(prev => ({ ...prev, ...data }));
+            const updatedErrors = { ...fieldErrors };
+            Object.keys(data).forEach(key => delete updatedErrors[key]);
+            setFieldErrors(updatedErrors);
+            setError("");
+          }}
+        />
+
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={goToStep1}
+          >
+            Back
+          </Button>
+          <Button
+            type="button"
+            onClick={handleContinueToStep3}
+            variant="accent"
+            className="flex-1"
+            disabled={loading}
+          >
+            Continue to Contact & Courses
+          </Button>
         </div>
+      </div>
     );
-};
+  };
 
   const renderStep3 = () => {
     const step3Fields: FormField[] = [
@@ -739,17 +739,10 @@ export default function CollegeOnboarding({
             salutationOptions={salutationOptions}
             loadingDesignations={loadingDesignations}
             loadingSalutations={loadingSalutations}
-            designationError={designationError}
-            salutationError={salutationError}
-            openDesignationDropdown={openDesignationDropdown}
-            onToggleDesignation={toggleDesignationDropdown}
             onSelectDesignation={selectDesignation}
             onPersonChange={handleContactPersonChange}
             onRemovePerson={removeContactPerson}
             onAddPerson={addContactPerson}
-            onRetryDesignations={fetchDesignations}
-            onRetrySalutations={fetchSalutations}
-            setDesignationRef={setDesignationRef}
             getSelectedDesignationLabel={getSelectedDesignationLabel}
           />
         </div>

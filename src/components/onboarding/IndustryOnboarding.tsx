@@ -583,25 +583,18 @@ export default function IndustryOnboarding({
             <div className="space-y-6">
                 <div className="relative">
                     <ContactPersonsTable
-                        contactPersons={contactPersons}
-                        fieldErrors={fieldErrors}
-                        designationOptions={designationOptions}
-                        salutationOptions={salutationOptions}
-                        loadingDesignations={loadingDesignations}
-                        loadingSalutations={loadingSalutations}
-                        designationError={designationError}
-                        salutationError={salutationError}
-                        openDesignationDropdown={openDesignationDropdown}
-                        onToggleDesignation={toggleDesignationDropdown}
-                        onSelectDesignation={selectDesignation}
-                        onPersonChange={handleContactPersonChange}
-                        onRemovePerson={removeContactPerson}
-                        onAddPerson={addContactPerson}
-                        onRetryDesignations={fetchDesignations}
-                        onRetrySalutations={fetchSalutations}
-                        setDesignationRef={setDesignationRef}
-                        getSelectedDesignationLabel={getSelectedDesignationLabel}
-                    />
+                                contactPersons={contactPersons}
+                                fieldErrors={fieldErrors}
+                                designationOptions={designationOptions}
+                                salutationOptions={salutationOptions}
+                                loadingDesignations={loadingDesignations}
+                                loadingSalutations={loadingSalutations}
+                                onSelectDesignation={selectDesignation}
+                                onPersonChange={handleContactPersonChange}
+                                onRemovePerson={removeContactPerson}
+                                onAddPerson={addContactPerson}
+                                getSelectedDesignationLabel={getSelectedDesignationLabel}
+                              />
                 </div>
 
                 <div className="flex gap-3 pt-6">

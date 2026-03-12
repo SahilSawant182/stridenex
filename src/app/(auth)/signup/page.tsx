@@ -6,12 +6,15 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { GraduationCap, Users, Building2, Briefcase } from "lucide-react";
 import AuthLayout from "../AuthLayout";
 import { useAuth } from "@/context/AuthContext";
 import DynamicForm from "@/components/forms/DynamicForm";
 import { FormField } from "@/types/doctypes.types";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+
+type UserRole = "student" | "mentor" | "college" | "industry" | null;
 
 export default function SignupPage() {
   const [bgImage, setBgImage] = useState<string | null>(null);
@@ -22,6 +25,7 @@ export default function SignupPage() {
   const [formValues, setFormValues] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<UserRole>("student");
   const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const { isAuthenticated } = useAuth();
@@ -52,6 +56,42 @@ export default function SignupPage() {
     }
     return { isValid: true, message: "" };
   };
+
+  // Role selection cards - FIXED COLOR ASSIGNMENTS
+  const roles = [
+    { 
+      id: "student", 
+      label: "Student", 
+      icon: GraduationCap, 
+      color: "accent", 
+      gradient: "from-accent to-orange-600", 
+      description: "Start your career journey"
+    },
+    { 
+      id: "mentor", 
+      label: "Mentor", 
+      icon: Users, 
+      color: "emerald", 
+      gradient: "from-emerald-600 to-emerald-500",
+      description: "Guide and inspire others"
+    },
+    { 
+      id: "college", 
+      label: "College", 
+      icon: Building2, 
+      color: "blue", 
+      gradient: "from-blue-600 to-blue-500", 
+      description: "Enhance student outcomes"
+    },
+    { 
+      id: "industry", 
+      label: "Industry", 
+      icon: Briefcase, 
+      color: "primary", 
+      gradient: "from-primary to-purple-600",
+      description: "Build your talent pipeline"
+    },
+  ];
 
   // Update the form fields with custom input for password fields
   const signupFields: FormField[] = [
@@ -150,8 +190,16 @@ export default function SignupPage() {
           localStorage.setItem("userFirstName", data.firstName);
           localStorage.setItem("userLastName", data.lastName);
 
-          // Directly navigate to student onboarding
-          router.push("/onboarding/student");
+          // Navigate based on selected role
+          if (selectedRole === "student") {
+            router.push("/onboarding/student");
+          } else if (selectedRole === "mentor") {
+            router.push("/onboarding/mentor");
+          } else if (selectedRole === "college") {
+            router.push("/onboarding/college");
+          } else if (selectedRole === "industry") {
+            router.push("/onboarding/industry");
+          }
         } else {
           // Handle different error structures
           const errorMsg = responseData?.message ||
@@ -235,6 +283,62 @@ export default function SignupPage() {
           loading={loading}
           onChange={handleFormChange}
         />
+
+        {/* Role Selection Cards - Smaller size with centered text */}
+        <div className="space-y-3">
+          <Label className="text-sm font-medium text-slate-700 text-center block w-full">
+            I want to join as
+          </Label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {roles.map((role) => {
+              const Icon = role.icon;
+              const isSelected = selectedRole === role.id;
+              return (
+                <button
+                  key={role.id}
+                  type="button"
+                  onClick={() => setSelectedRole(role.id as UserRole)}
+                  className={`relative p-2.5 rounded-xl border-2 transition-all duration-200 group ${
+                    isSelected
+                      ? `border-${role.color} bg-gradient-to-br ${role.gradient} bg-opacity-10 shadow-md`
+                      : 'border-slate-200 hover:border-slate-300 bg-white hover:shadow-sm'
+                  }`}
+                >
+                  <div className="flex flex-col items-center text-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-all ${
+                      isSelected 
+                        ? 'bg-white/20' 
+                        : `bg-${role.color}/10 group-hover:bg-${role.color}/20`
+                    }`}>
+                      <Icon className={`w-4 h-4 ${
+                        isSelected ? 'text-white' : `text-${role.color}`
+                      }`} />
+                    </div>
+                    <p className={`text-xs font-semibold mb-0.5 ${
+                      isSelected ? 'text-white' : 'text-slate-900'
+                    }`}>
+                      {role.label}
+                    </p>
+                    <p className={`text-[9px] leading-tight ${
+                      isSelected ? 'text-white/80' : 'text-slate-500'
+                    }`}>
+                      {role.description}
+                    </p>
+                  </div>
+
+                  {/* Selected indicator */}
+                  {isSelected && (
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-md">
+                      <svg className="w-2.5 h-2.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Terms Checkbox */}
         <div className="flex items-start gap-3">
