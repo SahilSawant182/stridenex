@@ -196,4 +196,13 @@
 .btn-cta-navy {
     @apply btn-navy btn-md btn-hover-scale;
 }
+
+ .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }

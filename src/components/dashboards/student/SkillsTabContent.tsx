@@ -1,23 +1,18 @@
-// components/dashboard/student/SkillsTabContent.tsx
+// components/dashboards/student/SkillsTabContent.tsx
 "use client";
 
 import { motion } from "framer-motion";
-import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
 import { CheckCircle2, ShieldCheck, Award, FileText, Lock, Star } from "lucide-react";
+import { StatsCard } from "@/components/dashboards/shared/StatsCard";
+import { SkillRadar } from "@/components/dashboards/shared/RadarChart";
+import { SummaryList } from "@/components/dashboards/shared/SummaryList";
+import { CircularScore } from "@/components/dashboards/shared/CircularScore";
 
 // Types
 interface RadarData {
   subject: string;
-  A: number;
-  fullMark: number;
-}
-
-interface LedgerItem {
-  label: string;
   value: number;
-  icon: React.ReactNode;
-  bgColor: string;
-  textColor: string;
+  fullMark: number;
 }
 
 interface SkillRow {
@@ -35,26 +30,26 @@ interface SkillRow {
 
 // Data
 const radarData: RadarData[] = [
-  { subject: 'Python', A: 90, fullMark: 100 },
-  { subject: 'ML', A: 70, fullMark: 100 },
-  { subject: 'SQL', A: 85, fullMark: 100 },
-  { subject: 'Comm', A: 65, fullMark: 100 },
-  { subject: 'Problem', A: 80, fullMark: 100 },
-  { subject: 'Data Viz', A: 75, fullMark: 100 },
+  { subject: 'Python', value: 90, fullMark: 100 },
+  { subject: 'ML', value: 70, fullMark: 100 },
+  { subject: 'SQL', value: 85, fullMark: 100 },
+  { subject: 'Comm', value: 65, fullMark: 100 },
+  { subject: 'Problem', value: 80, fullMark: 100 },
+  { subject: 'Data Viz', value: 75, fullMark: 100 },
 ];
 
-const ledgerSummary: LedgerItem[] = [
+const ledgerItems = [
   {
     label: 'Total Skills',
     value: 14,
-    icon: <span className="w-5 h-5 flex items-center justify-center bg-red-50 text-red-500 rounded-full text-xs">🎯</span>,
+    icon: <span>🎯</span>,
     bgColor: 'bg-red-50',
     textColor: 'text-red-500'
   },
   {
     label: 'AI Verified',
     value: 6,
-    icon: <span className="w-5 h-5 flex items-center justify-center bg-blue-50 text-blue-500 rounded-full text-xs">🤖</span>,
+    icon: <span>🤖</span>,
     bgColor: 'bg-blue-50',
     textColor: 'text-blue-500'
   },
@@ -68,7 +63,7 @@ const ledgerSummary: LedgerItem[] = [
   {
     label: 'Industry Endorsed',
     value: 2,
-    icon: <span className="w-5 h-5 flex items-center justify-center bg-purple-50 text-purple-500 rounded-full text-xs">🏭</span>,
+    icon: <span>🏭</span>,
     bgColor: 'bg-purple-50',
     textColor: 'text-purple-500'
   },
@@ -80,6 +75,20 @@ const ledgerSummary: LedgerItem[] = [
     textColor: 'text-slate-500'
   },
 ];
+
+const ledgerFooter = (
+  <div className="flex justify-between items-center py-2">
+    <div className="flex items-center gap-2 text-sm text-slate-600">
+      <span className="w-5 h-5 flex items-center justify-center text-slate-400">
+        <Lock className="w-4 h-4" />
+      </span>
+      Ledger Integrity
+    </div>
+    <span className="font-bold text-slate-800 flex items-center gap-1">
+      <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Verified
+    </span>
+  </div>
+);
 
 const skillRows: SkillRow[] = [
   { id: '1', name: 'Python', category: 'Technical', categoryType: 'Technical', level: 'Advanced', levelType: 'Advanced', evidence: 5, endorsements: 2, aiVerified: true, lastDemo: 'Feb 14' },
@@ -110,92 +119,23 @@ export default function SkillsTabContent() {
     <div className="space-y-6">
       {/* Top Row: Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
         {/* Skill Radar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-xl border border-slate-200/60 p-6 flex flex-col shadow-sm"
-        >
-          <h3 className="text-sm font-bold text-slate-800 mb-4">Skill Radar</h3>
-          <div className="flex-1 min-h-[220px] w-full relative -ml-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart cx="50%" cy="50%" outerRadius="70%" data={radarData}>
-                <PolarGrid stroke="#e2e8f0" />
-                <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10 }} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                <Radar name="Student" dataKey="A" stroke="#f97316" fill="#f97316" fillOpacity={0.2} strokeWidth={2} />
-              </RadarChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
+        <StatsCard title="Skill Radar" className="overflow-hidden">
+          <SkillRadar data={radarData} />
+        </StatsCard>
 
         {/* Ledger Summary */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-white rounded-xl border border-slate-200/60 p-6 flex flex-col shadow-sm"
-        >
-          <h3 className="text-sm font-bold text-slate-800 mb-6">Ledger Summary</h3>
-          <div className="flex-1 flex flex-col justify-between">
-            {ledgerSummary.map((item, index) => (
-              <div key={item.label} className="flex justify-between items-center py-2 border-b border-slate-50 last:border-0">
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                  <span className={`w-5 h-5 flex items-center justify-center ${item.bgColor} ${item.textColor} rounded-full text-xs`}>
-                    {item.icon}
-                  </span>
-                  {item.label}
-                </div>
-                <span className="font-bold text-slate-800">{item.value}</span>
-              </div>
-            ))}
-            <div className="flex justify-between items-center py-2 pt-4">
-              <div className="flex items-center gap-2 text-sm text-slate-600">
-                <span className="w-5 h-5 flex items-center justify-center text-slate-400">
-                  <Lock className="w-4 h-4" />
-                </span>
-                Ledger Integrity
-              </div>
-              <span className="font-bold text-slate-800 flex items-center gap-1">
-                <CheckCircle2 className="w-4 h-4 text-slate-800" /> Verified
-              </span>
-            </div>
-          </div>
-        </motion.div>
+        <StatsCard title="Ledger Summary">
+          <SummaryList items={ledgerItems} footer={ledgerFooter} />
+        </StatsCard>
 
         {/* Overall Score */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-white rounded-xl border border-slate-200/60 p-6 flex flex-col justify-center items-center shadow-sm relative overflow-hidden group"
-        >
-          <h3 className="text-sm font-bold text-slate-800 absolute top-6 left-6">Overall Score</h3>
-          <div className="relative w-32 h-32 mt-4 hover:scale-105 transition-transform duration-300">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="40" className="stroke-slate-100" strokeWidth="8" fill="none" />
-              <motion.circle
-                initial={{ strokeDashoffset: 251.2 }}
-                animate={{ strokeDashoffset: 251.2 * (1 - 0.73) }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
-                cx="50" cy="50" r="40"
-                className="stroke-orange-500"
-                strokeWidth="8"
-                fill="none"
-                strokeLinecap="round"
-                strokeDasharray="251.2"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-3xl font-extrabold text-slate-800">73</span>
-              <span className="text-[10px] font-bold text-orange-500 uppercase tracking-widest">Overall</span>
-            </div>
-          </div>
+        <StatsCard title="Overall Score" className="flex flex-col items-center justify-center relative overflow-hidden group">
+          <CircularScore score={73} label="Overall" color="stroke-orange-500" />
           <p className="text-[11px] font-medium text-slate-500 mt-6 group-hover:text-slate-700 transition-colors">
             Top 15% in cohort · 6 skills verified
           </p>
-        </motion.div>
+        </StatsCard>
       </div>
 
       {/* Full Skill Ledger Table */}
@@ -232,14 +172,18 @@ export default function SkillsTabContent() {
                     <span className={getLevelStyle(row.level, row.levelType)}>{row.level}</span>
                   </td>
                   <td className="py-4 px-6 font-semibold text-slate-800">{row.evidence} items</td>
-                  <td className="py-4 px-6 text-slate-700 font-medium flex items-center gap-1 mt-1">
-                    {row.endorsements} <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                  <td className="py-4 px-6">
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm font-semibold text-slate-800">{row.endorsements}</span>
+                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                    </div>
                   </td>
                   <td className="py-4 px-6">
                     {row.aiVerified ? (
-                      <span className="px-2 py-1 bg-emerald-50 text-emerald-600 rounded-md text-[11px] font-bold flex items-center w-fit gap-1">
-                        <ShieldCheck className="w-3 h-3" />Verified
-                      </span>
+                      <div className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md w-fit">
+                        <ShieldCheck className="w-3 h-3" />
+                        <span className="text-[11px] font-bold">Verified</span>
+                      </div>
                     ) : (
                       <span className="text-slate-400 font-medium text-[11px] px-2 py-1">Pending</span>
                     )}

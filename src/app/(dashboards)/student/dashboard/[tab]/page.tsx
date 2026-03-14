@@ -2,6 +2,14 @@ import CommonTabContent from "@/components/dashboards/shared/CommonTabContent";
 import SkillsTabContent from "@/components/dashboards/student/SkillsTabContent";
 import PathTabContent from "@/components/dashboards/student/PathTabContent";
 import { use } from "react";
+import CommunityTabContent from "@/components/dashboards/student/CommunityTabContent";
+import InternshipTabContent from "@/components/dashboards/student/InternshipTabContent";
+import HabitsTabContent from "@/components/dashboards/student/HabitsTabContent";
+import MentorsTabContent from "@/components/dashboards/student/MentorsTabContent";
+import EventsTabContent from "@/components/dashboards/student/EventsTabContent";
+import StoriesTabContent from "@/components/dashboards/student/StoriesTabContent";
+import PlanTabContent from "@/components/dashboards/student/PlanTabContent";
+import ShortsTabContent from "@/components/dashboards/student/ShortsTabContent";
 
 export default function DynamicStudentTabPage({ params }: { params: Promise<{ tab: string }> }) {
   const unwrappedParams = use(params);
@@ -13,6 +21,30 @@ export default function DynamicStudentTabPage({ params }: { params: Promise<{ ta
   
   if (unwrappedParams.tab === "path") {
     return <PathTabContent />;
+  }
+  if (unwrappedParams.tab === "shorts") {
+    return <ShortsTabContent />;
+  }
+  if (unwrappedParams.tab === "community") {
+    return <CommunityTabContent />;
+  }
+  if (unwrappedParams.tab === "internships") {
+    return <InternshipTabContent />;
+  }
+  if (unwrappedParams.tab === "habits") {
+    return <HabitsTabContent />;
+  }
+  if (unwrappedParams.tab === "mentors") {
+    return <MentorsTabContent />;
+  }
+  if (unwrappedParams.tab === "events") {
+    return <EventsTabContent />;
+  }
+  if (unwrappedParams.tab === "stories") {
+    return <StoriesTabContent />;
+  }
+  if (unwrappedParams.tab === "plans") {
+    return <PlanTabContent />;
   }
   
   return <CommonTabContent title={unwrappedParams.tab} />;

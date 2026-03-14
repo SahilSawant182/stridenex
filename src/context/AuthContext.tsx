@@ -10,6 +10,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   currentUser: string | null;
   fullName: string | null;
+  role: string | null;
   login: (key: string, secret: string, userData?: { email?: string; fullName?: string; role?: string }) => Promise<void>;
   logout: () => void;
   isInitialized: boolean;
@@ -24,6 +25,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const router = useRouter();
   const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -34,6 +36,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const storedSecret = localStorage.getItem("apiSecret");
     const storedUser = localStorage.getItem("currentUser");
     const storedFullName = localStorage.getItem("fullName");
+    const storedRole = localStorage.getItem("role");
 
     if (storedKey && storedSecret) {
       setApiKey(storedKey);
@@ -47,6 +50,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     if (storedFullName) {
       setFullName(storedFullName);
+    }
+
+    if (storedRole) {
+      setRole(storedRole);
     }
 
     setIsInitialized(true);
@@ -120,6 +127,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setFullName(userData.fullName);
           localStorage.setItem("fullName", userData.fullName);
         }
+        if (userData.role) {
+          setRole(userData.role);
+          localStorage.setItem("role", userData.role);
+        }
       } else {
         // Fallback: Fetch current user after login
         const user = await getCurrentUser();
@@ -135,9 +146,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setApiSecret(null);
       setIsAuthenticated(false);
       setFullName(null);
+      setRole(null);
       localStorage.removeItem("apiKey");
       localStorage.removeItem("apiSecret");
       localStorage.removeItem("fullName");
+      localStorage.removeItem("role");
     }
   };
 
@@ -174,6 +187,7 @@ const logout = async () => {
   localStorage.removeItem("posProfile");
   localStorage.removeItem("currentUser");
   localStorage.removeItem("fullName");
+  localStorage.removeItem("role");
   localStorage.removeItem("csrfToken");
 
   // Use setTimeout to ensure state updates complete before redirect
@@ -191,6 +205,7 @@ const logout = async () => {
         isAuthenticated,
         currentUser,
         fullName,
+        role,
         login,
         logout,
         getCurrentUser,

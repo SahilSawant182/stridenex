@@ -21,16 +21,15 @@ export default function LoginPage() {
   const [formValues, setFormValues] = useState<any>({});
   const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  const { isAuthenticated, login } = useAuth();
+  const { isAuthenticated, login, role } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (isAuthenticated) {
-      // If we have a role in the currentUser details, redirect there
-      // For now default to student dashboard as a fallback
-      router.push("/student/dashboard");
+      const dashboardRole = role || "student";
+      router.push(`/${dashboardRole}/dashboard`);
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, role]);
 
 
   const loginFields: FormField[] = [
@@ -93,15 +92,28 @@ export default function LoginPage() {
         const { api_key, api_secret } = data.key_details;
         const fullName = data.full_name || formData.username.split('@')[0];
         const email = data.user || formData.username;
-        const role = data.role?.toLowerCase() || 'student';
+
+        let userRole = 'student';
+        const availableDashboards = ['student', 'college', 'industry', 'mentor'];
+
+        if (data.roles && Array.isArray(data.roles)) {
+          const matchedRole = data.roles.find((r: string) =>
+            availableDashboards.some(d => r.toLowerCase().includes(d))
+          );
+          if (matchedRole) {
+            const foundDashboard = availableDashboards.find(d => matchedRole.toLowerCase().includes(d));
+            if (foundDashboard) userRole = foundDashboard;
+          }
+        } else if (data.role) {
+          userRole = data.role.toLowerCase();
+        }
 
         await login(api_key, api_secret, {
           email: email,
           fullName: fullName,
-          role: role
+          role: userRole
         });
-
-        router.push(`/${role}/dashboard`);
+        router.push(`/${userRole}/dashboard`);
       } else {
         const errorMessage = data.message || "Login failed";
         setError(errorMessage);
