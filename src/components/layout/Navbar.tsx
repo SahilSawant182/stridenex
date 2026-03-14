@@ -1,3 +1,4 @@
+// components/layout/PublicNavbar.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -9,18 +10,11 @@ import {
   X,
   ChevronDown,
   Search,
-  User,
-  LogOut,
-  Settings,
-  HelpCircle,
   Sparkles,
   GraduationCap,
   Building2,
   Briefcase,
-  AlertTriangle
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useAuth } from "@/context/AuthContext";
 import { navigationConfig, getBadgeColorClasses } from "@/config/navigation";
 
 interface NavbarProps {
@@ -79,87 +73,15 @@ const sectionVariants = {
   visible: { opacity: 1, y: 0 }
 };
 
-// Custom Modal Component
-const LogoutModal = ({ isOpen, onClose, onConfirm }: { isOpen: boolean; onClose: () => void; onConfirm: () => void }) => {
-  if (!isOpen) return null;
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999]"
-          />
-          
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="fixed left-0 top-0 right-0 bottom-0 flex items-center justify-center pointer-events-none z-[9999]"
-          >
-            <div className="w-[90%] max-w-md bg-white rounded-2xl shadow-2xl pointer-events-auto">
-              <div className="p-8">
-                {/* Icon */}
-                <div className="mx-auto w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
-                  <AlertTriangle className="w-8 h-8 text-red-600" />
-                </div>
-                
-                {/* Title */}
-                <h3 className="text-xl font-bold text-center text-slate-900 mb-3">
-                  Confirm Logout
-                </h3>
-                
-                {/* Description */}
-                <p className="text-center text-slate-600 mb-6">
-                  Are you sure you want to logout? You'll need to login again to access your account.
-                </p>
-                
-                {/* Buttons */}
-                <div className="flex gap-3">
-                  <button
-                    onClick={onClose}
-                    className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={onConfirm}
-                    className="flex-1 px-4 py-2.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-                  >
-                    Logout
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-};
-
-export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
+export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [logoutModalOpen, setLogoutModalOpen] = useState(false);
 
   const megaMenuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
-  const userMenuRef = useRef<HTMLDivElement>(null);
-  const userButtonRef = useRef<HTMLButtonElement>(null);
-
-  const { isAuthenticated, currentUser, logout } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -177,13 +99,6 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
 
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setSearchOpen(false);
-      }
-
-      if (userMenuRef.current &&
-        !userMenuRef.current.contains(event.target as Node) &&
-        userButtonRef.current &&
-        !userButtonRef.current.contains(event.target as Node)) {
-        setUserMenuOpen(false);
       }
     };
 
@@ -210,18 +125,7 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
     router.push(href);
     setMobileMenuOpen(false);
     setActiveMegaMenu(null);
-    setUserMenuOpen(false);
     setSearchOpen(false);
-  };
-
-  const handleLogoutClick = () => {
-    setUserMenuOpen(false);
-    setLogoutModalOpen(true);
-  };
-
-  const handleConfirmLogout = async () => {
-    setLogoutModalOpen(false);
-    await logout();
   };
 
   const navItems = Object.entries(navigationConfig).map(([key, value]) => ({
@@ -230,48 +134,32 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
   }));
 
   const quickActions = [
-    { label: "Students", icon: GraduationCap, href: "/students", color: "from-primary to-purple-600" },
-    { label: "Institutes", icon: Building2, href: "/institutes", color: "from-accent to-orange-600" },
-    { label: "Industry", icon: Briefcase, href: "/industry", color: "from-emerald-600 to-emerald-500" },
+    { label: "Students", icon: GraduationCap, color: "from-primary to-purple-600" },
+    { label: "College", icon: Building2, color: "from-accent to-orange-600" },
+    { label: "Mentor", icon: Briefcase, color: "from-emerald-600 to-emerald-500" },
+    { label: "Industry", icon: Briefcase, color: "from-primary to-purple-400" },
   ];
-
-  const getDisplayName = () => {
-    if (!currentUser) return 'Account';
-    if (currentUser.includes('@')) {
-      return currentUser.split('@')[0];
-    }
-    return currentUser;
-  };
 
   return (
     <>
-      {/* Logout Confirmation Modal */}
-      <LogoutModal
-        isOpen={logoutModalOpen}
-        onClose={() => setLogoutModalOpen(false)}
-        onConfirm={handleConfirmLogout}
-      />
-
       <nav
-        className={`fixed top-0 w-full z-50 transition-all duration-500 ${isScrolled
-          ? 'bg-white/95 backdrop-blur-xl shadow-lg'
-          : 'bg-white/80 backdrop-blur-sm'
-          }`}
+        className={`fixed top-0 w-full z-50 transition-all duration-500 ${
+          isScrolled
+            ? 'bg-white/95 backdrop-blur-xl shadow-lg'
+            : 'bg-white/80 backdrop-blur-sm'
+        }`}
       >
         <div className="max-w-7xl mx-auto px-6">
           {/* TOP ROW - Logo and Right Side Actions */}
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <div
-              onClick={() => handleNavigation('/portal/dashboard')}
-              className="flex items-center cursor-pointer"
-            >
+            <Link href="/" className="flex items-center cursor-pointer">
               <img
                 src="/images/Logo.png"
-                alt="Skill Bridge Logo"
+                alt="StrideNex Logo"
                 className="w-[170px] h-[170px] object-contain hover:scale-105 transition-transform duration-300"
               />
-            </div>
+            </Link>
 
             {/* Right Side Actions */}
             <div className="flex items-center gap-2">
@@ -280,7 +168,7 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
                 {quickActions.map((action) => (
                   <button
                     key={action.label}
-                    onClick={() => handleNavigation(action.href)}
+                    // onClick={() => handleNavigation(action.href)}
                     className="text-xs px-2 py-1 h-7 rounded-lg hover:bg-primary/5 transition-colors flex items-center gap-1"
                   >
                     <div className={`w-1.5 h-1.5 rounded-full bg-gradient-to-r ${action.color} mr-1`}></div>
@@ -299,98 +187,21 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
                 <Search className="w-4 h-4" />
               </motion.button>
 
-              {/* Auth Buttons / User Menu */}
-              {isAuthenticated ? (
-                <div className="relative">
-                  <motion.button
-                    ref={userButtonRef}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-slate-700 hover:text-primary hover:bg-primary/5 transition-colors"
-                  >
-                    <div className="w-7 h-7 rounded-full bg-gradient-mixed flex items-center justify-center">
-                      <User className="w-3.5 h-3.5 text-white" />
-                    </div>
-                    <span className="text-sm font-medium hidden md:block">
-                      {getDisplayName()}
-                    </span>
-                  </motion.button>
-
-                  <AnimatePresence>
-                    {userMenuOpen && (
-                      <motion.div
-                        ref={userMenuRef}
-                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-primary/10 overflow-hidden z-50"
-                      >
-                        <div className="p-2">
-                          <div className="px-3 py-2 border-b border-slate-100 mb-2">
-                            <p className="text-xs text-slate-500">Signed in as</p>
-                            <p className="text-sm font-semibold text-slate-900 truncate">
-                              {currentUser || 'User'}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => handleNavigation('/profile')}
-                            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-slate-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                          >
-                            <User className="w-4 h-4" />
-                            Profile
-                          </button>
-                          <button
-                            onClick={() => handleNavigation('/dashboard')}
-                            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-slate-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                          >
-                            <Briefcase className="w-4 h-4" />
-                            Dashboard
-                          </button>
-                          <button
-                            onClick={() => handleNavigation('/settings')}
-                            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-slate-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                          >
-                            <Settings className="w-4 h-4" />
-                            Settings
-                          </button>
-                          <button
-                            onClick={() => handleNavigation('/help')}
-                            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-slate-600 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                          >
-                            <HelpCircle className="w-4 h-4" />
-                            Help
-                          </button>
-                          <hr className="my-2 border-slate-100" />
-                          <button
-                            onClick={handleLogoutClick}
-                            className="flex w-full items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          >
-                            <LogOut className="w-4 h-4" />
-                            Logout
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleNavigation('/login')}
-                    className="px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                  >
-                    Login
-                  </button>
-                  <button
-                    onClick={() => handleNavigation('/signup')}
-                    className="px-3 py-1.5 text-sm font-medium bg-gradient-to-r from-accent to-orange-600 text-white rounded-lg shadow-lg hover:shadow-xl transition-all"
-                  >
-                    Join as Student
-                  </button>
-                </div>
-              )}
+              {/* Public Action Buttons */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleNavigation('/login')}
+                  className="px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+                >
+                  Login
+                </button>
+                <button
+                  onClick={() => handleNavigation('/signup')}
+                  className="px-3 py-1.5 text-sm font-medium bg-gradient-to-r from-accent to-orange-600 text-white rounded-lg shadow-lg hover:shadow-xl transition-all"
+                >
+                  Join Now
+                </button>
+              </div>
 
               {/* Mobile Menu Button */}
               <button
@@ -407,7 +218,6 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
 
           {/* BOTTOM ROW - Desktop Navigation */}
           <div className="hidden lg:flex items-center justify-center py-2">
-            {/* Main navigation items - centered */}
             <div className="flex items-center gap-1">
               {navItems.map((item) => {
                 const hasSections = item.sections && item.sections.length > 0;
@@ -422,36 +232,49 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
                     {item.href ? (
                       <button
                         onClick={() => handleNavigation(item.href!)}
-                        className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1 group ${activeMegaMenu === item.key
-                          ? 'text-primary bg-primary/10'
-                          : 'text-slate-700 hover:text-primary hover:bg-primary/5'
-                          }`}
+                        className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1 group ${
+                          activeMegaMenu === item.key
+                            ? 'text-primary bg-primary/10'
+                            : 'text-slate-700 hover:text-primary hover:bg-primary/5'
+                        }`}
                       >
                         <item.icon className="w-4 h-4" />
                         {item.label}
                         {hasSections && (
-                          <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${activeMegaMenu === item.key ? 'rotate-180' : ''
-                            }`} />
+                          <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${
+                            activeMegaMenu === item.key ? 'rotate-180' : ''
+                          }`} />
                         )}
                       </button>
                     ) : (
                       <button
-                        className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1 group ${activeMegaMenu === item.key
-                          ? 'text-primary bg-primary/10'
-                          : 'text-slate-700 hover:text-primary hover:bg-primary/5'
-                          }`}
+                        className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1 group ${
+                          activeMegaMenu === item.key
+                            ? 'text-primary bg-primary/10'
+                            : 'text-slate-700 hover:text-primary hover:bg-primary/5'
+                        }`}
                       >
                         <item.icon className="w-4 h-4" />
                         {item.label}
                         {hasSections && (
-                          <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${activeMegaMenu === item.key ? 'rotate-180' : ''
-                            }`} />
+                          <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${
+                            activeMegaMenu === item.key ? 'rotate-180' : ''
+                          }`} />
                         )}
                       </button>
                     )}
                   </div>
                 );
               })}
+              
+              {/* Additional Join Now Button in Navbar Row */}
+              <button
+                onClick={() => handleNavigation('/signup')}
+                className="px-3 py-1.5 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1 group text-accent hover:bg-accent/10"
+              >
+                <Sparkles className="w-4 h-4" />
+                Join Now
+              </button>
             </div>
           </div>
         </div>
@@ -503,9 +326,11 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
                                     {item.label}
                                   </span>
                                   {item.badge && (
-                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${getBadgeColorClasses(item.badgeColor).bg
-                                      } ${getBadgeColorClasses(item.badgeColor).text
-                                      }`}>
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                                      getBadgeColorClasses(item.badgeColor).bg
+                                    } ${
+                                      getBadgeColorClasses(item.badgeColor).text
+                                    }`}>
                                       {item.badge}
                                     </span>
                                   )}
@@ -531,7 +356,7 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
                 >
                   <div className="grid md:grid-cols-3 gap-4">
                     <button
-                      onClick={() => handleNavigation('/students')}
+                      onClick={() => handleNavigation('/signup?role=student')}
                       className="group text-left"
                     >
                       <div className="bg-gradient-to-r from-primary/5 to-purple-600/5 rounded-xl p-4 hover:shadow-lg transition-all">
@@ -547,7 +372,7 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
                       </div>
                     </button>
                     <button
-                      onClick={() => handleNavigation('/institutes')}
+                      onClick={() => handleNavigation('/signup?role=college')}
                       className="group text-left"
                     >
                       <div className="bg-gradient-to-r from-accent/5 to-orange-600/5 rounded-xl p-4 hover:shadow-lg transition-all">
@@ -563,7 +388,7 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
                       </div>
                     </button>
                     <button
-                      onClick={() => handleNavigation('/industry')}
+                      onClick={() => handleNavigation('/signup?role=industry')}
                       className="group text-left"
                     >
                       <div className="bg-gradient-to-r from-emerald-500/5 to-emerald-600/5 rounded-xl p-4 hover:shadow-lg transition-all">
@@ -616,7 +441,7 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
           )}
         </AnimatePresence>
 
-        {/* Mobile Menu - FIXED: Show navigation + user menu when logged in */}
+        {/* Mobile Menu */}
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div
@@ -652,7 +477,7 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
                   </button>
                 </div>
 
-                {/* Mobile Navigation Items - ALWAYS SHOW THESE */}
+                {/* Mobile Navigation Items */}
                 {navItems.map((item) => {
                   const hasSections = item.sections && item.sections.length > 0;
 
@@ -675,54 +500,51 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
                         >
                           <span className="text-lg font-bold text-slate-900">{item.label}</span>
                           {hasSections && (
-                            <ChevronDown className={`w-5 h-5 text-accent transition-transform ${activeMegaMenu === item.key ? 'rotate-180' : ''
-                              }`} />
+                            <ChevronDown className={`w-5 h-5 text-accent transition-transform ${
+                              activeMegaMenu === item.key ? 'rotate-180' : ''
+                            }`} />
                           )}
                         </button>
                       )}
 
-                      {hasSections && (
-                        <AnimatePresence>
-                          {activeMegaMenu === item.key && (
-                            <motion.div
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: 'auto' }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="space-y-4 overflow-hidden"
-                            >
-                              {item.sections.map((section) => (
-                                <div key={section.title} className="space-y-2">
-                                  <h5 className="text-xs font-bold uppercase text-primary tracking-wider">
-                                    {section.title}
-                                  </h5>
-                                  <div className="space-y-1">
-                                    {section.items.map((subItem) => (
-                                      <button
-                                        key={subItem.label}
-                                        onClick={() => handleNavigation(subItem.href)}
-                                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-primary/5 transition-colors w-full text-left"
-                                      >
-                                        {subItem.icon && (
-                                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                                            <subItem.icon className="w-4 h-4" />
-                                          </div>
-                                        )}
-                                        <div>
-                                          <div className="text-sm font-semibold text-slate-900">
-                                            {subItem.label}
-                                          </div>
-                                          {subItem.description && (
-                                            <p className="text-xs text-slate-500">{subItem.description}</p>
-                                          )}
-                                        </div>
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                      {hasSections && activeMegaMenu === item.key && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="space-y-4 overflow-hidden"
+                        >
+                          {item.sections.map((section: any) => (
+                            <div key={section.title} className="space-y-2">
+                              <h5 className="text-xs font-bold uppercase text-primary tracking-wider">
+                                {section.title}
+                              </h5>
+                              <div className="space-y-1">
+                                {section.items.map((subItem: any) => (
+                                  <button
+                                    key={subItem.label}
+                                    onClick={() => handleNavigation(subItem.href)}
+                                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-primary/5 transition-colors w-full text-left"
+                                  >
+                                    {subItem.icon && (
+                                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                                        <subItem.icon className="w-4 h-4" />
+                                      </div>
+                                    )}
+                                    <div>
+                                      <div className="text-sm font-semibold text-slate-900">
+                                        {subItem.label}
+                                      </div>
+                                      {subItem.description && (
+                                        <p className="text-xs text-slate-500">{subItem.description}</p>
+                                      )}
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </motion.div>
                       )}
                     </motion.div>
                   );
@@ -730,81 +552,21 @@ export default function Navbar({ appName = "StrideNex" }: NavbarProps) {
 
                 <hr className="border-slate-200" />
 
-                {/* User Menu Section - Show when authenticated */}
-                {isAuthenticated ? (
-                  <div className="space-y-2">
-                    <div className="px-3 py-2 bg-slate-50 rounded-lg mb-2">
-                      <p className="text-xs text-slate-500">Signed in as</p>
-                      <p className="text-sm font-semibold text-slate-900 truncate">
-                        {currentUser || 'User'}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => handleNavigation('/profile')}
-                      className="w-full px-4 py-2.5 text-left text-slate-700 hover:bg-primary/5 rounded-lg transition-colors flex items-center gap-3"
-                    >
-                      <User className="w-5 h-5 text-primary" />
-                      <span>Profile</span>
-                    </button>
-                    <button
-                      onClick={() => handleNavigation('/dashboard')}
-                      className="w-full px-4 py-2.5 text-left text-slate-700 hover:bg-primary/5 rounded-lg transition-colors flex items-center gap-3"
-                    >
-                      <Briefcase className="w-5 h-5 text-primary" />
-                      <span>Dashboard</span>
-                    </button>
-                    <button
-                      onClick={() => handleNavigation('/settings')}
-                      className="w-full px-4 py-2.5 text-left text-slate-700 hover:bg-primary/5 rounded-lg transition-colors flex items-center gap-3"
-                    >
-                      <Settings className="w-5 h-5 text-primary" />
-                      <span>Settings</span>
-                    </button>
-                    <button
-                      onClick={() => handleNavigation('/help')}
-                      className="w-full px-4 py-2.5 text-left text-slate-700 hover:bg-primary/5 rounded-lg transition-colors flex items-center gap-3"
-                    >
-                      <HelpCircle className="w-5 h-5 text-primary" />
-                      <span>Help</span>
-                    </button>
-                    <hr className="my-2 border-slate-200" />
-                    <button
-                      onClick={handleLogoutClick}
-                      className="w-full px-4 py-2.5 text-left text-red-600 hover:bg-red-50 rounded-lg transition-colors flex items-center gap-3"
-                    >
-                      <LogOut className="w-5 h-5" />
-                      <span>Logout</span>
-                    </button>
-                  </div>
-                ) : (
-                  /* Auth buttons for non-authenticated users */
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => handleNavigation('/login')}
-                      className="w-full px-4 py-2 text-center text-primary font-semibold hover:bg-primary/5 rounded-lg transition-colors"
-                    >
-                      Login
-                    </button>
-                    <button
-                      onClick={() => handleNavigation('/signup')}
-                      className="w-full px-4 py-2 text-center bg-gradient-to-r from-primary to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
-                    >
-                      Join as Student
-                    </button>
-                    <button
-                      onClick={() => handleNavigation('/institutes/register')}
-                      className="w-full px-4 py-2 text-center bg-gradient-to-r from-accent to-orange-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
-                    >
-                      Register as Institute
-                    </button>
-                    <button
-                      onClick={() => handleNavigation('/industry/partner')}
-                      className="w-full px-4 py-2 text-center bg-gradient-to-r from-emerald-600 to-emerald-500 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
-                    >
-                      Partner as Industry
-                    </button>
-                  </div>
-                )}
+                {/* Auth buttons for public users */}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => handleNavigation('/login')}
+                    className="w-full px-4 py-2 text-center text-primary font-semibold hover:bg-primary/5 rounded-lg transition-colors"
+                  >
+                    Login
+                  </button>
+                  <button
+                    onClick={() => handleNavigation('/signup')}
+                    className="w-full px-4 py-2 text-center bg-gradient-to-r from-primary to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+                  >
+                    Join Now
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}

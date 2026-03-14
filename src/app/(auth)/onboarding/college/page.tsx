@@ -33,7 +33,7 @@ export default function CollegeOnboardingPage() {
         localStorage.setItem("onboardingCompleted", "true");
         localStorage.setItem("userType", "college");
 
-        router.push("/portal/dashboard");
+        router.push("/college/dashboard");
       } else {
         console.error("Failed to save onboarding data");
       }

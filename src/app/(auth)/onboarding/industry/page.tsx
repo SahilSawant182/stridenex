@@ -34,7 +34,7 @@ export default function IndustryOnboardingPage() {
         localStorage.setItem("onboardingCompleted", "true");
         localStorage.setItem("userType", "industry");
 
-        router.push("/portal/dashboard");
+        router.push("/industry/dashboard");
       } else {
         console.error("Failed to save onboarding data");
       }

@@ -33,7 +33,7 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.push("/portal/dashboard");
+      router.push("/student/dashboard"); // Fallback, real roles will be set next
     }
   }, [isAuthenticated, router]);
 

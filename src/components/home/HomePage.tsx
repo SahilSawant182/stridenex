@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import HeroSection from "./HeroSection";
+import OfferingsSection from "./OfferingsSection";
 import JourneySection from "./JourneySection";
 import PathwaysSection from "./PathwaysSection";
 import HowItWorksSection from "./HowItWorksSection";
@@ -10,7 +11,6 @@ import ImpactSection from "./ImpactSection";
 import StakeholdersSection from "./StakeholdersSection";
 import WhyDifferentSection from "./WhyDifferentSection";
 import FinalCTASection from "./FinalCTASection";
-import Footer from "../layout/Footer";
 import WelcomePopup from "@/components/ui/WelcomePopup";
 
 interface HomePageProps {
@@ -58,6 +58,7 @@ export default function HomePage({ appName = "StrideNex" }: HomePageProps) {
     <>
       <main>
         <HeroSection appName={appName} />
+        <OfferingsSection />
         <JourneySection />
         <PathwaysSection />
         <HowItWorksSection />
@@ -66,10 +67,9 @@ export default function HomePage({ appName = "StrideNex" }: HomePageProps) {
         <WhyDifferentSection />
         <FinalCTASection />
       </main>
-      {/* <Footer appName={appName} /> */}
 
       {/* Welcome Popup */}
-      <WelcomePopup
+      {/* <WelcomePopup
         isOpen={showWelcome}
         onClose={() => {
           console.log("👋 Closing popup");
@@ -78,7 +78,7 @@ export default function HomePage({ appName = "StrideNex" }: HomePageProps) {
         userName={displayName}
         userEmail={displayEmail}
         userType="student"
-      />
+      /> */}
 
       {/* Debug button to manually trigger popup */}
       {/* <button

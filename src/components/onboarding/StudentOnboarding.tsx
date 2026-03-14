@@ -797,7 +797,7 @@ export default function StudentOnboarding({
     if (onSkip) {
       onSkip();
     } else {
-      router.push("/portal/dashboard");
+      router.push("/student/dashboard");
     }
   };
 

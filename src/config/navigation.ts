@@ -193,7 +193,7 @@ export const navigationConfig: Record<string, NavCategory> = {
   
   about: {
     label: "About",
-    href: "/portal/about", // Main category link
+    href: "/about", // Main category link
     icon: Info,
     sections: [
       {
@@ -269,6 +269,43 @@ export const navigationConfig: Record<string, NavCategory> = {
       },
     ]
   },
+  
+  join: {
+    label: "Join Us",
+    href: "/signup",
+    icon: Rocket,
+    sections: [
+      {
+        title: "Roles",
+        items: [
+          {
+            label: "Student",
+            href: "/signup?role=student",
+            icon: GraduationCap,
+            description: "Start your career journey",
+          },
+          {
+            label: "Institute",
+            href: "/signup?role=college",
+            icon: Building2,
+            description: "Enhance placement success",
+          },
+          {
+            label: "Mentor",
+            href: "/signup?role=mentor",
+            icon: Lightbulb,
+            description: "Guide the next generation",
+          },
+          {
+            label: "Industry",
+            href: "/signup?role=industry",
+            icon: Briefcase,
+            description: "Access skilled talent",
+          }
+        ]
+      }
+    ]
+  }
 };
 
 // Helper function to get badge color classes

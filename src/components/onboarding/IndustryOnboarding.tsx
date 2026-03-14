@@ -360,7 +360,7 @@ export default function IndustryOnboarding({
         if (onSkip) {
             onSkip();
         } else {
-            router.push("/portal/dashboard");
+      router.push("/industry/dashboard");
         }
     };
 

@@ -413,7 +413,7 @@ export default function CollegeOnboarding({
     if (onSkip) {
       onSkip();
     } else {
-      router.push("/portal/dashboard");
+      router.push("/college/dashboard");
     }
   };
 

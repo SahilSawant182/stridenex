@@ -34,7 +34,7 @@ export default function MentorOnboardingPage() {
         localStorage.setItem("onboardingCompleted", "true");
         localStorage.setItem("userType", "mentor");
 
-        router.push("/portal/dashboard");
+        router.push("/mentor/dashboard");
       } else {
         console.error("Failed to save onboarding data");
       }

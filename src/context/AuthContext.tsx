@@ -10,7 +10,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   currentUser: string | null;
   fullName: string | null;
-  login: (key: string, secret: string, userData?: { email?: string; fullName?: string }) => Promise<void>;
+  login: (key: string, secret: string, userData?: { email?: string; fullName?: string; role?: string }) => Promise<void>;
   logout: () => void;
   isInitialized: boolean;
   getCurrentUser: () => Promise<string | null>;
@@ -55,7 +55,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // Auto-fetch current user if authenticated but user not known
   useEffect(() => {
     let isMounted = true;
-    
+
     if (apiKey && apiSecret && !currentUser && isInitialized) {
       getCurrentUser().then((user) => {
         if (isMounted && user) {
@@ -99,13 +99,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const login = async (key: string, secret: string, userData?: { email?: string; fullName?: string }) => {
+  const login = async (key: string, secret: string, userData?: { email?: string; fullName?: string; role?: string }) => {
     try {
       // Set state immediately
       setApiKey(key);
       setApiSecret(secret);
       setIsAuthenticated(true);
-      
+
       // Save to localStorage
       localStorage.setItem("apiKey", key);
       localStorage.setItem("apiSecret", secret);
@@ -141,7 +141,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
- const logout = async () => {
+const logout = async () => {
   try {
     if (apiKey && apiSecret) {
       await fetch(
@@ -176,19 +176,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   localStorage.removeItem("fullName");
   localStorage.removeItem("csrfToken");
 
-  router.push("/login");
+  // Use setTimeout to ensure state updates complete before redirect
+  setTimeout(() => {
+    // Force a hard navigation to home page
+    window.location.href = "/";
+  }, 100);
 };
 
   return (
-    <AuthContext.Provider 
-      value={{ 
-        apiKey, 
-        apiSecret, 
-        isAuthenticated, 
-        currentUser, 
+    <AuthContext.Provider
+      value={{
+        apiKey,
+        apiSecret,
+        isAuthenticated,
+        currentUser,
         fullName,
-        login, 
-        logout, 
+        login,
+        logout,
         getCurrentUser,
         isInitialized,
       }}

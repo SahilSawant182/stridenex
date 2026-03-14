@@ -34,7 +34,7 @@ export default function StudentOnboardingPage() {
         localStorage.setItem("onboardingCompleted", "true");
         localStorage.setItem("userType", "student");
 
-        router.push("/portal/dashboard");
+        router.push("/student/dashboard");
       } else {
         console.error("Failed to save onboarding data");
       }

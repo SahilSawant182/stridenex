@@ -26,10 +26,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      router.push("/portal/dashboard");
+      // If we have a role in the currentUser details, redirect there
+      // For now default to student dashboard as a fallback
+      router.push("/student/dashboard");
     }
   }, [isAuthenticated, router]);
-  
+
 
   const loginFields: FormField[] = [
     {
@@ -54,7 +56,7 @@ export default function LoginPage() {
 
   const handleLogin = async () => {
     const formData = formValues;
-    
+
     // Validate form using the reusable validator
     const errors = validateLoginForm({
       username: formData.username,
@@ -91,13 +93,15 @@ export default function LoginPage() {
         const { api_key, api_secret } = data.key_details;
         const fullName = data.full_name || formData.username.split('@')[0];
         const email = data.user || formData.username;
-        
+        const role = data.role?.toLowerCase() || 'student';
+
         await login(api_key, api_secret, {
           email: email,
-          fullName: fullName
+          fullName: fullName,
+          role: role
         });
 
-        router.push("/portal/dashboard");
+        router.push(`/${role}/dashboard`);
       } else {
         const errorMessage = data.message || "Login failed";
         setError(errorMessage);
@@ -123,7 +127,7 @@ export default function LoginPage() {
       <div className="space-y-5">
         <DynamicForm
           fields={loginFields}
-          onSubmit={() => {}} // Empty onSubmit
+          onSubmit={() => { }} // Empty onSubmit
           buttonLabel="" // No button from DynamicForm
           loading={loading}
           onChange={handleFormChange}
