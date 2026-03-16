@@ -59,35 +59,35 @@ export default function SignupPage() {
 
   // Role selection cards - FIXED COLOR ASSIGNMENTS
   const roles = [
-    { 
-      id: "student", 
-      label: "Student", 
-      icon: GraduationCap, 
-      color: "accent", 
-      gradient: "from-accent to-orange-600", 
+    {
+      id: "student",
+      label: "Student",
+      icon: GraduationCap,
+      color: "accent",
+      gradient: "from-accent to-orange-600",
       description: "Start your career journey"
     },
-    { 
-      id: "mentor", 
-      label: "Mentor", 
-      icon: Users, 
-      color: "emerald", 
+    {
+      id: "mentor",
+      label: "Mentor",
+      icon: Users,
+      color: "emerald",
       gradient: "from-emerald-600 to-emerald-500",
       description: "Guide and inspire others"
     },
-    { 
-      id: "college", 
-      label: "College", 
-      icon: Building2, 
-      color: "blue", 
-      gradient: "from-blue-600 to-blue-500", 
+    {
+      id: "college",
+      label: "College",
+      icon: Building2,
+      color: "blue",
+      gradient: "from-blue-600 to-blue-500",
       description: "Enhance student outcomes"
     },
-    { 
-      id: "industry", 
-      label: "Industry", 
-      icon: Briefcase, 
-      color: "primary", 
+    {
+      id: "industry",
+      label: "Industry",
+      icon: Briefcase,
+      color: "primary",
       gradient: "from-primary to-purple-600",
       description: "Build your talent pipeline"
     },
@@ -167,6 +167,13 @@ export default function SignupPage() {
 
     setLoading(true);
     setError("");
+    console.log('selected role', selectedRole)
+    const rolePayload = [
+      { student: selectedRole === "student" ? 1 : 0 },
+      { college: selectedRole === "college" ? 1 : 0 },
+      { mentor: selectedRole === "mentor" ? 1 : 0 },
+      { industry: selectedRole === "industry" ? 1 : 0 }
+    ];
 
     // Call API
     fetch(`${BASE_URL}method/stridenex_app.api_stridenex_app.app.signup`, {
@@ -180,6 +187,7 @@ export default function SignupPage() {
         last_name: data.lastName,
         email: data.email,
         password: data.password,
+        role: rolePayload,
       }),
     })
       .then(response => response.json())
@@ -298,30 +306,25 @@ export default function SignupPage() {
                   key={role.id}
                   type="button"
                   onClick={() => setSelectedRole(role.id as UserRole)}
-                  className={`relative p-2.5 rounded-xl border-2 transition-all duration-200 group ${
-                    isSelected
+                  className={`relative p-2.5 rounded-xl border-2 transition-all duration-200 group ${isSelected
                       ? `border-${role.color} bg-gradient-to-br ${role.gradient} bg-opacity-10 shadow-md`
                       : 'border-slate-200 hover:border-slate-300 bg-white hover:shadow-sm'
-                  }`}
+                    }`}
                 >
                   <div className="flex flex-col items-center text-center">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-all ${
-                      isSelected 
-                        ? 'bg-white/20' 
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-all ${isSelected
+                        ? 'bg-white/20'
                         : `bg-${role.color}/10 group-hover:bg-${role.color}/20`
-                    }`}>
-                      <Icon className={`w-4 h-4 ${
-                        isSelected ? 'text-white' : `text-${role.color}`
-                      }`} />
+                      }`}>
+                      <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : `text-${role.color}`
+                        }`} />
                     </div>
-                    <p className={`text-xs font-semibold mb-0.5 ${
-                      isSelected ? 'text-white' : 'text-slate-900'
-                    }`}>
+                    <p className={`text-xs font-semibold mb-0.5 ${isSelected ? 'text-white' : 'text-slate-900'
+                      }`}>
                       {role.label}
                     </p>
-                    <p className={`text-[9px] leading-tight ${
-                      isSelected ? 'text-white/80' : 'text-slate-500'
-                    }`}>
+                    <p className={`text-[9px] leading-tight ${isSelected ? 'text-white/80' : 'text-slate-500'
+                      }`}>
                       {role.description}
                     </p>
                   </div>

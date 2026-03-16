@@ -94,18 +94,30 @@ export default function LoginPage() {
         const email = data.user || formData.username;
 
         let userRole = 'student';
-        const availableDashboards = ['student', 'college', 'industry', 'mentor'];
 
         if (data.roles && Array.isArray(data.roles)) {
-          const matchedRole = data.roles.find((r: string) =>
-            availableDashboards.some(d => r.toLowerCase().includes(d))
-          );
-          if (matchedRole) {
-            const foundDashboard = availableDashboards.find(d => matchedRole.toLowerCase().includes(d));
-            if (foundDashboard) userRole = foundDashboard;
+          const lowerRoles: string[] = data.roles.map((r: string) => r.toLowerCase());
+          
+          if (lowerRoles.some((r: string) => r.includes('college') || r.includes('admin'))) {
+            userRole = 'college';
+          } else if (lowerRoles.some((r: string) => r.includes('industry'))) {
+            userRole = 'industry';
+          } else if (lowerRoles.some((r: string) => r.includes('mentor'))) {
+            userRole = 'mentor';
+          } else if (lowerRoles.some((r: string) => r.includes('student'))) {
+            userRole = 'student';
           }
         } else if (data.role) {
-          userRole = data.role.toLowerCase();
+          const r = data.role.toLowerCase();
+          if (r.includes('college') || r.includes('admin')) {
+            userRole = 'college';
+          } else if (r.includes('industry')) {
+            userRole = 'industry';
+          } else if (r.includes('mentor')) {
+            userRole = 'mentor';
+          } else if (r.includes('student')) {
+            userRole = 'student';
+          }
         }
 
         await login(api_key, api_secret, {
