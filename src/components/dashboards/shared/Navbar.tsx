@@ -48,10 +48,11 @@ export default function Navbar({ role }: NavbarProps) {
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             className="flex items-center gap-2 p-1 pl-2 pr-3 bg-slate-50 hover:bg-slate-100 rounded-full border border-slate-200 transition-colors"
           >
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm ${role === 'student' ? 'bg-gradient-to-tr from-accent to-orange-500' :
-                role === 'college' ? 'bg-blue-600' :
-                  role === 'mentor' ? 'bg-emerald-600' :
-                    'bg-purple-600' // industry
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm ${
+                role === 'student' ? 'bg-gradient-to-tr from-accent to-orange-500' :
+                role === 'college' ? 'bg-green-600' :
+                role === 'mentor' ? 'bg-emerald-600' :
+                'bg-purple-600' // industry
               }`}>
               {displayName.charAt(0).toUpperCase()}
             </div>

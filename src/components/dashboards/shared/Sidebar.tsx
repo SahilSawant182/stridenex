@@ -49,6 +49,34 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
     return "U";
   };
 
+  const getActiveTabStyles = () => {
+    switch (role) {
+      case 'college':
+        return "bg-green-50 text-green-600 font-semibold";
+      case 'mentor':
+        return "bg-emerald-50 text-emerald-600 font-semibold";
+      case 'industry':
+        return "bg-purple-50 text-purple-600 font-semibold";
+      case 'student':
+      default:
+        return "bg-orange-50 text-orange-600 font-semibold";
+    }
+  };
+
+  const getActiveIconStyles = () => {
+    switch(role) {
+      case 'college':
+        return "text-green-600";
+      case 'mentor':
+        return "text-emerald-600";
+      case 'industry':
+        return "text-purple-600";
+      case 'student':
+      default:
+        return "text-orange-600";
+    }
+  };
+
   return (
     <motion.div
       initial={{ width: collapsed ? 80 : 256 }}
@@ -105,14 +133,14 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
                 relative flex items-center gap-3 px-3 py-2.5 rounded-lg
                 transition-all duration-300 group
                 ${isActive
-                  ? "bg-orange-50 text-orange-600 font-semibold"
+                  ? getActiveTabStyles()
                   : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-900 font-medium"
                 }
                 ${collapsed ? "justify-center" : ""}
               `}
             >
               <Icon
-                className={`w-[20px] h-[20px] transition-colors ${isActive ? "text-orange-600" : "text-slate-400 group-hover:text-slate-600"
+                className={`w-[20px] h-[20px] transition-colors ${isActive ? getActiveIconStyles() : "text-slate-400 group-hover:text-slate-600"
                   }`}
               />
 
@@ -153,13 +181,13 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
                   relative flex items-center gap-3 px-3 py-2.5 rounded-lg
                   transition-all duration-300 group
                   ${isActive
-                    ? "bg-orange-50 text-orange-600 font-semibold"
+                    ? getActiveTabStyles()
                     : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 font-medium"
                   }
                   ${collapsed ? "justify-center" : ""}
                 `}
               >
-                <Icon className={`w-[20px] h-[20px] transition-colors ${isActive ? "text-orange-600" : "text-slate-400 group-hover:text-slate-600"}`} />
+                <Icon className={`w-[20px] h-[20px] transition-colors ${isActive ? getActiveIconStyles() : "text-slate-400 group-hover:text-slate-600"}`} />
 
                 {!collapsed && (
                   <span className={`flex-1 text-[14px] tracking-wide ${isActive ? "font-bold" : "font-medium"}`}>{link.name}</span>
