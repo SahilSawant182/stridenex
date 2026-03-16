@@ -3,6 +3,13 @@
 import React, { useState } from 'react';
 import { motion, Variants } from "framer-motion";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
+import Nep2020Content from "./Nep2020Content";
+import Ugc2026Content from "./Ugc2026Content";
+import GrievanceEngineContent from "./GrievanceEngineContent";
+import PortfolioLockerContent from "./PortfolioLockerContent";
+import AbcCreditsContent from "./AbcCreditsContent";
+import EquityAuditContent from "./EquityAuditContent";
+import ReportsTabContent from "./ReportsTabContent";
 import { FileText, Target, CheckSquare, BarChart, Download, Users, Briefcase, Calendar } from "lucide-react";
 
 // Icons used in sub nav
@@ -219,8 +226,16 @@ export default function NepUgcTabContent() {
         </motion.div>
       )}
 
+      {activeTab === "NEP 2020" && <Nep2020Content />}
+      {activeTab === "UGC 2026" && <Ugc2026Content />}
+      {/* {activeTab === "Grievance Engine" && <GrievanceEngineContent />}
+      {activeTab === "Portfolio Locker" && <PortfolioLockerContent />}
+      {activeTab === "ABC Credits" && <AbcCreditsContent />}
+      {activeTab === "Equity Audit" && <EquityAuditContent />}
+      {activeTab === "Reports" && <div className="mt-6"><ReportsTabContent /></div>} */}
+
       {/* Placeholders for other sub-tabs */}
-      {activeTab !== "Dashboard" && (
+      {activeTab !== "Dashboard" && activeTab !== "NEP 2020" && activeTab !== "UGC 2026" && activeTab !== "Grievance Engine" && activeTab !== "Portfolio Locker" && activeTab !== "ABC Credits" && activeTab !== "Equity Audit" && activeTab !== "Reports" && (
         <motion.div
            initial={{ opacity: 0, y: 10 }}
            animate={{ opacity: 1, y: 0 }}
