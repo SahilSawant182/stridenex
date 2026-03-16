@@ -77,7 +77,7 @@ export default function NepUgcTabContent() {
         <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-4 bg-white p-4 rounded-xl border border-slate-200 -mt-[17px] relative z-0">
           
           {/* Main Top Banner Card */}
-          <motion.div variants={itemVariants} className="bg-[#1f3a8a] text-white rounded-xl p-6 relative overflow-hidden flex flex-col md:flex-row items-center justify-between shadow-md">
+          <motion.div variants={itemVariants} className="bg-gradient-to-r from-[#0d4f30] to-[#047857] text-white rounded-xl p-6 relative overflow-hidden flex flex-col md:flex-row items-center justify-between shadow-md">
              {/* Decorative pattern behind text */}
              <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-white via-transparent to-transparent"></div>
              
@@ -94,7 +94,7 @@ export default function NepUgcTabContent() {
                      <path
                       d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                       fill="none"
-                      stroke="#3b82f6" strokeWidth="3" strokeOpacity="0.3"
+                      stroke="#10b981" strokeWidth="3" strokeOpacity="0.3"
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -105,7 +105,7 @@ export default function NepUgcTabContent() {
                
                <div className="text-center md:text-left">
                  <h2 className="text-2xl font-bold mb-2">Compliance Score</h2>
-                 <p className="text-sm text-blue-100 max-w-2xl mb-4 font-medium leading-relaxed">
+                 <p className="text-sm text-emerald-100 max-w-2xl mb-4 font-medium leading-relaxed">
                    Based on NEP 2020 mandates, UGC 2026 Equity Regulations, NAAC criteria, and UDISE+ requirements.
                  </p>
                  <div className="flex items-center justify-center md:justify-start gap-4">

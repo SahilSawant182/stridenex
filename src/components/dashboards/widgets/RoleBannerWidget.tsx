@@ -58,15 +58,15 @@ const roleConfig = {
     greeting: "Good Morning",
     roleName: "College Admin",
     icon: Building2,
-    gradient: "from-emerald-800 to-emerald-900",
+    gradient: "from-[#0d4f30] to-[#10b981]", // A deep vibrant green gradient
     accentColor: "emerald",
-    textColor: "text-emerald-200",
+    textColor: "text-emerald-100", // Soft text on the green gradient
     progressBg: "bg-emerald-900/50",
     progressBorder: "border-emerald-800/50",
     metrics: [
       { key: "students", default: "2,847", label: "Active Students", icon: Users },
-      { key: "placements", default: "86%", label: "Placement Rate", icon: Briefcase },
-      { key: "partners", default: 38, label: "Industry Partners", icon: Building2 }
+      { key: "placements", default: "94%", label: "Placement Rate", icon: Briefcase }, // Updated default value based on new screenshot
+      { key: "partners", default: "78%", label: "Avg Employability", icon: TrendingUp } // Updated generic metric based on new screenshot
     ],
     defaultTitle: "Veermata Jijabai Technological Institute",
     defaultSubtitle: "Mumbai University Affiliate • NAAC A++ • Estd. 1887",
