@@ -91,22 +91,22 @@ const roleConfig = {
     defaultProgress: 92
   },
   industry: {
-    greeting: "Good Morning",
-    roleName: "Industry Partner",
-    icon: Briefcase,
-    gradient: "from-blue-800 to-blue-900",
-    accentColor: "blue",
+    greeting: "Industry Portal",
+    roleName: "Recruiter",
+    icon: Building2,
+    gradient: "from-[#1e1b4b] to-[#312e81]", // Deep purplish blue
+    accentColor: "purple",
     textColor: "text-blue-200",
-    progressBg: "bg-blue-900/50",
-    progressBorder: "border-blue-800/50",
+    progressBg: "bg-purple-900/50",
+    progressBorder: "border-purple-800/50",
     metrics: [
-      { key: "positions", default: 8, label: "Open Positions", icon: Briefcase },
-      { key: "applications", default: 124, label: "Applications", icon: Users },
-      { key: "shortlisted", default: 24, label: "Shortlisted", icon: Target }
+      { key: "positions", default: 8, label: "Open Roles", icon: Briefcase },
+      { key: "applications", default: 247, label: "Applications", icon: Users },
+      { key: "match", default: "94%", label: "Match Quality", icon: Target }
     ],
-    defaultTitle: "Rahul Mehta",
-    defaultSubtitle: "Talent Acquisition • Tech Corp",
-    defaultProgress: 70
+    defaultTitle: "Razorpay Technologies",
+    defaultSubtitle: "Fintech • Bengaluru • 2000+ employees • Industry Pro Plan",
+    defaultProgress: 100
   }
 };
 
@@ -191,7 +191,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
           </div>
           <div>
             <p className={`text-sm ${config.textColor} font-medium uppercase tracking-wider mb-1 flex items-center gap-1`}>
-              {config.greeting} <span>👋</span>
+              {config.greeting} {role !== "industry" && <span>👋</span>}
               <span className="ml-2 text-xs bg-white/10 px-2 py-0.5 rounded-full">
                 {config.roleName}
               </span>

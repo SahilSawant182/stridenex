@@ -228,11 +228,11 @@ export default function NepUgcTabContent() {
 
       {activeTab === "NEP 2020" && <Nep2020Content />}
       {activeTab === "UGC 2026" && <Ugc2026Content />}
-      {/* {activeTab === "Grievance Engine" && <GrievanceEngineContent />}
+      {activeTab === "Grievance Engine" && <GrievanceEngineContent />}
       {activeTab === "Portfolio Locker" && <PortfolioLockerContent />}
       {activeTab === "ABC Credits" && <AbcCreditsContent />}
       {activeTab === "Equity Audit" && <EquityAuditContent />}
-      {activeTab === "Reports" && <div className="mt-6"><ReportsTabContent /></div>} */}
+      {activeTab === "Reports" && <div className="mt-6"><ReportsTabContent /></div>}
 
       {/* Placeholders for other sub-tabs */}
       {activeTab !== "Dashboard" && activeTab !== "NEP 2020" && activeTab !== "UGC 2026" && activeTab !== "Grievance Engine" && activeTab !== "Portfolio Locker" && activeTab !== "ABC Credits" && activeTab !== "Equity Audit" && activeTab !== "Reports" && (

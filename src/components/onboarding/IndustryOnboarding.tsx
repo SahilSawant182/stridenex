@@ -344,7 +344,7 @@ export default function IndustryOnboarding({
 
             if (response.status === 200) {
                 setSuccess("Industry onboarding completed successfully!");
-                setTimeout(() => router.push("/portal/dashboard"), 1500);
+                setTimeout(() => router.push("/login"), 1500);
             } else {
                 setError(response.data?.message || "Failed to create industry. Please try again.");
             }

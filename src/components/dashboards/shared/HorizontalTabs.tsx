@@ -67,14 +67,12 @@ const tabConfig = {
     { name: "Earnings", icon: Award, path: "/dashboard/mentor/earnings" },
   ],
   industry: [
-    { name: "Overview", icon: LayoutDashboard, path: "/dashboard/industry" },
-    { name: "Hiring", icon: Briefcase, path: "/dashboard/industry/hiring" },
-    { name: "Applications", icon: Mail, path: "/dashboard/industry/applications" },
-    { name: "Shortlisted", icon: UserCheck, path: "/dashboard/industry/shortlisted" },
-    { name: "Interviews", icon: Calendar, path: "/dashboard/industry/interviews" },
-    { name: "Partners", icon: School, path: "/dashboard/industry/partners" },
-    { name: "Analytics", icon: BarChart3, path: "/dashboard/industry/analytics" },
-    { name: "Messages", icon: MessageSquare, path: "/dashboard/industry/messages" },
+    { name: "Overview", icon: LayoutDashboard, path: "/industry/dashboard" },
+    { name: "Find Talent", icon: Briefcase, path: "/industry/dashboard/find-talent" },
+    { name: "Pipeline", icon: Mail, path: "/industry/dashboard/pipeline" },
+    { name: "Internships", icon: UserCheck, path: "/industry/dashboard/internships" },
+    { name: "Analytics", icon: Calendar, path: "/industry/dashboard/analytics" },
+    { name: "Plans", icon: School, path: "/industry/dashboard/plan" },
   ],
 };
 

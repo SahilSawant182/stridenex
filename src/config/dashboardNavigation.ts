@@ -120,13 +120,11 @@ export const industryConfig: RoleConfig = {
   searchPlaceholder: "Search candidates, applications, partners...",
   links: [
     { name: "Overview", href: "/industry/dashboard", icon: LayoutDashboard },
-    { name: "Hiring", href: "/industry/hiring", icon: Briefcase },
-    { name: "Applications", href: "/industry/applications", icon: Mail },
-    { name: "Shortlisted", href: "/industry/shortlisted", icon: UserCheck },
-    { name: "Interviews", href: "/industry/interviews", icon: Calendar },
-    { name: "Campus Partners", href: "/industry/partners", icon: School },
-    { name: "Analytics", href: "/industry/analytics", icon: BarChart },
-    { name: "Messages", href: "/industry/messages", icon: MessageSquare },
+    { name: "Find Talent", href: "/industry/dashboard/find-talent", icon: Briefcase },
+    { name: "Hiring Pipeline", href: "/industry/dashboard/pipeline", icon: Mail },
+    { name: "Internship Posts", href: "/industry/dashboard/internships", icon: UserCheck },
+    { name: "Analytics", href: "/industry/dashboard/analytics", icon: Calendar },
+    { name: "Subscription", href: "/industry/dashboard/plan", icon: Award },
   ],
   bottomLinks: [
     { name: "Settings", href: "/industry/settings", icon: Settings },
