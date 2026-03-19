@@ -74,21 +74,21 @@ const roleConfig = {
   },
   mentor: {
     greeting: "Good Morning",
-    roleName: "Mentor",
+    roleName: "Verified Mentor",
     icon: Users,
-    gradient: "from-purple-800 to-purple-900",
-    accentColor: "purple",
-    textColor: "text-purple-200",
-    progressBg: "bg-purple-900/50",
-    progressBorder: "border-purple-800/50",
+    gradient: "from-[#2e1065] to-[#4c1d95]", // Deep violet
+    accentColor: "violet",
+    textColor: "text-violet-200",
+    progressBg: "bg-violet-900/50",
+    progressBorder: "border-violet-800/50",
     metrics: [
-      { key: "mentees", default: 12, label: "Active Mentees", icon: Users },
-      { key: "sessions", default: 48, label: "Sessions Done", icon: Calendar },
-      { key: "rating", default: "4.8", label: "Avg Rating", icon: Award }
+      { key: "students", default: 247, label: "Total Students", icon: Users },
+      { key: "sessions", default: 18, label: "Sessions Done", icon: Calendar },
+      { key: "rating", default: "4.9", label: "Avg Rating", icon: Award }
     ],
-    defaultTitle: "Dr. Kavya Reddy",
-    defaultSubtitle: "Senior Mentor • Computer Science Department",
-    defaultProgress: 92
+    defaultTitle: "Kavya Reddy",
+    defaultSubtitle: "Senior Data Scientist @ Amazon - ML, Python, Career Counselling",
+    defaultProgress: 100
   },
   industry: {
     greeting: "Industry Portal",
@@ -138,6 +138,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
   // Get accent color classes
   const getIconColor = () => {
     switch (config.accentColor) {
+      case "violet": return "text-violet-400";
       case "orange": return "text-orange-400";
       case "emerald": return "text-emerald-400";
       case "purple": return "text-purple-400";
@@ -148,6 +149,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
 
   const getProgressGradient = () => {
     switch (config.accentColor) {
+      case "violet": return "from-violet-400 to-violet-500";
       case "orange": return "from-orange-400 to-orange-500";
       case "emerald": return "from-emerald-400 to-emerald-500";
       case "purple": return "from-purple-400 to-purple-500";
@@ -158,6 +160,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
 
   const getMetricBg = () => {
     switch (config.accentColor) {
+      case "violet": return "bg-violet-600/40 border-violet-500/30";
       case "orange": return "bg-blue-600/40 border-blue-500/30";
       case "emerald": return "bg-emerald-600/40 border-emerald-500/30";
       case "purple": return "bg-purple-600/40 border-purple-500/30";

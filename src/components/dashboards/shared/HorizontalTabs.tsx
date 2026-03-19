@@ -57,14 +57,13 @@ const tabConfig = {
     { name: "Plans", path: "/college/dashboard/plans", icon: Award },
   ],
   mentor: [
-    { name: "Overview", icon: LayoutDashboard, path: "/dashboard/mentor" },
-    { name: "Mentees", icon: Users, path: "/dashboard/mentor/mentees" },
-    { name: "Sessions", icon: Video, path: "/dashboard/mentor/sessions" },
-    { name: "Schedule", icon: Calendar, path: "/dashboard/mentor/schedule" },
-    { name: "Resources", icon: BookOpen, path: "/dashboard/mentor/resources" },
-    { name: "Feedback", icon: MessageSquare, path: "/dashboard/mentor/feedback" },
-    { name: "Analytics", icon: TrendingUp, path: "/dashboard/mentor/analytics" },
-    { name: "Earnings", icon: Award, path: "/dashboard/mentor/earnings" },
+    { name: "Overview", icon: LayoutDashboard, path: "/mentor/dashboard" },
+    { name: "Schedule", icon: Calendar, path: "/mentor/dashboard/schedule" },
+    { name: "Offerings", icon: Video, path: "/mentor/dashboard/offerings" },
+    { name: "Requests", icon: Calendar, path: "/mentor/dashboard/requests" },
+    { name: "Session History", icon: BookOpen, path: "/mentor/dashboard/session-history" },
+    { name: "Payouts & Commission", icon: MessageSquare, path: "/mentor/dashboard/payouts" },
+    { name: "My Profile", icon: TrendingUp, path: "/mentor/dashboard/profile" },
   ],
   industry: [
     { name: "Overview", icon: LayoutDashboard, path: "/industry/dashboard" },
@@ -80,6 +79,15 @@ export default function HorizontalTabs({ role }: HorizontalTabsProps) {
   const pathname = usePathname();
   const tabs = tabConfig[role] || tabConfig.student;
 
+  const getActiveColor = () => {
+    switch (role) {
+      case "college": return "text-green-600";
+      case "mentor": return "text-violet-600";
+      case "industry": return "text-purple-600";
+      case "student": default: return "text-orange-600";
+    }
+  };
+
   return (
     <div className="w-full bg-white rounded-full border border-slate-200 p-2 shadow-sm overflow-x-auto hide-scrollbar mb-6">
       <div className="flex items-center gap-1 min-w-max">
@@ -87,7 +95,7 @@ export default function HorizontalTabs({ role }: HorizontalTabsProps) {
           const Icon = tab.icon;
 
           // Exact match for base dashboard route to prevent it from being active on sub-routes
-          const isBaseRoute = tab.path === `/student/dashboard` || tab.path === `/dashboard/${role}`;
+          const isBaseRoute = tab.path === `/student/dashboard` || tab.path === `/${role}/dashboard`;
           const isActive = isBaseRoute
             ? pathname === tab.path
             : (pathname === tab.path || pathname?.startsWith(`${tab.path}/`));
@@ -102,7 +110,7 @@ export default function HorizontalTabs({ role }: HorizontalTabsProps) {
                 }`}
             >
               <span className="relative z-10 flex items-center gap-2">
-                <Icon className={`w-4 h-4 ${isActive ? 'text-blue-600' : 'text-slate-500'}`} />
+                <Icon className={`w-4 h-4 ${isActive ? getActiveColor() : 'text-slate-500'}`} />
                 {tab.name}
               </span>
             </Link>

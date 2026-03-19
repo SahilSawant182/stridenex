@@ -54,7 +54,7 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
       case 'college':
         return "bg-green-50 text-green-600 font-semibold";
       case 'mentor':
-        return "bg-emerald-50 text-emerald-600 font-semibold";
+        return "bg-violet-50 text-violet-600 font-semibold";
       case 'industry':
         return "bg-purple-50 text-purple-600 font-semibold";
       case 'student':
@@ -68,7 +68,7 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
       case 'college':
         return "text-green-600";
       case 'mentor':
-        return "text-emerald-600";
+        return "text-violet-600";
       case 'industry':
         return "text-purple-600";
       case 'student':

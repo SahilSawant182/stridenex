@@ -1,0 +1,38 @@
+"use client";
+
+import { motion } from "framer-motion";
+import HorizontalTabs from "@/components/dashboards/shared/HorizontalTabs";
+import RoleBannerWidget from "@/components/dashboards/widgets/RoleBannerWidget";
+
+export default function MentorDashboardSubLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="max-w-7xl mx-auto space-y-6 pb-12">
+      {/* Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 100, damping: 15 }}
+      >
+        <RoleBannerWidget role="mentor" />
+      </motion.div>
+
+      {/* Tabs */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 100, damping: 15, delay: 0.1 }}
+      >
+        <HorizontalTabs role="mentor" />
+      </motion.div>
+
+      {/* Dynamic Tab Content injected here */}
+      <div className="pt-2">
+        {children}
+      </div>
+    </div>
+  );
+}

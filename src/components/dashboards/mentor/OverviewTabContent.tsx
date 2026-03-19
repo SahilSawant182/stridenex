@@ -1,0 +1,284 @@
+"use client";
+
+import { motion } from "framer-motion";
+import { 
+  GraduationCap, 
+  Calendar, 
+  Star, 
+  IndianRupee,
+  Clock,
+  Video,
+  ChevronRight,
+  TrendingUp,
+  FileText,
+  CheckCircle,
+  Activity,
+  AlertCircle
+} from "lucide-react";
+
+// Dummy Data
+const overviewStats = [
+  { label: "TOTAL STUDENTS MENTORED", value: "247", trend: "+18 this month", trendUp: true, icon: GraduationCap, iconBg: "bg-orange-50", iconColor: "text-orange-600", borderStyle: "border-t-4 border-t-slate-800" },
+  { label: "SESSIONS THIS MONTH", value: "18", trend: "4 upcoming", trendUp: true, icon: Calendar, iconBg: "bg-blue-50", iconColor: "text-blue-600", borderStyle: "border-t-4 border-t-blue-500" },
+  { label: "AVERAGE RATING", value: "4.9/5", trend: "from 120 reviews", trendUp: true, icon: Star, iconBg: "bg-yellow-50", iconColor: "text-yellow-600", borderStyle: "border-t-4 border-t-amber-400" },
+  { label: "PENDING PAYOUT (FEB)", value: "₹18,360", trend: "released Mar 1", trendUp: true, icon: IndianRupee, iconBg: "bg-emerald-50", iconColor: "text-emerald-600", borderStyle: "border-t-4 border-t-emerald-500" }
+];
+
+const upcomingSessions = [
+  { id: "PS", initials: "PS", name: "Priya Sharma", topic: "ML Project Milestone Review", date: "Feb 26 4:00 PM", duration: "60 min", type: "Technical", color: "bg-orange-500" },
+  { id: "AN", initials: "AN", name: "Arjun Nair", topic: "FAANG Prep Check-In", date: "Feb 27 3:00 PM", duration: "45 min", type: "Career", color: "bg-blue-500" },
+  { id: "TG", initials: "TG", name: "Tanya Gupta", topic: "Data Science Roadmap", date: "Mar 1 12:00 PM", duration: "60 min", type: "Career", color: "bg-emerald-500" },
+  { id: "RV", initials: "RV", name: "Rohan Verma", topic: "DSA: Trees & Graphs", date: "Mar 2 5:00 PM", duration: "90 min", type: "Technical", color: "bg-purple-500" }
+];
+
+const earningDetails = [
+  { label: "Gross Earned", value: "₹21,600" },
+  { label: "Platform Commission (15%)", value: "-₹3,240", valueColor: "text-red-500" },
+  { label: "Net to Bank", value: "₹18,360", valueColor: "text-emerald-600", bold: true }
+];
+
+const pendingRequests = [
+  { initials: "AK", name: "Aisha Khan", topic: "Product Management Intro", priority: "high", color: "bg-pink-100 text-pink-700" },
+  { initials: "RM", name: "Rahul Mehta", topic: "DSA Mock Interview", priority: "medium", color: "bg-blue-100 text-blue-700" },
+  { initials: "TG", name: "Tanya Gupta", topic: "Career Switch Counselling", priority: "medium", color: "bg-emerald-100 text-emerald-700" }
+];
+
+const verifyQueue = [
+  { name: "Priya Sharma", skill: "Machine Learning", priority: "normal", icon: AlertCircle, iconColor: "text-slate-400" },
+  { name: "Arjun Nair", skill: "System Design", priority: "high", icon: AlertCircle, iconColor: "text-red-500" },
+  { name: "Sneha Patel", skill: "Product Strategy", priority: "normal", icon: AlertCircle, iconColor: "text-slate-400" }
+];
+
+const thisMonthStats = [
+  { label: "Sessions completed", value: "18", icon: GraduationCap },
+  { label: "5-star reviews", value: "14", icon: Star },
+  { label: "Notes shared", value: "22", icon: FileText },
+  { label: "Skills verified", value: "6", icon: CheckCircle },
+  { label: "Hours mentored", value: "21h", icon: Clock },
+  { label: "Profile views", value: "840", icon: Activity }
+];
+
+export default function OverviewTabContent() {
+  return (
+    <div className="space-y-6">
+      {/* 4 Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {overviewStats.map((stat, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.1 }}
+            className={`bg-white rounded-xl shadow-sm border border-slate-200 p-5 ${stat.borderStyle} flex flex-col justify-between`}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <p className="text-[10px] font-bold text-slate-500 tracking-wider mb-1">{stat.label}</p>
+                <h3 className="text-3xl font-bold text-slate-800">{stat.value}</h3>
+              </div>
+              <div className={`w-10 h-10 rounded-lg ${stat.iconBg} flex items-center justify-center`}>
+                <stat.icon className={`w-5 h-5 ${stat.iconColor}`} />
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 mt-2">
+              <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="text-xs font-medium text-emerald-600">{stat.trend}</span>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column (Span 2) */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Upcoming Sessions */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+          >
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-slate-500" /> Upcoming Sessions
+              </h3>
+              <button className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                Manage Schedule <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {upcomingSessions.map((session, i) => (
+                <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 px-6 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-start gap-4 mb-4 sm:mb-0">
+                    <div className={`w-10 h-10 rounded-full ${session.color} flex items-center justify-center text-white font-bold text-sm shrink-0 mt-1`}>
+                      {session.initials}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-800">{session.name}</h4>
+                      <p className="text-sm text-slate-600 mb-2">{session.topic}</p>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="flex items-center gap-1 text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+                          <Calendar className="w-3 h-3" /> {session.date}
+                        </span>
+                        <span className="flex items-center gap-1 text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
+                          <Clock className="w-3 h-3" /> {session.duration}
+                        </span>
+                        <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
+                          {session.type}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 self-start sm:self-center ml-14 sm:ml-0">
+                    <button className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors">
+                      Join
+                    </button>
+                    <button className="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-lg transition-colors">
+                      Reschedule
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Pending Requests */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+            >
+              <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                  <Video className="w-4 h-4 text-orange-500" /> Pending Requests
+                </h3>
+                <button className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                  View All <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="p-5 flex-1 space-y-4">
+                {pendingRequests.map((req, i) => (
+                  <div key={i} className="flex items-center justify-between pb-4 border-b border-slate-50 last:border-0 last:pb-0">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-full ${req.color} flex items-center justify-center font-bold text-xs`}>
+                        {req.initials}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm text-slate-800">{req.name}</h4>
+                        <p className="text-xs text-slate-500">{req.topic}</p>
+                      </div>
+                    </div>
+                    <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-md ${req.priority === 'high' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'}`}>
+                      {req.priority}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="p-5 pt-0">
+                <button className="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg text-sm transition-colors">
+                  4 Pending — Review Now
+                </button>
+              </div>
+            </motion.div>
+
+            {/* Skill Verify Queue */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
+            >
+              <div className="px-5 py-4 border-b border-slate-100">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4 text-slate-500" /> Skill Verify Queue
+                </h3>
+              </div>
+              <div className="p-5 flex-1 space-y-4">
+                {verifyQueue.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between pb-4 border-b border-slate-50 last:border-0 last:pb-0">
+                    <div className="flex items-center gap-3">
+                      <item.icon className={`w-5 h-5 ${item.iconColor}`} />
+                      <div>
+                        <h4 className="font-semibold text-sm text-slate-800">{item.name}</h4>
+                        <p className="text-xs text-slate-500">{item.skill}</p>
+                      </div>
+                    </div>
+                    <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-md ${item.priority === 'high' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'}`}>
+                      {item.priority}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="p-5 pt-0">
+                <button className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm transition-colors">
+                  4 Awaiting Review
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Right Column (Span 1) */}
+        <div className="space-y-6">
+          {/* Earnings Widget */}
+          <motion.div
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+          >
+            <div className="px-5 py-4 border-b border-slate-100">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <IndianRupee className="w-4 h-4 text-emerald-600 bg-emerald-50 rounded" /> Feb 2025 Earnings
+              </h3>
+            </div>
+            <div className="p-6 text-center">
+              <h2 className="text-4xl font-extrabold text-emerald-500 mb-1">₹18,360</h2>
+              <p className="text-xs text-slate-500 mb-6">Net payout • Processing Mar 1</p>
+              
+              <div className="space-y-3 mb-6">
+                {earningDetails.map((detail, i) => (
+                  <div key={i} className={`flex justify-between items-center text-sm ${detail.bold ? 'font-bold pt-3 border-t border-slate-100' : 'text-slate-600'}`}>
+                    <span>{detail.label}</span>
+                    <span className={detail.valueColor || 'text-slate-800 font-medium'}>{detail.value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-4 bg-blue-50/50 rounded-lg text-left">
+                <p className="text-xs text-blue-800 leading-relaxed">
+                  <span className="font-bold">Commission Breakdown:</span> Stridenex charges 15% on all bookings for platform access, AI matching, payment processing, and student trust & safety. Rate reduces to 12% above ₹50k/month.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* This Month Summary */}
+          <motion.div
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+          >
+            <div className="px-5 py-4 border-b border-slate-100">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <Activity className="w-4 h-4 text-blue-500" /> This Month
+              </h3>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {thisMonthStats.map((stat, i) => (
+                <div key={i} className="px-5 py-3.5 flex justify-between items-center hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <stat.icon className="w-4 h-4 text-slate-400" />
+                    <span className="text-sm font-medium text-slate-600">{stat.label}</span>
+                  </div>
+                  <span className="text-sm font-bold text-slate-800">{stat.value}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </div>
+  );
+}
