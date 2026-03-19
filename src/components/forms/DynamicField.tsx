@@ -45,6 +45,11 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
   const customInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Lifted hooks to prevent Rules of Hooks violations
+  const [showPassword, setShowPassword] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fileName, setFileName] = useState<string>("");
+
   // Check if this field should have "Others" option based on the allowCustom prop
   const hasOthersOption = field.allowCustom === true;
 
@@ -186,7 +191,8 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
       }
     } catch (err: any) {
       console.error(`Error fetching ${field.label}:`, err);
-      setFetchError(err?.response?.data?.message || `Failed to load ${field.fieldname}`);
+      const msg = err?.response?.data?.message || err?.message || `Failed to load ${field.fieldname}`;
+      setFetchError(typeof msg === 'string' ? msg : JSON.stringify(msg));
       setOptions([]);
       setFilteredOptions([]);
     } finally {
@@ -565,7 +571,6 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
     // Regular field types
     switch (field.fieldtype) {
       case "Password":
-        const [showPassword, setShowPassword] = useState(false);
         return (
           <div className="relative">
             <input
@@ -701,8 +706,6 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
         );
 
       case "File":
-        const fileInputRef = useRef<HTMLInputElement>(null);
-        const [fileName, setFileName] = useState<string>("");
 
         const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
           const file = e.target.files?.[0];

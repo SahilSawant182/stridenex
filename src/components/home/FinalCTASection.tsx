@@ -3,8 +3,15 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export default function FinalCTASection() {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     return (
         <section className="py-24 px-6 bg-gradient-to-br from-primary via-purple-600 to-accent relative overflow-hidden">
             {/* Animated Background */}
@@ -16,7 +23,7 @@ export default function FinalCTASection() {
             </div>
 
             {/* Floating elements */}
-            {[...Array(8)].map((_, i) => (
+            {mounted && [...Array(8)].map((_, i) => (
                 <motion.div
                     key={i}
                     className="absolute rounded-full bg-white/10"

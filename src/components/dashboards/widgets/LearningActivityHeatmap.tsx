@@ -2,6 +2,7 @@
 
 import { BookOpen, Code, Clock } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
 
 interface LearningActivityHeatmapProps {
   data: any;
@@ -11,9 +12,13 @@ export default function LearningActivityHeatmap({ data }: LearningActivityHeatma
   // Generate slightly longer horizontal blocks to match the design
   const weeks = 22;
   const days = 5;
-  const heatmapData = Array.from({ length: days }).map(() => 
-    Array.from({ length: weeks }).map(() => Math.floor(Math.random() * 5))
-  );
+  const [heatmapData, setHeatmapData] = useState<number[][]>([]);
+
+  useEffect(() => {
+    setHeatmapData(Array.from({ length: days }).map(() => 
+      Array.from({ length: weeks }).map(() => Math.floor(Math.random() * 5))
+    ));
+  }, [days, weeks]);
 
   const getColor = (value: number) => {
     switch(value) {

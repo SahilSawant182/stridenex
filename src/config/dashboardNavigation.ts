@@ -82,7 +82,7 @@ export const collegeConfig: RoleConfig = {
     { name: "Interventions", href: "/college/dashboard/interventions", icon: Building2 },
     { name: "Notice Board", href: "/college/dashboard/noticeBoard", icon: BarChart },
     { name: "Reports", href: "/college/dashboard/reports", icon: Calendar },
-    { name: "Subscriptions", href: "/college/dashboard/subscriptions", icon: Award },
+    { name: "Subscriptions", href: "/college/dashboard/plans", icon: Award },
   ],
   bottomLinks: [
     { name: "Settings", href: "/college/settings", icon: Settings },

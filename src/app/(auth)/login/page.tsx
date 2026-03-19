@@ -127,12 +127,13 @@ export default function LoginPage() {
         });
         router.push(`/${userRole}/dashboard`);
       } else {
-        const errorMessage = data.message || "Login failed";
-        setError(errorMessage);
+        const msg = data.message || "Login failed";
+        setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
         setLoading(false);
       }
-    } catch (err) {
-      setError("An error occurred during login");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || "An error occurred during login";
+      setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
       console.error(err);
       setLoading(false);
     }

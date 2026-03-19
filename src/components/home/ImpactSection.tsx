@@ -48,6 +48,12 @@ function Counter({ end, suffix, duration = 2000 }: { end: number; suffix: string
 }
 
 export default function ImpactSection() {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
     return (
         <section className="relative py-24 overflow-hidden bg-gradient-to-br from-primary via-purple-600 to-accent">
             {/* Animated Background */}
@@ -58,8 +64,8 @@ export default function ImpactSection() {
                 }} />
             </div>
 
-            {/* Floating Bubbles */}
-            {[...Array(15)].map((_, i) => (
+            {/* Floating Bubbles - Only render on client to prevent hydration mismatch */}
+            {mounted && [...Array(15)].map((_, i) => (
                 <motion.div
                     key={i}
                     className="absolute rounded-full bg-white/10"

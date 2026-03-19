@@ -65,8 +65,8 @@ export default function StudentOnboarding({
     privacyAccepted: false,
     mobileNo: "",
     mobileVerified: false,
-    firstName: typeof window !== 'undefined' ? localStorage.getItem("userFirstName") || "" : "",
-    lastName: typeof window !== 'undefined' ? localStorage.getItem("userLastName") || "" : "",
+    firstName: "",
+    lastName: "",
     state: "",
     district: "",
     college: "",
@@ -88,9 +88,13 @@ export default function StudentOnboarding({
 
   useEffect(() => {
     const savedEmail = localStorage.getItem("userEmail") || "";
+    const savedFirstName = localStorage.getItem("userFirstName") || "";
+    const savedLastName = localStorage.getItem("userLastName") || "";
     setFormData(prev => ({
       ...prev,
       email: savedEmail,
+      firstName: savedFirstName,
+      lastName: savedLastName,
     }));
   }, []);
 
