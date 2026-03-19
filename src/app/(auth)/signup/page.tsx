@@ -68,12 +68,12 @@ export default function SignupPage() {
       description: "Start your career journey"
     },
     {
-      id: "mentor",
-      label: "Mentor",
-      icon: Users,
-      color: "emerald",
-      gradient: "from-emerald-600 to-emerald-500",
-      description: "Guide and inspire others"
+      id: "industry",
+      label: "Industry",
+      icon: Briefcase,
+      color: "primary",
+      gradient: "from-primary to-purple-600",
+      description: "Build your talent pipeline"
     },
     {
       id: "college",
@@ -84,12 +84,12 @@ export default function SignupPage() {
       description: "Enhance student outcomes"
     },
     {
-      id: "industry",
-      label: "Industry",
-      icon: Briefcase,
-      color: "primary",
-      gradient: "from-primary to-purple-600",
-      description: "Build your talent pipeline"
+      id: "mentor",
+      label: "Mentor",
+      icon: Users,
+      color: "emerald",
+      gradient: "from-emerald-600 to-emerald-500",
+      description: "Guide and inspire others"
     },
   ];
 
@@ -307,14 +307,14 @@ export default function SignupPage() {
                   type="button"
                   onClick={() => setSelectedRole(role.id as UserRole)}
                   className={`relative p-2.5 rounded-xl border-2 transition-all duration-200 group ${isSelected
-                      ? `border-${role.color} bg-gradient-to-br ${role.gradient} bg-opacity-10 shadow-md`
-                      : 'border-slate-200 hover:border-slate-300 bg-white hover:shadow-sm'
+                    ? `border-${role.color} bg-gradient-to-br ${role.gradient} bg-opacity-10 shadow-md`
+                    : 'border-slate-200 hover:border-slate-300 bg-white hover:shadow-sm'
                     }`}
                 >
                   <div className="flex flex-col items-center text-center">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-all ${isSelected
-                        ? 'bg-white/20'
-                        : `bg-${role.color}/10 group-hover:bg-${role.color}/20`
+                      ? 'bg-white/20'
+                      : `bg-${role.color}/10 group-hover:bg-${role.color}/20`
                       }`}>
                       <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : `text-${role.color}`
                         }`} />

@@ -15,12 +15,12 @@ export default function AboutPage() {
   return (
     <main>
       <AboutHero />
+      <VisionMission />
       <WhoWeAre />
       <WhyCreated />
       <Philosophy />
       <Approach />
       <WhatMakesDifferent />
-      <VisionMission />
       <Ecosystem />
       <JoinMovement />
     </main>

@@ -50,7 +50,7 @@ export default function WhatMakesDifferent() {
         >
           <div className="aspect-square rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
             <img 
-              src="https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2074&q=80" 
+              src="https://images.unsplash.com/photo-1659080925920-1683d25f772a?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
               alt="Innovation and collaboration"
               className="w-full h-full object-cover"
             />

@@ -15,6 +15,12 @@ import {
   Building2,
   Briefcase,
 } from "lucide-react";
+import {
+  FaLinkedin,
+  FaInstagram,
+  FaFacebook,
+  FaYoutube
+} from "react-icons/fa";
 import { navigationConfig, getBadgeColorClasses } from "@/config/navigation";
 
 interface NavbarProps {
@@ -134,20 +140,20 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
   }));
 
   const quickActions = [
-    { label: "Students", icon: GraduationCap, color: "from-primary to-purple-600" },
-    { label: "College", icon: Building2, color: "from-accent to-orange-600" },
-    { label: "Mentor", icon: Briefcase, color: "from-emerald-600 to-emerald-500" },
-    { label: "Industry", icon: Briefcase, color: "from-primary to-purple-400" },
+    { label: "LinkedIn", icon: FaLinkedin, color: "from-blue-600 to-blue-700", href: "https://linkedin.com/company/stridenex" },
+    { label: "Instagram", icon: FaInstagram, color: "from-pink-500 to-purple-600", href: "https://instagram.com/stridenex" },
+    { label: "Facebook", icon: FaFacebook, color: "from-blue-600 to-blue-700", href: "https://facebook.com/stridenex" },
+    { label: "YouTube", icon: FaYoutube, color: "from-red-600 to-red-700", href: "https://youtube.com/@stridenex" },
   ];
+
 
   return (
     <>
       <nav
-        className={`fixed top-0 w-full z-50 transition-all duration-500 ${
-          isScrolled
-            ? 'bg-white/95 backdrop-blur-xl shadow-lg'
-            : 'bg-white/80 backdrop-blur-sm'
-        }`}
+        className={`fixed top-0 w-full z-50 transition-all duration-500 ${isScrolled
+          ? 'bg-white/95 backdrop-blur-xl shadow-lg'
+          : 'bg-white/80 backdrop-blur-sm'
+          }`}
       >
         <div className="max-w-7xl mx-auto px-6">
           {/* TOP ROW - Logo and Right Side Actions */}
@@ -168,11 +174,17 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
                 {quickActions.map((action) => (
                   <button
                     key={action.label}
-                    // onClick={() => handleNavigation(action.href)}
+                    onClick={() => window.open(action.href, '_blank')}
                     className="text-xs px-2 py-1 h-7 rounded-lg hover:bg-primary/5 transition-colors flex items-center gap-1"
                   >
-                    <div className={`w-1.5 h-1.5 rounded-full bg-gradient-to-r ${action.color} mr-1`}></div>
-                    {action.label}
+                    <action.icon
+                      className={`w-3.5 h-3.5 ${action.label === 'LinkedIn' ? 'text-[#0077B5]' :
+                        action.label === 'Instagram' ? 'text-[#E4405F]' :
+                          action.label === 'Facebook' ? 'text-[#1877F2]' :
+                            action.label === 'YouTube' ? 'text-[#FF0000]' : ''
+                        }`}
+                    />
+                    <span className="hidden lg:inline text-slate-700">{action.label}</span>
                   </button>
                 ))}
               </div>
@@ -190,17 +202,17 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
               {/* Public Action Buttons */}
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => handleNavigation('/login')}
+                  onClick={() => window.open('/login', '_blank')}
                   className="px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
                 >
                   Login
                 </button>
-                <button
+                {/* <button
                   onClick={() => handleNavigation('/signup')}
                   className="px-3 py-1.5 text-sm font-medium bg-gradient-to-r from-accent to-orange-600 text-white rounded-lg shadow-lg hover:shadow-xl transition-all"
                 >
                   Join Now
-                </button>
+                </button> */}
               </div>
 
               {/* Mobile Menu Button */}
@@ -231,50 +243,52 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
                   >
                     {item.href ? (
                       <button
-                        onClick={() => handleNavigation(item.href!)}
-                        className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1 group ${
-                          activeMegaMenu === item.key
-                            ? 'text-primary bg-primary/10'
-                            : 'text-slate-700 hover:text-primary hover:bg-primary/5'
-                        }`}
+                        onClick={() => {
+                          if (item.key === 'join') {
+                            window.open(item.href, '_blank');
+                          } else {
+                            handleNavigation(item.href!);
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1 group ${activeMegaMenu === item.key
+                          ? 'text-primary bg-primary/10'
+                          : 'text-slate-700 hover:text-primary hover:bg-primary/5'
+                          }`}
                       >
                         <item.icon className="w-4 h-4" />
                         {item.label}
                         {hasSections && (
-                          <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${
-                            activeMegaMenu === item.key ? 'rotate-180' : ''
-                          }`} />
+                          <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${activeMegaMenu === item.key ? 'rotate-180' : ''
+                            }`} />
                         )}
                       </button>
                     ) : (
                       <button
-                        className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1 group ${
-                          activeMegaMenu === item.key
-                            ? 'text-primary bg-primary/10'
-                            : 'text-slate-700 hover:text-primary hover:bg-primary/5'
-                        }`}
+                        className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1 group ${activeMegaMenu === item.key
+                          ? 'text-primary bg-primary/10'
+                          : 'text-slate-700 hover:text-primary hover:bg-primary/5'
+                          }`}
                       >
                         <item.icon className="w-4 h-4" />
                         {item.label}
                         {hasSections && (
-                          <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${
-                            activeMegaMenu === item.key ? 'rotate-180' : ''
-                          }`} />
+                          <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${activeMegaMenu === item.key ? 'rotate-180' : ''
+                            }`} />
                         )}
                       </button>
                     )}
                   </div>
                 );
               })}
-              
+
               {/* Additional Join Now Button in Navbar Row */}
-              <button
+              {/* <button
                 onClick={() => handleNavigation('/signup')}
                 className="px-3 py-1.5 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1 group text-accent hover:bg-accent/10"
               >
                 <Sparkles className="w-4 h-4" />
                 Join Now
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
@@ -293,12 +307,16 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
               style={{ originY: 0 }}
             >
               <div className="max-w-7xl mx-auto px-6 py-12">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div className={`flex flex-col md:flex-row flex-wrap gap-8 md:gap-12 lg:gap-16 ${
+                  (navItems.find(item => item.key === activeMegaMenu)?.sections?.length || 0) === 1 
+                    ? 'justify-start' 
+                    : 'justify-center'
+                }`}>
                   {navItems.find(item => item.key === activeMegaMenu)?.sections.map((section, idx) => (
                     <motion.div
                       key={section.title}
                       variants={sectionVariants}
-                      className="space-y-4"
+                      className="space-y-4 w-full md:w-[280px]"
                     >
                       <h4 className="text-xs font-bold uppercase tracking-wider text-gradient-orange">
                         {section.title}
@@ -326,11 +344,9 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
                                     {item.label}
                                   </span>
                                   {item.badge && (
-                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                                      getBadgeColorClasses(item.badgeColor).bg
-                                    } ${
-                                      getBadgeColorClasses(item.badgeColor).text
-                                    }`}>
+                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${getBadgeColorClasses(item.badgeColor).bg
+                                      } ${getBadgeColorClasses(item.badgeColor).text
+                                      }`}>
                                       {item.badge}
                                     </span>
                                   )}
@@ -500,9 +516,8 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
                         >
                           <span className="text-lg font-bold text-slate-900">{item.label}</span>
                           {hasSections && (
-                            <ChevronDown className={`w-5 h-5 text-accent transition-transform ${
-                              activeMegaMenu === item.key ? 'rotate-180' : ''
-                            }`} />
+                            <ChevronDown className={`w-5 h-5 text-accent transition-transform ${activeMegaMenu === item.key ? 'rotate-180' : ''
+                              }`} />
                           )}
                         </button>
                       )}
@@ -564,6 +579,7 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
                     onClick={() => handleNavigation('/signup')}
                     className="w-full px-4 py-2 text-center bg-gradient-to-r from-primary to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition-all"
                   >
+
                     Join Now
                   </button>
                 </div>

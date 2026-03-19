@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, Building2, Briefcase, ArrowRight } from "lucide-react";
+import { GraduationCap, Building2, Briefcase, ArrowRight, ArrowLeft, Home } from "lucide-react";
 
 interface AuthLayoutProps {
   children: React.ReactNode;
@@ -149,9 +149,19 @@ export default function AuthLayout({
         </div>
 
         {/* RIGHT SIDE - Form - Scrollable */}
-        <div className="w-full lg:w-1/2 overflow-y-auto">
-          <div className="flex flex-col justify-center items-center px-6 py-12 md:px-16 lg:px-24 min-h-full">
+        <div className="w-full lg:w-1/2 overflow-y-auto relative bg-white">
+
+          <Link
+            href="/"
+            className="absolute top-6 right-6 lg:top-8 lg:right-10 z-50 flex items-center justify-center w-10 h-10 text-white bg-orange-500 hover:bg-orange-600 hover:scale-105 transition-all rounded-full shadow-lg"
+            aria-label="Go to home page"
+          >
+            <Home className="w-4 h-4" />
+          </Link>
+
+          <div className="flex flex-col justify-center items-center px-6 py-16 md:px-16 lg:px-24 min-h-full">
             <div className="w-full max-w-[440px]">
+
               {/* Mobile Branding */}
               <div className="lg:hidden flex items-center gap-4 mb-10">
                 <div className="w-14 h-14 flex items-center justify-center">

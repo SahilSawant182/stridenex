@@ -28,7 +28,8 @@ const heroSlides = [
         title: "Transform Your Future with",
         subtitle: "Real-World Skills",
         description: "Join thousands of students who have accelerated their careers through our industry-connected programs, mentorship, and practical project experience.",
-        image: "https://images.unsplash.com/photo-1552664730-d307ca884978?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+          image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2071&q=80",
+
         stat: "500+",
         statLabel: "Partner Institutes",
         gradient: "from-purple-600 to-pink-600",
@@ -40,7 +41,8 @@ const heroSlides = [
         title: "Launch Your Career with",
         subtitle: "Industry Connections",
         description: "Connect directly with industry partners, work on real projects, and build a portfolio that employers trust. Your journey to career success starts here.",
-        image: "https://images.unsplash.com/photo-1557804506-669a67965ba0?ixlib=rb-4.0.3&auto=format&fit=crop&w=2074&q=80",
+          image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+
         stat: "200+",
         statLabel: "Industry Partners",
         gradient: "from-orange-500 to-red-500",

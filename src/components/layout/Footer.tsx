@@ -72,19 +72,19 @@ const footerLinks = {
 };
 
 const socialLinks = [
-  { icon: Facebook, href: "https://facebook.com/skillbridge", label: "Facebook" },
-  { icon: X, href: "https://twitter.com/skillbridge", label: "X (Twitter)", customIcon: FaXTwitter },
-  { icon: Linkedin, href: "https://linkedin.com/company/skillbridge", label: "LinkedIn" },
-  { icon: Instagram, href: "https://instagram.com/skillbridge", label: "Instagram" },
-  { icon: MessageCircle, href: "https://whatsapp.com/skillbridge", label: "WhatsApp", customIcon: FaWhatsapp },
+  { icon: Facebook, href: "https://facebook.com/stridenex", label: "Facebook" },
+  // { icon: X, href: "https://twitter.com/stridenex", label: "X (Twitter)", customIcon: FaXTwitter },
+  { icon: Linkedin, href: "https://linkedin.com/company/stridenex", label: "LinkedIn" },
+  { icon: Instagram, href: "https://instagram.com/stridenex", label: "Instagram" },
+  // { icon: MessageCircle, href: "https://whatsapp.com/stridenex", label: "WhatsApp", customIcon: FaWhatsapp },
 ];
 
 const contactInfo = {
-  email: "info@skillbridge.com",
+  email: "info@stridenex.ai",
   phone: "+1 (555) 789-0123",
-  address: "548 Market St, San Francisco, CA 94104",
-  support: "support@skillbridge.com",
-  partnerships: "partners@skillbridge.com",
+  address: "B2/20, Saudamini Co-Operative Housing Society, Paud Road, Kothrud, Pune, (MH) India 411038",
+  support: "support@stridenex.com",
+  partnerships: "partners@stridenex.com",
 };
 
 export default function Footer({ appName = "StrideNex" }: FooterProps) {
@@ -197,11 +197,11 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
                     className="w-10 h-10 rounded-full bg-slate-800/50 backdrop-blur-sm flex items-center justify-center hover:bg-gradient-to-r hover:from-accent hover:to-orange-600 transition-all border border-slate-700 hover:border-transparent text-slate-300 hover:text-white"
                     aria-label={social.label}
                   >
-                    {social.customIcon ? (
+                    {/* {social.customIcon ? (
                       <social.customIcon className="w-4 h-4" />
-                    ) : (
+                    ) : ( */}
                       <social.icon className="w-4 h-4" />
-                    )}
+                    {/* )} */}
                   </motion.a>
                 ))}
               </div>
@@ -368,7 +368,7 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
         </div>
 
         {/* Quick Contact Bar */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.6 }}
@@ -392,8 +392,8 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
             </div>
             <div>
               <div className="text-xs text-slate-500">Institute Partnerships</div>
-              <a href={`mailto:institutions@skillbridge.com`} className="text-sm font-medium text-slate-300 hover:text-accent transition-colors">
-                institutions@skillbridge.com
+              <a href={`mailto:institutions@stridenex.com`} className="text-sm font-medium text-slate-300 hover:text-accent transition-colors">
+                institutions@stridenex.com
               </a>
             </div>
           </div>
@@ -403,8 +403,8 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
             </div>
             <div>
               <div className="text-xs text-slate-500">Industry Collaborations</div>
-              <a href={`mailto:partners@skillbridge.com`} className="text-sm font-medium text-slate-300 hover:text-emerald-500 transition-colors">
-                partners@skillbridge.com
+              <a href={`mailto:partners@stridenex.com`} className="text-sm font-medium text-slate-300 hover:text-emerald-500 transition-colors">
+                partners@stridenex.com
               </a>
             </div>
           </div>
@@ -414,45 +414,47 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
             </div>
             <div>
               <div className="text-xs text-slate-500">Mentor Applications</div>
-              <a href={`mailto:mentors@skillbridge.com`} className="text-sm font-medium text-slate-300 hover:text-purple-500 transition-colors">
-                mentors@skillbridge.com
+              <a href={`mailto:mentors@stridenex.com`} className="text-sm font-medium text-slate-300 hover:text-purple-500 transition-colors">
+                mentors@stridenex.com
               </a>
             </div>
           </div>
-        </motion.div>
+        </motion.div> */}
 
         {/* Bottom Bar */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-sm text-slate-500 flex items-center gap-2">
             © {new Date().getFullYear()} {appName}. All rights reserved.
-            <span className="flex items-center gap-1 ml-2">
+            {/* <span className="flex items-center gap-1 ml-2">
               Made with <Heart className="w-3 h-3 text-red-500 fill-red-500" /> for future careers
-            </span>
+            </span> */}
           </div>
 
           <div className="flex items-center gap-6">
-            <Link href="/privacy" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+            <Link href="/privacy-policy"
+              target="_blank"className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
               Privacy
             </Link>
             <span className="text-slate-700">•</span>
-            <Link href="/terms" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+            <Link href="/terms-of-use"
+              target="_blank"className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
               Terms
             </Link>
-            <span className="text-slate-700">•</span>
+            {/* <span className="text-slate-700">•</span>
             <Link href="/cookies" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
               Cookies
             </Link>
             <span className="text-slate-700">•</span>
             <Link href="/accessibility" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
               Accessibility
-            </Link>
+            </Link> */}
           </div>
 
           {/* Trust Badge */}
-          <div className="flex items-center gap-2 text-xs text-slate-500">
+          {/* <div className="flex items-center gap-2 text-xs text-slate-500">
             <Shield className="w-3 h-3" />
             <span>ISO 27001 Certified</span>
-          </div>
+          </div> */}
         </div>
       </div>
 

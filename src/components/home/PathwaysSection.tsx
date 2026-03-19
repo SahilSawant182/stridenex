@@ -13,7 +13,7 @@ const pathways = [
         tagline: "Become Industry-Ready Before You Graduate",
         description: "Designed for students aiming to enter the workforce with confidence and practical capability.",
         icon: Briefcase,
-        image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", 
+        image: "https://plus.unsplash.com/premium_photo-1770426275698-755a4e790a4c?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", 
         color: "from-primary to-purple-600",
         features: [
             "Industry-aligned skill pathways",
@@ -31,7 +31,7 @@ const pathways = [
         tagline: "Transform Ideas into Scalable Ventures",
         description: "For students who aspire to create, innovate, and lead.",
         icon: Rocket,
-        image: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", 
+        image: "https://images.unsplash.com/photo-1612772992614-bc2c2a2c3362?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", 
         color: "from-accent to-orange-600",
         features: [
             "Innovation and problem-identification frameworks",
@@ -49,7 +49,7 @@ const pathways = [
         tagline: "Prepare for Advanced Academic Excellence",
         description: "For learners planning global or specialized higher studies with clarity and preparation.",
         icon: GraduationCap,
-        image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", 
+        image: "https://images.unsplash.com/photo-1616587226157-48e49175ee20?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", 
         color: "from-emerald-600 to-emerald-500",
         features: [
             "Career-aligned higher education mapping",

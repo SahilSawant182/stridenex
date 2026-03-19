@@ -35,7 +35,7 @@ const offerings = [
         description: "Building resilient, inclusive, and high-performance teams.",
         icon: Users,
         color: "from-accent to-orange-600",
-        image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+        image: "https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
         stats: "10+ Workshops",
         features: ["Team Building", "Diversity & Inclusion", "Change Management"],
     },

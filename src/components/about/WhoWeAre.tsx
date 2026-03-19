@@ -35,7 +35,7 @@ export default function WhoWeAre() {
         >
           <div className="aspect-square rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
             <img 
-              src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80" 
+              src="https://www.tbsnews.net/sites/default/files/styles/amp_metadata_content_image_min_696px_wide/public/images/2022/12/03/panorama.png" 
               alt="Students collaborating"
               className="w-full h-full object-cover"
             />

@@ -18,7 +18,7 @@ export default function VisionMission() {
           <Sparkles className="w-12 h-12 text-accent mb-6" />
           <h3 className="text-3xl font-bold text-slate-900 mb-4">Our Vision</h3>
           <p className="text-lg text-slate-600 leading-relaxed">
-            To create a globally connected talent ecosystem where education naturally evolves into employability, innovation, and lifelong professional growth.
+            To build a reliable talent ecosystem where industries can consistently find and trust job-ready, future-ready, and entrepreneurial individuals, enabled through structured pathways that align students with real industry needs and drive outcomes in careers, ventures, and higher education.
           </p>
         </motion.div>
         <motion.div
@@ -31,7 +31,7 @@ export default function VisionMission() {
           <Target className="w-12 h-12 text-accent mb-6" />
           <h3 className="text-3xl font-bold text-slate-900 mb-4">Our Mission</h3>
           <p className="text-lg text-slate-600 leading-relaxed">
-            To empower students with clarity, capability, and confidence by aligning learning pathways with real-world opportunities through collaboration between institutions and industry.
+            For students and industries, StrideNEX builds a reliable talent ecosystem by preparing individuals for jobs, entrepreneurship, and higher education through industry-aligned learning, real-world exposure, and validated skill assessment using artificial intelligence agents.
           </p>
         </motion.div>
       </div>

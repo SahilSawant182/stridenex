@@ -4,6 +4,7 @@
 import { usePathname } from "next/navigation";
 import PublicNavbar from "./PublicNavbar";
 import PublicFooter from "./PublicFooter";
+import FloatingSignupButton from "./FloatingSignupButton";
 
 export default function ConditionalLayout({
     children,
@@ -14,7 +15,9 @@ export default function ConditionalLayout({
 
     // Check if current path is public (home, about, etc.)
     const isPublicPage = pathname === '/' ||
-        pathname?.startsWith('/about')
+        pathname?.startsWith('/about') ||
+        pathname?.startsWith('/privacy-policy') ||
+        pathname?.startsWith('/terms-of-use')
 
     // Only show navbar and footer on public pages
     if (isPublicPage) {
@@ -24,6 +27,7 @@ export default function ConditionalLayout({
                 <main className="pt-[74px] min-h-screen">
                     {children}
                 </main>
+                <FloatingSignupButton />
                 <PublicFooter />
             </>
         );

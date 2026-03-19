@@ -48,6 +48,85 @@ export interface NavCategory {
 }
 
 export const navigationConfig: Record<string, NavCategory> = {
+about: {
+    label: "About",
+    href: "/about", // Main category link
+    icon: Info,
+    sections: [
+      {
+        title: "Company",
+        items: [
+          { 
+            label: "Our Story", 
+            href: "/about", 
+            icon: Heart,
+            description: "Why StrideNex was created",
+          },
+          { 
+            label: "Capabilities", 
+            href: "/about/capabilities", 
+            icon: Sparkles,
+            description: "Building a connected talent ecosystem",
+          },
+          { 
+            label: "Core Solutions", 
+            href: "/about/solutions", 
+            icon: Target,
+            description: "Three pathways. One structured journey",
+          },
+          { 
+            label: "Leadership", 
+            href: "/about/leadership", 
+            icon: Users,
+            description: "Guided by experience, driven by purpose",
+          },
+        ]
+      },
+      {
+        title: "Community",
+        items: [
+          { 
+            label: "Mentors", 
+            href: "/about/mentors", 
+            icon: Award,
+            description: "Industry experts shaping future professionals",
+          },
+          { 
+            label: "Experts & Advisors", 
+            href: "/about/experts", 
+            icon: Lightbulb,
+            description: "Strategic expertise supporting innovation",
+          },
+          { 
+            label: "Testimonials", 
+            href: "/about/testimonials", 
+            icon: Star,
+            description: "Real stories. Real transformation",
+          },
+        ]
+      },
+      {
+        title: "Connect",
+        items: [
+          { 
+            label: "Contact Us", 
+            href: "/about/contact", 
+            icon: Phone,
+            description: "Get in touch with our team",
+          },
+          { 
+            label: "Partner With Us", 
+            href: "/partners", 
+            icon: Handshake,
+            description: "Join our ecosystem",
+            badge: "Join Us",
+            badgeColor: "accent"
+          },
+        ]
+      },
+    ]
+  },
+
   solutions: {
     label: "Solutions",
     icon: Target,
@@ -191,89 +270,12 @@ export const navigationConfig: Record<string, NavCategory> = {
     ]
   },
   
-  about: {
-    label: "About",
-    href: "/about", // Main category link
-    icon: Info,
-    sections: [
-      {
-        title: "Company",
-        items: [
-          { 
-            label: "Our Story", 
-            href: "/about", 
-            icon: Heart,
-            description: "Why StrideNex was created",
-          },
-          { 
-            label: "Capabilities", 
-            href: "/about/capabilities", 
-            icon: Sparkles,
-            description: "Building a connected talent ecosystem",
-          },
-          { 
-            label: "Core Solutions", 
-            href: "/about/solutions", 
-            icon: Target,
-            description: "Three pathways. One structured journey",
-          },
-          { 
-            label: "Leadership", 
-            href: "/about/leadership", 
-            icon: Users,
-            description: "Guided by experience, driven by purpose",
-          },
-        ]
-      },
-      {
-        title: "Community",
-        items: [
-          { 
-            label: "Mentors", 
-            href: "/about/mentors", 
-            icon: Award,
-            description: "Industry experts shaping future professionals",
-          },
-          { 
-            label: "Experts & Advisors", 
-            href: "/about/experts", 
-            icon: Lightbulb,
-            description: "Strategic expertise supporting innovation",
-          },
-          { 
-            label: "Testimonials", 
-            href: "/about/testimonials", 
-            icon: Star,
-            description: "Real stories. Real transformation",
-          },
-        ]
-      },
-      {
-        title: "Connect",
-        items: [
-          { 
-            label: "Contact Us", 
-            href: "/about/contact", 
-            icon: Phone,
-            description: "Get in touch with our team",
-          },
-          { 
-            label: "Partner With Us", 
-            href: "/partners", 
-            icon: Handshake,
-            description: "Join our ecosystem",
-            badge: "Join Us",
-            badgeColor: "accent"
-          },
-        ]
-      },
-    ]
-  },
+  
   
   join: {
     label: "Join Us",
     href: "/signup",
-    icon: Rocket,
+    icon: Sparkles, 
     sections: [
       {
         title: "Roles",
