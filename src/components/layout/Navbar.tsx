@@ -92,6 +92,8 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
+      setActiveMegaMenu(null);
+      setSearchOpen(false);
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -111,6 +113,14 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (activeMegaMenu || mobileMenuOpen || searchOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  }, [activeMegaMenu, mobileMenuOpen, searchOpen]);
 
   const handleMegaMenuEnter = (key: string) => {
     const item = navItems.find(item => item.key === key);
@@ -306,8 +316,8 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
               className="absolute left-0 right-0 top-[110px] bg-white shadow-2xl border-t border-primary/10 overflow-hidden"
               style={{ originY: 0 }}
             >
-              <div className="max-w-7xl mx-auto px-6 py-12">
-                <div className={`flex flex-col md:flex-row flex-wrap gap-8 md:gap-12 lg:gap-16 ${
+              <div className="max-w-7xl mx-auto px-6 py-6">
+                <div className={`flex flex-col md:flex-row flex-wrap gap-6 md:gap-8 lg:gap-12 ${
                   (navItems.find(item => item.key === activeMegaMenu)?.sections?.length || 0) === 1 
                     ? 'justify-start' 
                     : 'justify-center'
@@ -321,7 +331,7 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
                       <h4 className="text-xs font-bold uppercase tracking-wider text-gradient-orange">
                         {section.title}
                       </h4>
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         {section.items.map((item, itemIdx) => (
                           <motion.div
                             key={item.label}
@@ -331,7 +341,7 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
                           >
                             <button
                               onClick={() => handleNavigation(item.href)}
-                              className="flex items-start gap-3 p-3 rounded-xl hover:bg-primary/5 transition-colors w-full text-left"
+                              className="flex items-start gap-3 p-2 rounded-xl hover:bg-primary/5 transition-colors w-full text-left"
                             >
                               {item.icon && (
                                 <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-colors">
@@ -368,7 +378,7 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
                 {/* Featured CTA - Role-based */}
                 <motion.div
                   variants={sectionVariants}
-                  className="mt-8 pt-8 border-t border-slate-100"
+                  className="mt-6 pt-6 border-t border-slate-100"
                 >
                   <div className="grid md:grid-cols-3 gap-4">
                     <button
