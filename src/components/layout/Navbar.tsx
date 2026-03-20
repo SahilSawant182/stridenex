@@ -150,7 +150,7 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
   }));
 
   const quickActions = [
-    { label: "LinkedIn", icon: FaLinkedin, color: "from-blue-600 to-blue-700", href: "https://linkedin.com/company/stridenex" },
+    { label: "LinkedIn", icon: FaLinkedin, color: "from-blue-600 to-blue-700", href: "https://www.linkedin.com/company/stridenex-ai/about/" },
     { label: "Instagram", icon: FaInstagram, color: "from-pink-500 to-purple-600", href: "https://instagram.com/stridenex" },
     { label: "Facebook", icon: FaFacebook, color: "from-blue-600 to-blue-700", href: "https://facebook.com/stridenex" },
     { label: "YouTube", icon: FaYoutube, color: "from-red-600 to-red-700", href: "https://youtube.com/@stridenex" },
