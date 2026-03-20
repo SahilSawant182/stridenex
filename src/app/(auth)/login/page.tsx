@@ -98,7 +98,7 @@ export default function LoginPage() {
         if (data.roles && Array.isArray(data.roles)) {
           const lowerRoles: string[] = data.roles.map((r: string) => r.toLowerCase());
           
-          if (lowerRoles.some((r: string) => r.includes('college') || r.includes('admin'))) {
+          if (lowerRoles.some((r: string) => r.includes('college'))) {
             userRole = 'college';
           } else if (lowerRoles.some((r: string) => r.includes('industry'))) {
             userRole = 'industry';

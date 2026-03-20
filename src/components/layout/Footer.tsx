@@ -81,7 +81,7 @@ const socialLinks = [
 
 const contactInfo = {
   email: "info@stridenex.ai",
-  phone: "+1 (555) 789-0123",
+  phone: "(+91) 8668756959",
   address: "B2/20, Saudamini Co-Operative Housing Society, Paud Road, Kothrud, Pune, (MH) India 411038",
   support: "support@stridenex.com",
   partnerships: "partners@stridenex.com",
@@ -150,7 +150,7 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
              <div className="flex items-center gap-3 mb-4">
   <div className="w-14 h-14 bg-white rounded-xl shadow-lg flex items-center justify-center p-2">
     <img
-      src="/images/Social Media Logo Icon 1 A2.jpg" // Changed from the jpg to your actual logo file
+      src="/images/circularLogo.jpg" // Changed from the jpg to your actual logo file
       alt="Skill Bridge Logo"
       className="w-full h-full object-contain"
     />

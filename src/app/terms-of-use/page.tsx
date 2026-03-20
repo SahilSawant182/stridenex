@@ -81,7 +81,7 @@ export default function TermsOfUsePage() {
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 flex items-center justify-center">
               <img
-                src="/images/Social Media Logo Icon 1 A2.jpg"
+                src="/images/circularLogo.jpg"
                 alt="StrideNex Logo"
                 className="w-full h-full object-contain"
               />

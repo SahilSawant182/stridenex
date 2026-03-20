@@ -93,7 +93,7 @@ export default function AuthLayout({
             <div className="flex items-center gap-4 mb-12">
               <div className="w-20 h-20 bg-white rounded-xl shadow-lg flex items-center justify-center p-3">
                 <img
-                  src="/images/Social Media Logo Icon 1 A2.jpg"
+                  src="/images/circularLogo.jpg"
                   alt="Skill Bridge Logo"
                   className="w-full h-full object-contain"
                 />
@@ -166,7 +166,7 @@ export default function AuthLayout({
               <div className="lg:hidden flex items-center gap-4 mb-10">
                 <div className="w-14 h-14 flex items-center justify-center">
                   <img
-                    src="/images/Social Media Logo Icon 1 A2.jpg"
+                    src="/images/circularLogo.jpg"
                     alt="Skill Bridge Logo"
                     className="w-full h-full object-contain"
                   />

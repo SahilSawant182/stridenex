@@ -85,7 +85,7 @@ export default function OnboardingLayout({
             <div className="flex items-center gap-4 mb-12">
               <div className="w-16 h-16 bg-white rounded-xl shadow-lg flex items-center justify-center p-3">
                 <img
-                  src="/images/Social Media Logo Icon 1 A2.jpg"
+                  src="/images/circularLogo.jpg"
                   alt="Skill Bridge Logo"
                   className="w-full h-full object-contain"
                 />
@@ -152,7 +152,7 @@ export default function OnboardingLayout({
             <div className="lg:hidden flex items-center gap-3 mb-10">
               <div className="w-6 h-6 bg-white rounded-xl shadow-lg flex items-center justify-center p-3">
                 <img
-                  src="/images/Social Media Logo Icon 1 A2.jpg"
+                  src="/images/circularLogo.jpg"
                   alt="Skill Bridge Logo"
                   className="w-full h-full object-contain"
                 />
