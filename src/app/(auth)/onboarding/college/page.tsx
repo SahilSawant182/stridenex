@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { OnboardingData } from "@/types/onboarding.types";
 import CollegeOnboarding from "@/components/onboarding/CollegeOnboarding";
@@ -9,12 +9,14 @@ import CollegeOnboarding from "@/components/onboarding/CollegeOnboarding";
 export default function CollegeOnboardingPage() {
   const { isAuthenticated, apiKey, apiSecret } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isMobileSource = searchParams.get("source") === "mobile";
 
-//   useEffect(() => {
-//     if (!isAuthenticated) {
-//       router.push("/login");
-//     }
-//   }, [isAuthenticated, router]);
+  //   useEffect(() => {
+  //     if (!isAuthenticated) {
+  //       router.push("/login");
+  //     }
+  //   }, [isAuthenticated, router]);
 
   const handleSubmit = async (data: OnboardingData) => {
     try {
@@ -33,7 +35,11 @@ export default function CollegeOnboardingPage() {
         localStorage.setItem("onboardingCompleted", "true");
         localStorage.setItem("userType", "college");
 
-        router.push("/college/dashboard");
+        if (isMobileSource) {
+          window.location.href = "stridenex://login";
+        } else {
+          router.push("/college/dashboard");
+        }
       } else {
         console.error("Failed to save onboarding data");
       }
@@ -42,9 +48,9 @@ export default function CollegeOnboardingPage() {
     }
   };
 
-//   if (!isAuthenticated) {
-//     return null;
-//   }
+  //   if (!isAuthenticated) {
+  //     return null;
+  //   }
 
   return <CollegeOnboarding onSubmit={handleSubmit} />;
 }

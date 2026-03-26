@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import OnboardingLayout from "./OnboardingLayout";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,8 @@ export default function MentorOnboarding({
     onSkip
 }: MentorOnboardingProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const isMobileSource = searchParams.get("source") === "mobile";
     const { apiKey, apiSecret } = useAuth();
     const [currentStep, setCurrentStep] = useState<Step>(1);
     const [loading, setLoading] = useState(false);
@@ -371,7 +373,11 @@ export default function MentorOnboarding({
             if (response.status === 200) {
                 setSuccess("Mentor onboarding completed successfully!");
                 setTimeout(() => {
-                    router.push("/login");
+                    if (isMobileSource) {
+                        window.location.href = "/login";
+                    } else {
+                        router.push("/login");
+                    }
                 }, 1500);
             } else {
                 setError(response.data?.message || "Failed to create mentor. Please try again.");

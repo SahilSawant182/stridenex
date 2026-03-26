@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import OnboardingLayout from "./OnboardingLayout";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,8 @@ export default function IndustryOnboarding({
     onSkip
 }: IndustryOnboardingProps) {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const isMobileSource = searchParams.get("source") === "mobile";
     const { apiKey, apiSecret } = useAuth();
     const [currentStep, setCurrentStep] = useState<Step>(1);
     const [loading, setLoading] = useState(false);
@@ -344,7 +346,13 @@ export default function IndustryOnboarding({
 
             if (response.status === 200) {
                 setSuccess("Industry onboarding completed successfully!");
-                setTimeout(() => router.push("/login"), 1500);
+                setTimeout(() => {
+                    if (isMobileSource) {
+                        window.location.href = "/login";
+                    } else {
+                        router.push("/login");
+                    }
+                }, 1500);
             } else {
                 setError(response.data?.message || "Failed to create industry. Please try again.");
             }
@@ -360,7 +368,7 @@ export default function IndustryOnboarding({
         if (onSkip) {
             onSkip();
         } else {
-      router.push("/industry/dashboard");
+            router.push("/industry/dashboard");
         }
     };
 
@@ -583,18 +591,18 @@ export default function IndustryOnboarding({
             <div className="space-y-6">
                 <div className="relative">
                     <ContactPersonsTable
-                                contactPersons={contactPersons}
-                                fieldErrors={fieldErrors}
-                                designationOptions={designationOptions}
-                                salutationOptions={salutationOptions}
-                                loadingDesignations={loadingDesignations}
-                                loadingSalutations={loadingSalutations}
-                                onSelectDesignation={selectDesignation}
-                                onPersonChange={handleContactPersonChange}
-                                onRemovePerson={removeContactPerson}
-                                onAddPerson={addContactPerson}
-                                getSelectedDesignationLabel={getSelectedDesignationLabel}
-                              />
+                        contactPersons={contactPersons}
+                        fieldErrors={fieldErrors}
+                        designationOptions={designationOptions}
+                        salutationOptions={salutationOptions}
+                        loadingDesignations={loadingDesignations}
+                        loadingSalutations={loadingSalutations}
+                        onSelectDesignation={selectDesignation}
+                        onPersonChange={handleContactPersonChange}
+                        onRemovePerson={removeContactPerson}
+                        onAddPerson={addContactPerson}
+                        getSelectedDesignationLabel={getSelectedDesignationLabel}
+                    />
                 </div>
 
                 <div className="flex gap-3 pt-6">

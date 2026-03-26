@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { OnboardingData } from "@/types/onboarding.types";
 import MentorOnboarding from "@/components/onboarding/MentorOnboarding";
@@ -10,6 +10,8 @@ import MentorOnboarding from "@/components/onboarding/MentorOnboarding";
 export default function MentorOnboardingPage() {
   const { isAuthenticated, apiKey, apiSecret } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isMobileSource = searchParams.get("source") === "mobile";
 
 //   useEffect(() => {
 //     if (!isAuthenticated) {
@@ -34,7 +36,11 @@ export default function MentorOnboardingPage() {
         localStorage.setItem("onboardingCompleted", "true");
         localStorage.setItem("userType", "mentor");
 
-        router.push("/mentor/dashboard");
+        if (isMobileSource) {
+          window.location.href = "stridenex://login";
+        } else {
+          router.push("/mentor/dashboard");
+        }
       } else {
         console.error("Failed to save onboarding data");
       }

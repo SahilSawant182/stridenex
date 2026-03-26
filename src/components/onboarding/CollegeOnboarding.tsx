@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import OnboardingLayout from "./OnboardingLayout";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,8 @@ export default function CollegeOnboarding({
   onSkip
 }: CollegeOnboardingProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isMobileSource = searchParams.get("source") === "mobile";
   const { apiKey, apiSecret } = useAuth();
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
@@ -385,7 +387,13 @@ export default function CollegeOnboarding({
 
       if (response.data && (response.data.message === "College created successfully" || response.status === 200)) {
         setSuccess("College onboarding completed successfully!");
-        setTimeout(() => router.push("/login"), 1500);
+        setTimeout(() => {
+          if (isMobileSource) {
+            window.location.href = "/login";
+          } else {
+            router.push("/login");
+          }
+        }, 1500);
       } else {
         setError(response.data?.message || "Failed to create college. Please try again.");
       }

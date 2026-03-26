@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { OnboardingData } from "@/types/onboarding.types";
 import IndustryOnboarding from "@/components/onboarding/IndustryOnboarding";
@@ -10,6 +10,8 @@ import IndustryOnboarding from "@/components/onboarding/IndustryOnboarding";
 export default function IndustryOnboardingPage() {
   const { isAuthenticated, apiKey, apiSecret } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isMobileSource = searchParams.get("source") === "mobile";
 
 //   useEffect(() => {
 //     if (!isAuthenticated) {
@@ -34,7 +36,11 @@ export default function IndustryOnboardingPage() {
         localStorage.setItem("onboardingCompleted", "true");
         localStorage.setItem("userType", "industry");
 
-        router.push("/industry/dashboard");
+        if (isMobileSource) {
+          window.location.href = "stridenex://login";
+        } else {
+          router.push("/industry/dashboard");
+        }
       } else {
         console.error("Failed to save onboarding data");
       }
