@@ -1,15 +1,16 @@
 "use client";
-export const dynamic = "force-dynamic";
 
+import { Suspense } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
-import { OnboardingData } from "@/types/onboarding.types";
 import MentorOnboarding from "@/components/onboarding/MentorOnboarding";
+import { OnboardingData } from "@/types/onboarding.types";
 
-export default function MentorOnboardingPage() {
+function MentorOnboardingContent() {
   const { isAuthenticated, apiKey, apiSecret } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const isMobileSource = searchParams.get("source") === "mobile";
 
   const handleSubmit = async (data: OnboardingData) => {
@@ -39,4 +40,12 @@ export default function MentorOnboardingPage() {
   };
 
   return <MentorOnboarding onSubmit={handleSubmit} />;
+}
+
+export default function MentorOnboardingPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <MentorOnboardingContent />
+    </Suspense>
+  );
 }

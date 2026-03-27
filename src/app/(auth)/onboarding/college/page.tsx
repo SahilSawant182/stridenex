@@ -1,13 +1,12 @@
 "use client";
 
 import { Suspense } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { useRouter, useSearchParams } from "next/navigation";
 import CollegeOnboarding from "@/components/onboarding/CollegeOnboarding";
 import { OnboardingData } from "@/types/onboarding.types";
 
 function CollegeOnboardingContent() {
-  const { useAuth } = require("@/context/AuthContext");
-  const { useRouter, useSearchParams } = require("next/navigation");
-
   const { isAuthenticated, apiKey, apiSecret } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -34,6 +33,8 @@ function CollegeOnboardingContent() {
         } else {
           router.push("/college/dashboard");
         }
+      } else {
+        console.error("Failed to save onboarding data");
       }
     } catch (error) {
       console.error("Error during onboarding:", error);
