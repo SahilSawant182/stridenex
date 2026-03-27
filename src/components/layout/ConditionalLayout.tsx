@@ -24,7 +24,7 @@ export default function ConditionalLayout({
         return (
             <>
                 <PublicNavbar />
-                <main className="pt-[74px] min-h-screen">
+                <main className="pt-[106px] min-h-screen">
                     {children}
                 </main>
                 <FloatingSignupButton />

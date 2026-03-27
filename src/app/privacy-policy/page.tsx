@@ -36,7 +36,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section id={id} className="scroll-mt-24">
+    <section id={id} className="scroll-mt-[120px]">
       <h2 className="text-xl md:text-2xl font-bold text-navy mb-4 pb-2 border-b border-accent/20">
         {title}
       </h2>
@@ -70,39 +70,23 @@ function NumberedList({ items }: { items: string[] }) {
 export default function PrivacyPolicyPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      {/* Header */}
-      <div className="bg-white shadow-md border-b border-primary/10 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 flex items-center justify-center">
-              <img
-                src="/images/circularLogo.jpg"
-                alt="StrideNex Logo"
-                className="w-full h-full object-contain"
-              />
-            </div>
-
-            <div>
-              <h1 className="text-xl font-bold text-navy">StrideNex</h1>
-              <p className="text-xs text-slate-500">Privacy Policy</p>
-            </div>
-          </div>
-          <Link
-            href="/signup"
-            className="text-accent hover:text-orange-600 font-medium flex items-center gap-1 transition-colors"
-          >
-            ← Back to Signup
-          </Link>
-        </div>
-      </div>
 
       {/* Hero Banner */}
       <div className="bg-gradient-to-r from-navy to-royal text-white">
         <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="flex items-center gap-2 text-sm text-white/80 mb-3">
-            <Link href="/" className="hover:text-white transition-colors">Home</Link>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-white">Privacy Policy</span>
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex items-center gap-2 text-sm text-white/80">
+              <Link href="/" className="hover:text-white transition-colors">Home</Link>
+              <ChevronRight className="w-4 h-4" />
+              <span className="text-white">Privacy Policy</span>
+            </div>
+            <Link
+              href="/signup"
+              className="bg-accent hover:bg-orange-600 text-white px-4 py-2 rounded-full font-semibold flex items-center gap-2 transition-all shadow-lg hover:shadow-orange-500/20 hover:-translate-y-0.5 text-sm"
+            >
+              <ChevronRight className="w-4 h-4 rotate-180" />
+              Back to Signup
+            </Link>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold mb-4">Privacy Policy</h1>
           <p className="text-lg text-white/80 max-w-3xl">
@@ -128,7 +112,7 @@ export default function PrivacyPolicyPage() {
       <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Table of Contents - Sticky Sidebar */}
         <aside className="hidden lg:block lg:col-span-1">
-          <div className="sticky top-24 bg-white rounded-xl shadow-lg border border-primary/10 p-6">
+          <div className="sticky top-[120px] bg-white rounded-xl shadow-lg border border-primary/10 p-6">
             <h3 className="font-bold text-navy mb-4 pb-2 border-b border-accent/20">
               Contents
             </h3>
