@@ -1,26 +1,21 @@
 "use client";
 
-import { useAuth } from "@/context/AuthContext";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
-import { OnboardingData } from "@/types/onboarding.types";
+import { Suspense } from "react";
 import CollegeOnboarding from "@/components/onboarding/CollegeOnboarding";
+import { OnboardingData } from "@/types/onboarding.types";
 
-export default function CollegeOnboardingPage() {
+function CollegeOnboardingContent() {
+  const { useAuth } = require("@/context/AuthContext");
+  const { useRouter, useSearchParams } = require("next/navigation");
+
   const { isAuthenticated, apiKey, apiSecret } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isMobileSource = searchParams.get("source") === "mobile";
 
-  //   useEffect(() => {
-  //     if (!isAuthenticated) {
-  //       router.push("/login");
-  //     }
-  //   }, [isAuthenticated, router]);
+  const isMobileSource = searchParams.get("source") === "mobile";
 
   const handleSubmit = async (data: OnboardingData) => {
     try {
-      // Save college onboarding data
       const response = await fetch("/api/onboarding/college", {
         method: "POST",
         headers: {
@@ -31,7 +26,6 @@ export default function CollegeOnboardingPage() {
       });
 
       if (response.ok) {
-        // Mark onboarding as completed
         localStorage.setItem("onboardingCompleted", "true");
         localStorage.setItem("userType", "college");
 
@@ -40,17 +34,19 @@ export default function CollegeOnboardingPage() {
         } else {
           router.push("/college/dashboard");
         }
-      } else {
-        console.error("Failed to save onboarding data");
       }
     } catch (error) {
       console.error("Error during onboarding:", error);
     }
   };
 
-  //   if (!isAuthenticated) {
-  //     return null;
-  //   }
-
   return <CollegeOnboarding onSubmit={handleSubmit} />;
+}
+
+export default function CollegeOnboardingPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CollegeOnboardingContent />
+    </Suspense>
+  );
 }

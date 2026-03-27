@@ -1,11 +1,10 @@
 "use client";
+export const dynamic = "force-dynamic";
 
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
 import { OnboardingData } from "@/types/onboarding.types";
 import MentorOnboarding from "@/components/onboarding/MentorOnboarding";
-
 
 export default function MentorOnboardingPage() {
   const { isAuthenticated, apiKey, apiSecret } = useAuth();
@@ -13,15 +12,8 @@ export default function MentorOnboardingPage() {
   const searchParams = useSearchParams();
   const isMobileSource = searchParams.get("source") === "mobile";
 
-//   useEffect(() => {
-//     if (!isAuthenticated) {
-//       router.push("/login");
-//     }
-//   }, [isAuthenticated, router]);
-
   const handleSubmit = async (data: OnboardingData) => {
     try {
-      // Save college onboarding data
       const response = await fetch("/api/onboarding/mentor", {
         method: "POST",
         headers: {
@@ -32,7 +24,6 @@ export default function MentorOnboardingPage() {
       });
 
       if (response.ok) {
-        // Mark onboarding as completed
         localStorage.setItem("onboardingCompleted", "true");
         localStorage.setItem("userType", "mentor");
 
@@ -41,17 +32,11 @@ export default function MentorOnboardingPage() {
         } else {
           router.push("/mentor/dashboard");
         }
-      } else {
-        console.error("Failed to save onboarding data");
       }
     } catch (error) {
       console.error("Error during onboarding:", error);
     }
   };
-
-//   if (!isAuthenticated) {
-//     return null;
-//   }
 
   return <MentorOnboarding onSubmit={handleSubmit} />;
 }

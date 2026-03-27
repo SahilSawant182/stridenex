@@ -1,27 +1,21 @@
 "use client";
 
-import { useAuth } from "@/context/AuthContext";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect } from "react";
-import { OnboardingData } from "@/types/onboarding.types";
+import { Suspense } from "react";
 import IndustryOnboarding from "@/components/onboarding/IndustryOnboarding";
+import { OnboardingData } from "@/types/onboarding.types";
 
+function IndustryOnboardingContent() {
+  const { useAuth } = require("@/context/AuthContext");
+  const { useRouter, useSearchParams } = require("next/navigation");
 
-export default function IndustryOnboardingPage() {
   const { isAuthenticated, apiKey, apiSecret } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const isMobileSource = searchParams.get("source") === "mobile";
 
-//   useEffect(() => {
-//     if (!isAuthenticated) {
-//       router.push("/login");
-//     }
-//   }, [isAuthenticated, router]);
+  const isMobileSource = searchParams.get("source") === "mobile";
 
   const handleSubmit = async (data: OnboardingData) => {
     try {
-      // Save college onboarding data
       const response = await fetch("/api/onboarding/industry", {
         method: "POST",
         headers: {
@@ -32,7 +26,6 @@ export default function IndustryOnboardingPage() {
       });
 
       if (response.ok) {
-        // Mark onboarding as completed
         localStorage.setItem("onboardingCompleted", "true");
         localStorage.setItem("userType", "industry");
 
@@ -49,9 +42,13 @@ export default function IndustryOnboardingPage() {
     }
   };
 
-//   if (!isAuthenticated) {
-//     return null;
-//   }
-
   return <IndustryOnboarding onSubmit={handleSubmit} />;
+}
+
+export default function IndustryOnboardingPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <IndustryOnboardingContent />
+    </Suspense>
+  );
 }
