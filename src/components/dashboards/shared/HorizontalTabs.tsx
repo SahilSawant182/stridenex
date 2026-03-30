@@ -25,7 +25,9 @@ import {
   UserCheck,
   BarChart3,
   School,
-  BarChart
+  BarChart,
+  Star,
+  FolderGit2
 } from "lucide-react";
 
 interface HorizontalTabsProps {
@@ -67,9 +69,12 @@ const tabConfig = {
   ],
   industry: [
     { name: "Overview", icon: LayoutDashboard, path: "/industry/dashboard" },
+    { name: "Company Profile", icon: Building2, path: "/industry/dashboard/company-profile" },
     { name: "Find Talent", icon: Briefcase, path: "/industry/dashboard/find-talent" },
     { name: "Pipeline", icon: Mail, path: "/industry/dashboard/pipeline" },
+    { name: "Projects", icon: FolderGit2, path: "/industry/dashboard/projects" },
     { name: "Internships", icon: UserCheck, path: "/industry/dashboard/internships" },
+    { name: "Feedback", icon: Star, path: "/industry/dashboard/feedback" },
     { name: "Analytics", icon: Calendar, path: "/industry/dashboard/analytics" },
     { name: "Plans", icon: School, path: "/industry/dashboard/plan" },
   ],

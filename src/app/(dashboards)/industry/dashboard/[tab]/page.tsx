@@ -6,8 +6,10 @@ import FindTalentTabContent from "@/components/dashboards/industry/FindTalentTab
 import PipelineTabContent from "@/components/dashboards/industry/PipelineTabContent";
 import InternshipsTabContent from "@/components/dashboards/industry/InternshipsTabContent";
 import AnalyticsTabContent from "@/components/dashboards/industry/AnalyticsTabContent";
-
 import PlansTabContent from "@/components/dashboards/industry/PlansTabContent";
+import CompanyProfileTabContent from "@/components/dashboards/industry/CompanyProfileTabContent";
+import ProjectsTabContent from "@/components/dashboards/industry/ProjectsTabContent";
+import FeedbackTabContent from "@/components/dashboards/industry/FeedbackTabContent";
 
 export default function IndustryTabContent({
   params
@@ -17,12 +19,18 @@ export default function IndustryTabContent({
   const resolvedParams = use(params);
   
   switch (resolvedParams.tab) {
+    case "company-profile":
+      return <CompanyProfileTabContent />;
     case "find-talent":
       return <FindTalentTabContent />;
     case "pipeline":
       return <PipelineTabContent />;
+    case "projects":
+      return <ProjectsTabContent />;
     case "internships":
       return <InternshipsTabContent />;
+    case "feedback":
+      return <FeedbackTabContent />;
     case "analytics":
       return <AnalyticsTabContent />;
     case "plan":

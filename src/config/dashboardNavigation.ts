@@ -23,6 +23,8 @@ import {
   MessageSquare,
   Mail,
   UserCheck,
+  Star,
+  FolderGit2,
   type LucideIcon
 } from "lucide-react";
 
@@ -119,9 +121,12 @@ export const industryConfig: RoleConfig = {
   searchPlaceholder: "Search candidates, applications, partners...",
   links: [
     { name: "Overview", href: "/industry/dashboard", icon: LayoutDashboard },
+    { name: "Company Profile", href: "/industry/dashboard/company-profile", icon: Building2 },
     { name: "Find Talent", href: "/industry/dashboard/find-talent", icon: Briefcase },
     { name: "Hiring Pipeline", href: "/industry/dashboard/pipeline", icon: Mail },
+    { name: "Projects & R&D", href: "/industry/dashboard/projects", icon: FolderGit2 },
     { name: "Internship Posts", href: "/industry/dashboard/internships", icon: UserCheck },
+    { name: "Student Feedback", href: "/industry/dashboard/feedback", icon: Star },
     { name: "Analytics", href: "/industry/dashboard/analytics", icon: Calendar },
     { name: "Subscription", href: "/industry/dashboard/plan", icon: Award },
   ],
