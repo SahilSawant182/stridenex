@@ -247,7 +247,7 @@ export const ContactPersonsTable: React.FC<Props> = ({
                         {/* HEADER - Updated column widths */}
                         <thead className="bg-slate-50 sticky top-0 z-10">
                             <tr className="text-left">
-                                <th className="px-3 py-3 w-[120px]">Title *</th> {/* Increased from 90px to 120px */}
+                                <th className="px-3 py-3 w-[120px]">Title * {/* Increased from 90px to 120px */}</th>
                                 <th className="px-3 py-3 w-[160px]">First Name *</th>
                                 <th className="px-3 py-3 w-[160px]">Last Name *</th>
                                 <th className="px-3 py-3 w-[220px]">Designation *</th>
@@ -263,8 +263,8 @@ export const ContactPersonsTable: React.FC<Props> = ({
                             {contactPersons.map((person, index) => {
                                 return (
                                     <tr key={index} className="border-t hover:bg-slate-50">
-                                        {/* TITLE - Increased width */}
                                         <td className="px-3 py-3 w-[120px]">
+                                            {/* TITLE - Increased width */}
                                             <button
                                                 ref={el => { titleButtonRefs.current[index] = el; }}
                                                 type="button"
