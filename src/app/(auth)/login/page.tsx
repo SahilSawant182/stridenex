@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BASE_URL, fetchBackgroundImage, fetchProjectDetails } from "@/services/api.services";
 import DynamicForm from "@/components/forms/DynamicForm";
 import { FormField } from "@/types/doctypes.types";
 import { useAuth } from "@/context/AuthContext";
@@ -97,7 +96,7 @@ export default function LoginPage() {
 
         if (data.roles && Array.isArray(data.roles)) {
           const lowerRoles: string[] = data.roles.map((r: string) => r.toLowerCase());
-          
+
           if (lowerRoles.some((r: string) => r.includes('college'))) {
             userRole = 'college';
           } else if (lowerRoles.some((r: string) => r.includes('industry'))) {

@@ -50,3 +50,28 @@ export const addHiringRound = async (data: any) => {
     throw error;
   }
 };
+
+export const createProject = async (data: any) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.create_project`,
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating project:", error);
+    throw error;
+  }
+};
+
+export const getProjectList = async (industry: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.get_project_list?industry=${encodeURIComponent(industry)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching project list:", error);
+    throw error;
+  }
+};

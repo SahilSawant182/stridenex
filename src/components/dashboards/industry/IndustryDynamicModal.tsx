@@ -10,13 +10,15 @@ import { Label } from "@/components/ui/label";
 export interface IndustryField {
   name: string;
   label: string;
-  type: "text" | "number" | "select" | "textarea" | "email" | "url";
+  type: "text" | "number" | "select" | "textarea" | "email" | "url" | "date";
   placeholder?: string;
   icon?: LucideIcon;
   colSpan?: 1 | 2;
   options?: { value: string; label: string }[] | string[];
   required?: boolean;
   onFocus?: (fieldName: string) => void;
+  textTransform?: "uppercase" | "lowercase" | "capitalize" | "none";
+  disabled?: boolean;
 }
 
 interface IndustryDynamicModalProps {
@@ -151,8 +153,9 @@ export default function IndustryDynamicModal({
                             }}
                             placeholder={field.placeholder}
                             rows={3}
-                            className={`w-full ${field.icon ? 'pl-12' : 'px-4'} pr-4 pt-3.5 rounded-[1.5rem] border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm resize-none outline-none min-h-[100px]`}
+                            className={`w-full ${field.icon ? 'pl-12' : 'px-4'} pr-4 pt-3.5 rounded-[1.5rem] border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm resize-none outline-none min-h-[100px] disabled:bg-slate-50 disabled:text-slate-500`}
                             required={field.required}
+                            disabled={field.disabled}
                           />
                         ) : field.type === "select" ? (
                           <select
@@ -163,8 +166,9 @@ export default function IndustryDynamicModal({
                               if (field.onFocus) field.onFocus(field.name);
                               if (onFieldFocus) onFieldFocus(field.name);
                             }}
-                            className={`w-full h-12 ${field.icon ? 'pl-12' : 'px-4'} pr-4 rounded-2xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm appearance-none outline-none bg-white`}
+                            className={`w-full h-12 ${field.icon ? 'pl-12' : 'px-4'} pr-4 rounded-2xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm appearance-none outline-none bg-white disabled:bg-slate-50 disabled:text-slate-500`}
                             required={field.required}
+                            disabled={field.disabled}
                           >
                             <option value="" disabled>{field.placeholder || `Select ${field.label}`}</option>
                             {field.options?.map((opt: any) => {
@@ -184,8 +188,10 @@ export default function IndustryDynamicModal({
                               if (onFieldFocus) onFieldFocus(field.name);
                             }}
                             placeholder={field.placeholder}
-                            className={`${field.icon ? 'pl-12' : 'px-4'} h-12 rounded-2xl border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold`}
                             required={field.required}
+                            disabled={field.disabled}
+                            style={field.textTransform ? { textTransform: field.textTransform } : {}}
+                            className={`${field.icon ? 'pl-12' : 'px-4'} h-12 rounded-2xl border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold ${field.textTransform === 'uppercase' ? 'placeholder:uppercase' : ''} disabled:bg-slate-50 disabled:text-slate-500`}
                           />
                         )}
                       </div>
