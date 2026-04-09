@@ -17,7 +17,8 @@ import {
   Loader2
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
-import { getProjectList, createProject, getIndustryByEmail } from "@/services/industry.services";
+import { getProjectList, createProject } from "@/services/industry.services";
+import { useIndustry } from "@/context/IndustryContext";
 import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
 
 const container: Variants = {
@@ -34,15 +35,17 @@ const item: Variants = {
 };
 
 export default function ProjectsTabContent() {
+  const { industryData, loading: industryLoading } = useIndustry();
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const companyName = industryData?.company_name || "";
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
-  const [companyName, setCompanyName] = useState<string>("");
   const [skillOptions, setSkillOptions] = useState<string[]>([]);
 
   const fetchSkillOptions = async () => {
@@ -56,7 +59,6 @@ export default function ProjectsTabContent() {
         }
       );
       const data = await response.json();
-      // Handle both { data: [...] } and { message: { data: [...] } } formats common in this codebase
       const apiData = data.data || data.message || [];
       const options = Array.isArray(apiData) ? apiData.map((item: any) => item.name) : [];
       setSkillOptions(options);
@@ -93,7 +95,6 @@ export default function ProjectsTabContent() {
       setError(null);
       const response = await getProjectList(industry);
       
-      // Standardize response handling for empty/blank results
       const apiMessage = response?.message;
       let projectData = [];
       
@@ -119,46 +120,18 @@ export default function ProjectsTabContent() {
     }
   };
 
-  const fetchIndustryInfo = async () => {
-    // Only fetch if we don't already have it
-    if (companyName) return;
-
-    try {
-      const email = typeof window !== "undefined" ? localStorage.getItem("currentUser") : null;
-      if (email) {
-        const response = await getIndustryByEmail(email);
-        const apiData = response?.message;
-        if (apiData && (apiData.status === 200 || apiData.status === "200")) {
-          const industryData = Array.isArray(apiData.data) ? apiData.data[0] : apiData.data;
-          setCompanyName(industryData?.company_name || "");
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching industry info:", err);
-    }
-  };
-
   useEffect(() => {
-    fetchIndustryInfo();
-  }, []);
-
-  useEffect(() => {
-    // Only call the API if we are actually on the projects tab and have companyName
-    const isProjectsActive = window.location.pathname.endsWith("/projects");
-    if (isProjectsActive && companyName) {
+    if (companyName) {
       fetchProjects(companyName);
-    } else if (isProjectsActive && !companyName) {
-      // Still set loading false if no company name found after fetch attempts
+    } else if (!industryLoading) {
       setLoading(false);
     }
-  }, [companyName]); 
+  }, [companyName, industryLoading]);
 
   const handleModalSubmit = async (formData: any) => {
     setModalLoading(true);
     setModalError(null);
     try {
-      // Input date will be YYYY-MM-DD from the native picker
-      // required_skills is now a single selected value from dropdown
       const payload = {
         ...formData,
         required_skills: [{ skill: formData.required_skills }],
@@ -186,7 +159,6 @@ export default function ProjectsTabContent() {
     try {
       const parts = dateString.split("-");
       if (parts.length === 3) {
-        // Assume YYYY-MM-DD format from backend
         return `${parts[2]}-${parts[1]}-${parts[0]}`;
       }
     } catch (e) {
@@ -195,7 +167,7 @@ export default function ProjectsTabContent() {
     return dateString;
   };
 
-  if (loading && projects.length === 0) {
+  if ((loading || industryLoading) && projects.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
@@ -214,7 +186,6 @@ export default function ProjectsTabContent() {
         </div>
         <button
           onClick={() => {
-            fetchIndustryInfo();
             setIsModalOpen(true);
           }}
           className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-orange-500/10"
@@ -323,7 +294,6 @@ export default function ProjectsTabContent() {
             <p className="text-sm text-slate-500 mb-6">Start by posting your first industry project.</p>
             <button
               onClick={() => {
-                fetchIndustryInfo();
                 setIsModalOpen(true);
               }}
               className="bg-slate-900 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all"

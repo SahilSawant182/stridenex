@@ -28,8 +28,8 @@ import {
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
-import { getIndustryByEmail, updateIndustry, addRequiredRole, addHiringRound } from "@/services/industry.services";
-import { getMasterData } from "@/services/college.services";
+import { updateIndustry, addRequiredRole, addHiringRound } from "@/services/industry.services";
+import { useIndustry, IndustryData, IndustryRole, HiringRound } from "@/context/IndustryContext";
 import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
 
 const container: Variants = {
@@ -78,42 +78,8 @@ const skillDomains = [
   }
 ];
 
-interface IndustryRole {
-  name?: string; // Unique identifier from backend
-  role: string;
-  duration: number;
-  semester: string;
-  description: string | null;
-  available_positions: number;
-}
-
-interface HiringRound {
-  name?: string; // Unique identifier from backend
-  round: string;
-  based_on: string;
-  duration: number;
-}
-
-interface IndustryData {
-  company_name: string;
-  about: string | null;
-  business_type: string;
-  gst_number: string;
-  industry_sector: string;
-  headquarters: string | null;
-  employee_head_count: string;
-  cin: string | null;
-  turn_over_in_cr: string | number | null;
-  company_website: string | null;
-  status: string;
-  required_roles: IndustryRole[];
-  hiring_process: HiringRound[];
-}
-
 export default function CompanyProfileTabContent() {
-  const [data, setData] = useState<IndustryData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { industryData: data, loading, error, refreshIndustryData } = useIndustry();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"profile" | "role" | "hiring">("profile");
   const [modalLoading, setModalLoading] = useState(false);
@@ -121,7 +87,6 @@ export default function CompanyProfileTabContent() {
 
   const [roleToEdit, setRoleToEdit] = useState<IndustryRole | undefined>(undefined);
   const [roundToEdit, setRoundToEdit] = useState<HiringRound | undefined>(undefined);
-  const [userEmail, setUserEmail] = useState<string>("");
 
   const [businessTypeOptions, setBusinessTypeOptions] = useState<string[]>([]);
   const [industrySectorOptions, setIndustrySectorOptions] = useState<string[]>([]);
@@ -192,12 +157,7 @@ export default function CompanyProfileTabContent() {
     try {
       if (modalMode === "profile") {
         await updateIndustry(data?.company_name || "", formData);
-        // Optimistic update for all profile fields to ensure UI visibility even if fetchCompanyData times out
-        if (data) {
-          setData({ ...data, ...formData });
-        }
       } else if (modalMode === "role") {
-        // Light single-object payload to prevent timeouts and handle updates via ID (name)
         const payload = { 
           ...formData, 
           industry_name: data?.company_name,
@@ -205,7 +165,6 @@ export default function CompanyProfileTabContent() {
         };
         await addRequiredRole(payload);
       } else if (modalMode === "hiring") {
-        // Light single-object payload to prevent timeouts and handle updates via ID (name)
         const payload = { 
           ...formData, 
           industry_name: data?.company_name,
@@ -213,46 +172,12 @@ export default function CompanyProfileTabContent() {
         };
         await addHiringRound(payload);
       }
-      await fetchCompanyData();
+      await refreshIndustryData();
       setIsModalOpen(false);
     } catch (err: any) {
       setModalError(err?.message || "Failed to save data");
     } finally {
       setModalLoading(false);
-    }
-  };
-
-  const fetchCompanyData = async () => {
-    try {
-      setLoading(true);
-      // Getting email from localStorage (saved as 'currentUser' in auth flow)
-      const email = typeof window !== "undefined" ? localStorage.getItem("currentUser") : null;
-
-      if (!email) {
-        setError("Session expired. Please log in again.");
-        setLoading(false);
-        return;
-      }
-
-      setUserEmail(email);
-      const response = await getIndustryByEmail(email);
-
-      // The API returns { message: { status: 200, data: [...] } } or similar
-      const apiData = response?.message;
-
-      if (apiData && (apiData.status === 200 || apiData.status === "200")) {
-        // If data is an array, take the first element (common for 'get_by_email' queries)
-        const industryData = Array.isArray(apiData.data) ? apiData.data[0] : apiData.data;
-        setData(industryData || null);
-        setError(null);
-      } else {
-        setError(apiData?.message || "Failed to fetch industry details");
-      }
-    } catch (err: any) {
-      console.error("Error fetching industry data:", err);
-      setError(err?.message || "An error occurred while fetching company profile details");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -266,17 +191,13 @@ export default function CompanyProfileTabContent() {
           body: JSON.stringify({ doctype })
         }
       );
-      const data = await response.json();
-      const options = (data.data || data).map((item: any) => item.name);
+      const dataResponse = await response.json();
+      const options = (dataResponse.data || dataResponse).map((item: any) => item.name);
       setter(options);
     } catch (err) {
       console.error(`Error fetching ${doctype} options:`, err);
     }
   };
-
-  useEffect(() => {
-    fetchCompanyData();
-  }, []);
 
   const handleFieldFocus = (fieldName: string) => {
     if (fieldName === "business_type" && businessTypeOptions.length === 0) {
@@ -298,7 +219,14 @@ export default function CompanyProfileTabContent() {
     setIsModalOpen(true);
   };
 
-  // Removed full-page loader to make transition feel instant
+  if (loading && !data) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+        <p className="text-slate-500 font-bold text-sm tracking-widest uppercase tracking-widest">Loading Company Profile...</p>
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -309,7 +237,7 @@ export default function CompanyProfileTabContent() {
         <h2 className="text-xl font-bold text-slate-800">Connection Error</h2>
         <p className="text-slate-500 font-medium max-w-md">{error || "We couldn't retrieve the company profile at this time."}</p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => refreshIndustryData()}
           className="bg-slate-900 text-white px-6 py-2 rounded-xl text-sm font-bold hover:scale-105 transition-transform"
         >
           Try Again

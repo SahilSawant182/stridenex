@@ -100,3 +100,15 @@ export const getInternshipList = async (industry: string) => {
     throw error;
   }
 };
+
+export const getStudentApplicationList = async (industry: string, status: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.internship_application.internship_application.get_student_application_list?industry=${encodeURIComponent(industry)}&status=${encodeURIComponent(status)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching student application list:", error);
+    throw error;
+  }
+};

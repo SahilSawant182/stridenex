@@ -20,7 +20,8 @@ import {
   CircleDot,
   Pen
 } from "lucide-react";
-import { getInternshipList, createInternship, getIndustryByEmail } from "@/services/industry.services";
+import { getInternshipList, createInternship } from "@/services/industry.services";
+import { useIndustry } from "@/context/IndustryContext";
 import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
 
 const container: Variants = {
@@ -37,15 +38,17 @@ const item: Variants = {
 };
 
 export default function InternshipsTabContent() {
+  const { industryData, loading: industryLoading } = useIndustry();
   const [internships, setInternships] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const companyName = industryData?.company_name || "";
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
-  const [companyName, setCompanyName] = useState<string>("");
   const [skillOptions, setSkillOptions] = useState<string[]>([]);
   const [editingInternship, setEditingInternship] = useState<any>(null);
 
@@ -111,7 +114,6 @@ export default function InternshipsTabContent() {
       setError(null);
       const response = await getInternshipList(industry);
       
-      // Resilient handling of different API response structures
       const projectData = response?.data || response?.message?.data || response?.message || [];
       setInternships(Array.isArray(projectData) ? projectData : []);
     } catch (err: any) {
@@ -127,40 +129,13 @@ export default function InternshipsTabContent() {
     }
   };
 
-  const fetchIndustryInfo = async () => {
-    if (companyName) return;
-    try {
-      const email = typeof window !== "undefined" ? localStorage.getItem("currentUser") : null;
-      if (email) {
-        const response = await getIndustryByEmail(email);
-        const apiData = response?.message;
-        if (apiData && (apiData.status === 200 || apiData.status === "200")) {
-          const industryData = Array.isArray(apiData.data) ? apiData.data[0] : apiData.data;
-          setCompanyName(industryData?.company_name || "");
-        }
-      }
-    } catch (err) {
-      console.error("Error fetching industry info:", err);
-    }
-  };
-
   useEffect(() => {
-    fetchIndustryInfo();
-  }, []);
-
-  useEffect(() => {
-    // Only call the API when the internships tab is active
-    const isInternshipsActive = window.location.pathname.endsWith("/internships");
-    if (isInternshipsActive && companyName) {
+    if (companyName) {
       fetchInternships(companyName);
-    } else if (isInternshipsActive && !companyName) {
-      // If we're on the tab but don't have companyName yet, stay in loading
-      setLoading(true);
-    } else {
-      // Not on internships tab
+    } else if (!industryLoading) {
       setLoading(false);
     }
-  }, [companyName, window.location.pathname]);
+  }, [companyName, industryLoading]);
 
   const handleModalSubmit = async (formData: any) => {
     setModalLoading(true);
@@ -195,7 +170,7 @@ export default function InternshipsTabContent() {
     return `₹${(num / 1000).toFixed(0)}k/mo`;
   };
 
-  if (loading && internships.length === 0) {
+  if ((loading || industryLoading) && internships.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <Loader2 className="w-10 h-10 text-orange-500 animate-spin" />
@@ -213,7 +188,6 @@ export default function InternshipsTabContent() {
         </div>
         <button 
           onClick={() => {
-            fetchIndustryInfo();
             setEditingInternship(null);
             setIsModalOpen(true);
           }}
@@ -274,7 +248,6 @@ export default function InternshipsTabContent() {
                     <td className="py-4 px-6 whitespace-nowrap text-right">
                       <button 
                         onClick={() => {
-                          fetchIndustryInfo();
                           setEditingInternship(internship);
                           setIsModalOpen(true);
                         }}
@@ -295,7 +268,6 @@ export default function InternshipsTabContent() {
               <p className="text-sm text-slate-500 mb-6">Start by posting your first internship opportunity.</p>
               <button 
                 onClick={() => {
-                  fetchIndustryInfo();
                   setIsModalOpen(true);
                 }}
                 className="bg-slate-900 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all"
