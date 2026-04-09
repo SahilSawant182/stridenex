@@ -93,7 +93,7 @@ export default function CompanyProfileTabContent() {
   const [hiringProcessOptions, setHiringProcessOptions] = useState<string[]>([]);
 
   const profileFields: IndustryField[] = useMemo(() => [
-    { name: "company_name", label: "Company Name", type: "text", icon: Building2, required: true, colSpan: 2, placeholder: "e.g. Acme Corporation" },
+    { name: "company_name", label: "Company Name", type: "text", icon: Building2, required: true, colSpan: 2, placeholder: "e.g. Acme Corporation", disabled: true },
     { name: "business_type", label: "Business Type", type: "select", icon: Layout, options: businessTypeOptions.length > 0 ? businessTypeOptions : ["Enterprises", "Consultant and Agency", "Other"], required: true, placeholder: "Select Business Type" },
     { name: "industry_sector", label: "Industry Sector", type: "select", icon: Layers, options: industrySectorOptions.length > 0 ? industrySectorOptions : ["Information Services", "Manufacturing", "Finance", "Healthcare", "Education", "Other"], required: true, placeholder: "Select Industry Sector" },
     { name: "employee_head_count", label: "Employee Count", type: "number", icon: Users, required: true, placeholder: "e.g. 500" },
@@ -112,15 +112,15 @@ export default function CompanyProfileTabContent() {
   ], []);
 
   const hiringFields: IndustryField[] = useMemo(() => [
-    { 
-      name: "round", 
-      label: "Round Name", 
-      type: "select", 
-      icon: ListChecks, 
+    {
+      name: "round",
+      label: "Round Name",
+      type: "select",
+      icon: ListChecks,
       options: hiringProcessOptions.length > 0 ? hiringProcessOptions : ["Technical Interview", "HR Interview", "Aptitude Test", "Other"],
-      required: true, 
-      colSpan: 2, 
-      placeholder: "Select Round Name" 
+      required: true,
+      colSpan: 2,
+      placeholder: "Select Round Name"
     },
     { name: "based_on", label: "Based On", type: "text", icon: TargetIcon, required: true, colSpan: 2, placeholder: "e.g. Coding & Data Structures" },
     { name: "duration", label: "Duration (min)", type: "number", icon: Clock, required: true, colSpan: 2, placeholder: "e.g. 45" },
@@ -158,15 +158,15 @@ export default function CompanyProfileTabContent() {
       if (modalMode === "profile") {
         await updateIndustry(data?.company_name || "", formData);
       } else if (modalMode === "role") {
-        const payload = { 
-          ...formData, 
+        const payload = {
+          ...formData,
           industry_name: data?.company_name,
           ...(roleToEdit?.name ? { name: roleToEdit.name } : {})
         };
         await addRequiredRole(payload);
       } else if (modalMode === "hiring") {
-        const payload = { 
-          ...formData, 
+        const payload = {
+          ...formData,
           industry_name: data?.company_name,
           ...(roundToEdit?.name ? { name: roundToEdit.name } : {})
         };

@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import HorizontalTabs from "@/components/dashboards/shared/HorizontalTabs";
-import RoleBannerWidget from "@/components/dashboards/widgets/RoleBannerWidget";
+import IndustryBannerWrapper from "@/components/dashboards/widgets/IndustryBannerWrapper";
 import { IndustryProvider } from "@/context/IndustryContext";
 
 export default function IndustryDashboardSubLayout({
@@ -19,7 +19,7 @@ export default function IndustryDashboardSubLayout({
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ type: "spring", stiffness: 100, damping: 15 }}
                 >
-                    <RoleBannerWidget role="industry" />
+                    <IndustryBannerWrapper />
                 </motion.div>
 
                 {/* Tabs */}
