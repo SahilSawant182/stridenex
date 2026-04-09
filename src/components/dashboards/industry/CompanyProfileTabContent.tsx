@@ -79,7 +79,15 @@ const skillDomains = [
 ];
 
 export default function CompanyProfileTabContent() {
-  const { industryData: data, loading, error, refreshIndustryData } = useIndustry();
+  const { 
+    industryData: data, 
+    roleList,
+    loading, 
+    roleLoading,
+    error, 
+    refreshIndustryData,
+    refreshRoleList
+  } = useIndustry();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"profile" | "role" | "hiring">("profile");
   const [modalLoading, setModalLoading] = useState(false);
@@ -157,13 +165,15 @@ export default function CompanyProfileTabContent() {
     try {
       if (modalMode === "profile") {
         await updateIndustry(data?.company_name || "", formData);
+        await refreshIndustryData();
       } else if (modalMode === "role") {
         const payload = {
           ...formData,
-          industry_name: data?.company_name,
-          ...(roleToEdit?.name ? { name: roleToEdit.name } : {})
+          industry: data?.company_name,
+          amended_from: ""
         };
-        await addRequiredRole(payload);
+        await addRequiredRole(payload, data?.company_name || "");
+        await refreshRoleList();
       } else if (modalMode === "hiring") {
         const payload = {
           ...formData,
@@ -171,8 +181,8 @@ export default function CompanyProfileTabContent() {
           ...(roundToEdit?.name ? { name: roundToEdit.name } : {})
         };
         await addHiringRound(payload);
+        await refreshIndustryData();
       }
-      await refreshIndustryData();
       setIsModalOpen(false);
     } catch (err: any) {
       setModalError(err?.message || "Failed to save data");
@@ -278,7 +288,7 @@ export default function CompanyProfileTabContent() {
               {/* Stats Row - High Contrast */}
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
                 {[
-                  { label: "Open Roles", value: data?.required_roles?.reduce((acc, r) => acc + r.available_positions, 0)?.toString() || "0", color: "text-blue-400", bg: "bg-blue-500/10" },
+                  { label: "Open Roles", value: roleList?.reduce((acc, r) => acc + (Number(r.available_positions) || 0), 0)?.toString() || "0", color: "text-blue-400", bg: "bg-blue-500/10" },
                   { label: "Avg CTC", value: "₹18.5L", color: "text-orange-400", bg: "bg-orange-500/10" },
                   { label: "Rating", value: "4.1", icon: Star, color: "text-amber-400", bg: "bg-amber-500/10" },
                   { label: "Hired", value: "247", color: "text-emerald-400", bg: "bg-emerald-500/10" },
@@ -438,8 +448,13 @@ export default function CompanyProfileTabContent() {
               </button>
             </div>
             <div className="p-6 space-y-6">
-              {data?.required_roles && data.required_roles.length > 0 ? (
-                data.required_roles.map((role, idx) => {
+              {roleLoading ? (
+                <div className="py-10 flex flex-col items-center justify-center space-y-3">
+                  <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Updating Roles...</p>
+                </div>
+              ) : roleList && roleList.length > 0 ? (
+                roleList.map((role, idx) => {
                   const roleIcons: Record<string, any> = {
                     "Full-Time": Building2,
                     "Internship": Monitor,
@@ -468,7 +483,7 @@ export default function CompanyProfileTabContent() {
                             </button>
                           </div>
                           <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mt-1">
-                            {role.duration > 0 ? `${role.duration} Months` : role.semester}
+                            {Number(role.duration) > 0 ? `${role.duration} Months` : role.semester}
                           </p>
                         </div>
                       </div>

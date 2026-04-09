@@ -25,15 +25,27 @@ export const updateIndustry = async (companyName: string, data: any) => {
   }
 };
 
-export const addRequiredRole = async (data: any) => {
+export const addRequiredRole = async (data: any, industry: string) => {
   try {
     const response = await apiService.post(
-      `method/stridenex_app.api_stridenex_app.industry.industry.add_required_role`,
+      `method/stridenex_app.stridenex_app.doctype.industry_role.industry_role.create_industry_role?industry=${encodeURIComponent(industry)}`,
       data
     );
     return response;
   } catch (error) {
     console.error("Error adding required role:", error);
+    throw error;
+  }
+};
+
+export const getIndustryRoleList = async (industry: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.industry_role.industry_role.get_industry_role_list?industry=${encodeURIComponent(industry)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching industry role list:", error);
     throw error;
   }
 };
@@ -76,6 +88,31 @@ export const getProjectList = async (industry: string) => {
   }
 };
 
+export const updateProject = async (projectName: string, data: any) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.update_project?project_name=${encodeURIComponent(projectName)}`,
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating project:", error);
+    throw error;
+  }
+};
+
+export const deleteProject = async (projectName: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.inactive_project?project_name=${encodeURIComponent(projectName)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error deleting project:", error);
+    throw error;
+  }
+};
+
 export const createInternship = async (data: any) => {
   try {
     const response = await apiService.post(
@@ -89,6 +126,19 @@ export const createInternship = async (data: any) => {
   }
 };
 
+export const updateInternship = async (name: string, data: any) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.internship.internship.update_internship?name=${encodeURIComponent(name)}`,
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating internship:", error);
+    throw error;
+  }
+};
+
 export const getInternshipList = async (industry: string) => {
   try {
     const response = await apiService.get(
@@ -97,6 +147,18 @@ export const getInternshipList = async (industry: string) => {
     return response;
   } catch (error) {
     console.error("Error fetching internship list:", error);
+    throw error;
+  }
+};
+
+export const deleteInternship = async (name: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.internship.internship.inactive_internship?name=${encodeURIComponent(name)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error deleting internship:", error);
     throw error;
   }
 };

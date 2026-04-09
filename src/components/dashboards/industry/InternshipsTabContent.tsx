@@ -18,9 +18,10 @@ import {
   Globe,
   Award,
   CircleDot,
-  Pen
+  Pen,
+  Trash2
 } from "lucide-react";
-import { getInternshipList, createInternship } from "@/services/industry.services";
+import { getInternshipList, createInternship, updateInternship, deleteInternship } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
 import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
 
@@ -39,6 +40,7 @@ const item: Variants = {
 
 export default function InternshipsTabContent() {
   const { industryData, loading: industryLoading } = useIndustry();
+
   const [internships, setInternships] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +53,7 @@ export default function InternshipsTabContent() {
   const [modalError, setModalError] = useState<string | null>(null);
   const [skillOptions, setSkillOptions] = useState<string[]>([]);
   const [editingInternship, setEditingInternship] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const fetchSkillOptions = async () => {
     try {
@@ -70,6 +73,10 @@ export default function InternshipsTabContent() {
       console.error(`Error fetching Skill options:`, err);
     }
   };
+
+  useEffect(() => {
+    fetchSkillOptions();
+  }, []);
 
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
@@ -100,10 +107,11 @@ export default function InternshipsTabContent() {
       label: "Required Skills", 
       type: "select", 
       icon: Award, 
-      options: skillOptions.length > 0 ? skillOptions : ["Python", "Java", "React", "Other"],
+      options: skillOptions,
       required: true, 
       colSpan: 2, 
-      placeholder: "Select Required Skill" 
+      placeholder: "Select Required Skills",
+      multiple: true
     },
     { name: "description", label: "Description", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Describe the roles and responsibilities..." },
   ], [skillOptions]);
@@ -141,20 +149,43 @@ export default function InternshipsTabContent() {
     setModalLoading(true);
     setModalError(null);
     try {
+      const skillsArray = Array.isArray(formData.required_skills) 
+        ? formData.required_skills.map((s: string) => ({ skill: s }))
+        : (typeof formData.required_skills === 'string' ? [{ skill: formData.required_skills }] : []);
+
       const payload = {
         ...formData,
-        required_skills: [{ skill: formData.required_skills }],
+        required_skills: skillsArray,
         duration: String(formData.duration),
         stipend: Number(formData.stipend)
       };
 
-      await createInternship(payload);
+      if (editingInternship) {
+        await updateInternship(editingInternship.name, { ...payload, name: editingInternship.name });
+      } else {
+        await createInternship(payload);
+      }
+      
       await fetchInternships(companyName);
       setIsModalOpen(false);
     } catch (err: any) {
-      setModalError(err?.message || "Failed to post internship");
+      setModalError(err?.message || `Failed to ${editingInternship ? 'update' : 'post'} internship`);
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleDeleteInternship = async (name: string) => {
+    if (!window.confirm("Are you sure you want to delete this internship?")) return;
+    
+    try {
+      setIsDeleting(name);
+      await deleteInternship(name);
+      await fetchInternships(companyName);
+    } catch (err: any) {
+      alert(err?.message || "Failed to delete internship");
+    } finally {
+      setIsDeleting(null);
     }
   };
 
@@ -167,8 +198,27 @@ export default function InternshipsTabContent() {
   const formatStipend = (amount: any) => {
     if (!amount) return "N/A";
     const num = Number(amount);
-    return `₹${(num / 1000).toFixed(0)}k/mo`;
+    return num >= 1000 ? `₹${(num / 1000).toFixed(0)}k/mo` : `₹${num}/mo`;
   };
+
+  const modalInitialValues = useMemo(() => {
+    if (editingInternship) {
+      return {
+        ...editingInternship,
+        industry: companyName || editingInternship.industry,
+        required_skills: Array.isArray(editingInternship.required_skills) 
+          ? editingInternship.required_skills.map((s: any) => s.skill || s.skills) 
+          : []
+      };
+    }
+    return { 
+      industry: companyName || "Razorpay Technologies", 
+      status: "Active", 
+      location: "Remote", 
+      type: "Technical",
+      required_skills: []
+    };
+  }, [editingInternship, companyName]);
 
   if ((loading || industryLoading) && internships.length === 0) {
     return (
@@ -245,14 +295,27 @@ export default function InternshipsTabContent() {
                         {internship.status}
                       </span>
                     </td>
-                    <td className="py-4 px-6 whitespace-nowrap text-right">
+                    <td className="py-4 px-6 whitespace-nowrap text-right flex items-center justify-end gap-2">
+                      <button 
+                        onClick={() => handleDeleteInternship(internship.name)}
+                        disabled={isDeleting === internship.name || internship.status === "Closed" || internship.status === "Disable"}
+                        className={`text-slate-500 border border-slate-200 bg-white rounded-lg transition-all active:scale-95 flex items-center justify-center w-8 h-8 disabled:opacity-30 disabled:cursor-not-allowed ${internship.status === 'Closed' || internship.status === 'Disable' ? '' : 'hover:text-red-500 hover:border-red-200 hover:bg-red-50'}`}
+                        title={internship.status === "Closed" || internship.status === "Disable" ? "Internship is closed/disabled" : "Delete Internship"}
+                      >
+                        {isDeleting === internship.name ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
                       <button 
                         onClick={() => {
                           setEditingInternship(internship);
                           setIsModalOpen(true);
                         }}
-                        className="text-slate-500 hover:text-blue-600 border border-slate-200 hover:border-blue-200 hover:bg-blue-50 bg-white rounded-lg transition-all active:scale-95 flex items-center justify-center w-8 h-8 ml-auto"
-                        title="Edit Internship"
+                        disabled={internship.status === "Closed" || internship.status === "Disable"}
+                        className={`text-slate-500 border border-slate-200 bg-white rounded-lg transition-all active:scale-95 flex items-center justify-center w-8 h-8 disabled:opacity-30 disabled:cursor-not-allowed ${internship.status === 'Closed' || internship.status === 'Disable' ? '' : 'hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50'}`}
+                        title={internship.status === "Closed" || internship.status === "Disable" ? "Internship is closed/disabled" : "Edit Internship"}
                       >
                         <Pen className="w-4 h-4" />
                       </button>
@@ -262,12 +325,13 @@ export default function InternshipsTabContent() {
               </tbody>
             </table>
           ) : (
-            <div className="py-20 flex flex-col items-center justify-center bg-white">
+            <div className="py-20 flex flex-col items-center justify-center bg-white border border-dashed border-slate-200 rounded-3xl mx-6 mb-6">
               <Plus className="w-12 h-12 text-slate-200 mb-4" />
               <h3 className="text-lg font-bold text-slate-800">No Internships Found</h3>
               <p className="text-sm text-slate-500 mb-6">Start by posting your first internship opportunity.</p>
               <button 
                 onClick={() => {
+                  setEditingInternship(null);
                   setIsModalOpen(true);
                 }}
                 className="bg-slate-900 text-white px-6 py-2 rounded-xl text-sm font-bold hover:bg-slate-800 transition-all"
@@ -287,7 +351,7 @@ export default function InternshipsTabContent() {
         headerIcon={Briefcase}
         iconBgColor="bg-orange-500"
         fields={internshipFields}
-        initialValues={editingInternship ? { ...editingInternship, industry: companyName || editingInternship.industry } : { industry: companyName || "Razorpay Technologies", status: "Active", location: "Remote", type: "Technical" }}
+        initialValues={modalInitialValues}
         onSubmit={handleModalSubmit}
         loading={modalLoading}
         error={modalError}

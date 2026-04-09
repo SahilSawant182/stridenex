@@ -38,9 +38,12 @@ export interface IndustryData {
 
 interface IndustryContextType {
   industryData: IndustryData | null;
+  roleList: IndustryRole[];
   loading: boolean;
+  roleLoading: boolean;
   error: string | null;
   refreshIndustryData: () => Promise<void>;
+  refreshRoleList: () => Promise<void>;
 }
 
 const IndustryContext = createContext<IndustryContextType | undefined>(undefined);
@@ -48,8 +51,26 @@ const IndustryContext = createContext<IndustryContextType | undefined>(undefined
 export const IndustryProvider = ({ children }: { children: React.ReactNode }) => {
   const { currentUser, isInitialized } = useAuth();
   const [industryData, setIndustryData] = useState<IndustryData | null>(null);
+  const [roleList, setRoleList] = useState<IndustryRole[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [roleLoading, setRoleLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fetchRoleList = useCallback(async (industryName: string) => {
+    try {
+      setRoleLoading(true);
+      const { getIndustryRoleList } = await import("@/services/industry.services");
+      const response = await getIndustryRoleList(industryName);
+      
+      // Standardize response handling for empty/blank results
+      const apiData = response?.message?.data || response?.data || response?.message || [];
+      setRoleList(Array.isArray(apiData) ? apiData : []);
+    } catch (err) {
+      console.error("Error fetching role list:", err);
+    } finally {
+      setRoleLoading(false);
+    }
+  }, []);
 
   const fetchIndustryData = useCallback(async (email: string) => {
     try {
@@ -61,6 +82,11 @@ export const IndustryProvider = ({ children }: { children: React.ReactNode }) =>
         const data = Array.isArray(apiData.data) ? apiData.data[0] : apiData.data;
         setIndustryData(data || null);
         setError(null);
+        
+        // Fetch separate role list if company name exists
+        if (data?.company_name) {
+          fetchRoleList(data.company_name);
+        }
       } else {
         setError(apiData?.message || "Failed to fetch industry details");
       }
@@ -70,7 +96,7 @@ export const IndustryProvider = ({ children }: { children: React.ReactNode }) =>
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchRoleList]);
 
   useEffect(() => {
     if (isInitialized && currentUser) {
@@ -86,13 +112,22 @@ export const IndustryProvider = ({ children }: { children: React.ReactNode }) =>
     }
   };
 
+  const refreshRoleList = async () => {
+    if (industryData?.company_name) {
+      await fetchRoleList(industryData.company_name);
+    }
+  };
+
   return (
     <IndustryContext.Provider
       value={{
         industryData,
+        roleList,
         loading,
+        roleLoading,
         error,
         refreshIndustryData,
+        refreshRoleList,
       }}
     >
       {children}

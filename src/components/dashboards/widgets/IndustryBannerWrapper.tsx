@@ -5,7 +5,7 @@ import RoleBannerWidget from "./RoleBannerWidget";
 import { Briefcase, Users, Target } from "lucide-react";
 
 export default function IndustryBannerWrapper() {
-  const { industryData, loading } = useIndustry();
+  const { industryData, roleList, loading, roleLoading } = useIndustry();
 
   if (loading && !industryData) {
     return (
@@ -23,7 +23,7 @@ export default function IndustryBannerWrapper() {
   
   const subtitle = subtitleParts.length > 0 ? subtitleParts.join(" • ") : "Industry Professional Plan";
 
-  const openPositions = industryData?.required_roles?.reduce((acc, r) => acc + (Number(r.available_positions) || 0), 0) || 0;
+  const openPositions = roleList?.reduce((acc, r) => acc + (Number(r.available_positions) || 0), 0) || 0;
 
   // Construct dynamic metrics
   const customMetrics = [
@@ -47,11 +47,16 @@ export default function IndustryBannerWrapper() {
     }
   ];
 
+  const capitalize = (str: string) => {
+    if (!str) return "";
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
+
   return (
     <RoleBannerWidget 
       role="industry" 
       customData={{
-        title: industryData?.company_name,
+        title: capitalize(industryData?.company_name || ""),
         subtitle: subtitle,
         metrics: customMetrics
       }}

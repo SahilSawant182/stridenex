@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2, Save, LucideIcon } from "lucide-react";
+import { X, Loader2, Save, LucideIcon, ChevronDown, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,7 @@ export interface IndustryField {
   onFocus?: (fieldName: string) => void;
   textTransform?: "uppercase" | "lowercase" | "capitalize" | "none";
   disabled?: boolean;
+  multiple?: boolean;
 }
 
 interface IndustryDynamicModalProps {
@@ -51,6 +52,7 @@ export default function IndustryDynamicModal({
   onFieldFocus
 }: IndustryDynamicModalProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [activeMultiSelect, setActiveMultiSelect] = useState<string | null>(null);
 
   // Track which initial values we've already loaded to avoid infinite loops
   const [lastInitialValues, setLastInitialValues] = useState<string>("");
@@ -59,19 +61,17 @@ export default function IndustryDynamicModal({
     if (isOpen) {
       const currentInitialStr = JSON.stringify(initialValues);
       
-      // Only initialize if we just opened the modal OR if the initialValues have changed
-      // (e.g. switching between different items to edit while the modal is somehow open)
       if (lastInitialValues !== currentInitialStr) {
         const initial: Record<string, any> = {};
         fields.forEach(field => {
-          initial[field.name] = initialValues?.[field.name] ?? (field.type === "number" ? "" : "");
+          initial[field.name] = initialValues?.[field.name] ?? (field.multiple ? [] : (field.type === "number" ? "" : ""));
         });
         setFormData(initial);
         setLastInitialValues(currentInitialStr);
       }
     } else {
-      // Reset tracking when modal closes
       setLastInitialValues("");
+      setActiveMultiSelect(null);
     }
   }, [isOpen, fields, initialValues, lastInitialValues]);
 
@@ -80,6 +80,23 @@ export default function IndustryDynamicModal({
     setFormData(prev => ({ 
       ...prev, 
       [name]: type === "number" ? (value === "" ? "" : Number(value)) : value 
+    }));
+  };
+
+  const toggleMultiSelect = (fieldName: string, value: string) => {
+    setFormData(prev => {
+      const currentValues = Array.isArray(prev[fieldName]) ? prev[fieldName] : [];
+      const newValues = currentValues.includes(value)
+        ? currentValues.filter((v: string) => v !== value)
+        : [...currentValues, value];
+      return { ...prev, [fieldName]: newValues };
+    });
+  };
+
+  const removeMultiSelectValue = (fieldName: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [fieldName]: (prev[fieldName] || []).filter((v: string) => v !== value)
     }));
   };
 
@@ -139,7 +156,7 @@ export default function IndustryDynamicModal({
                       </Label>
                       <div className="relative">
                         {field.icon && (
-                          <field.icon className={`absolute left-4 ${field.type === 'textarea' ? 'top-4' : 'top-1/2 -translate-y-1/2'} w-4 h-4 text-slate-400`} />
+                          <field.icon className={`absolute left-4 ${field.type === 'textarea' ? 'top-4' : 'top-1/2 -translate-y-1/2'} w-4 h-4 text-slate-400 z-10`} />
                         )}
                         
                         {field.type === "textarea" ? (
@@ -157,6 +174,59 @@ export default function IndustryDynamicModal({
                             required={field.required}
                             disabled={field.disabled}
                           />
+                        ) : field.type === "select" && field.multiple ? (
+                          <div className="relative">
+                            <div 
+                              onClick={() => !field.disabled && setActiveMultiSelect(activeMultiSelect === field.name ? null : field.name)}
+                              className={`w-full min-h-[3rem] ${field.icon ? 'pl-12' : 'px-4'} pr-10 py-2.5 rounded-2xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm bg-white cursor-pointer flex flex-wrap gap-2 ${field.disabled ? 'bg-slate-50 opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                              {(formData[field.name] || []).length === 0 && (
+                                <span className="text-slate-400">{field.placeholder || `Select ${field.label}`}</span>
+                              )}
+                              {(formData[field.name] || []).map((val: string) => (
+                                <span 
+                                  key={val} 
+                                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg shadow-sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    removeMultiSelectValue(field.name, val);
+                                  }}
+                                >
+                                  {val}
+                                  <X className="w-3 h-3 hover:text-red-400 transition-colors" />
+                                </span>
+                              ))}
+                              <ChevronDown className={`absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-transform ${activeMultiSelect === field.name ? 'rotate-180' : ''}`} />
+                            </div>
+
+                            <AnimatePresence>
+                              {activeMultiSelect === field.name && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, y: 10 }}
+                                  className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-100 shadow-2xl z-[110] max-h-[200px] overflow-y-auto p-2"
+                                >
+                                  {field.options?.map((opt: any) => {
+                                    const value = typeof opt === 'string' ? opt : opt.value;
+                                    const label = typeof opt === 'string' ? opt : opt.label;
+                                    const isSelected = (formData[field.name] || []).includes(value);
+
+                                    return (
+                                      <div
+                                        key={value}
+                                        onClick={() => toggleMultiSelect(field.name, value)}
+                                        className={`flex items-center justify-between px-4 py-2.5 rounded-xl cursor-pointer transition-all ${isSelected ? 'bg-blue-50 text-blue-600' : 'hover:bg-slate-50 text-slate-600'}`}
+                                      >
+                                        <span className="text-sm font-bold">{label}</span>
+                                        {isSelected && <Check className="w-4 h-4" />}
+                                      </div>
+                                    );
+                                  })}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
                         ) : field.type === "select" ? (
                           <select
                             name={field.name}
