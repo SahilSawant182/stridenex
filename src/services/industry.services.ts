@@ -186,3 +186,53 @@ export const getSkillDomain = async (industry: string) => {
     throw error;
   }
 };
+
+export const createSkillDomain = async (data: any) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.industry_skill_domain.industry_skill_domain.create_skill_domain?industry=${encodeURIComponent(data.industry)}`,
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating skill domain:", error);
+    throw error;
+  }
+};
+
+export const updateSkillDomain = async (name: string, data: any) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.industry_skill_domain.industry_skill_domain.update_skill_domain?name=${encodeURIComponent(name)}`,
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating skill domain:", error);
+    throw error;
+  }
+};
+
+export const deleteSkillDomain = async (name: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.industry_skill_domain.industry_skill_domain.delete_skill_domain?name=${encodeURIComponent(name)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error deleting skill domain:", error);
+    throw error;
+  }
+};
+
+export const getApplicationStatusCount = async (industry: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.internship_application.internship_application.get_application_status_count?industry=${encodeURIComponent(industry)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching application status count:", error);
+    throw error;
+  }
+};

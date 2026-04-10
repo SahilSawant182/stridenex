@@ -1,6 +1,7 @@
 // app/(dashboards)/industry/dashboard/page.tsx
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion, Variants } from "framer-motion";
 import {
   Users,
@@ -11,11 +12,14 @@ import {
   Award,
   Calendar,
   ChevronRight,
-  ClipboardList
+  ClipboardList,
+  Loader2
 } from "lucide-react";
 import StatsWidget from "@/components/dashboards/widgets/StatsWidget";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
+import { useIndustry } from "@/context/IndustryContext";
+import { getApplicationStatusCount } from "@/services/industry.services";
 import Link from "next/link";
 
 const container: Variants = {
@@ -118,16 +122,52 @@ const topCandidates = [
   }
 ];
 
-const pipelineStages = [
-  { stage: "New Applications", count: 87, color: "bg-slate-800", width: "100%" },
-  { stage: "AI Pre-screened", count: 62, color: "bg-blue-500", width: "75%" },
-  { stage: "HR Shortlisted", count: 28, color: "bg-orange-500", width: "40%" },
-  { stage: "Interview Round 1", count: 14, color: "bg-orange-400", width: "20%" },
-  { stage: "Final Round", count: 6, color: "bg-emerald-500", width: "10%" },
-  { stage: "Offers Extended", count: 3, color: "bg-emerald-600", width: "5%" }
+const initialPipelineStages = [
+  { stage: "New Applications", count: 0, color: "bg-slate-800", width: "5%", apiKey: "Applied" },
+  { stage: "AI Pre-screened", count: 0, color: "bg-blue-500", width: "5%", apiKey: "Shortlisted" },
+  { stage: "HR Shortlisted", count: 0, color: "bg-orange-500", width: "5%", apiKey: "HR" },
+  { stage: "Interview Round 1", count: 0, color: "bg-orange-400", width: "5%", apiKey: "Tech Interview" },
+  { stage: "Final Round", count: 0, color: "bg-emerald-500", width: "5%", apiKey: "Final" },
+  { stage: "Offers Extended", count: 0, color: "bg-emerald-600", width: "5%", apiKey: "Selected" }
 ];
 
 export default function IndustryOverviewPage() {
+  const { industryData } = useIndustry();
+  const [pipelineStages, setPipelineStages] = useState(initialPipelineStages);
+  const [loadingPipeline, setLoadingPipeline] = useState(false);
+
+  useEffect(() => {
+    const fetchPipelineCounts = async () => {
+      if (industryData?.company_name) {
+        try {
+          setLoadingPipeline(true);
+          const response = await getApplicationStatusCount(industryData.company_name);
+          const apiData = response?.data || response?.message || {};
+
+          // Calculate max count for relative widths (funnel effect)
+          const counts = Object.values(apiData).map(v => Number(v) || 0);
+          const maxCount = Math.max(...counts, 1); // Avoid division by zero
+
+          const updatedStages = initialPipelineStages.map(stage => {
+            const count = Number(apiData[stage.apiKey]) || 0;
+            return {
+              ...stage,
+              count,
+              width: `${Math.max((count / maxCount) * 100, 5)}%`
+            };
+          });
+
+          setPipelineStages(updatedStages);
+        } catch (err) {
+          console.error("Error fetching pipeline counts:", err);
+        } finally {
+          setLoadingPipeline(false);
+        }
+      }
+    };
+
+    fetchPipelineCounts();
+  }, [industryData?.company_name]);
   return (
     <motion.div
       variants={container}
@@ -205,23 +245,32 @@ export default function IndustryOverviewPage() {
         <motion.div variants={item} className="flex flex-col gap-6">
           <BaseCard className="border-slate-200">
             <CardHeader title="Application Pipeline" />
-            <div className="p-5 space-y-5">
-              {pipelineStages.map((item, idx) => (
-                <div key={idx} className="flex items-center">
-                  <div className="w-36 text-sm font-medium text-slate-700 shrink-0">
-                    {item.stage}
-                  </div>
-                  <div className="flex-1 mx-4 h-2 bg-slate-100 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full ${item.color}`} 
-                      style={{ width: item.width }}
-                    />
-                  </div>
-                  <div className="w-8 text-right font-bold text-slate-800 text-sm">
-                    {item.count}
-                  </div>
+            <div className="p-5 space-y-5 min-h-[300px] flex flex-col justify-center">
+              {loadingPipeline ? (
+                <div className="flex flex-col items-center justify-center space-y-3 opacity-60">
+                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Updating Pipeline...</p>
                 </div>
-              ))}
+              ) : (
+                pipelineStages.map((item, idx) => (
+                  <div key={idx} className="flex items-center">
+                    <div className="w-36 text-sm font-medium text-slate-700 shrink-0">
+                      {item.stage}
+                    </div>
+                    <div className="flex-1 mx-4 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: item.width }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className={`h-full rounded-full ${item.color}`} 
+                      />
+                    </div>
+                    <div className="w-8 text-right font-bold text-slate-800 text-sm">
+                      {item.count}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </BaseCard>
 

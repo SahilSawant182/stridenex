@@ -144,7 +144,7 @@ export default function IndustryDynamicModal({
 
               {/* Form Content */}
               <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                <form id="dynamic-industry-form" onSubmit={handleFormSubmit} className="grid grid-cols-2 gap-6">
+                <form id="dynamic-industry-form" onSubmit={handleFormSubmit} className="grid grid-cols-2 gap-6 pb-40">
                   {fields.map((field) => (
                     <div 
                       key={field.name} 
@@ -177,7 +177,13 @@ export default function IndustryDynamicModal({
                         ) : field.type === "select" && field.multiple ? (
                           <div className="relative">
                             <div 
-                              onClick={() => !field.disabled && setActiveMultiSelect(activeMultiSelect === field.name ? null : field.name)}
+                              onClick={() => {
+                                if (!field.disabled) {
+                                  setActiveMultiSelect(activeMultiSelect === field.name ? null : field.name);
+                                  if (field.onFocus) field.onFocus(field.name);
+                                  if (onFieldFocus) onFieldFocus(field.name);
+                                }
+                              }}
                               className={`w-full min-h-[3rem] ${field.icon ? 'pl-12' : 'px-4'} pr-10 py-2.5 rounded-2xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm bg-white cursor-pointer flex flex-wrap gap-2 ${field.disabled ? 'bg-slate-50 opacity-50 cursor-not-allowed' : ''}`}
                             >
                               {(formData[field.name] || []).length === 0 && (
