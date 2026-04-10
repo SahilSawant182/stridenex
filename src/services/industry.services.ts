@@ -236,3 +236,28 @@ export const getApplicationStatusCount = async (industry: string) => {
     throw error;
   }
 };
+
+export const getCampusPartnerList = async (industry: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.campus_partner.campus_partner.get_campus_partener_list?industry=${encodeURIComponent(industry)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching campus partner list:", error);
+    throw error;
+  }
+};
+
+export const createCampusPartner = async (data: any) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.campus_partner.campus_partner.create_campus_partener`,
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating campus partner:", error);
+    throw error;
+  }
+};

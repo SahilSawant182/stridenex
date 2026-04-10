@@ -24,11 +24,12 @@ import {
   Layout,
   Calendar,
   ListChecks,
-  Clock
+  Clock,
+  Trash2
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
-import { updateIndustry, addRequiredRole, addHiringRound, getSkillDomain } from "@/services/industry.services";
+import { updateIndustry, addRequiredRole, addHiringRound, getSkillDomain, createSkillDomain, updateSkillDomain, deleteSkillDomain, getCampusPartnerList, createCampusPartner } from "@/services/industry.services";
 import { useIndustry, IndustryData, IndustryRole, HiringRound } from "@/context/IndustryContext";
 import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
 
@@ -70,59 +71,148 @@ const colorThemes = [
 ];
 
 export default function CompanyProfileTabContent() {
-  const { 
-    industryData: data, 
+  const {
+    industryData: data,
     roleList,
-    loading, 
+    loading,
     roleLoading,
-    error, 
+    error,
     refreshIndustryData,
     refreshRoleList
   } = useIndustry();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"profile" | "role" | "hiring">("profile");
+  const [modalMode, setModalMode] = useState<"profile" | "role" | "hiring" | "skill_domain" | "campus_partner">("profile");
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
   const [roleToEdit, setRoleToEdit] = useState<IndustryRole | undefined>(undefined);
   const [roundToEdit, setRoundToEdit] = useState<HiringRound | undefined>(undefined);
+  const [skillDomainToEdit, setSkillDomainToEdit] = useState<any | undefined>(undefined);
+  const [isDeletingSkillDomain, setIsDeletingSkillDomain] = useState<string | null>(null);
 
   const [businessTypeOptions, setBusinessTypeOptions] = useState<string[]>([]);
   const [industrySectorOptions, setIndustrySectorOptions] = useState<string[]>([]);
   const [hiringProcessOptions, setHiringProcessOptions] = useState<string[]>([]);
+  const [skillOptions, setSkillOptions] = useState<string[]>([]);
+  const [designationOptions, setDesignationOptions] = useState<string[]>([]);
 
   const [skillDomains, setSkillDomains] = useState<any[]>([]);
   const [skillsLoading, setSkillsLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchSkills = async () => {
-      if (data?.company_name) {
-        try {
-          setSkillsLoading(true);
-          const response = await getSkillDomain(data.company_name);
-          const apiData = response?.data || response?.message || [];
-          if (Array.isArray(apiData)) {
-            const mapped = apiData.map((domain: any, idx: number) => {
-              const theme = colorThemes[idx % colorThemes.length];
-              return {
-                id: domain.name || `domain-${idx}`,
-                title: domain.skill_domain,
-                tags: domain.skills?.map((s: any) => s.skill) || [],
-                roles: domain.roles?.map((r: any) => r.designation).join(" • ") || "N/A",
-                openings: 0, // Not provided in API
-                ...theme
-              };
-            });
-            setSkillDomains(mapped);
-          }
-        } catch (err) {
-          console.error("Error fetching skill domains:", err);
-        } finally {
-          setSkillsLoading(false);
-        }
+  const [campusPartners, setCampusPartners] = useState<any[]>([]);
+  const [campusPartnersLoading, setCampusPartnersLoading] = useState(false);
+  const [collegeOptions, setCollegeOptions] = useState<string[]>([]);
+
+  // const fetchSkillsList = async () => {
+  //   if (data?.company_name) {
+  //     try {
+  //       setSkillsLoading(true);
+  //       const response = await getSkillDomain(data?.company_name);
+
+  //       // Resilience: Handle various API response structures
+  //       let apiData: any[] = [];
+  //       if (Array.isArray(response)) {
+  //         apiData = response;
+  //       } else if (response?.data && Array.isArray(response.data)) {
+  //         apiData = response.data;
+  //       } else if (response?.message?.data && Array.isArray(response.message.data)) {
+  //         apiData = response.message.data;
+  //       } else if (response?.message && Array.isArray(response.message)) {
+  //         apiData = response.message;
+  //       }
+
+  //       if (Array.isArray(apiData)) {
+  //         const mapped = apiData.map((domain: any, idx: number) => {
+  //           const theme = colorThemes[idx % colorThemes.length] || colorThemes[0];
+  //           return {
+  //             id: domain.name || `domain-${idx}`,
+  //             title: domain.skill_domain || "Untitled Domain",
+  //             tags: Array.isArray(domain.skills) ? domain.skills.map((s: any) => s.skill).filter(Boolean) : [],
+  //             roles: Array.isArray(domain.roles) ? domain.roles.map((r: any) => r.designation).filter(Boolean).join(" • ") : "N/A",
+  //             openings: 0,
+  //             ...theme,
+  //             raw: domain
+  //           };
+  //         });
+  //         setSkillDomains(mapped);
+  //       } else {
+  //         setSkillDomains([]);
+  //       }
+  //     } catch (err) {
+  //       console.error("Error fetching skill domains:", err);
+  //     } finally {
+  //       setSkillsLoading(false);
+  //     }
+  //   }
+  // };
+
+
+  const fetchSkillsList = async () => {
+    if (!data?.company_name) return;
+    try {
+      setSkillsLoading(true);
+      const response = await getSkillDomain(data.company_name);
+
+      // Extensive data extraction
+      let apiData: any[] = [];
+      if (Array.isArray(response)) {
+        apiData = response;
+      } else if (response?.data && Array.isArray(response.data)) {
+        apiData = response.data;
+      } else if (response?.message?.data && Array.isArray(response.message.data)) {
+        apiData = response.message.data;
+      } else if (response?.message && Array.isArray(response.message)) {
+        apiData = response.message;
+      } else if (typeof response === 'object' && response !== null) {
+        // Fallback for single object or nested 'message' with 'data'
+        apiData = response.data || response.message?.data || response.message || [];
       }
-    };
-    fetchSkills();
+
+      if (!Array.isArray(apiData)) apiData = [];
+
+      const mapped = apiData.map((domain: any, idx: number) => {
+        const theme = colorThemes[idx % colorThemes.length] || colorThemes[0];
+        return {
+          id: domain.name || `domain-${idx}-${Date.now()}`,
+          title: domain.skill_domain || "Untitled Domain",
+          tags: Array.isArray(domain.skills) ? domain.skills.map((s: any) => s.skill).filter(Boolean) : [],
+          roles: Array.isArray(domain.roles) && domain.roles.length > 0 ? domain.roles.map((r: any) => r.designation).filter(Boolean).join(" • ") : "N/A",
+          openings: Number(domain.openings) || 0,
+          ...theme,
+          raw: domain
+        };
+      });
+      console.log("SUCCESSFULLY MAPPED:", mapped.length, "domains for", data.company_name);
+      setSkillDomains(mapped);
+    } catch (err) {
+      console.error("Error in fetchSkillsList:", err);
+      setSkillDomains([]);
+    } finally {
+      setSkillsLoading(false);
+    }
+  };
+
+  const fetchCampusPartners = async () => {
+    if (!data?.company_name) return;
+    try {
+      setCampusPartnersLoading(true);
+      const response = await getCampusPartnerList(data.company_name);
+      const apiData = response?.data || response?.message?.data || response?.message || [];
+      setCampusPartners(Array.isArray(apiData) ? apiData : []);
+    } catch (err) {
+      console.error("Error fetching campus partners:", err);
+    } finally {
+      setCampusPartnersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSkillsList();
+    fetchCampusPartners();
+    // Fetch critical options on mount to ensure they are available for the modal
+    fetchMasterOptions("Skill", setSkillOptions);
+    fetchMasterOptions("Industry Designation", setDesignationOptions);
+    fetchMasterOptions("College", setCollegeOptions);
   }, [data?.company_name]);
 
   const profileFields: IndustryField[] = useMemo(() => [
@@ -159,11 +249,23 @@ export default function CompanyProfileTabContent() {
     { name: "duration", label: "Duration (min)", type: "number", icon: Clock, required: true, colSpan: 2, placeholder: "e.g. 45" },
   ], [hiringProcessOptions]);
 
+  const skillDomainFields: IndustryField[] = useMemo(() => [
+    { name: "skill_domain", label: "Domain Name", type: "text", icon: TargetIcon, required: true, colSpan: 2, placeholder: "e.g. Backend Engineering" },
+    { name: "skills", label: "Skills We Audit", type: "select", icon: Zap, options: skillOptions, required: true, colSpan: 2, placeholder: "Select Skills", multiple: true },
+    { name: "roles", label: "Designations", type: "select", icon: Briefcase, options: designationOptions, required: true, colSpan: 2, placeholder: "Select Designations", multiple: true },
+  ], [skillOptions, designationOptions]);
+
+  const campusPartnerFields: IndustryField[] = useMemo(() => [
+    { name: "college", label: "Select College", type: "select", icon: GraduationCap, options: collegeOptions, required: true, colSpan: 2, placeholder: "Select Campus Partner" },
+  ], [collegeOptions]);
+
   const activeFields = useMemo(() => {
     if (modalMode === "profile") return profileFields;
     if (modalMode === "role") return roleFields;
+    if (modalMode === "skill_domain") return skillDomainFields;
+    if (modalMode === "campus_partner") return campusPartnerFields;
     return hiringFields;
-  }, [modalMode, profileFields, roleFields, hiringFields]);
+  }, [modalMode, profileFields, roleFields, hiringFields, skillDomainFields, campusPartnerFields]);
 
   const modalInitialValues = useMemo(() => {
     if (modalMode === "profile") {
@@ -181,8 +283,21 @@ export default function CompanyProfileTabContent() {
     if (modalMode === "role") {
       return roleToEdit ? { ...roleToEdit } : undefined;
     }
+    if (modalMode === "skill_domain") {
+      if (skillDomainToEdit) {
+        return {
+          skill_domain: skillDomainToEdit.skill_domain,
+          skills: Array.isArray(skillDomainToEdit.skills) ? skillDomainToEdit.skills.map((s: any) => s.skill) : [],
+          roles: Array.isArray(skillDomainToEdit.roles) ? skillDomainToEdit.roles.map((r: any) => r.designation) : [],
+        };
+      }
+      return { industry: data?.company_name };
+    }
+    if (modalMode === "campus_partner") {
+      return { industry: data?.company_name };
+    }
     return roundToEdit ? { ...roundToEdit } : undefined;
-  }, [modalMode, data, roleToEdit, roundToEdit]);
+  }, [modalMode, data, roleToEdit, roundToEdit, skillDomainToEdit]);
 
   const handleModalSubmit = async (formData: any) => {
     setModalLoading(true);
@@ -207,12 +322,47 @@ export default function CompanyProfileTabContent() {
         };
         await addHiringRound(payload);
         await refreshIndustryData();
+      } else if (modalMode === "skill_domain") {
+        const payload = {
+          industry: data?.company_name,
+          skill_domain: formData.skill_domain,
+          skills: Array.isArray(formData.skills) ? formData.skills.map((s: string) => ({ skill: s })) : [],
+          roles: Array.isArray(formData.roles) ? formData.roles.map((r: string) => ({ designation: r })) : [],
+        };
+        if (skillDomainToEdit) {
+          await updateSkillDomain(skillDomainToEdit.name, { ...payload, name: skillDomainToEdit.name });
+          setSkillDomainToEdit(undefined);
+        } else {
+          await createSkillDomain(payload);
+        }
+        await fetchSkillsList();
+      } else if (modalMode === "campus_partner") {
+        const payload = {
+          industry: data?.company_name,
+          college: formData.college
+        };
+        await createCampusPartner(payload);
+        await fetchCampusPartners();
       }
       setIsModalOpen(false);
     } catch (err: any) {
       setModalError(err?.message || "Failed to save data");
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleDeleteSkillDomain = async (name: string) => {
+    if (!window.confirm("Are you sure you want to delete this skill domain?")) return;
+    try {
+      setIsDeletingSkillDomain(name);
+      await deleteSkillDomain(name);
+      await fetchSkillsList();
+    } catch (err: any) {
+      console.error("Error deleting skill domain:", err);
+      alert(err || "Failed to delete skill domain");
+    } finally {
+      setIsDeletingSkillDomain(null);
     }
   };
 
@@ -226,8 +376,9 @@ export default function CompanyProfileTabContent() {
           body: JSON.stringify({ doctype })
         }
       );
-      const dataResponse = await response.json();
-      const options = (dataResponse.data || dataResponse).map((item: any) => item.name);
+      const data = await response.json();
+      const apiData = data.data || data.message || [];
+      const options = Array.isArray(apiData) ? apiData.map((item: any) => item.name) : [];
       setter(options);
     } catch (err) {
       console.error(`Error fetching ${doctype} options:`, err);
@@ -241,6 +392,12 @@ export default function CompanyProfileTabContent() {
       fetchMasterOptions("Industry Sector", setIndustrySectorOptions);
     } else if (fieldName === "round" && hiringProcessOptions.length === 0) {
       fetchMasterOptions("Hiring Process", setHiringProcessOptions);
+    } else if (fieldName === "skills" && skillOptions.length === 0) {
+      fetchMasterOptions("Skill", setSkillOptions);
+    } else if (fieldName === "roles" && designationOptions.length === 0) {
+      fetchMasterOptions("Industry Designation", setDesignationOptions);
+    } else if (fieldName === "college" && collegeOptions.length === 0) {
+      fetchMasterOptions("College", setCollegeOptions);
     }
   };
 
@@ -341,22 +498,30 @@ export default function CompanyProfileTabContent() {
       {/* Dynamic Modal */}
       <IndustryDynamicModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSkillDomainToEdit(undefined);
+          setRoleToEdit(undefined);
+          setRoundToEdit(undefined);
+        }}
         title={
           modalMode === "profile" ? "Edit Company Profile" :
             modalMode === "role" ? (roleToEdit ? "Edit Role" : "Add New Role") :
-              (roundToEdit ? "Edit Hiring Round" : "Add Hiring Round")
+              modalMode === "skill_domain" ? (skillDomainToEdit ? "Edit Skill Domain" : "Add Skill Domain") :
+                (roundToEdit ? "Edit Hiring Round" : "Add Hiring Round")
         }
         subtitle={capitalizeFirstLetter(data?.company_name || "")}
         headerIcon={
           modalMode === "profile" ? Building2 :
             modalMode === "role" ? Briefcase :
-              ListChecks
+              modalMode === "skill_domain" ? TargetIcon :
+                ListChecks
         }
         iconBgColor={
           modalMode === "profile" ? "bg-blue-600" :
             modalMode === "role" ? "bg-indigo-600" :
-              "bg-emerald-600"
+              modalMode === "skill_domain" ? "bg-red-600" :
+                "bg-emerald-600"
         }
         fields={activeFields}
         initialValues={modalInitialValues}
@@ -413,12 +578,26 @@ export default function CompanyProfileTabContent() {
           </BaseCard>
 
           {/* Skill Domains - Vibrant */}
+          {/* Skill Domains - Vibrant & Robust */}
           <div className="space-y-4">
-            <div className="flex items-center gap-3 px-2 mb-2">
-              <TargetIcon className="w-5 h-5 text-red-500" />
-              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Skill Domains We Audit</h2>
+            <div className="flex items-center justify-between px-2 mb-2">
+              <div className="flex items-center gap-3">
+                <TargetIcon className="w-5 h-5 text-red-500" />
+                <h2 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Skill Domains We Audit</h2>
+              </div>
+              <button
+                onClick={() => {
+                  setSkillDomainToEdit(undefined);
+                  setModalMode("skill_domain");
+                  setIsModalOpen(true);
+                }}
+                className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-400 hover:text-red-600"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
             </div>
 
+            {/* Re-trigger container for visibility and debug */}
             <div className="grid grid-cols-1 gap-4">
               {skillsLoading ? (
                 <div className="py-10 flex flex-col items-center justify-center space-y-4 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-100">
@@ -429,7 +608,9 @@ export default function CompanyProfileTabContent() {
                 skillDomains.map((domain) => (
                   <motion.div
                     key={domain.id}
-                    variants={item}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
                     className={`${domain.bg} border-2 ${domain.borderColor} rounded-3xl p-6 group hover:bg-white hover:border-slate-200 transition-all cursor-default relative overflow-hidden shadow-sm`}
                   >
                     <div className="flex items-start justify-between relative z-10">
@@ -437,18 +618,48 @@ export default function CompanyProfileTabContent() {
                         <div className="flex items-center gap-4 mb-4">
                           <div className={`w-3 h-3 rounded-full ${domain.dotBg} shadow-lg shadow-black/10`} />
                           <h3 className="text-xl font-bold text-slate-900">{domain.title}</h3>
+
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSkillDomainToEdit(domain.raw);
+                                setModalMode("skill_domain");
+                                setIsModalOpen(true);
+                              }}
+                              className="p-1.5 hover:bg-white/50 rounded-lg text-slate-400 hover:text-blue-600"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteSkillDomain(domain.raw.name);
+                              }}
+                              disabled={isDeletingSkillDomain === domain.raw.name}
+                              className="p-1.5 hover:bg-white/50 rounded-lg text-slate-400 hover:text-red-500 disabled:opacity-30"
+                            >
+                              {isDeletingSkillDomain === domain.raw.name ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
                         </div>
 
                         <div className="flex flex-wrap gap-2.5 mb-6">
-                          {domain.tags.map((tag: string) => (
+                          {domain.tags.length > 0 ? domain.tags.map((tag: string) => (
                             <span key={tag} className="px-4 py-2 bg-white text-slate-700 text-xs font-bold rounded-xl border border-slate-100 shadow-sm hover:border-slate-300 transition-colors">
                               {tag}
                             </span>
-                          ))}
+                          )) : (
+                            <span className="text-xs text-slate-400 font-medium italic opacity-60">No skills added</span>
+                          )}
                         </div>
 
                         <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider bg-white/50 px-3 py-1 rounded-lg inline-block border border-slate-100">
-                          <span className="text-slate-400">ROLES:</span> {domain.roles}
+                          <span className="text-slate-400">ROLES:</span> {domain.roles || "None defined"}
                         </p>
                       </div>
 
@@ -471,6 +682,7 @@ export default function CompanyProfileTabContent() {
               )}
             </div>
           </div>
+
         </div>
 
         {/* Right Column */}
@@ -513,16 +725,7 @@ export default function CompanyProfileTabContent() {
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="text-base font-bold text-slate-800 leading-tight">{role.role}</h4>
-                            <button
-                              onClick={() => {
-                                setRoleToEdit(role);
-                                setModalMode("role");
-                                setIsModalOpen(true);
-                              }}
-                              className="p-1 hover:bg-slate-100 rounded-md transition-colors text-slate-400 hover:text-blue-600 opacity-0 group-hover:opacity-100"
-                            >
-                              <Edit3 className="w-3 h-3" />
-                            </button>
+
                           </div>
                           <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mt-1">
                             {Number(role.duration) > 0 ? `${role.duration} Months` : role.semester}
@@ -618,20 +821,55 @@ export default function CompanyProfileTabContent() {
           </BaseCard>
 
           <BaseCard className="border-slate-200 rounded-3xl overflow-hidden shadow-sm bg-gradient-to-br from-slate-50 to-white">
-            <CardHeader title="Campus Partners" />
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                Campus Partners
+                {!campusPartnersLoading && campusPartners.length > 0 && (
+                  <button 
+                    onClick={() => {
+                      setModalMode("campus_partner");
+                      setIsModalOpen(true);
+                    }}
+                    className="p-1 hover:bg-indigo-50 rounded-lg text-indigo-500 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                )}
+              </h3>
+            </div>
             <div className="p-6">
-              <div className="flex flex-wrap gap-2.5 mb-6">
-                {[
-                  "IIT Bombay", "IIT Delhi", "NIT Warangal", "VJTI Mumbai", "COEP Pune", "Manipal"
-                ].map(tag => (
-                  <span key={tag} className="px-4 py-2 bg-white text-slate-600 text-[11px] font-bold rounded-xl border border-slate-100 hover:border-indigo-300 hover:text-indigo-600 transition-all shadow-sm cursor-default">
-                    {tag}
-                  </span>
-                ))}
+              <div className="flex flex-wrap gap-2">
+                {campusPartnersLoading ? (
+                  <div className="w-full py-4 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                  </div>
+                ) : campusPartners.length > 0 ? (
+                  campusPartners.map((partner, idx) => (
+                    <div 
+                      key={partner.name || idx} 
+                      className="px-3 py-1.5 bg-white text-slate-700 text-[10px] font-bold rounded-xl border border-slate-100 hover:border-indigo-200 hover:shadow-sm transition-all cursor-default flex items-center gap-2 group/tag shrink-0"
+                    >
+                      <span className="truncate max-w-[150px]">{partner.college}</span>
+                      <button className="text-slate-300 hover:text-red-500 transition-colors shrink-0">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="w-full">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-4 ml-1">No campus partners added</p>
+                    <button 
+                      onClick={() => {
+                        setModalMode("campus_partner");
+                        setIsModalOpen(true);
+                      }}
+                      className="w-full bg-white hover:bg-slate-50 text-slate-900 font-bold py-4 rounded-2xl border border-slate-200 transition-all text-xs flex items-center justify-center gap-3 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      <Plus className="w-5 h-5 text-indigo-500" /> Add Corporate Partner
+                    </button>
+                  </div>
+                )}
               </div>
-              <button className="w-full bg-white hover:bg-slate-50 text-slate-900 font-bold py-4 rounded-2xl border border-slate-200 transition-all text-xs flex items-center justify-center gap-3 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
-                <Plus className="w-5 h-5 text-indigo-500" /> Add Corporate Partner
-              </button>
             </div>
           </BaseCard>
         </div>
