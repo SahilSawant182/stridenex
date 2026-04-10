@@ -166,11 +166,23 @@ export const deleteInternship = async (name: string) => {
 export const getStudentApplicationList = async (industry: string, status: string) => {
   try {
     const response = await apiService.get(
-      `method/stridenex_app.stridenex_app.doctype.internship_application.internship_application.get_student_application_list?industry=${encodeURIComponent(industry)}&status=${encodeURIComponent(status)}`
+      `method/stridenex_app.stridenex_app.doctype.internship_application.internship_application.get_student_application_list?industry=${encodeURIComponent(industry)}`
     );
     return response;
   } catch (error) {
     console.error("Error fetching student application list:", error);
+    throw error;
+  }
+};
+
+export const getSkillDomain = async (industry: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.industry_skill_domain.industry_skill_domain.get_skill_domain?industry=${encodeURIComponent(industry)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching skill domain:", error);
     throw error;
   }
 };

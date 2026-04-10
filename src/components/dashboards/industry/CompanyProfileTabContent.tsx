@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
-import { updateIndustry, addRequiredRole, addHiringRound } from "@/services/industry.services";
+import { updateIndustry, addRequiredRole, addHiringRound, getSkillDomain } from "@/services/industry.services";
 import { useIndustry, IndustryData, IndustryRole, HiringRound } from "@/context/IndustryContext";
 import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
 
@@ -42,39 +42,30 @@ const item: Variants = {
   show: { opacity: 1, y: 0, transition: { type: "tween", duration: 0.3 } },
 };
 
-const skillDomains = [
+const colorThemes = [
   {
-    id: "engineering",
-    title: "Engineering",
     color: "text-blue-600",
     dotBg: "bg-blue-600",
     bg: "bg-blue-50/50",
     borderColor: "border-blue-100",
-    openings: 24,
-    tags: ["Python", "Go", "React", "Kafka", "Docker", "Kubernetes"],
-    roles: "Backend Engineer • Frontend Engineer • ML Engineer"
   },
   {
-    id: "datascience",
-    title: "Data Science",
     color: "text-purple-600",
     dotBg: "bg-purple-600",
     bg: "bg-purple-50/50",
     borderColor: "border-purple-100",
-    openings: 8,
-    tags: ["Python", "SQL", "Statistics", "TensorFlow"],
-    roles: "Data Scientist • ML Researcher • Analytics"
   },
   {
-    id: "product",
-    title: "Product",
     color: "text-orange-600",
     dotBg: "bg-orange-600",
     bg: "bg-orange-50/50",
     borderColor: "border-orange-100",
-    openings: 5,
-    tags: ["Strategy", "SQL", "A/B Testing", "Figma"],
-    roles: "Product Manager • Analyst • Growth PM"
+  },
+  {
+    color: "text-emerald-600",
+    dotBg: "bg-emerald-600",
+    bg: "bg-emerald-50/50",
+    borderColor: "border-emerald-100",
   }
 ];
 
@@ -99,6 +90,40 @@ export default function CompanyProfileTabContent() {
   const [businessTypeOptions, setBusinessTypeOptions] = useState<string[]>([]);
   const [industrySectorOptions, setIndustrySectorOptions] = useState<string[]>([]);
   const [hiringProcessOptions, setHiringProcessOptions] = useState<string[]>([]);
+
+  const [skillDomains, setSkillDomains] = useState<any[]>([]);
+  const [skillsLoading, setSkillsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchSkills = async () => {
+      if (data?.company_name) {
+        try {
+          setSkillsLoading(true);
+          const response = await getSkillDomain(data.company_name);
+          const apiData = response?.data || response?.message || [];
+          if (Array.isArray(apiData)) {
+            const mapped = apiData.map((domain: any, idx: number) => {
+              const theme = colorThemes[idx % colorThemes.length];
+              return {
+                id: domain.name || `domain-${idx}`,
+                title: domain.skill_domain,
+                tags: domain.skills?.map((s: any) => s.skill) || [],
+                roles: domain.roles?.map((r: any) => r.designation).join(" • ") || "N/A",
+                openings: 0, // Not provided in API
+                ...theme
+              };
+            });
+            setSkillDomains(mapped);
+          }
+        } catch (err) {
+          console.error("Error fetching skill domains:", err);
+        } finally {
+          setSkillsLoading(false);
+        }
+      }
+    };
+    fetchSkills();
+  }, [data?.company_name]);
 
   const profileFields: IndustryField[] = useMemo(() => [
     { name: "company_name", label: "Company Name", type: "text", icon: Building2, required: true, colSpan: 2, placeholder: "e.g. Acme Corporation", disabled: true },
@@ -395,38 +420,55 @@ export default function CompanyProfileTabContent() {
             </div>
 
             <div className="grid grid-cols-1 gap-4">
-              {skillDomains.map((domain) => (
-                <motion.div
-                  key={domain.id}
-                  variants={item}
-                  className={`${domain.bg} border-2 ${domain.borderColor} rounded-3xl p-6 group hover:bg-white hover:border-slate-200 transition-all cursor-default relative overflow-hidden shadow-sm`}
-                >
-                  <div className="flex items-start justify-between relative z-10">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className={`w-3 h-3 rounded-full ${domain.dotBg} shadow-lg shadow-black/10`} />
-                        <h3 className="text-xl font-bold text-slate-900">{domain.title}</h3>
+              {skillsLoading ? (
+                <div className="py-10 flex flex-col items-center justify-center space-y-4 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-100">
+                  <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+                  <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Fetching Skill Domains...</p>
+                </div>
+              ) : skillDomains.length > 0 ? (
+                skillDomains.map((domain) => (
+                  <motion.div
+                    key={domain.id}
+                    variants={item}
+                    className={`${domain.bg} border-2 ${domain.borderColor} rounded-3xl p-6 group hover:bg-white hover:border-slate-200 transition-all cursor-default relative overflow-hidden shadow-sm`}
+                  >
+                    <div className="flex items-start justify-between relative z-10">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className={`w-3 h-3 rounded-full ${domain.dotBg} shadow-lg shadow-black/10`} />
+                          <h3 className="text-xl font-bold text-slate-900">{domain.title}</h3>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2.5 mb-6">
+                          {domain.tags.map((tag: string) => (
+                            <span key={tag} className="px-4 py-2 bg-white text-slate-700 text-xs font-bold rounded-xl border border-slate-100 shadow-sm hover:border-slate-300 transition-colors">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+
+                        <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider bg-white/50 px-3 py-1 rounded-lg inline-block border border-slate-100">
+                          <span className="text-slate-400">ROLES:</span> {domain.roles}
+                        </p>
                       </div>
 
-                      <div className="flex flex-wrap gap-2.5 mb-6">
-                        {domain.tags.map(tag => (
-                          <span key={tag} className="px-4 py-2 bg-white text-slate-700 text-xs font-bold rounded-xl border border-slate-100 shadow-sm hover:border-slate-300 transition-colors">
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-
-                      <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider bg-white/50 px-3 py-1 rounded-lg inline-block border border-slate-100">
-                        <span className="text-slate-400">ROLES:</span> {domain.roles}
-                      </p>
+                      {domain.openings > 0 && (
+                        <span className={`px-4 py-2 bg-white ${domain.color} text-[10px] font-bold rounded-xl border-2 ${domain.borderColor} uppercase tracking-[0.1em] shadow-sm`}>
+                          {domain.openings} OPENINGS
+                        </span>
+                      )}
                     </div>
-
-                    <span className={`px-4 py-2 bg-white ${domain.color} text-[10px] font-bold rounded-xl border-2 ${domain.borderColor} uppercase tracking-[0.1em] shadow-sm`}>
-                      {domain.openings} OPENINGS
-                    </span>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="py-10 flex flex-col items-center justify-center space-y-4 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-100 text-center px-6">
+                  <TargetIcon className="w-8 h-8 text-slate-300" />
+                  <div>
+                    <p className="text-sm font-bold text-slate-700">No skill domains listed</p>
+                    <p className="text-xs text-slate-500 mt-1">We haven't audited any skill domains for this company yet.</p>
                   </div>
-                </motion.div>
-              ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -206,8 +206,10 @@ export default function InternshipsTabContent() {
       return {
         ...editingInternship,
         industry: companyName || editingInternship.industry,
-        required_skills: Array.isArray(editingInternship.required_skills) 
-          ? editingInternship.required_skills.map((s: any) => s.skill || s.skills) 
+        required_skills: Array.isArray(editingInternship.skills) 
+          ? editingInternship.skills.map((s: any) => s.skill || s.skills) 
+          : Array.isArray(editingInternship.required_skills)
+          ? editingInternship.required_skills.map((s: any) => s.skill || s.skills)
           : []
       };
     }
@@ -257,6 +259,7 @@ export default function InternshipsTabContent() {
                   <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Type</th>
                   <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Location</th>
                   <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Stipend</th>
+                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Skills</th>
                   <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Openings</th>
                   <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
                   <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Actions</th>
@@ -281,6 +284,23 @@ export default function InternshipsTabContent() {
                     </td>
                     <td className="py-4 px-6 whitespace-nowrap font-medium text-slate-700 text-sm">
                       {formatStipend(internship.stipend)}
+                    </td>
+                    <td className="py-4 px-6 whitespace-nowrap">
+                      <div className="flex flex-wrap gap-1.5 max-w-[200px]">
+                        {(internship.skills || internship.required_skills)?.slice(0, 2).map((s: any, idx: number) => (
+                          <span key={idx} className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded-md border border-indigo-100">
+                            {s.skill || s.skills}
+                          </span>
+                        ))}
+                        {(internship.skills || internship.required_skills)?.length > 2 && (
+                          <span className="px-2 py-0.5 bg-slate-50 text-slate-500 text-[10px] font-bold rounded-md border border-slate-100">
+                            +{(internship.skills || internship.required_skills).length - 2}
+                          </span>
+                        )}
+                        {!(internship.skills || internship.required_skills)?.length && (
+                          <span className="text-[10px] text-slate-400 font-mediumitalic">None</span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-4 px-6 whitespace-nowrap font-bold text-slate-800 text-sm">
                       {internship.openings !== undefined && internship.openings !== null ? internship.openings : "0"} 

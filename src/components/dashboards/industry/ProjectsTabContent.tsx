@@ -197,8 +197,10 @@ export default function ProjectsTabContent() {
     if (projectToEdit) {
       return {
         ...projectToEdit,
-        required_skills: Array.isArray(projectToEdit.required_skills) 
-          ? projectToEdit.required_skills.map((s: any) => s.skill || s.skills) 
+        required_skills: Array.isArray(projectToEdit.skills) 
+          ? projectToEdit.skills.map((s: any) => s.skill || s.skills) 
+          : Array.isArray(projectToEdit.required_skills)
+          ? projectToEdit.required_skills.map((s: any) => s.skill || s.skills)
           : []
       };
     }

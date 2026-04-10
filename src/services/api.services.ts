@@ -20,7 +20,6 @@ const apiRequest = async (config: AxiosRequestConfig) => {
     ...config.headers,
     ...(apiKey && apiSecret ? { Authorization: `token ${apiKey}:${apiSecret}` } : {}),
   };
-
   try {
     const response = await api({ ...config, headers });
     return response.data;
