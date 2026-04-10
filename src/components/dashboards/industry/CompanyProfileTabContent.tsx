@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
-import { updateIndustry, addRequiredRole, addHiringRound, getSkillDomain, createSkillDomain, updateSkillDomain, deleteSkillDomain, getCampusPartnerList, createCampusPartner } from "@/services/industry.services";
+import { updateIndustry, addRequiredRole, addHiringRound, getSkillDomain, createSkillDomain, updateSkillDomain, deleteSkillDomain, getCampusPartnerList, createCampusPartner, deleteCampusPartner } from "@/services/industry.services";
 import { useIndustry, IndustryData, IndustryRole, HiringRound } from "@/context/IndustryContext";
 import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
 
@@ -89,6 +89,7 @@ export default function CompanyProfileTabContent() {
   const [roundToEdit, setRoundToEdit] = useState<HiringRound | undefined>(undefined);
   const [skillDomainToEdit, setSkillDomainToEdit] = useState<any | undefined>(undefined);
   const [isDeletingSkillDomain, setIsDeletingSkillDomain] = useState<string | null>(null);
+  const [isDeletingPartner, setIsDeletingPartner] = useState<string | null>(null);
 
   const [businessTypeOptions, setBusinessTypeOptions] = useState<string[]>([]);
   const [industrySectorOptions, setIndustrySectorOptions] = useState<string[]>([]);
@@ -363,6 +364,20 @@ export default function CompanyProfileTabContent() {
       alert(err || "Failed to delete skill domain");
     } finally {
       setIsDeletingSkillDomain(null);
+    }
+  };
+
+  const handleDeleteCampusPartner = async (name: string) => {
+    if (!window.confirm("Are you sure you want to delete this campus partner?")) return;
+    try {
+      setIsDeletingPartner(name);
+      await deleteCampusPartner(name);
+      await fetchCampusPartners();
+    } catch (err: any) {
+      console.error("Error deleting campus partner:", err);
+      alert(err?.message || "Failed to delete campus partner");
+    } finally {
+      setIsDeletingPartner(null);
     }
   };
 
@@ -776,11 +791,10 @@ export default function CompanyProfileTabContent() {
               </button>
             </div>
             <div className="p-6 space-y-10 relative">
-              <div className="absolute left-[2.65rem] top-16 bottom-16 w-1 bg-slate-50 shadow-inner rounded-full" />
               {data?.hiring_process && data.hiring_process.length > 0 ? (
                 data.hiring_process.map((step, idx) => (
-                  <div key={idx} className="relative flex items-start gap-6 pl-12 group">
-                    <div className="absolute left-[0.25rem] top-1.5 w-4 h-4 rounded-full bg-emerald-500 border-4 border-white shadow-xl z-20" />
+                  <div key={idx} className="relative flex items-start gap-4 group">
+                    <div className="mt-1 w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shrink-0" />
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <h4 className="text-sm font-bold text-slate-800 leading-none">{step.round}</h4>
@@ -844,17 +858,30 @@ export default function CompanyProfileTabContent() {
                     <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
                   </div>
                 ) : campusPartners.length > 0 ? (
-                  campusPartners.map((partner, idx) => (
-                    <div 
-                      key={partner.name || idx} 
-                      className="px-3 py-1.5 bg-white text-slate-700 text-[10px] font-bold rounded-xl border border-slate-100 hover:border-indigo-200 hover:shadow-sm transition-all cursor-default flex items-center gap-2 group/tag shrink-0"
-                    >
-                      <span className="truncate max-w-[150px]">{partner.college}</span>
-                      <button className="text-slate-300 hover:text-red-500 transition-colors shrink-0">
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))
+                  campusPartners.map((partner, idx) => {
+                    const partnerId = partner.name || `${data?.company_name}-${partner.college}`;
+                    const isDeleting = isDeletingPartner === partnerId;
+                    
+                    return (
+                      <div 
+                        key={partnerId} 
+                        className={`px-3 py-1.5 bg-white text-slate-700 text-[10px] font-bold rounded-xl border border-slate-100 hover:border-indigo-200 hover:shadow-sm transition-all cursor-default flex items-center gap-2 group/tag shrink-0 ${isDeleting ? 'opacity-50 grayscale' : ''}`}
+                      >
+                        <span className="truncate max-w-[150px]">{partner.college}</span>
+                        <button 
+                          onClick={() => handleDeleteCampusPartner(partnerId)}
+                          disabled={isDeleting}
+                          className="text-slate-300 hover:text-red-500 transition-colors shrink-0 disabled:opacity-50"
+                        >
+                          {isDeleting ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3 h-3" />
+                          )}
+                        </button>
+                      </div>
+                    );
+                  })
                 ) : (
                   <div className="w-full">
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-4 ml-1">No campus partners added</p>

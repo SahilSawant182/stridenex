@@ -261,3 +261,15 @@ export const createCampusPartner = async (data: any) => {
     throw error;
   }
 };
+
+export const deleteCampusPartner = async (name: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.campus_partner.campus_partner.delete_campus_partener?name=${encodeURIComponent(name)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error deleting campus partner:", error);
+    throw error;
+  }
+};
