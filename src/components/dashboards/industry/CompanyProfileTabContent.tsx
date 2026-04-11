@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
-import { updateIndustry, addRequiredRole, updateIndustryRole, addHiringRound, getSkillDomain, createSkillDomain, updateSkillDomain, deleteSkillDomain, getCampusPartnerList, createCampusPartner, deleteCampusPartner } from "@/services/industry.services";
+import { updateIndustry, addRequiredRole, updateIndustryRole, addHiringRound, getSkillDomain, createSkillDomain, updateSkillDomain, deleteSkillDomain, getCampusPartnerList, createCampusPartner, deleteCampusPartner, getMasterData } from "@/services/industry.services";
 import { useIndustry, IndustryData, IndustryRole, HiringRound } from "@/context/IndustryContext";
 import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
 
@@ -346,15 +346,7 @@ export default function CompanyProfileTabContent() {
 
   const fetchMasterOptions = async (doctype: string, setter: (val: string[]) => void) => {
     try {
-      const response = await fetch(
-        `https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ doctype })
-        }
-      );
-      const data = await response.json();
+      const data = await getMasterData(doctype);
       const apiData = data.data || data.message || [];
       const options = Array.isArray(apiData) ? apiData.map((item: any) => item.name) : [];
       setter(options);

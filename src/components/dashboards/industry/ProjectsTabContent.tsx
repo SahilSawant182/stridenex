@@ -18,7 +18,7 @@ import {
   Trash2
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
-import { getProjectList, createProject, updateProject, deleteProject } from "@/services/industry.services";
+import { getProjectList, createProject, updateProject, deleteProject, getMasterData } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
 import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
 import { calculateEndDate } from "@/utils/date.utils";
@@ -52,22 +52,14 @@ export default function ProjectsTabContent() {
   const [projectToEdit, setProjectToEdit] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-  const fetchSkillOptions = async () => {
+  const fetchOptions = async (doctype: string, setter: (val: string[]) => void) => {
     try {
-      const response = await fetch(
-        `https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ doctype: "Skill" })
-        }
-      );
-      const data = await response.json();
+      const data = await getMasterData(doctype);
       const apiData = data.data || data.message || [];
       const options = Array.isArray(apiData) ? apiData.map((item: any) => item.name) : [];
-      setSkillOptions(options);
+      setter(options);
     } catch (err) {
-      console.error(`Error fetching Skill options:`, err);
+      console.error(`Error fetching ${doctype} options:`, err);
     }
   };
 
@@ -181,7 +173,7 @@ export default function ProjectsTabContent() {
 
   const handleFieldFocus = (fieldName: string) => {
     if (fieldName === "required_skills" && skillOptions.length === 0) {
-      fetchSkillOptions();
+      fetchOptions("Skill", setSkillOptions);
     }
   };
 

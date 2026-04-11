@@ -21,7 +21,7 @@ import {
   Pen,
   Trash2
 } from "lucide-react";
-import { getInternshipList, createInternship, updateInternship, deleteInternship } from "@/services/industry.services";
+import { getInternshipList, createInternship, updateInternship, deleteInternship, getMasterData } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
 import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
 import { calculateEndDate } from "@/utils/date.utils";
@@ -56,27 +56,21 @@ export default function InternshipsTabContent() {
   const [editingInternship, setEditingInternship] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-  const fetchSkillOptions = async () => {
+  const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+
+  const fetchOptions = async (doctype: string, setter: (val: string[]) => void) => {
     try {
-      const response = await fetch(
-        `https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ doctype: "Skill" })
-        }
-      );
-      const data = await response.json();
+      const data = await getMasterData(doctype);
       const apiData = data.data || data.message || [];
       const options = Array.isArray(apiData) ? apiData.map((item: any) => item.name) : [];
-      setSkillOptions(options);
+      setter(options);
     } catch (err) {
-      console.error(`Error fetching Skill options:`, err);
+      console.error(`Error fetching ${doctype} options:`, err);
     }
   };
 
   useEffect(() => {
-    fetchSkillOptions();
+    // Initial fetch for common fields if needed
   }, []);
 
   const formatDate = (dateString: string) => {
@@ -94,7 +88,7 @@ export default function InternshipsTabContent() {
 
   const internshipFields: IndustryField[] = useMemo(() => [
     { name: "title", label: "Internship Title", type: "text", icon: Briefcase, required: true, colSpan: 2, placeholder: "e.g. Backend Developer Intern" },
-    { name: "type", label: "Category", type: "select", icon: Target, options: ["Technical", "Business", "Design", "Research", "Marketing", "Finance", "Operations"], required: true, placeholder: "Select Category" },
+    { name: "type", label: "Category", type: "select", icon: Target, options: categoryOptions.length > 0 ? categoryOptions : ["Technical", "Business", "Design", "Research", "Marketing", "Finance", "Operations"], required: true, placeholder: "Select Category" },
     { name: "industry", label: "Industry", type: "text", icon: Globe, required: true, placeholder: "e.g. Razorpay Technologies", disabled: true },
     { name: "location", label: "Location Type", type: "select", icon: MapPin, options: ["Remote", "On-site", "Hybrid"], required: true, placeholder: "Select Location" },
     { name: "stipend", label: "Stipend (Monthly)", type: "number", icon: IndianRupee, required: true, placeholder: "e.g. 15000" },
@@ -115,7 +109,7 @@ export default function InternshipsTabContent() {
       multiple: true
     },
     { name: "description", label: "Description", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Describe the roles and responsibilities..." },
-  ], [skillOptions]);
+  ], [skillOptions, categoryOptions]);
 
   const fetchInternships = async (industry: string) => {
     try {
@@ -193,7 +187,9 @@ export default function InternshipsTabContent() {
 
   const handleFieldFocus = (fieldName: string) => {
     if (fieldName === "required_skills" && skillOptions.length === 0) {
-      fetchSkillOptions();
+      fetchOptions("Skill", setSkillOptions);
+    } else if (fieldName === "type" && categoryOptions.length === 0) {
+      fetchOptions("Industry Skill Domain", setCategoryOptions);
     }
   };
 
@@ -228,7 +224,7 @@ export default function InternshipsTabContent() {
       industry: companyName || "Razorpay Technologies",
       status: "Active",
       location: "Remote",
-      type: "Technical",
+      type: "",
       required_skills: []
     };
   }, [editingInternship, companyName]);

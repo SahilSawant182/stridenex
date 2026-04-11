@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { motion, Variants } from "framer-motion";
 import { Search, ChevronDown, Download, Sparkles, Bookmark, Loader2, UserX, Target } from "lucide-react";
 import { useIndustry } from "@/context/IndustryContext";
-import { getFindTalentList } from "@/services/industry.services";
+import { getFindTalentList, getMasterData } from "@/services/industry.services";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -26,6 +26,23 @@ export default function FindTalentTabContent() {
   const [students, setStudents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [colleges, setColleges] = useState<string[]>([]);
+  const [isFetchingColleges, setIsFetchingColleges] = useState(false);
+
+  const fetchColleges = async () => {
+    if (colleges.length > 0 || isFetchingColleges) return;
+    try {
+      setIsFetchingColleges(true);
+      const response = await getMasterData("College");
+      const apiData = response.data || response.message || [];
+      const options = Array.isArray(apiData) ? apiData.map((item: any) => item.name) : [];
+      setColleges(options);
+    } catch (err) {
+      console.error("Error fetching colleges:", err);
+    } finally {
+      setIsFetchingColleges(false);
+    }
+  };
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -129,11 +146,14 @@ export default function FindTalentTabContent() {
           </div>
 
           <div className="relative">
-            <select className="appearance-none pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-700 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500">
-              <option>College Tier</option>
-              <option>Tier 1</option>
-              <option>Tier 2</option>
-              <option>Tier 3</option>
+            <select 
+              onFocus={fetchColleges}
+              className="appearance-none pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-700 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+            >
+              <option value="">{isFetchingColleges ? "Loading..." : "Select College"}</option>
+              {colleges.map((college) => (
+                <option key={college} value={college}>{college}</option>
+              ))}
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
           </div>

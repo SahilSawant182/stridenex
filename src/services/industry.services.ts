@@ -1,5 +1,22 @@
 import { apiService } from "./api.services";
 
+export const getMasterData = async (doctype: string) => {
+  try {
+    const response = await fetch(
+      `https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doctype })
+      }
+    );
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching master data for ${doctype}:`, error);
+    throw error;
+  }
+};
+
 export const getIndustryByEmail = async (email: string) => {
   try {
     const response = await apiService.get(
@@ -299,3 +316,5 @@ export const getFindTalentList = async (industry: string) => {
     throw error;
   }
 };
+
+
