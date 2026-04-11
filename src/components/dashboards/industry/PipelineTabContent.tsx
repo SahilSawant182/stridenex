@@ -109,13 +109,14 @@ export default function PipelineTabContent() {
   if (industryLoading || (loading && candidates["Applied"].length === 0)) {
     return (
       <div className="h-full min-h-[400px] flex flex-col items-center justify-center space-y-4">
-        <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+        <Loader2 className="w-10 h-10 text-orange-600 animate-spin" />
         <p className="text-slate-500 font-bold text-sm tracking-widest uppercase">Syncing Pipeline Data...</p>
       </div>
     );
   }
 
-  if (industryError || error) {
+  // Only show error if we have NO data to show
+  if ((industryError || error) && candidates["Applied"].length === 0) {
     return (
       <div className="h-full min-h-[400px] flex flex-col items-center justify-center space-y-4 text-center px-4">
         <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center">

@@ -25,11 +25,12 @@ import {
   Calendar,
   ListChecks,
   Clock,
+  Pen,
   Trash2
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
-import { updateIndustry, addRequiredRole, addHiringRound, getSkillDomain, createSkillDomain, updateSkillDomain, deleteSkillDomain, getCampusPartnerList, createCampusPartner, deleteCampusPartner } from "@/services/industry.services";
+import { updateIndustry, addRequiredRole, updateIndustryRole, addHiringRound, getSkillDomain, createSkillDomain, updateSkillDomain, deleteSkillDomain, getCampusPartnerList, createCampusPartner, deleteCampusPartner } from "@/services/industry.services";
 import { useIndustry, IndustryData, IndustryRole, HiringRound } from "@/context/IndustryContext";
 import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
 
@@ -179,7 +180,7 @@ export default function CompanyProfileTabContent() {
     { name: "employee_head_count", label: "Employee Count", type: "number", icon: Users, required: true, placeholder: "e.g. 500" },
     { name: "headquarters", label: "Headquarters", type: "text", icon: MapPin, required: true, placeholder: "e.g. Mumbai, Maharashtra" },
     { name: "company_website", label: "Website (URL)", type: "url", icon: Globe, required: true, placeholder: "https://www.company.com" },
-    { name: "cin", label: "CIN Number", type: "text", icon: FileText, required: true, placeholder: "Enter Corporate Identification Number" },
+    { name: "CIN", label: "CIN Number", type: "text", icon: FileText, required: true, placeholder: "Enter Corporate Identification Number" },
     { name: "about", label: "About Company", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Briefly describe your company's mission and goals..." },
   ], [businessTypeOptions, industrySectorOptions]);
 
@@ -233,7 +234,7 @@ export default function CompanyProfileTabContent() {
         employee_head_count: data?.employee_head_count,
         headquarters: data?.headquarters,
         company_website: data?.company_website,
-        cin: data?.cin,
+        CIN: data?.CIN,
         about: data?.about
       };
     }
@@ -269,7 +270,12 @@ export default function CompanyProfileTabContent() {
           industry: data?.company_name,
           amended_from: ""
         };
-        await addRequiredRole(payload, data?.company_name || "");
+        if (roleToEdit?.name) {
+          await updateIndustryRole(roleToEdit.name, payload);
+          setRoleToEdit(undefined);
+        } else {
+          await addRequiredRole(payload, data?.company_name || "");
+        }
         await refreshRoleList();
       } else if (modalMode === "hiring") {
         const payload = {
@@ -529,7 +535,7 @@ export default function CompanyProfileTabContent() {
                     { label: "Size", value: data?.employee_head_count ? `${parseInt(data.employee_head_count).toLocaleString()}+` : "N/A", icon: Users, color: "text-orange-500", bg: "bg-orange-50" },
                     { label: "HQ", value: data?.headquarters || "N/A", icon: MapPin, color: "text-emerald-500", bg: "bg-emerald-50" },
                     { label: "Website", value: data?.company_website || "N/A", icon: Globe, color: "text-indigo-500", bg: "bg-indigo-50" },
-                    { label: "CIN", value: data?.cin || "N/A", icon: FileText, color: "text-purple-500", bg: "bg-purple-50" },
+                    { label: "CIN", value: data?.CIN || "N/A", icon: FileText, color: "text-purple-500", bg: "bg-purple-50" },
                     { label: "Stage", value: "Series F Unicorn", icon: Star, color: "text-amber-500", bg: "bg-amber-50" },
                     { label: "GST Status", value: data?.gst_number ? "Registered" : "Pending", icon: ShieldCheck, color: "text-slate-600", bg: "bg-slate-100" },
                   ].map((item, idx) => (
@@ -688,7 +694,7 @@ export default function CompanyProfileTabContent() {
                   const Icon = roleIcons[role.role] || Building2;
 
                   return (
-                    <div key={idx} className="flex items-center justify-between group cursor-default hover:translate-x-1 transition-transform">
+                    <div key={idx} className="flex items-center justify-between group cursor-default hover:translate-x-1 transition-transform relative">
                       <div className="flex items-center gap-5">
                         <div className={`w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center shrink-0 border border-transparent shadow-sm group-hover:border-inherit transition-all`}>
                           <Icon className={`w-6 h-6 text-blue-500`} />
@@ -696,7 +702,18 @@ export default function CompanyProfileTabContent() {
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="text-base font-bold text-slate-800 leading-tight">{role.role}</h4>
-
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRoleToEdit(role);
+                                setModalMode("role");
+                                setIsModalOpen(true);
+                              }}
+                              className="p-1 hover:bg-slate-100 rounded-md transition-colors text-slate-400 hover:text-blue-600 opacity-0 group-hover:opacity-100"
+                              title="Edit Role"
+                            >
+                              <Pen className="w-3 h-3" />
+                            </button>
                           </div>
                           <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mt-1">
                             {Number(role.duration) > 0 ? `${role.duration} Months` : role.semester}

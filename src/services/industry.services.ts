@@ -38,6 +38,19 @@ export const addRequiredRole = async (data: any, industry: string) => {
   }
 };
 
+export const updateIndustryRole = async (name: string, data: any) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.industry_role.industry_role.update_industry_role?name=${encodeURIComponent(name)}`,
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating industry role:", error);
+    throw error;
+  }
+};
+
 export const getIndustryRoleList = async (industry: string) => {
   try {
     const response = await apiService.get(

@@ -28,7 +28,7 @@ export interface IndustryData {
   industry_sector: string;
   headquarters: string | null;
   employee_head_count: string;
-  cin: string | null;
+  CIN: string | null;
   turn_over_in_cr: string | number | null;
   company_website: string | null;
   status: string;
@@ -61,7 +61,7 @@ export const IndustryProvider = ({ children }: { children: React.ReactNode }) =>
       setRoleLoading(true);
       const { getIndustryRoleList } = await import("@/services/industry.services");
       const response = await getIndustryRoleList(industryName);
-      
+
       // Standardize response handling for empty/blank results
       const apiData = response?.message?.data || response?.data || response?.message || [];
       setRoleList(Array.isArray(apiData) ? apiData : []);
@@ -82,7 +82,7 @@ export const IndustryProvider = ({ children }: { children: React.ReactNode }) =>
         const data = Array.isArray(apiData.data) ? apiData.data[0] : apiData.data;
         setIndustryData(data || null);
         setError(null);
-        
+
         // Fetch separate role list if company name exists
         if (data?.company_name) {
           fetchRoleList(data.company_name);
