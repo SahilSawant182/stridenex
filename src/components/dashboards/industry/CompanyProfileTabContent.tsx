@@ -267,14 +267,15 @@ export default function CompanyProfileTabContent() {
       } else if (modalMode === "role") {
         const payload = {
           ...formData,
-          industry: data?.company_name,
-          amended_from: ""
+          industry: data?.company_name || formData.industry,
+          amended_from: formData.amended_from || "",
+          name: roleToEdit?.name || formData.name
         };
         if (roleToEdit?.name) {
           await updateIndustryRole(roleToEdit.name, payload);
           setRoleToEdit(undefined);
         } else {
-          await addRequiredRole(payload, data?.company_name || "");
+          await addRequiredRole(payload, data?.company_name || formData.industry || "");
         }
         await refreshRoleList();
       } else if (modalMode === "hiring") {
