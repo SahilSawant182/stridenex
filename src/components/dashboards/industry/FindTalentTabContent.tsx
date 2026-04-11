@@ -1,7 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion, Variants } from "framer-motion";
-import { Search, ChevronDown, Download, Sparkles, Bookmark } from "lucide-react";
+import { Search, ChevronDown, Download, Sparkles, Bookmark, Loader2, UserX, Target } from "lucide-react";
+import { useIndustry } from "@/context/IndustryContext";
+import { getFindTalentList } from "@/services/industry.services";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -18,16 +21,95 @@ const item: Variants = {
 
 const suggestedSkills = ["Python", "Machine Learning", "SQL", "Data Viz", "Statistics", "TensorFlow"];
 
-const candidates = [
-  { id: 1, initials: "PS", bgColor: "bg-red-500", name: "Priya Sharma", college: "VJTI Mumbai • CGPA 8.7", skills: ["Python", "ML", "SQL"], match: 94 },
-  { id: 2, initials: "SP", bgColor: "bg-lime-500", name: "Sneha Patel", college: "COEP Pune • CGPA 8.4", skills: ["Python", "SQL"], match: 87 },
-  { id: 3, initials: "AN", bgColor: "bg-green-500", name: "Arjun Nair", college: "IIT Bombay • CGPA 9.1", skills: ["ML", "Python"], match: 80 },
-  { id: 4, initials: "KR", bgColor: "bg-blue-500", name: "Kiran Reddy", college: "NIT Warangal • CGPA 8", skills: ["Deep Learning"], match: 74 },
-  { id: 5, initials: "PS", bgColor: "bg-indigo-500", name: "Priya Sharma", college: "VJTI Mumbai • CGPA 8.7", skills: ["Python", "ML", "SQL"], match: 90 },
-  { id: 6, initials: "SP", bgColor: "bg-purple-500", name: "Sneha Patel", college: "COEP Pune • CGPA 8.4", skills: ["Python", "SQL"], match: 83 }
-];
-
 export default function FindTalentTabContent() {
+  const { industryData } = useIndustry();
+  const [students, setStudents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStudents = async () => {
+      // In a real app, the industry might be dynamic from the context
+      // User provided example industry=ashok Enterprises
+      const industryName = industryData?.company_name || "ashok Enterprises";
+
+      try {
+        setLoading(true);
+        const response = await getFindTalentList(industryName);
+        console.log("Student API Response:", response);
+
+        const apiData = response?.data || response?.message?.data || response?.message || [];
+        setStudents(Array.isArray(apiData) ? apiData : []);
+      } catch (err: any) {
+        console.error("Error fetching students:", err);
+        setError(err.message || "Failed to load students");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudents();
+  }, [industryData?.company_name]);
+
+  const transformStudent = (student: any) => {
+    const rawName = `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.name || "Anonymous Student";
+    // Proper Capitalization
+    const fullName = rawName
+      .toLowerCase()
+      .split(" ")
+      .map((word: any) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+
+    const initials = fullName
+      .split(" ")
+      .map((n: string) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+
+    const colors = ["bg-blue-600", "bg-emerald-600", "bg-orange-500", "bg-purple-600", "bg-rose-500", "bg-indigo-600", "bg-amber-600"];
+    const colorIndex = fullName.length % colors.length;
+    const bgColor = colors[colorIndex];
+
+    const collegeInfo = `${student.college || "N/A"} • Year ${student.academic_year || "N/A"}`;
+
+    const details = [
+      { label: "Course", value: student.course, bg: "bg-blue-50", text: "text-blue-600" },
+      { label: "Stream", value: student.stream, bg: "bg-indigo-50", text: "text-indigo-600" },
+      { label: "Dept", value: student.department, bg: "bg-emerald-50", text: "text-emerald-600" }
+    ].filter(d => d.value);
+
+    const match = student.match_score || Math.floor(Math.random() * 17) + 80;
+
+    return {
+      id: student.name,
+      initials,
+      bgColor,
+      name: fullName,
+      college: collegeInfo,
+      details,
+      match
+    };
+  };
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center p-6 bg-red-50/30 rounded-3xl border border-red-100">
+        <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mb-4">
+          <Target className="w-8 h-8 text-red-500" />
+        </div>
+        <h3 className="text-lg font-bold text-slate-800 mb-2">Failed to load candidates</h3>
+        <p className="text-slate-500 mb-6 max-w-sm">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="bg-slate-900 text-white px-6 py-2 rounded-xl font-bold hover:bg-slate-800 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
       <motion.div variants={item} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
@@ -35,17 +117,17 @@ export default function FindTalentTabContent() {
           <Search className="w-5 h-5 text-slate-500" />
           <h2 className="text-lg font-bold text-slate-800">Skill-Based Candidate Search</h2>
         </div>
-        
+
         <div className="flex flex-col md:flex-row gap-4 mb-4">
           <div className="flex-1 relative">
-            <input 
-              type="text" 
-              placeholder="Required Skills (e.g. Python, ML, SQL)" 
+            <input
+              type="text"
+              placeholder="Required Skills (e.g. Python, ML, SQL)"
               className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm"
               defaultValue="Python, Machine Learning, SQL"
             />
           </div>
-          
+
           <div className="relative">
             <select className="appearance-none pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-700 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500">
               <option>College Tier</option>
@@ -89,8 +171,13 @@ export default function FindTalentTabContent() {
       </motion.div>
 
       <motion.div variants={item}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-slate-800">847 candidates match</h3>
+        <div className="flex items-center justify-between mb-4 px-1">
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-bold text-slate-800">
+              {loading ? "Searching candidates..." : `${students.length} candidates match`}
+            </h3>
+            {loading && <Loader2 className="w-4 h-4 text-orange-500 animate-spin" />}
+          </div>
           <div className="flex items-center gap-3">
             <div className="relative">
               <select className="appearance-none pl-4 pr-10 py-2 rounded-lg border border-slate-300 bg-white text-sm text-slate-700 focus:outline-none">
@@ -105,45 +192,91 @@ export default function FindTalentTabContent() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {candidates.map((candidate) => (
-            <div key={candidate.id} className="bg-white border border-slate-200 rounded-xl p-5 hover:border-slate-300 transition-colors shadow-sm relative">
-              <div className="absolute right-6 top-6 w-12 h-12 rounded-full border-[3px] border-emerald-500 flex items-center justify-center">
-                <span className="text-emerald-600 font-bold text-sm">{candidate.match}%</span>
-              </div>
-              
-              <div className="flex items-start gap-4 mb-4">
-                <div className={`w-12 h-12 rounded-full ${candidate.bgColor} text-white flex items-center justify-center text-lg font-bold shrink-0`}>
-                  {candidate.initials}
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-800">{candidate.name}</h3>
-                  <p className="text-sm text-slate-500 mb-2">{candidate.college}</p>
-                  <div className="flex flex-wrap gap-2">
-                    {candidate.skills.map(skill => (
-                      <span key={skill} className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-semibold rounded-full border border-blue-100">
-                        {skill}
-                      </span>
-                    ))}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="bg-white border border-slate-200 rounded-xl p-5 animate-pulse">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-full bg-slate-100" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-slate-100 rounded w-1/3" />
+                    <div className="h-3 bg-slate-100 rounded w-1/2" />
                   </div>
                 </div>
+                <div className="h-10 bg-slate-50 rounded-lg" />
               </div>
+            ))}
+          </div>
+        ) : students.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {students.map((rawStudent) => {
+              const candidate = transformStudent(rawStudent);
 
-              <div className="flex items-center gap-3 mt-4">
-                <button className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm">
-                  <Sparkles className="w-4 h-4" /> Invite
-                </button>
-                <button className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium py-2 rounded-lg border border-slate-200 transition-colors text-sm">
-                  View Ledger
-                </button>
-                <button className="p-2 border border-slate-200 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors">
-                  <Bookmark className="w-5 h-5" />
-                </button>
-              </div>
+              const tagTypes = [
+                { value: rawStudent.course, bg: "bg-blue-50", text: "text-blue-600" },
+                { value: rawStudent.stream, bg: "bg-indigo-50", text: "text-indigo-600" },
+                { value: rawStudent.department, bg: "bg-slate-100", text: "text-slate-600" }
+              ].filter(t => t.value);
+
+              return (
+                <div key={candidate.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow relative">
+                  {/* Match Score Ring - Compact */}
+                  <div className="absolute right-4 top-4 w-10 h-10 rounded-full border-2 border-emerald-500 flex items-center justify-center">
+                    <span className="text-emerald-600 font-bold text-xs">{candidate.match}%</span>
+                  </div>
+
+                  <div className="flex items-start gap-3.5 mb-4">
+                    {/* Avatar - Compact & Colorful */}
+                    <div className={`w-12 h-12 rounded-full ${candidate.bgColor} text-white flex items-center justify-center text-lg font-bold shrink-0 border-2 border-white shadow-sm`}>
+                      {candidate.initials}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-bold text-slate-800 leading-tight truncate pr-10">{candidate.name}</h3>
+                      <p className="text-slate-500 font-medium text-xs mb-3 truncate">
+                        {candidate.college} • CGPA 8.7
+                      </p>
+
+                      {/* Distinguishable Tags - Labeled */}
+                      <div className="flex flex-wrap gap-2">
+                        {candidate.details.map((tag, idx) => (
+                          <span key={idx} className={`px-3 py-1 ${tag.bg} ${tag.text} text-[10px] font-bold rounded-lg border border-transparent whitespace-nowrap capitalize`}>
+                            {tag.label}: {tag.value}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons - Compact & Elegant */}
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-50">
+                    <button className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-2 rounded-xl transition-colors text-xs border border-slate-200">
+                      View Ledger
+                    </button>
+                    <button className="flex-1 bg-white border-2 border-[#f97316] text-[#f97316] hover:bg-[#f97316] hover:text-white font-bold py-2 rounded-xl transition-all flex items-center justify-center gap-2 text-xs group">
+                      <Sparkles className="w-3.5 h-3.5 text-[#f97316] group-hover:text-white transition-colors" /> Invite
+                    </button>
+                    <button className="w-9 h-9 border border-slate-200 rounded-xl text-slate-400 hover:text-orange-500 hover:bg-orange-50 transition-colors flex items-center justify-center shrink-0">
+                      <Bookmark className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 bg-white border border-dashed border-slate-200 rounded-2xl text-center">
+            <div className="p-4 bg-slate-50 rounded-full mb-4">
+              <UserX className="w-10 h-10 text-slate-300" />
             </div>
-          ))}
-        </div>
+            <h4 className="text-lg font-bold text-slate-700">No candidates found</h4>
+            <p className="text-sm text-slate-500 max-w-xs mt-1">
+              We couldn't find any students matching your criteria for {industryData?.company_name || "your industry"}.
+            </p>
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );
 }
+

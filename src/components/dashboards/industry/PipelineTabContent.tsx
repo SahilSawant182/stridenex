@@ -50,15 +50,20 @@ export default function PipelineTabContent() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const companyName = industryData?.company_name || "";
 
   const fetchApplications = useCallback(async (companyName: string) => {
     try {
       setLoading(true);
       // For now, only 'Applied' is available dynamically as per user request
-      const response = await getStudentApplicationList(companyName, "Applied");
-      
+      const response = await getStudentApplicationList(companyName);
+
       // Resilient data extraction to ensure all items are listed
-      const apiData = response?.data || response?.message?.data || response?.message;
+      const apiData =
+        response?.data?.data ||
+        response?.message?.data ||
+        (Array.isArray(response?.data) ? response.data : []) ||
+        [];
 
       if (Array.isArray(apiData)) {
         console.log(`Pipeline: Fetched ${apiData.length} applications for ${companyName}`);
@@ -70,15 +75,15 @@ export default function PipelineTabContent() {
 
           return {
             id: app.name || Math.random().toString(),
-            name: email.split('@')[0], 
+            name: email.split('@')[0],
             initials: initials,
             bgColor: randomColor,
-            college: app.college || "N/A", 
+            college: app.college || "N/A",
             skills: app.applied_on ? [new Date(app.applied_on).toLocaleDateString()] : [],
             match: Math.round(app.match_score * 100) || 0
           };
         });
-
+        console.log(mappedApplied, "mappedApplied")
         setCandidates(prev => ({
           ...prev,
           "Applied": mappedApplied
@@ -93,11 +98,13 @@ export default function PipelineTabContent() {
     }
   }, []);
 
+  console.log(candidates, "candidates")
+
   useEffect(() => {
-    if (industryData?.company_name) {
-      fetchApplications(industryData.company_name);
-    }
-  }, [industryData?.company_name, fetchApplications]);
+    // if (industryData?.company_name) {
+    fetchApplications(companyName);
+    // }
+  }, [companyName, fetchApplications]);
 
   if (industryLoading || (loading && candidates["Applied"].length === 0)) {
     return (
@@ -153,7 +160,7 @@ export default function PipelineTabContent() {
                         <p className="text-xs text-slate-500 font-semibold">{candidate.college}</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center justify-between mt-2">
                       <div className="flex flex-wrap gap-1">
                         {candidate.skills.map(skill => (

@@ -104,50 +104,6 @@ export default function CompanyProfileTabContent() {
   const [campusPartnersLoading, setCampusPartnersLoading] = useState(false);
   const [collegeOptions, setCollegeOptions] = useState<string[]>([]);
 
-  // const fetchSkillsList = async () => {
-  //   if (data?.company_name) {
-  //     try {
-  //       setSkillsLoading(true);
-  //       const response = await getSkillDomain(data?.company_name);
-
-  //       // Resilience: Handle various API response structures
-  //       let apiData: any[] = [];
-  //       if (Array.isArray(response)) {
-  //         apiData = response;
-  //       } else if (response?.data && Array.isArray(response.data)) {
-  //         apiData = response.data;
-  //       } else if (response?.message?.data && Array.isArray(response.message.data)) {
-  //         apiData = response.message.data;
-  //       } else if (response?.message && Array.isArray(response.message)) {
-  //         apiData = response.message;
-  //       }
-
-  //       if (Array.isArray(apiData)) {
-  //         const mapped = apiData.map((domain: any, idx: number) => {
-  //           const theme = colorThemes[idx % colorThemes.length] || colorThemes[0];
-  //           return {
-  //             id: domain.name || `domain-${idx}`,
-  //             title: domain.skill_domain || "Untitled Domain",
-  //             tags: Array.isArray(domain.skills) ? domain.skills.map((s: any) => s.skill).filter(Boolean) : [],
-  //             roles: Array.isArray(domain.roles) ? domain.roles.map((r: any) => r.designation).filter(Boolean).join(" • ") : "N/A",
-  //             openings: 0,
-  //             ...theme,
-  //             raw: domain
-  //           };
-  //         });
-  //         setSkillDomains(mapped);
-  //       } else {
-  //         setSkillDomains([]);
-  //       }
-  //     } catch (err) {
-  //       console.error("Error fetching skill domains:", err);
-  //     } finally {
-  //       setSkillsLoading(false);
-  //     }
-  //   }
-  // };
-
-
   const fetchSkillsList = async () => {
     if (!data?.company_name) return;
     try {
@@ -839,7 +795,7 @@ export default function CompanyProfileTabContent() {
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
                 Campus Partners
                 {!campusPartnersLoading && campusPartners.length > 0 && (
-                  <button 
+                  <button
                     onClick={() => {
                       setModalMode("campus_partner");
                       setIsModalOpen(true);
@@ -861,14 +817,14 @@ export default function CompanyProfileTabContent() {
                   campusPartners.map((partner, idx) => {
                     const partnerId = partner.name || `${data?.company_name}-${partner.college}`;
                     const isDeleting = isDeletingPartner === partnerId;
-                    
+
                     return (
-                      <div 
-                        key={partnerId} 
+                      <div
+                        key={partnerId}
                         className={`px-3 py-1.5 bg-white text-slate-700 text-[10px] font-bold rounded-xl border border-slate-100 hover:border-indigo-200 hover:shadow-sm transition-all cursor-default flex items-center gap-2 group/tag shrink-0 ${isDeleting ? 'opacity-50 grayscale' : ''}`}
                       >
                         <span className="truncate max-w-[150px]">{partner.college}</span>
-                        <button 
+                        <button
                           onClick={() => handleDeleteCampusPartner(partnerId)}
                           disabled={isDeleting}
                           className="text-slate-300 hover:text-red-500 transition-colors shrink-0 disabled:opacity-50"
@@ -885,7 +841,7 @@ export default function CompanyProfileTabContent() {
                 ) : (
                   <div className="w-full">
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-4 ml-1">No campus partners added</p>
-                    <button 
+                    <button
                       onClick={() => {
                         setModalMode("campus_partner");
                         setIsModalOpen(true);

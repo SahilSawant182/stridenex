@@ -163,11 +163,12 @@ export const deleteInternship = async (name: string) => {
   }
 };
 
-export const getStudentApplicationList = async (industry: string, status: string) => {
+export const getStudentApplicationList = async (industry: string) => {
   try {
     const response = await apiService.get(
       `method/stridenex_app.stridenex_app.doctype.internship_application.internship_application.get_student_application_list?industry=${encodeURIComponent(industry)}`
     );
+    console.log(response, "response")
     return response;
   } catch (error) {
     console.error("Error fetching student application list:", error);
@@ -270,6 +271,18 @@ export const deleteCampusPartner = async (name: string) => {
     return response;
   } catch (error) {
     console.error("Error deleting campus partner:", error);
+    throw error;
+  }
+};
+
+export const getFindTalentList = async (industry: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.student.student.get_student_list?industry=${encodeURIComponent(industry)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching student list:", error);
     throw error;
   }
 };
