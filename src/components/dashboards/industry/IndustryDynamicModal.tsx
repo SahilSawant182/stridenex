@@ -35,6 +35,7 @@ interface IndustryDynamicModalProps {
   loading?: boolean;
   error?: string | null;
   onFieldFocus?: (fieldName: string) => void;
+  onValuesChange?: (values: Record<string, any>, changedFieldName: string) => Record<string, any> | void;
 }
 
 export default function IndustryDynamicModal({
@@ -49,7 +50,8 @@ export default function IndustryDynamicModal({
   onSubmit,
   loading = false,
   error = null,
-  onFieldFocus
+  onFieldFocus,
+  onValuesChange
 }: IndustryDynamicModalProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [activeSelect, setActiveSelect] = useState<string | null>(null);
@@ -79,25 +81,40 @@ export default function IndustryDynamicModal({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    setFormData(prev => ({ 
-      ...prev, 
-      [name]: type === "number" ? (value === "" ? "" : Number(value)) : value 
-    }));
+    setFormData(prev => {
+      const newValue = type === "number" ? (value === "" ? "" : Number(value)) : value;
+      const updated = { ...prev, [name]: newValue };
+      
+      if (onValuesChange) {
+        const sideEffects = onValuesChange(updated, name);
+        if (sideEffects) return { ...updated, ...sideEffects };
+      }
+      
+      return updated;
+    });
   };
 
   const toggleSelectValue = (fieldName: string, value: string, multiple: boolean) => {
     setFormData(prev => {
+      let updated;
       if (multiple) {
         const currentValues = Array.isArray(prev[fieldName]) ? prev[fieldName] : [];
         const newValues = currentValues.includes(value)
           ? currentValues.filter((v: string) => v !== value)
           : [...currentValues, value];
-        return { ...prev, [fieldName]: newValues };
+        updated = { ...prev, [fieldName]: newValues };
       } else {
         setActiveSelect(null);
         setSearchTerm("");
-        return { ...prev, [fieldName]: value };
+        updated = { ...prev, [fieldName]: value };
       }
+
+      if (onValuesChange) {
+        const sideEffects = onValuesChange(updated, fieldName);
+        if (sideEffects) return { ...updated, ...sideEffects };
+      }
+
+      return updated;
     });
   };
 

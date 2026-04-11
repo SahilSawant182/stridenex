@@ -21,6 +21,7 @@ import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { getProjectList, createProject, updateProject, deleteProject } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
 import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
+import { calculateEndDate } from "@/utils/date.utils";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -181,6 +182,15 @@ export default function ProjectsTabContent() {
   const handleFieldFocus = (fieldName: string) => {
     if (fieldName === "required_skills" && skillOptions.length === 0) {
       fetchSkillOptions();
+    }
+  };
+
+  const handleValuesChange = (values: Record<string, any>, changedFieldName: string) => {
+    if (changedFieldName === "start_date" || changedFieldName === "duration") {
+      const newEndDate = calculateEndDate(values.start_date, values.duration);
+      if (newEndDate) {
+        return { end_date: newEndDate };
+      }
     }
   };
 
@@ -395,6 +405,7 @@ export default function ProjectsTabContent() {
         loading={modalLoading}
         error={modalError}
         onFieldFocus={handleFieldFocus}
+        onValuesChange={handleValuesChange}
       />
     </motion.div>
   );
