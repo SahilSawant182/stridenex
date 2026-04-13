@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, Variants } from "framer-motion";
-import { Search, ChevronDown, Download, Sparkles, Bookmark, Loader2, UserX, Target } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { motion, Variants, AnimatePresence } from "framer-motion";
+import { Search, ChevronDown, Download, Sparkles, Bookmark, Loader2, UserX, Target, Check } from "lucide-react";
+
 import { useIndustry } from "@/context/IndustryContext";
 import { getFindTalentList, getMasterData } from "@/services/industry.services";
 
@@ -28,6 +29,12 @@ export default function FindTalentTabContent() {
   const [error, setError] = useState<string | null>(null);
   const [colleges, setColleges] = useState<string[]>([]);
   const [isFetchingColleges, setIsFetchingColleges] = useState(false);
+  const [selectedCollege, setSelectedCollege] = useState<string>("");
+  const [isCollegeDropdownOpen, setIsCollegeDropdownOpen] = useState(false);
+  const [collegeSearchTerm, setCollegeSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+
 
   const fetchColleges = async () => {
     if (colleges.length > 0 || isFetchingColleges) return;
@@ -45,14 +52,23 @@ export default function FindTalentTabContent() {
   };
 
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsCollegeDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+
     const fetchStudents = async () => {
-      // In a real app, the industry might be dynamic from the context
-      // User provided example industry=ashok Enterprises
       const industryName = industryData?.company_name || "ashok Enterprises";
 
       try {
         setLoading(true);
-        const response = await getFindTalentList(industryName);
+        const response = await getFindTalentList(industryName, selectedCollege);
         console.log("Student API Response:", response);
 
         const apiData = response?.data || response?.message?.data || response?.message || [];
@@ -66,7 +82,8 @@ export default function FindTalentTabContent() {
     };
 
     fetchStudents();
-  }, [industryData?.company_name]);
+  }, [industryData?.company_name, selectedCollege]);
+
 
   const transformStudent = (student: any) => {
     const rawName = `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.name || "Anonymous Student";
@@ -145,18 +162,86 @@ export default function FindTalentTabContent() {
             />
           </div>
 
-          <div className="relative">
-            <select 
-              onFocus={fetchColleges}
-              className="appearance-none pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-700 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+          <div className="relative" ref={dropdownRef}>
+            <div 
+              onClick={() => {
+                setIsCollegeDropdownOpen(!isCollegeDropdownOpen);
+                if (!isCollegeDropdownOpen) fetchColleges();
+              }}
+              className={`flex items-center justify-between min-w-[200px] px-4 py-2.5 rounded-xl border ${isCollegeDropdownOpen ? 'border-orange-500 ring-2 ring-orange-500/20' : 'border-slate-300'} bg-white text-sm text-slate-700 cursor-pointer hover:border-slate-400 transition-all`}
             >
-              <option value="">{isFetchingColleges ? "Loading..." : "Select College"}</option>
-              {colleges.map((college) => (
-                <option key={college} value={college}>{college}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+              <span className="truncate max-w-[150px]">
+                {selectedCollege || (isFetchingColleges ? "Loading..." : "Select College")}
+              </span>
+              <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${isCollegeDropdownOpen ? 'rotate-180' : ''}`} />
+            </div>
+
+            <AnimatePresence>
+              {isCollegeDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 p-2 max-h-64 overflow-hidden flex flex-col"
+                >
+                  {/* Search Input */}
+                  <div className="relative mb-2">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input 
+                      type="text"
+                      placeholder="Search colleges..."
+                      value={collegeSearchTerm}
+                      onChange={(e) => setCollegeSearchTerm(e.target.value)}
+                      className="w-full h-10 pl-9 pr-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-orange-500/10 transition-all"
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* Colleges List */}
+                  <div className="overflow-y-auto custom-scrollbar flex-1">
+                    <div
+                      onClick={() => {
+                        setSelectedCollege("");
+                        setIsCollegeDropdownOpen(false);
+                        setCollegeSearchTerm("");
+                      }}
+                      className="px-3 py-2.5 rounded-xl cursor-pointer hover:bg-slate-50 text-slate-600 text-xs font-bold transition-all flex items-center justify-between mb-1"
+                    >
+                      All Colleges
+                    </div>
+                    {colleges
+                      .filter(c => c.toLowerCase().includes(collegeSearchTerm.toLowerCase()))
+                      .map((college) => {
+                        const isSelected = selectedCollege === college;
+                        return (
+                          <div
+                            key={college}
+                            onClick={() => {
+                              setSelectedCollege(college);
+                              setIsCollegeDropdownOpen(false);
+                              setCollegeSearchTerm("");
+                            }}
+                            className={`px-3 py-2.5 rounded-xl cursor-pointer transition-all mb-1 flex items-center justify-between ${
+                              isSelected ? 'bg-orange-50 text-orange-600' : 'hover:bg-slate-50 text-slate-600'
+                            }`}
+                          >
+                            <span className="text-xs font-bold leading-tight">{college}</span>
+                            {isSelected && <Check className="w-3.5 h-3.5" />}
+                          </div>
+                        );
+                      })}
+                    {colleges.filter(c => c.toLowerCase().includes(collegeSearchTerm.toLowerCase())).length === 0 && !isFetchingColleges && (
+                      <div className="py-6 text-center">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No colleges found</p>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
+
+
 
           <div className="relative">
             <select className="appearance-none pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm text-slate-700 min-w-[150px] focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500">

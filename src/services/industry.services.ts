@@ -305,16 +305,19 @@ export const deleteCampusPartner = async (name: string) => {
   }
 };
 
-export const getFindTalentList = async (industry: string) => {
+export const getFindTalentList = async (industry: string, college?: string) => {
   try {
-    const response = await apiService.get(
-      `method/stridenex_app.stridenex_app.doctype.student.student.get_student_list?industry=${encodeURIComponent(industry)}`
-    );
+    let url = `method/stridenex_app.stridenex_app.doctype.student.student.get_student_list?industry=${encodeURIComponent(industry)}`;
+    if (college) {
+      url += `&college=${encodeURIComponent(college)}`;
+    }
+    const response = await apiService.get(url);
     return response;
   } catch (error) {
     console.error("Error fetching student list:", error);
     throw error;
   }
 };
+
 
 
