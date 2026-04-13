@@ -23,6 +23,8 @@ import { useIndustry } from "@/context/IndustryContext";
 import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
 import { calculateEndDate } from "@/utils/date.utils";
 
+import { useSearchParams } from "next/navigation";
+
 const container: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -38,6 +40,8 @@ const item: Variants = {
 
 export default function ProjectsTabContent() {
   const { industryData, loading: industryLoading, refreshIndustryData } = useIndustry();
+  const searchParams = useSearchParams();
+  
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +55,14 @@ export default function ProjectsTabContent() {
   const [skillOptions, setSkillOptions] = useState<string[]>([]);
   const [projectToEdit, setProjectToEdit] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+  useEffect(() => {
+    const action = searchParams.get("action");
+    if (action === "post-new") {
+      setProjectToEdit(null);
+      setIsModalOpen(true);
+    }
+  }, [searchParams]);
 
   const fetchOptions = async (doctype: string, setter: (val: string[]) => void) => {
     try {

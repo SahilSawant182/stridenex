@@ -20,7 +20,7 @@ import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
 import { useIndustry } from "@/context/IndustryContext";
 import { getApplicationStatusCount } from "@/services/industry.services";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -132,6 +132,7 @@ const initialPipelineStages = [
 ];
 
 export default function IndustryOverviewPage() {
+  const router = useRouter();
   const { industryData } = useIndustry();
   const [pipelineStages, setPipelineStages] = useState(initialPipelineStages);
   const [loadingPipeline, setLoadingPipeline] = useState(false);
@@ -277,18 +278,24 @@ export default function IndustryOverviewPage() {
           <BaseCard className="border-slate-200 p-5">
             <h3 className="font-bold text-slate-800 mb-4 text-base">Quick Actions</h3>
             <div className="space-y-3">
-               <button className="w-full text-left px-4 py-3 border border-slate-200 rounded-xl flex items-center gap-3 hover:border-slate-300 hover:bg-slate-50 transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
-                    <Briefcase className="w-4 h-4 text-orange-500" />
-                  </div>
-                  <span className="font-medium text-slate-700 text-sm flex-1">Post New Internship</span>
-               </button>
-               <button className="w-full text-left px-4 py-3 border border-slate-200 rounded-xl flex items-center gap-3 hover:border-slate-300 hover:bg-slate-50 transition-colors">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                    <Target className="w-4 h-4 text-blue-500" />
-                  </div>
-                  <span className="font-medium text-slate-700 text-sm flex-1">Post Live Project</span>
-               </button>
+                <button 
+                  onClick={() => router.push("/industry/dashboard/internships?action=post-new")}
+                  className="w-full text-left px-4 py-3 border border-slate-200 rounded-xl flex items-center gap-3 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+                >
+                   <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+                     <Briefcase className="w-4 h-4 text-orange-500" />
+                   </div>
+                   <span className="font-medium text-slate-700 text-sm flex-1">Post New Internship</span>
+                </button>
+                <button 
+                  onClick={() => router.push("/industry/dashboard/projects?action=post-new")}
+                  className="w-full text-left px-4 py-3 border border-slate-200 rounded-xl flex items-center gap-3 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+                >
+                   <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                     <Target className="w-4 h-4 text-blue-500" />
+                   </div>
+                   <span className="font-medium text-slate-700 text-sm flex-1">Post Live Project</span>
+                </button>
             </div>
           </BaseCard>
         </motion.div>

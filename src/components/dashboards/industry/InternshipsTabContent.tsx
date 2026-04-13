@@ -26,6 +26,8 @@ import { useIndustry } from "@/context/IndustryContext";
 import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
 import { calculateEndDate } from "@/utils/date.utils";
 
+import { useSearchParams } from "next/navigation";
+
 const container: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -41,6 +43,7 @@ const item: Variants = {
 
 export default function InternshipsTabContent() {
   const { industryData, loading: industryLoading } = useIndustry();
+  const searchParams = useSearchParams();
 
   const [internships, setInternships] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +60,17 @@ export default function InternshipsTabContent() {
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    const action = searchParams.get("action");
+    if (action === "post-new") {
+      setEditingInternship(null);
+      setIsModalOpen(true);
+      
+      // Optional: Clear the parameter from the URL without refresh if needed
+      // window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, [searchParams]);
 
   const fetchOptions = async (doctype: string, setter: (val: string[]) => void) => {
     try {
