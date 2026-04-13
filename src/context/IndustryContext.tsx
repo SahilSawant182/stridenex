@@ -28,8 +28,9 @@ export interface IndustryData {
   industry_sector: string;
   headquarters: string | null;
   employee_head_count: string;
-  CIN: string | null;
+  cin: string | null;
   turn_over_in_cr: string | number | null;
+
   company_website: string | null;
   status: string;
   required_roles: IndustryRole[];
@@ -80,7 +81,14 @@ export const IndustryProvider = ({ children }: { children: React.ReactNode }) =>
 
       if (apiData && (apiData.status === 200 || apiData.status === "200")) {
         const data = Array.isArray(apiData.data) ? apiData.data[0] : apiData.data;
+        
+        // Standardize keys (e.g., CIN to cin)
+        if (data && data.CIN && !data.cin) {
+          data.cin = data.CIN;
+        }
+        
         setIndustryData(data || null);
+
         setError(null);
 
         // Fetch separate role list if company name exists

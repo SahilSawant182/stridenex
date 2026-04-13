@@ -180,8 +180,9 @@ export default function CompanyProfileTabContent() {
     { name: "employee_head_count", label: "Employee Count", type: "number", icon: Users, required: true, placeholder: "e.g. 500" },
     { name: "headquarters", label: "Headquarters", type: "text", icon: MapPin, required: true, placeholder: "e.g. Mumbai, Maharashtra" },
     { name: "company_website", label: "Website (URL)", type: "url", icon: Globe, required: true, placeholder: "https://www.company.com" },
-    { name: "CIN", label: "CIN Number", type: "text", icon: FileText, required: true, placeholder: "Enter Corporate Identification Number" },
+    { name: "cin", label: "CIN Number", type: "text", icon: FileText, required: true, placeholder: "Enter Corporate Identification Number" },
     { name: "about", label: "About Company", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Briefly describe your company's mission and goals..." },
+
   ], [businessTypeOptions, industrySectorOptions]);
 
   const roleFields: IndustryField[] = useMemo(() => [
@@ -234,9 +235,10 @@ export default function CompanyProfileTabContent() {
         employee_head_count: data?.employee_head_count,
         headquarters: data?.headquarters,
         company_website: data?.company_website,
-        CIN: data?.CIN,
+        cin: data?.cin,
         about: data?.about
       };
+
     }
     if (modalMode === "role") {
       return roleToEdit ? { ...roleToEdit } : undefined;
@@ -528,8 +530,9 @@ export default function CompanyProfileTabContent() {
                     { label: "Size", value: data?.employee_head_count ? `${parseInt(data.employee_head_count).toLocaleString()}+` : "N/A", icon: Users, color: "text-orange-500", bg: "bg-orange-50" },
                     { label: "HQ", value: data?.headquarters || "N/A", icon: MapPin, color: "text-emerald-500", bg: "bg-emerald-50" },
                     { label: "Website", value: data?.company_website || "N/A", icon: Globe, color: "text-indigo-500", bg: "bg-indigo-50" },
-                    { label: "CIN", value: data?.CIN || "N/A", icon: FileText, color: "text-purple-500", bg: "bg-purple-50" },
+                    { label: "CIN", value: data?.cin || "N/A", icon: FileText, color: "text-purple-500", bg: "bg-purple-50" },
                     { label: "Stage", value: "Series F Unicorn", icon: Star, color: "text-amber-500", bg: "bg-amber-50" },
+
                     { label: "GST Status", value: data?.gst_number ? "Registered" : "Pending", icon: ShieldCheck, color: "text-slate-600", bg: "bg-slate-100" },
                   ].map((item, idx) => (
                     <div key={idx} className="bg-white border border-slate-100 rounded-2xl p-5 hover:border-slate-300 hover:shadow-md transition-all group">
