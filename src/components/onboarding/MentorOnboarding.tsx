@@ -81,6 +81,18 @@ export default function MentorOnboarding({
     // Validation errors
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+    useEffect(() => {
+        const savedEmail = localStorage.getItem("userEmail") || "";
+        const savedFirstName = localStorage.getItem("userFirstName") || "";
+        const savedLastName = localStorage.getItem("userLastName") || "";
+        setFormData(prev => ({
+            ...prev,
+            email_id: savedEmail,
+            first_name: savedFirstName,
+            last_name: savedLastName,
+        }));
+    }, []);
+
     // Close dropdown when clicking outside
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -330,12 +342,14 @@ export default function MentorOnboarding({
             const cleanMobile = formData.mobile_no.replace(/\D/g, '');
             const formattedMobile = `+91-${cleanMobile}`;
 
+            const userEmail = localStorage.getItem("userEmail") || formData.email_id;
+
             // Format the payload according to your API requirements
             const payload = {
                 first_name: formData.first_name.trim(),
                 last_name: formData.last_name.trim(),
                 mobile_no: formattedMobile,
-                email_id: formData.email_id.trim().toLowerCase(),
+                email_id: userEmail.trim().toLowerCase(),
                 type: formData.type,
                 country: formData.country,
                 state: formData.state,
@@ -370,8 +384,18 @@ export default function MentorOnboarding({
 
             console.log("API Response:", response.data);
 
-            if (response.status === 200) {
+            // Strict check: HTTP 200 and internal message status must be 200 (if present)
+            const internalStatus = response.data?.message?.status;
+            const isSuccess = response.status === 200 && (internalStatus === 200 || internalStatus === undefined || internalStatus === "success");
+
+            if (isSuccess) {
                 setSuccess("Mentor onboarding completed successfully!");
+
+                // Clear onboarding-specific localStorage items
+                localStorage.removeItem("userEmail");
+                localStorage.removeItem("userFirstName");
+                localStorage.removeItem("userLastName");
+
                 setTimeout(() => {
                     if (isMobileSource) {
                         window.location.href = "/login";
@@ -380,29 +404,51 @@ export default function MentorOnboarding({
                     }
                 }, 1500);
             } else {
-                setError(response.data?.message || "Failed to create mentor. Please try again.");
+                // Handle internal errors or non-200 cases
+                let errorMsg = response.data?.message?.message || response.data?.message || "Failed to create mentor. Please try again.";
+                
+                if (response.data?._server_messages) {
+                    try {
+                        const messages = JSON.parse(response.data._server_messages);
+                        const parsedMessage = JSON.parse(messages[0]);
+                        errorMsg = parsedMessage.message || errorMsg;
+                    } catch (e) {
+                        // Keep previous errorMsg
+                    }
+                }
+                
+                setError(errorMsg);
             }
         } catch (err: any) {
             console.error("Error submitting mentor data:", err);
 
+            let errorMessage = "Error submitting mentor data. Please check your connection and try again.";
+
             if (err?.response?.status === 401) {
-                setError("Authentication required. Please contact support.");
+                errorMessage = "Authentication required. Please contact support.";
             } else if (err?.response?.data?._server_messages) {
                 try {
                     const messages = JSON.parse(err.response.data._server_messages);
                     const parsedMessage = JSON.parse(messages[0]);
-                    setError(parsedMessage.message || "Validation error. Please check your input.");
+                    errorMessage = parsedMessage.message || "Validation error. Please check your input.";
                 } catch {
-                    setError(err?.response?.data?.message || "Error submitting data");
+                    errorMessage = err?.response?.data?.message || "Error submitting data";
                 }
-            } else if (err?.response?.data?.message) {
-                setError(err.response.data.message);
-            } else if (err?.response?.data?.error) {
-                setError(err.response.data.error);
             } else {
-                const errorMessage = err?.message || "Error submitting mentor data. Please check your connection and try again.";
-                setError(errorMessage);
+                // Extract precise message if available
+                const nestedMessage = err?.response?.data?.message;
+                if (typeof nestedMessage === 'object' && nestedMessage !== null) {
+                    errorMessage = nestedMessage.message || errorMessage;
+                } else if (typeof nestedMessage === 'string') {
+                    errorMessage = nestedMessage;
+                } else if (err?.response?.data?.error) {
+                    errorMessage = err.response.data.error;
+                } else {
+                    errorMessage = err?.message || errorMessage;
+                }
             }
+            
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }

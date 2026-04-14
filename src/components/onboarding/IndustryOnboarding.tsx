@@ -93,8 +93,17 @@ export default function IndustryOnboarding({
         city: "",
         turn_over_in_cr: "",
         company_website: "",
-        average_fresher_recruited_per_year: ""
+        average_fresher_recruited_per_year: "",
+        email: ""
     });
+
+    useEffect(() => {
+        const savedEmail = localStorage.getItem("userEmail") || "";
+        setFormData(prev => ({
+            ...prev,
+            email: savedEmail
+        }));
+    }, []);
 
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -314,6 +323,10 @@ export default function IndustryOnboarding({
                 job_function: jobFunc
             }));
 
+            // Get email from localStorage (MANDATORY)
+            const userEmail = localStorage.getItem("userEmail");
+
+
             const payload = {
                 company_name: formData.company_name,
                 contact_details: formattedContactPersons,
@@ -331,12 +344,16 @@ export default function IndustryOnboarding({
                 turn_over_in_cr: formData.turn_over_in_cr ? parseFloat(formData.turn_over_in_cr) : undefined,
                 company_website: formData.company_website || undefined,
                 average_fresher_recruited_per_year: formData.average_fresher_recruited_per_year ?
-                    parseInt(formData.average_fresher_recruited_per_year) : undefined
+                    parseInt(formData.average_fresher_recruited_per_year) : undefined,
+                email: userEmail  // MANDATORY - always passed
             };
 
+            // Create cleanPayload but ALWAYS keep email even if empty
             const cleanPayload = Object.fromEntries(
                 Object.entries(payload).filter(([_, v]) => v !== undefined && v !== null)
             );
+            // Ensure email is always present
+            cleanPayload.email = userEmail;
 
             const response = await axios.post(
                 `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.industry.industry.create_industry`,
@@ -344,8 +361,18 @@ export default function IndustryOnboarding({
                 { headers: { 'Content-Type': 'application/json' } }
             );
 
-            if (response.status === 200) {
+            // Strict check: HTTP 200 and internal message status must be 200 (if present)
+            const internalStatus = response.data?.message?.status;
+            const isSuccess = response.status === 200 && (internalStatus === 200 || internalStatus === undefined || internalStatus === "success");
+
+            if (isSuccess) {
                 setSuccess("Industry onboarding completed successfully!");
+
+                // Clear onboarding-specific localStorage items
+                localStorage.removeItem("userEmail");
+                localStorage.removeItem("userFirstName");
+                localStorage.removeItem("userLastName");
+
                 setTimeout(() => {
                     if (isMobileSource) {
                         window.location.href = "/login";
@@ -354,11 +381,49 @@ export default function IndustryOnboarding({
                     }
                 }, 1500);
             } else {
-                setError(response.data?.message || "Failed to create industry. Please try again.");
+                // Handle internal status 500 or other non-200 cases
+                let errorMsg = "Failed to create industry. Please try again.";
+
+                if (response.data?._server_messages) {
+                    try {
+                        const messages = JSON.parse(response.data._server_messages);
+                        const parsedMessage = JSON.parse(messages[0]);
+                        errorMsg = parsedMessage.message || errorMsg;
+                    } catch (e) {
+                        errorMsg = response.data?.message?.message || response.data?.message || errorMsg;
+                    }
+                } else {
+                    errorMsg = response.data?.message?.message || response.data?.message || errorMsg;
+                }
+
+                setError(errorMsg);
             }
         } catch (err: any) {
             console.error("Error submitting industry data:", err);
-            setError(err?.response?.data?.message || err?.message || "Error submitting industry data");
+
+            let errorMessage = "Error submitting industry data";
+
+            if (err?.response?.data?._server_messages) {
+                try {
+                    const messages = JSON.parse(err.response.data._server_messages);
+                    const parsedMessage = JSON.parse(messages[0]);
+                    errorMessage = parsedMessage.message || errorMessage;
+                } catch (parseError) {
+                    errorMessage = err?.response?.data?.message || err?.message || errorMessage;
+                }
+            } else {
+                // Extract precise message if available
+                const nestedMessage = err?.response?.data?.message;
+                if (typeof nestedMessage === 'object' && nestedMessage !== null) {
+                    errorMessage = nestedMessage.message || errorMessage;
+                } else if (typeof nestedMessage === 'string') {
+                    errorMessage = nestedMessage;
+                } else {
+                    errorMessage = err?.message || errorMessage;
+                }
+            }
+
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }

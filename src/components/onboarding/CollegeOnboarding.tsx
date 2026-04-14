@@ -103,6 +103,14 @@ export default function CollegeOnboarding({
   });
 
   useEffect(() => {
+    const savedEmail = localStorage.getItem("userEmail") || "";
+    setFormData(prev => ({
+      ...prev,
+      email: savedEmail
+    }));
+  }, []);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       designationDropdownRefs.current.forEach((ref, index) => {
         if (ref && !ref.contains(event.target as Node) && openDesignationDropdown === index) {
@@ -358,12 +366,14 @@ export default function CollegeOnboarding({
       }));
 
       const validCourses = courses.filter(course => course.stream);
+      const userEmail = localStorage.getItem("userEmail") || formData.email;
+
       const payload = {
         college_name: formData.college_name,
         trust__governing_body: formData.trust__governing_body,
         year_of_establishment: formData.year_of_establishment ? parseInt(formData.year_of_establishment) : undefined,
         intake_capacity: formData.intake_capacity ? parseInt(formData.intake_capacity) : undefined,
-        email: formData.email,
+        email: userEmail,
         college_code: formData.college_code || undefined,
         country: "India",
         state: formData.state,
@@ -385,8 +395,18 @@ export default function CollegeOnboarding({
         { headers: { 'Content-Type': 'application/json' } }
       );
 
-      if (response.data && (response.data.message === "College created successfully" || response.status === 200)) {
+      // Strict check: HTTP 200 and internal message status must be 200 (if present)
+      const internalStatus = response.data?.message?.status;
+      const isSuccess = response.status === 200 && (internalStatus === 200 || internalStatus === undefined || internalStatus === "success" || response.data?.message === "College created successfully");
+
+      if (isSuccess) {
         setSuccess("College onboarding completed successfully!");
+
+        // Clear onboarding-specific localStorage items
+        localStorage.removeItem("userEmail");
+        localStorage.removeItem("userFirstName");
+        localStorage.removeItem("userLastName");
+
         setTimeout(() => {
           if (isMobileSource) {
             window.location.href = "/login";
@@ -395,23 +415,51 @@ export default function CollegeOnboarding({
           }
         }, 1500);
       } else {
-        setError(response.data?.message || "Failed to create college. Please try again.");
+        // Handle internal errors or non-200 cases
+        let errorMsg = "Failed to create college. Please try again.";
+        
+        if (response.data?._server_messages) {
+          try {
+            const messages = JSON.parse(response.data._server_messages);
+            const parsedMessage = JSON.parse(messages[0]);
+            errorMsg = parsedMessage.message || errorMsg;
+          } catch (e) {
+            errorMsg = response.data?.message?.message || response.data?.message || errorMsg;
+          }
+        } else {
+          errorMsg = response.data?.message?.message || response.data?.message || errorMsg;
+        }
+        
+        setError(errorMsg);
       }
     } catch (err: any) {
       console.error("Error submitting college data:", err);
+      
+      let errorMessage = "Error submitting college data";
+      
       if (err?.response?.data?._server_messages) {
         try {
           const messages = JSON.parse(err.response.data._server_messages);
           const parsedMessage = JSON.parse(messages[0]);
-          setError(parsedMessage.message || "Validation error");
+          errorMessage = parsedMessage.message || "Validation error";
         } catch {
-          setError(err?.response?.data?.message || "Error submitting data");
+          errorMessage = err?.response?.data?.message || "Error submitting data";
         }
       } else if (err?.response?.status === 401) {
-        setError("Authentication required. Please contact support.");
+        errorMessage = "Authentication required. Please contact support.";
       } else {
-        setError(err?.response?.data?.message || err?.message || "Error submitting college data");
+        // Extract precise message if available
+        const nestedMessage = err?.response?.data?.message;
+        if (typeof nestedMessage === 'object' && nestedMessage !== null) {
+          errorMessage = nestedMessage.message || errorMessage;
+        } else if (typeof nestedMessage === 'string') {
+          errorMessage = nestedMessage;
+        } else {
+          errorMessage = err?.message || errorMessage;
+        }
       }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

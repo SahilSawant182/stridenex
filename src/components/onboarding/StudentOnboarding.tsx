@@ -758,10 +758,13 @@ export default function StudentOnboarding({
 
       console.log("Registration response:", responseData);
 
-      // Check if registration was successful (status 200)
-      if (responseData?.status === 200 || responseData?.message === "Student registered successfully") {
+      // Strict check: responseData status or internal message status
+      const internalStatus = responseData?.message?.status;
+      const isSuccess = (responseData?.status === 200 || internalStatus === 200 || internalStatus === "success" || responseData?.message === "Student registered successfully");
+
+      if (isSuccess && internalStatus !== 500) {
         // Set success message (this will show in green Alert)
-        setSuccess(responseData?.message || "Student registered successfully!");
+        setSuccess(typeof responseData?.message === 'string' ? responseData.message : "Student registered successfully!");
 
         // Clear onboarding-specific localStorage items
         localStorage.removeItem("userEmail");
@@ -778,19 +781,47 @@ export default function StudentOnboarding({
         }, 1500);
       } else {
         // Handle error response - this will show in red Alert
-        const errorMsg = responseData?.message ||
-          responseData?.error ||
-          "Registration failed. Please try again.";
+        let errorMsg = "Registration failed. Please try again.";
+        
+        if (responseData?._server_messages) {
+          try {
+            const messages = JSON.parse(responseData._server_messages);
+            const parsedMessage = JSON.parse(messages[0]);
+            errorMsg = parsedMessage.message || errorMsg;
+          } catch (e) {
+            errorMsg = responseData?.message?.message || responseData?.message || errorMsg;
+          }
+        } else {
+          errorMsg = responseData?.message?.message || responseData?.message || responseData?.error || errorMsg;
+        }
+        
         setError(errorMsg);
       }
     } catch (err: any) {
       console.error("Error submitting onboarding data:", err);
 
-      // Check if it's an axios error with response data
-      const errorMessage = err?.response?.data?.message ||
-        err?.response?.data?.error ||
-        err?.message ||
-        "An error occurred during registration";
+      let errorMessage = "An error occurred during registration";
+
+      if (err?.response?.data?._server_messages) {
+        try {
+          const messages = JSON.parse(err.response.data._server_messages);
+          const parsedMessage = JSON.parse(messages[0]);
+          errorMessage = parsedMessage.message || errorMessage;
+        } catch (parseError) {
+          errorMessage = err?.response?.data?.message || err?.message || errorMessage;
+        }
+      } else {
+        // Extract precise message if available
+        const nestedMessage = err?.response?.data?.message;
+        if (typeof nestedMessage === 'object' && nestedMessage !== null) {
+          errorMessage = nestedMessage.message || errorMessage;
+        } else if (typeof nestedMessage === 'string') {
+          errorMessage = nestedMessage;
+        } else {
+          errorMessage = err?.response?.data?.error || err?.message || errorMessage;
+        }
+      }
+      
       setError(errorMessage);
     } finally {
       setLoading(false);
