@@ -57,6 +57,7 @@ export const studentConfig: RoleConfig = {
     { name: "Path", href: "/student/dashboard/path", icon: Target },
     { name: "Shorts", href: "/student/dashboard/shorts", icon: Video },
     { name: "Community", href: "/student/dashboard/community", icon: Users },
+    { name: "Projects", href: "/student/dashboard/projects", icon: FolderGit2 },
     { name: "Internships", href: "/student/dashboard/internships", icon: Briefcase },
     { name: "Habits", href: "/student/dashboard/habits", icon: CheckSquare },
     { name: "Mentors", href: "/student/dashboard/mentors", icon: UserCircle },

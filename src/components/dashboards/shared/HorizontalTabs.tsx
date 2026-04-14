@@ -41,6 +41,7 @@ const tabConfig = {
     { name: "Path", icon: Target, path: "/student/dashboard/path" },
     { name: "Shorts", icon: Video, path: "/student/dashboard/shorts" },
     { name: "Community", icon: Users, path: "/student/dashboard/community" },
+    { name: "Projects", icon: FolderGit2, path: "/student/dashboard/projects" },
     { name: "Internships", icon: Briefcase, path: "/student/dashboard/internships" },
     { name: "Habits", icon: CheckSquare, path: "/student/dashboard/habits" },
     { name: "Mentors", icon: UserCircle, path: "/student/dashboard/mentors" },
