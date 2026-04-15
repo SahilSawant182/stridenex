@@ -214,14 +214,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setIsOnboarded(null);
 
     // Clear localStorage
-    localStorage.removeItem("apiKey");
-    localStorage.removeItem("apiSecret");
-    localStorage.removeItem("posProfile");
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("fullName");
-    localStorage.removeItem("role");
-    localStorage.removeItem("csrfToken");
-    localStorage.removeItem("isOnboarded");
+    localStorage.clear();
 
     // Use setTimeout to ensure state updates complete before redirect
     setTimeout(() => {

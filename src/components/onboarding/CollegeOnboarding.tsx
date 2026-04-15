@@ -403,15 +403,13 @@ export default function CollegeOnboarding({
         setSuccess("College onboarding completed successfully!");
 
         // Clear onboarding-specific localStorage items
-        localStorage.removeItem("userEmail");
-        localStorage.removeItem("userFirstName");
-        localStorage.removeItem("userLastName");
+        localStorage.clear();
 
         setTimeout(() => {
           if (isMobileSource) {
             window.location.href = "/login";
           } else {
-            router.push("/login");
+            window.location.href = "/login";
           }
         }, 1500);
       } else {

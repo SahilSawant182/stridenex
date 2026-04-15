@@ -767,9 +767,7 @@ export default function StudentOnboarding({
         setSuccess(typeof responseData?.message === 'string' ? responseData.message : "Student registered successfully!");
 
         // Clear onboarding-specific localStorage items
-        localStorage.removeItem("userEmail");
-        localStorage.removeItem("userFirstName");
-        localStorage.removeItem("userLastName");
+        localStorage.clear();
 
         // Clear any errors
         setError("");
@@ -777,7 +775,7 @@ export default function StudentOnboarding({
 
         // Redirect to login page after a short delay
         setTimeout(() => {
-          router.push("/login");
+          window.location.href = "/login";
         }, 1500);
       } else {
         // Handle error response - this will show in red Alert

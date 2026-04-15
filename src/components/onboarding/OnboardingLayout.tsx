@@ -191,7 +191,7 @@ export default function OnboardingLayout({
             {children}
 
             {/* Skip Option */}
-            {/* {showSkip && onSkip && (
+            {showSkip && onSkip && (
               <div className="mt-6 text-center">
                 <button
                   type="button"
@@ -201,7 +201,7 @@ export default function OnboardingLayout({
                   Skip for now
                 </button>
               </div>
-            )} */}
+            )}
 
             {/* Footer Links */}
             <div className="mt-8 flex justify-center gap-4 text-xs text-slate-400">

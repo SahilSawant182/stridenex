@@ -354,6 +354,7 @@ export default function IndustryOnboarding({
             );
             // Ensure email is always present
             cleanPayload.email = userEmail;
+            console.log(cleanPayload, payload, 'payload');
 
             const response = await axios.post(
                 `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.industry.industry.create_industry`,
@@ -369,15 +370,13 @@ export default function IndustryOnboarding({
                 setSuccess("Industry onboarding completed successfully!");
 
                 // Clear onboarding-specific localStorage items
-                localStorage.removeItem("userEmail");
-                localStorage.removeItem("userFirstName");
-                localStorage.removeItem("userLastName");
+                localStorage.clear();
 
                 setTimeout(() => {
                     if (isMobileSource) {
                         window.location.href = "/login";
                     } else {
-                        router.push("/login");
+                        window.location.href = "/login";
                     }
                 }, 1500);
             } else {
