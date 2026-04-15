@@ -28,11 +28,11 @@ export default function OnboardingLayout({
 }: OnboardingLayoutProps) {
 
   const getStepCompletion = () => {
-  if (currentStep === 1) return 0;
-  if (currentStep === 2) return 33;
-  if (currentStep === 3) return 67;
-  return 0;
-};
+    if (currentStep === 1) return 0;
+    if (currentStep === 2) return 33;
+    if (currentStep === 3) return 67;
+    return 0;
+  };
 
   return (
     <div className="flex flex-col lg:flex-row w-screen h-screen overflow-hidden">
@@ -191,7 +191,7 @@ export default function OnboardingLayout({
             {children}
 
             {/* Skip Option */}
-            {showSkip && onSkip && (
+            {/* {showSkip && onSkip && (
               <div className="mt-6 text-center">
                 <button
                   type="button"
@@ -201,7 +201,7 @@ export default function OnboardingLayout({
                   Skip for now
                 </button>
               </div>
-            )}
+            )} */}
 
             {/* Footer Links */}
             <div className="mt-8 flex justify-center gap-4 text-xs text-slate-400">

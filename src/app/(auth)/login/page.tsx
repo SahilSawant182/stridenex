@@ -20,15 +20,18 @@ export default function LoginPage() {
   const [formValues, setFormValues] = useState<any>({});
   const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  const { isAuthenticated, login, role } = useAuth();
+  const { isAuthenticated, login, role, isOnboarded } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      const dashboardRole = role || "student";
-      router.push(`/${dashboardRole}/dashboard`);
+    if (!isAuthenticated || !role || isOnboarded === null) return;
+
+    if (isOnboarded === "1") {
+      router.push(`/${role}/dashboard`);
+    } else {
+      router.push(`/onboarding/${role}`);
     }
-  }, [isAuthenticated, router, role]);
+  }, [isAuthenticated, role, isOnboarded, router]);
 
 
   const loginFields: FormField[] = [
@@ -55,7 +58,6 @@ export default function LoginPage() {
   const handleLogin = async () => {
     const formData = formValues;
 
-    // Validate form using the reusable validator
     const errors = validateLoginForm({
       username: formData.username,
       password: formData.password
@@ -92,47 +94,58 @@ export default function LoginPage() {
         const fullName = data.full_name || formData.username.split('@')[0];
         const email = data.user || formData.username;
 
-        let userRole = 'student';
+        let userRole = "student";
 
         if (data.roles && Array.isArray(data.roles)) {
-          const lowerRoles: string[] = data.roles.map((r: string) => r.toLowerCase());
+          const lowerRoles = data.roles.map((r: string) => r.toLowerCase());
 
-          if (lowerRoles.some((r: string) => r.includes('college'))) {
-            userRole = 'college';
-          } else if (lowerRoles.some((r: string) => r.includes('industry'))) {
-            userRole = 'industry';
-          } else if (lowerRoles.some((r: string) => r.includes('mentor'))) {
-            userRole = 'mentor';
-          } else if (lowerRoles.some((r: string) => r.includes('student'))) {
-            userRole = 'student';
+          if (lowerRoles.some((r: string) => r.includes("college"))) {
+            userRole = "college";
+          } else if (lowerRoles.some((r: string) => r.includes("industry"))) {
+            userRole = "industry";
+          } else if (lowerRoles.some((r: string) => r.includes("mentor"))) {
+            userRole = "mentor";
+          } else if (lowerRoles.some((r: string) => r.includes("student"))) {
+            userRole = "student";
           }
         } else if (data.role) {
           const r = data.role.toLowerCase();
-          if (r.includes('college') || r.includes('admin')) {
-            userRole = 'college';
-          } else if (r.includes('industry')) {
-            userRole = 'industry';
-          } else if (r.includes('mentor')) {
-            userRole = 'mentor';
-          } else if (r.includes('student')) {
-            userRole = 'student';
+
+          if (r.includes("college") || r.includes("admin")) {
+            userRole = "college";
+          } else if (r.includes("industry")) {
+            userRole = "industry";
+          } else if (r.includes("mentor")) {
+            userRole = "mentor";
+          } else if (r.includes("student")) {
+            userRole = "student";
           }
         }
 
+        // ✅ ONLY SAVE DATA (NO ROUTING HERE)
         await login(api_key, api_secret, {
-          email: email,
-          fullName: fullName,
-          role: userRole
+          email,
+          fullName,
+          role: userRole,
+          isOnboarded: data.is_onboarded
         });
-        router.push(`/${userRole}/dashboard`);
+
+        // ❌ DO NOT ADD router.push HERE
+        // Navigation will be handled by useEffect
+
       } else {
         const msg = data.message || "Login failed";
-        setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+        setError(typeof msg === "string" ? msg : JSON.stringify(msg));
         setLoading(false);
       }
+
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err?.message || "An error occurred during login";
-      setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "An error occurred during login";
+
+      setError(typeof msg === "string" ? msg : JSON.stringify(msg));
       console.error(err);
       setLoading(false);
     }
