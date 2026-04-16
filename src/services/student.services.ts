@@ -79,3 +79,18 @@ export const getMasterData = async (doctype: string) => {
     throw error;
   }
 };
+
+/**
+ * Fetch mentor listings for students.
+ */
+export const getMentorListings = async () => {
+  try {
+    const response = await apiService.get(
+      "method/stridenex_app.stridenex_app.doctype.mentor_offering.mentor_offering.get_mentor_listings"
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching mentor listings:", error);
+    throw error;
+  }
+};

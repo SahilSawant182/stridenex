@@ -1,13 +1,14 @@
 // components/dashboards/student/MentorsTabContent.tsx
 "use client";
 
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { 
-  Star, 
-  Calendar, 
-  Clock, 
-  Briefcase, 
-  MapPin, 
+import {
+  Star,
+  Calendar,
+  Clock,
+  Briefcase,
+  MapPin,
   Award,
   BookOpen,
   Code,
@@ -23,12 +24,13 @@ import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
+import { getMentorListings } from "@/services/student.services";
 
 // Types
 interface Mentor {
-  id: number;
+  id: string;
   name: string;
   initials: string;
   role: string;
@@ -41,94 +43,12 @@ interface Mentor {
   nextSlot?: string;
   tags: string[];
   avatarColor: string;
+  profileImage: string;
 }
 
-// Mentors data
-const mentors: Mentor[] = [
-  {
-    id: 1,
-    name: "Kavya Reddy",
-    initials: "KR",
-    role: "Senior Data Scientist",
-    company: "Amazon",
-    expertise: ["ML", "Python", "Career"],
-    rating: 4.9,
-    sessions: 124,
-    hourlyRate: "$85/hr",
-    availability: "Feb 27, 4PM",
-    tags: ["Deep Learning", "NLP"],
-    avatarColor: "bg-purple-600"
-  },
-  {
-    id: 2,
-    name: "Siddharth Shah",
-    initials: "SS",
-    role: "Research Scientist",
-    company: "Microsoft",
-    expertise: ["Deep Learning", "Computer Vision", "Research"],
-    rating: 4.9,
-    sessions: 67,
-    hourlyRate: "$95/hr",
-    availability: "Mar 2, 11AM",
-    tags: ["PyTorch", "TensorFlow"],
-    avatarColor: "bg-blue-600"
-  },
-  {
-    id: 3,
-    name: "Rajan Mehta",
-    initials: "RM",
-    role: "Engineering Manager",
-    company: "Google",
-    expertise: ["Leadership", "Tech", "Resume"],
-    rating: 4.8,
-    sessions: 89,
-    hourlyRate: "$120/hr",
-    availability: "Mar 1, 2PM",
-    tags: ["System Design", "Interviews"],
-    avatarColor: "bg-emerald-600"
-  },
-  {
-    id: 4,
-    name: "Ananya Krishnan",
-    initials: "AK",
-    role: "Head of Analytics",
-    company: "Razorpay",
-    expertise: ["SQL", "Data Analytics", "Product"],
-    rating: 4.6,
-    sessions: 145,
-    hourlyRate: "$75/hr",
-    availability: "Mar 3, 10AM",
-    tags: ["Business Intelligence", "Metrics"],
-    avatarColor: "bg-orange-600"
-  },
-  {
-    id: 5,
-    name: "Pooja Iyer",
-    initials: "PI",
-    role: "Product Lead",
-    company: "Swiggy",
-    expertise: ["Product", "Startup", "MBA"],
-    rating: 4.7,
-    sessions: 98,
-    hourlyRate: "$90/hr",
-    availability: "Mar 1, 2PM",
-    tags: ["Product Strategy", "Growth"],
-    avatarColor: "bg-pink-600"
-  },
-  {
-    id: 6,
-    name: "Rahul Verma",
-    initials: "RV",
-    role: "Engineering Manager",
-    company: "Microsoft",
-    expertise: ["Cloud", "DevOps", "Architecture"],
-    rating: 4.8,
-    sessions: 112,
-    hourlyRate: "$105/hr",
-    availability: "Feb 28, 3PM",
-    tags: ["Azure", "Kubernetes"],
-    avatarColor: "bg-indigo-600"
-  }
+const COLORS = [
+  "bg-purple-600", "bg-blue-600", "bg-emerald-600",
+  "bg-orange-600", "bg-pink-600", "bg-indigo-600"
 ];
 
 const container = {
@@ -147,6 +67,78 @@ const item = {
 };
 
 export default function MentorsTabContent() {
+  const [mentors, setMentors] = useState<Mentor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchMentors();
+  }, []);
+
+  const fetchMentors = async () => {
+    try {
+      setLoading(true);
+      const userEmail = localStorage.getItem("currentUser") || "";
+
+      const response = await getMentorListings();
+      console.log(response, 'response')
+      if (response && response.message && Array.isArray(response.message)) {
+        const mappedMentors = response.message.map((m: any, index: number) => {
+          const name = m.full_name || m.mentor || "Unknown Mentor";
+          const initials = name
+            .split(" ")
+            .map((n: string) => n[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase() || "M";
+
+          return {
+            id: m.offering_name || `mentor-${index}`,
+            name: name,
+            initials,
+            role: m.designation || "Mentor",
+            company: m.company || "Independent",
+            expertise: m.tags || [],
+            rating: m.avg_rating || 0,
+            sessions: m.total_sessions || 0,
+            hourlyRate: m.price_per_hour ? `₹${m.price_per_hour}/hr` : "Free",
+            availability: m.next_slot || "Contact for availability",
+            tags: m.tags || [],
+            avatarColor: COLORS[index % COLORS.length],
+            profileImage: m.profile_image || ""
+          };
+        });
+        setMentors(mappedMentors);
+      } else {
+        setMentors([]);
+      }
+    } catch (err) {
+      console.error("Error loading mentors:", err);
+      setError("Failed to load mentor listings");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center py-20 text-slate-500">
+        <div className="animate-pulse flex items-center gap-2">
+          <BookOpen className="animate-spin w-5 h-5" />
+          <span>Loading mentors...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-20 text-red-500">
+        {error}
+      </div>
+    );
+  }
+
   return (
     <motion.div
       variants={container}
@@ -155,7 +147,7 @@ export default function MentorsTabContent() {
       className="space-y-6"
     >
       {/* Header */}
-      <motion.div variants={item} className="flex items-center justify-between">
+      <motion.div variants={item} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Mentors</h1>
           <p className="text-slate-500 mt-1">Connect with industry experts</p>
@@ -165,116 +157,98 @@ export default function MentorsTabContent() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               placeholder="Search mentors..."
-              className="pl-9 pr-4 py-2 w-64 bg-white border-slate-200 text-sm"
+              className="pl-9 pr-4 py-2 w-full md:w-64 bg-white border-slate-200 text-sm"
             />
           </div>
-          <Button variant="outline" size="icon" className="border-slate-200">
+          <Button variant="outline" size="icon" className="border-slate-200 shrink-0">
             <Filter className="w-4 h-4 text-slate-600" />
           </Button>
         </div>
       </motion.div>
 
-      {/* Mentors Grid */}
-      <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {mentors.map((mentor) => (
-          <BaseCard key={mentor.id} className="overflow-hidden hover:shadow-lg transition-all group">
-            <div className="p-5">
-              {/* Header with Avatar and Company */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <Avatar className="w-12 h-12">
-                    <AvatarFallback className={`${mentor.avatarColor} text-white font-medium`}>
-                      {mentor.initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-slate-800">{mentor.name}</h3>
-                    <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                      <Briefcase className="w-3 h-3" />
-                      {mentor.role} • {mentor.company}
-                    </p>
+      {mentors.length === 0 ? (
+        <motion.div variants={item} className="text-center py-20 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
+          No mentors available at the moment.
+        </motion.div>
+      ) : (
+        /* Mentors Grid */
+        <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {mentors.map((mentor) => (
+            <BaseCard key={mentor.id} className="overflow-hidden hover:shadow-lg transition-all group">
+              <div className="p-5 flex flex-col h-full">
+                <div className="flex-1">
+                  {/* Header with Avatar and Company */}
+                  <div className="flex justify-between items-start mb-4 gap-2">
+                    <div className="flex gap-3 flex-1 min-w-0">
+                      <Avatar className="w-11 h-11 shrink-0">
+                        {mentor.profileImage ? (
+                          <AvatarImage src={mentor.profileImage} alt={mentor.name} className="object-cover" />
+                        ) : null}
+                        <AvatarFallback className={`${mentor.avatarColor} text-white font-medium`}>
+                          {mentor.initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-slate-800 break-all text-sm leading-tight mt-0.5" title={mentor.name}>
+                          {mentor.name}
+                        </h3>
+                        <p className="text-xs text-slate-500 truncate flex items-center gap-1 mt-1" title={`${mentor.role} • ${mentor.company}`}>
+                          <Briefcase className="w-3 h-3 shrink-0" />
+                          <span className="truncate">{mentor.role} • {mentor.company}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 text-[10px] px-1.5 py-0 shrink-0 h-fit mt-0.5">
+                      Available
+                    </Badge>
+                  </div>
+
+                  {/* Expertise Tags */}
+                  {mentor.expertise && mentor.expertise.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {mentor.expertise.map((exp, i) => (
+                        <Badge key={i} variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-xs">
+                          {exp}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Stats Row */}
+                  <div className="flex items-center justify-between mb-4 mt-auto">
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                      <span className="text-sm font-semibold text-slate-800">{mentor.rating.toFixed(1)}</span>
+                      <span className="text-xs text-slate-400">({mentor.sessions})</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-4 h-4 text-slate-400" />
+                      <span className="text-sm font-medium text-slate-600">{mentor.hourlyRate}</span>
+                    </div>
+                  </div>
+
+                  {/* Next Available */}
+                  <div className="flex items-center gap-2 mb-4 p-2 bg-slate-50 rounded-lg">
+                    <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+                    <span className="text-xs text-slate-600">Next available: </span>
+                    <span className="text-xs font-medium text-slate-800 truncate">{mentor.availability}</span>
                   </div>
                 </div>
-                <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 text-xs">
-                  Available
-                </Badge>
-              </div>
 
-              {/* Expertise Tags */}
-              <div className="flex flex-wrap gap-1.5 mb-4">
-                {mentor.expertise.map((exp) => (
-                  <Badge key={exp} variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-xs">
-                    {exp}
-                  </Badge>
-                ))}
-              </div>
-
-              {/* Stats Row */}
-              <div className="flex items-center gap-4 mb-4">
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  <span className="text-sm font-semibold text-slate-800">{mentor.rating}</span>
-                  <span className="text-xs text-slate-400">({mentor.sessions})</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm text-slate-600">{mentor.hourlyRate}</span>
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 mt-auto">
+                  <Button className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm">
+                    Book Session
+                  </Button>
+                  <Button variant="outline" size="icon" className="border-slate-200 shrink-0">
+                    <ChevronRight className="w-4 h-4 text-slate-600" />
+                  </Button>
                 </div>
               </div>
-
-              {/* Next Available */}
-              <div className="flex items-center gap-2 mb-4 p-2 bg-slate-50 rounded-lg">
-                <Calendar className="w-4 h-4 text-slate-400" />
-                <span className="text-xs text-slate-600">Next available: </span>
-                <span className="text-xs font-medium text-slate-800">{mentor.availability}</span>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2">
-                <Button className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm">
-                  Book Session
-                </Button>
-                <Button variant="outline" size="icon" className="border-slate-200">
-                  <ChevronRight className="w-4 h-4 text-slate-600" />
-                </Button>
-              </div>
-            </div>
-          </BaseCard>
-        ))}
-      </motion.div>
-
-      {/* Featured Mentor Section */}
-      {/* <motion.div variants={item} className="mt-8">
-        <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl border border-orange-100 p-6">
-          <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-full bg-orange-600 flex items-center justify-center text-white font-bold text-xl">
-              RM
-            </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-slate-800">Rajan Mehta</h3>
-              <p className="text-sm text-slate-600">Engineering Manager @Google • Ex-Amazon</p>
-              <div className="flex items-center gap-4 mt-3">
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                  <span className="font-semibold">4.9</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Briefcase className="w-4 h-4 text-slate-400" />
-                  <span className="text-sm">15+ years experience</span>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2 mt-3">
-                <Badge className="bg-white text-slate-700 border-slate-200">System Design</Badge>
-                <Badge className="bg-white text-slate-700 border-slate-200">Leadership</Badge>
-                <Badge className="bg-white text-slate-700 border-slate-200">Career Growth</Badge>
-              </div>
-            </div>
-            <Button className="bg-orange-500 hover:bg-orange-600 text-white">
-              View Profile
-            </Button>
-          </div>
-        </div>
-      </motion.div> */}
+            </BaseCard>
+          ))}
+        </motion.div>
+      )}
     </motion.div>
   );
 }
