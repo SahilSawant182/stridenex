@@ -18,7 +18,8 @@ import {
   Target,
   Search,
   Filter,
-  ChevronRight
+  ChevronRight,
+  X
 } from "lucide-react";
 import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
@@ -26,12 +27,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { getMentorListings } from "@/services/student.services";
+import { getMentorListings, getMentorSlotCalendar } from "@/services/student.services";
 
 // Types
 interface Mentor {
   id: string;
   name: string;
+  email: string;
   initials: string;
   role: string;
   company: string;
@@ -71,6 +73,40 @@ export default function MentorsTabContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Booking Modal States
+  const [selectedMentorForBooking, setSelectedMentorForBooking] = useState<Mentor | null>(null);
+  const [slotCalendarData, setSlotCalendarData] = useState<{ [date: string]: any[] }>({});
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const handleBookSession = async (mentor: Mentor) => {
+    setSelectedMentorForBooking(mentor);
+    setIsLoadingSlots(true);
+    try {
+      const response = await getMentorSlotCalendar(mentor.email);
+      if (response && response.message) {
+        setSlotCalendarData(response.message);
+        const dates = Object.keys(response.message);
+        if (dates.length > 0) {
+          // Sort dates to show earliest first
+          dates.sort();
+          setSelectedDate(dates[0]);
+        } else {
+          setSelectedDate(null);
+        }
+      } else {
+        setSlotCalendarData({});
+        setSelectedDate(null);
+      }
+    } catch (err) {
+      console.error("Error loading slot calendar:", err);
+      setSlotCalendarData({});
+    } finally {
+      setIsLoadingSlots(false);
+    }
+  };
+
+
   useEffect(() => {
     fetchMentors();
   }, []);
@@ -95,6 +131,7 @@ export default function MentorsTabContent() {
           return {
             id: m.offering_name || `mentor-${index}`,
             name: name,
+            email: m.mentor || "unknown@example.com",
             initials,
             role: m.designation || "Mentor",
             company: m.company || "Independent",
@@ -237,7 +274,10 @@ export default function MentorsTabContent() {
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 mt-auto">
-                  <Button className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm">
+                  <Button 
+                    className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm"
+                    onClick={() => handleBookSession(mentor)}
+                  >
                     Book Session
                   </Button>
                   <Button variant="outline" size="icon" className="border-slate-200 shrink-0">
@@ -248,6 +288,113 @@ export default function MentorsTabContent() {
             </BaseCard>
           ))}
         </motion.div>
+      )}
+
+      {/* Booking Modal */}
+      {selectedMentorForBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col"
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <div>
+                <h2 className="text-xl font-bold text-slate-800">Book Session</h2>
+                <p className="text-sm text-slate-500 mt-1">with {selectedMentorForBooking.name}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setSelectedMentorForBooking(null);
+                  setSelectedDate(null);
+                  setSlotCalendarData({});
+                }}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
+              {isLoadingSlots ? (
+                <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                  <BookOpen className="animate-spin w-8 h-8 mb-4 text-orange-500" />
+                  <span>Loading available slots...</span>
+                </div>
+              ) : Object.keys(slotCalendarData).length === 0 ? (
+                <div className="text-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
+                  No slots available for this mentor.
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Date Selector */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-orange-500" />
+                      Select Date
+                    </h3>
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 snap-x">
+                      {Object.keys(slotCalendarData).map((date) => (
+                        <button
+                          key={date}
+                          onClick={() => setSelectedDate(date)}
+                          className={`snap-start shrink-0 px-4 py-3 rounded-xl border transition-all ${
+                            selectedDate === date
+                              ? "bg-orange-50 border-orange-200 text-orange-700 shadow-sm"
+                              : "bg-white border-slate-200 text-slate-600 hover:border-orange-200 hover:bg-orange-50/50"
+                          }`}
+                        >
+                          <div className="text-xs font-medium uppercase opacity-70 mb-1">
+                            {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}
+                          </div>
+                          <div className="font-semibold whitespace-nowrap">
+                            {new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Slots Grid */}
+                  {selectedDate && slotCalendarData[selectedDate] && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-orange-500" />
+                        Available Slots
+                      </h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-3">
+                        {slotCalendarData[selectedDate].map((slot: any, idx: number) => {
+                          const isAvailable = slot.status === "available";
+                          return (
+                            <div
+                              key={idx}
+                              className={`p-3 rounded-xl border text-center transition-all ${
+                                isAvailable
+                                  ? "bg-white border-emerald-200 hover:border-emerald-500 hover:shadow-md cursor-pointer group"
+                                  : "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed"
+                              }`}
+                            >
+                              <div className={`text-sm font-semibold ${isAvailable ? "text-slate-800 group-hover:text-emerald-700" : "text-slate-500"}`}>
+                                {slot.from_time.slice(0, 5)} - {slot.to_time.slice(0, 5)}
+                              </div>
+                              <div className={`text-[10px] mt-1 font-medium ${isAvailable ? "text-emerald-600" : "text-slate-400"}`}>
+                                {isAvailable ? "Available" : "Booked"}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
       )}
     </motion.div>
   );

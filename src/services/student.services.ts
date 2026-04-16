@@ -94,3 +94,19 @@ export const getMentorListings = async () => {
     throw error;
   }
 };
+
+/**
+ * Fetch mentor slot calendar.
+ */
+export const getMentorSlotCalendar = async (mentorEmail: string) => {
+  try {
+    const response = await apiService.get(
+      "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.get_slot_calendar",
+      { params: { mentor: mentorEmail } }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching mentor slot calendar:", error);
+    throw error;
+  }
+};
