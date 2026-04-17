@@ -27,7 +27,8 @@ import {
   School,
   BarChart,
   Star,
-  FolderGit2
+  FolderGit2,
+  Settings
 } from "lucide-react";
 
 interface HorizontalTabsProps {
@@ -78,6 +79,7 @@ const tabConfig = {
     { name: "Feedback", icon: Star, path: "/industry/dashboard/feedback" },
     { name: "Analytics", icon: Calendar, path: "/industry/dashboard/analytics" },
     { name: "Plans", icon: School, path: "/industry/dashboard/plan" },
+    { name: "Settings", icon: Settings, path: "/industry/dashboard/settings" },
   ],
 };
 

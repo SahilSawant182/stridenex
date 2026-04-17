@@ -10,6 +10,7 @@ import PlansTabContent from "@/components/dashboards/industry/PlansTabContent";
 import CompanyProfileTabContent from "@/components/dashboards/industry/CompanyProfileTabContent";
 import ProjectsTabContent from "@/components/dashboards/industry/ProjectsTabContent";
 import FeedbackTabContent from "@/components/dashboards/industry/FeedbackTabContent";
+import SettingsTabContent from "@/components/dashboards/industry/SettingsTabContent";
 
 export default function IndustryTabContent({
   params
@@ -36,6 +37,8 @@ export default function IndustryTabContent({
         return <AnalyticsTabContent />;
       case "plan":
         return <PlansTabContent />;
+      case "settings":
+        return <SettingsTabContent />;
       default:
         return <div className="p-6 text-center text-red-500">Tab not found</div>;
     }

@@ -130,6 +130,7 @@ export const industryConfig: RoleConfig = {
     { name: "Student Feedback", href: "/industry/dashboard/feedback", icon: Star },
     { name: "Analytics", href: "/industry/dashboard/analytics", icon: Calendar },
     { name: "Subscription", href: "/industry/dashboard/plan", icon: Award },
+    { name: "Settings", href: "/industry/dashboard/settings", icon: Settings },
   ],
   bottomLinks: [
     { name: "Settings", href: "/industry/settings", icon: Settings },
