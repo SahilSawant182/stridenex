@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
-import { updateIndustry, addRequiredRole, updateIndustryRole, addHiringRound, getSkillDomain, createSkillDomain, updateSkillDomain, deleteSkillDomain, getCampusPartnerList, createCampusPartner, deleteCampusPartner, getMasterData } from "@/services/industry.services";
+import { updateIndustry, addRequiredRole, updateIndustryRole, deleteIndustryRole, addHiringRound, getSkillDomain, createSkillDomain, updateSkillDomain, deleteSkillDomain, getCampusPartnerList, createCampusPartner, deleteCampusPartner, getMasterData, deleteHiringRound, updateHiringRound } from "@/services/industry.services";
 import { useIndustry, IndustryData, IndustryRole, HiringRound } from "@/context/IndustryContext";
 import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
 
@@ -91,6 +91,8 @@ export default function CompanyProfileTabContent() {
   const [skillDomainToEdit, setSkillDomainToEdit] = useState<any | undefined>(undefined);
   const [isDeletingSkillDomain, setIsDeletingSkillDomain] = useState<string | null>(null);
   const [isDeletingPartner, setIsDeletingPartner] = useState<string | null>(null);
+  const [isDeletingHiringRound, setIsDeletingHiringRound] = useState<string | null>(null);
+  const [isDeletingRole, setIsDeletingRole] = useState<string | null>(null);
 
   const [businessTypeOptions, setBusinessTypeOptions] = useState<string[]>([]);
   const [industrySectorOptions, setIndustrySectorOptions] = useState<string[]>([]);
@@ -284,9 +286,13 @@ export default function CompanyProfileTabContent() {
         const payload = {
           ...formData,
           industry_name: data?.company_name,
-          ...(roundToEdit?.name ? { name: roundToEdit.name } : {})
         };
-        await addHiringRound(payload);
+        if (roundToEdit?.name) {
+          payload.row_name = roundToEdit.name;
+          await updateHiringRound(payload);
+        } else {
+          await addHiringRound(payload);
+        }
         await refreshIndustryData();
       } else if (modalMode === "skill_domain") {
         const payload = {
@@ -343,6 +349,34 @@ export default function CompanyProfileTabContent() {
       alert(err?.message || "Failed to delete campus partner");
     } finally {
       setIsDeletingPartner(null);
+    }
+  };
+
+  const handleDeleteHiringRound = async (rowName: string) => {
+    if (!window.confirm("Are you sure you want to delete this hiring round?")) return;
+    try {
+      setIsDeletingHiringRound(rowName);
+      await deleteHiringRound(data?.company_name || "", rowName);
+      await refreshIndustryData();
+    } catch (err: any) {
+      console.error("Error deleting hiring round:", err);
+      alert(err || "Failed to delete hiring round");
+    } finally {
+      setIsDeletingHiringRound(null);
+    }
+  };
+
+  const handleDeleteRole = async (name: string) => {
+    if (!window.confirm("Are you sure you want to delete this role?")) return;
+    try {
+      setIsDeletingRole(name);
+      await deleteIndustryRole(name);
+      await refreshRoleList();
+    } catch (err: any) {
+      console.error("Error deleting role:", err);
+      alert(err || "Failed to delete role");
+    } finally {
+      setIsDeletingRole(null);
     }
   };
 
@@ -698,18 +732,35 @@ export default function CompanyProfileTabContent() {
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="text-base font-bold text-slate-800 leading-tight">{role.role}</h4>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setRoleToEdit(role);
-                                setModalMode("role");
-                                setIsModalOpen(true);
-                              }}
-                              className="p-1 hover:bg-slate-100 rounded-md transition-colors text-slate-400 hover:text-blue-600 opacity-0 group-hover:opacity-100"
-                              title="Edit Role"
-                            >
-                              <Pen className="w-3 h-3" />
-                            </button>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRoleToEdit(role);
+                                  setModalMode("role");
+                                  setIsModalOpen(true);
+                                }}
+                                className="p-1 hover:bg-slate-100 rounded-md transition-colors text-slate-400 hover:text-blue-600"
+                                title="Edit Role"
+                              >
+                                <Pen className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (role.name) handleDeleteRole(role.name);
+                                }}
+                                disabled={isDeletingRole === role.name}
+                                className="p-1 hover:bg-slate-100 rounded-md transition-colors text-slate-400 hover:text-red-500 disabled:opacity-30"
+                                title="Delete Role"
+                              >
+                                {isDeletingRole === role.name ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
                           </div>
                           <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider mt-1">
                             {Number(role.duration) > 0 ? `${role.duration} Months` : role.semester}
@@ -764,19 +815,34 @@ export default function CompanyProfileTabContent() {
                 data.hiring_process.map((step, idx) => (
                   <div key={idx} className="relative flex items-start gap-4 group">
                     <div className="mt-1 w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-sm shrink-0" />
-                    <div>
+                    <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h4 className="text-sm font-bold text-slate-800 leading-none">{step.round}</h4>
-                        <button
-                          onClick={() => {
-                            setRoundToEdit(step);
-                            setModalMode("hiring");
-                            setIsModalOpen(true);
-                          }}
-                          className="p-1 hover:bg-slate-100 rounded-md transition-colors text-slate-400 hover:text-emerald-600 opacity-0 group-hover:opacity-100"
-                        >
-                          <Edit3 className="w-3 h-3" />
-                        </button>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => {
+                              setRoundToEdit(step);
+                              setModalMode("hiring");
+                              setIsModalOpen(true);
+                            }}
+                            className="p-1 hover:bg-slate-100 rounded-md transition-colors text-slate-400 hover:text-emerald-600"
+                            title="Edit Round"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => { if (step.name) handleDeleteHiringRound(step.name); }}
+                            disabled={isDeletingHiringRound === step.name}
+                            className="p-1 hover:bg-slate-100 rounded-md transition-colors text-slate-400 hover:text-red-500 disabled:opacity-30"
+                            title="Delete Round"
+                          >
+                            {isDeletingHiringRound === step.name ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
                       </div>
                       <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-widest">Based on: {step.based_on}</p>
                     </div>

@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { getMentorListings, getMentorSlotCalendar } from "@/services/student.services";
+import { getMentorListings, getMentorSlotCalendar, bookMentorSlot } from "@/services/student.services";
 
 // Types
 interface Mentor {
@@ -78,10 +78,16 @@ export default function MentorsTabContent() {
   const [slotCalendarData, setSlotCalendarData] = useState<{ [date: string]: any[] }>({});
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedSlotForBooking, setSelectedSlotForBooking] = useState<any | null>(null);
+  const [bookingTopic, setBookingTopic] = useState("");
+  const [isBooking, setIsBooking] = useState(false);
 
   const handleBookSession = async (mentor: Mentor) => {
     setSelectedMentorForBooking(mentor);
     setIsLoadingSlots(true);
+    // Reset previous booking states
+    setSelectedSlotForBooking(null);
+    setBookingTopic("");
     try {
       const response = await getMentorSlotCalendar(mentor.email);
       if (response && response.message) {
@@ -105,6 +111,56 @@ export default function MentorsTabContent() {
       setIsLoadingSlots(false);
     }
   };
+
+  const handleConfirmBooking = async () => {
+    if (!selectedMentorForBooking || !selectedDate || !selectedSlotForBooking) return;
+    setIsBooking(true);
+    try {
+      const payload = {
+        mentor: selectedMentorForBooking.email,
+        student: localStorage.getItem("currentUser") || "",
+        offering: selectedMentorForBooking.id,
+        session_date: selectedDate,
+        from_time: selectedSlotForBooking.from_time,
+        to_time: selectedSlotForBooking.to_time,
+        topic: bookingTopic || "General Mentorship"
+      };
+      
+      const response = await bookMentorSlot(payload);
+      
+      if (response && response.exc_type) {
+        let errMsg = "Failed to book session. Please try again.";
+        if (response._server_messages) {
+          try {
+            const messages = JSON.parse(response._server_messages);
+            const msgObj = JSON.parse(messages[0]);
+            errMsg = msgObj.message || errMsg;
+          } catch (e) {
+            console.error("Error parsing server messages:", e);
+          }
+        }
+        alert(errMsg);
+        return;
+      }
+      
+      // Close modal and reset
+      setSelectedMentorForBooking(null);
+      setSelectedDate(null);
+      setSelectedSlotForBooking(null);
+      setBookingTopic("");
+      setSlotCalendarData({});
+      
+      // Show success and refresh
+      alert(`Session booked successfully! ID: ${response?.message?.session_name || ""}`);
+      fetchMentors();
+    } catch (err) {
+      console.error("Error booking session:", err);
+      alert("Failed to book session. Please try again.");
+    } finally {
+      setIsBooking(false);
+    }
+  };
+
 
 
   useEffect(() => {
@@ -310,6 +366,8 @@ export default function MentorsTabContent() {
                 onClick={() => {
                   setSelectedMentorForBooking(null);
                   setSelectedDate(null);
+                  setSelectedSlotForBooking(null);
+                  setBookingTopic("");
                   setSlotCalendarData({});
                 }}
                 className="text-slate-400 hover:text-slate-600"
@@ -341,7 +399,10 @@ export default function MentorsTabContent() {
                       {Object.keys(slotCalendarData).map((date) => (
                         <button
                           key={date}
-                          onClick={() => setSelectedDate(date)}
+                          onClick={() => {
+                            setSelectedDate(date);
+                            setSelectedSlotForBooking(null);
+                          }}
                           className={`snap-start shrink-0 px-4 py-3 rounded-xl border transition-all ${
                             selectedDate === date
                               ? "bg-orange-50 border-orange-200 text-orange-700 shadow-sm"
@@ -372,13 +433,18 @@ export default function MentorsTabContent() {
                           return (
                             <div
                               key={idx}
+                              onClick={() => {
+                                if (isAvailable) setSelectedSlotForBooking(slot);
+                              }}
                               className={`p-3 rounded-xl border text-center transition-all ${
-                                isAvailable
-                                  ? "bg-white border-emerald-200 hover:border-emerald-500 hover:shadow-md cursor-pointer group"
-                                  : "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed"
+                                !isAvailable
+                                  ? "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed"
+                                  : selectedSlotForBooking === slot
+                                  ? "bg-emerald-50 border-emerald-500 shadow-md ring-2 ring-emerald-500/20 cursor-pointer"
+                                  : "bg-white border-emerald-200 hover:border-emerald-500 hover:shadow-md cursor-pointer group"
                               }`}
                             >
-                              <div className={`text-sm font-semibold ${isAvailable ? "text-slate-800 group-hover:text-emerald-700" : "text-slate-500"}`}>
+                              <div className={`text-sm font-semibold ${isAvailable ? (selectedSlotForBooking === slot ? "text-emerald-800" : "text-slate-800 group-hover:text-emerald-700") : "text-slate-500"}`}>
                                 {slot.from_time.slice(0, 5)} - {slot.to_time.slice(0, 5)}
                               </div>
                               <div className={`text-[10px] mt-1 font-medium ${isAvailable ? "text-emerald-600" : "text-slate-400"}`}>
@@ -389,6 +455,34 @@ export default function MentorsTabContent() {
                         })}
                       </div>
                     </div>
+                  )}
+
+                  {/* Topic and Confirm */}
+                  {selectedSlotForBooking && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4"
+                    >
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Session Topic / Agenda
+                        </label>
+                        <Input
+                          placeholder="e.g., Python Basics, Architecture Review..."
+                          value={bookingTopic}
+                          onChange={(e) => setBookingTopic(e.target.value)}
+                          className="bg-slate-50 border-slate-200 focus-visible:ring-emerald-500"
+                        />
+                      </div>
+                      <Button 
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={handleConfirmBooking}
+                        disabled={isBooking}
+                      >
+                        {isBooking ? "Booking..." : "Confirm Booking"}
+                      </Button>
+                    </motion.div>
                   )}
                 </div>
               )}

@@ -1,13 +1,13 @@
 import { apiService } from "./api.services";
 
-export const getMasterData = async (doctype: string) => {
+export const getMasterData = async (doctype: string, additionalPayload: any = {}) => {
   try {
     const response = await fetch(
       `https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ doctype })
+        body: JSON.stringify({ doctype, ...additionalPayload })
       }
     );
     return await response.json();
@@ -68,6 +68,18 @@ export const updateIndustryRole = async (name: string, data: any) => {
   }
 };
 
+export const deleteIndustryRole = async (name: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.industry_role.industry_role.delete_industry_role?name=${encodeURIComponent(name)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error deleting industry role:", error);
+    throw error;
+  }
+};
+
 export const getIndustryRoleList = async (industry: string) => {
   try {
     const response = await apiService.get(
@@ -89,6 +101,33 @@ export const addHiringRound = async (data: any) => {
     return response;
   } catch (error) {
     console.error("Error adding hiring round:", error);
+    throw error;
+  }
+};
+
+export const deleteHiringRound = async (companyName: string, rowName: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.api_stridenex_app.industry.industry.delete_hiring_round?name=${encodeURIComponent(companyName)}&row_name=${encodeURIComponent(rowName)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error deleting hiring round:", error);
+    throw error;
+  }
+};
+
+export const updateHiringRound = async (data: any) => {
+  try {
+    const companyName = data.industry_name || "";
+    const rowName = data.row_name || "";
+    const response = await apiService.post(
+      `method/stridenex_app.api_stridenex_app.industry.industry.update_hiring_round?name=${encodeURIComponent(companyName)}&row_name=${encodeURIComponent(rowName)}`,
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating hiring round:", error);
     throw error;
   }
 };
@@ -319,5 +358,28 @@ export const getFindTalentList = async (industry: string, college?: string) => {
   }
 };
 
+export const getStudentByEmail = async (emailId: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.api_stridenex_app.student.student.get_student_by_email?email_id=${encodeURIComponent(emailId)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching student by email:", error);
+    throw error;
+  }
+};
 
+export const updateApplicationStatus = async (name: string, status: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.internship_application.internship_application.update_application_status`,
+      { name, status }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating application status:", error);
+    throw error;
+  }
+};
 

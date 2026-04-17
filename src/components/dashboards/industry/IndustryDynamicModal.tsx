@@ -215,7 +215,9 @@ export default function IndustryDynamicModal({
                               {field.multiple ? (
                                 <>
                                   {(formData[field.name] || []).length === 0 && (
-                                    <span className="text-slate-400">{field.placeholder || `Select ${field.label}`}</span>
+                                    <span className="text-slate-400">{
+                                      field.options && field.options.length === 0 ? "No data found" : (field.placeholder || `Select ${field.label}`)
+                                    }</span>
                                   )}
                                   {(formData[field.name] || []).map((val: string) => (
                                     <span 
@@ -233,7 +235,7 @@ export default function IndustryDynamicModal({
                                 </>
                               ) : (
                                 <span className={!formData[field.name] ? "text-slate-400" : "text-slate-900"}>
-                                  {formData[field.name] || field.placeholder || `Select ${field.label}`}
+                                  {formData[field.name] || (field.options && field.options.length === 0 ? "No data found" : (field.placeholder || `Select ${field.label}`))}
                                 </span>
                               )}
                               <ChevronDown className={`absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-transform ${activeSelect === field.name ? 'rotate-180' : ''}`} />
@@ -241,59 +243,69 @@ export default function IndustryDynamicModal({
 
                             <AnimatePresence>
                               {activeSelect === field.name && (
-                                <motion.div
-                                  initial={{ opacity: 0, y: 10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  exit={{ opacity: 0, y: 10 }}
-                                  className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl border border-slate-100 shadow-2xl z-[120] max-h-[320px] overflow-hidden flex flex-col p-2"
-                                >
-                                  {/* Search Input */}
-                                  <div className="px-2 pt-1 pb-2 border-b border-slate-50 mb-1">
-                                    <div className="relative">
-                                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                      <input 
-                                        type="text"
-                                        autoFocus
-                                        placeholder="Search..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full h-10 pl-9 pr-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/10 transition-all font-sans"
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="overflow-y-auto custom-scrollbar flex-1">
-                                    {field.options?.filter((opt: any) => {
-                                      const label = typeof opt === 'string' ? opt : opt.label;
-                                      return label.toLowerCase().includes(searchTerm.toLowerCase());
-                                    }).map((opt: any) => {
-                                      const value = typeof opt === 'string' ? opt : opt.value;
-                                      const label = typeof opt === 'string' ? opt : opt.label;
-                                      const isSelected = field.multiple 
-                                        ? (formData[field.name] || []).includes(value)
-                                        : formData[field.name] === value;
-
-                                      return (
-                                        <div
-                                          key={value}
-                                          onClick={() => toggleSelectValue(field.name, value, !!field.multiple)}
-                                          className={`flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-all mb-0.5 ${isSelected ? 'bg-blue-50 text-blue-600' : 'hover:bg-slate-50 text-slate-600'}`}
-                                        >
-                                          <span className="text-sm font-bold leading-tight">{label}</span>
-                                          {isSelected && <Check className="w-4 h-4 shrink-0 shadow-sm" />}
-                                        </div>
-                                      );
-                                    })}
-                                    {field.options?.filter((opt: any) => {
-                                      const label = typeof opt === 'string' ? opt : opt.label;
-                                      return label.toLowerCase().includes(searchTerm.toLowerCase());
-                                    }).length === 0 && (
-                                      <div className="py-8 text-center">
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No results found</p>
+                                <>
+                                  <div 
+                                    className="fixed inset-0 z-[110]" 
+                                    onClick={(e) => { 
+                                      e.stopPropagation(); 
+                                      setActiveSelect(null); 
+                                      setSearchTerm(""); 
+                                    }} 
+                                  />
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 10 }}
+                                    className="absolute top-full left-0 right-0 mt-2 bg-white rounded-3xl border border-slate-100 shadow-2xl z-[120] max-h-[320px] overflow-hidden flex flex-col p-2"
+                                  >
+                                    {/* Search Input */}
+                                    <div className="px-2 pt-1 pb-2 border-b border-slate-50 mb-1">
+                                      <div className="relative">
+                                        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input 
+                                          type="text"
+                                          autoFocus
+                                          placeholder="Search..."
+                                          value={searchTerm}
+                                          onChange={(e) => setSearchTerm(e.target.value)}
+                                          className="w-full h-10 pl-9 pr-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/10 transition-all font-sans"
+                                        />
                                       </div>
-                                    )}
-                                  </div>
-                                </motion.div>
+                                    </div>
+
+                                    <div className="overflow-y-auto custom-scrollbar flex-1">
+                                      {field.options?.filter((opt: any) => {
+                                        const label = typeof opt === 'string' ? opt : opt.label;
+                                        return label.toLowerCase().includes(searchTerm.toLowerCase());
+                                      }).map((opt: any) => {
+                                        const value = typeof opt === 'string' ? opt : opt.value;
+                                        const label = typeof opt === 'string' ? opt : opt.label;
+                                        const isSelected = field.multiple 
+                                          ? (formData[field.name] || []).includes(value)
+                                          : formData[field.name] === value;
+
+                                        return (
+                                          <div
+                                            key={value}
+                                            onClick={() => toggleSelectValue(field.name, value, !!field.multiple)}
+                                            className={`flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-all mb-0.5 ${isSelected ? 'bg-blue-50 text-blue-600' : 'hover:bg-slate-50 text-slate-600'}`}
+                                          >
+                                            <span className="text-sm font-bold leading-tight">{label}</span>
+                                            {isSelected && <Check className="w-4 h-4 shrink-0 shadow-sm" />}
+                                          </div>
+                                        );
+                                      })}
+                                      {field.options?.filter((opt: any) => {
+                                        const label = typeof opt === 'string' ? opt : opt.label;
+                                        return label.toLowerCase().includes(searchTerm.toLowerCase());
+                                      }).length === 0 && (
+                                        <div className="py-8 text-center">
+                                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No results found</p>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </motion.div>
+                                </>
                               )}
                             </AnimatePresence>
                           </div>

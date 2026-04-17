@@ -110,3 +110,19 @@ export const getMentorSlotCalendar = async (mentorEmail: string) => {
     throw error;
   }
 };
+
+/**
+ * Book a mentor slot.
+ */
+export const bookMentorSlot = async (data: Record<string, string>) => {
+  try {
+    const queryString = new URLSearchParams(data).toString();
+    const url = `method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.book_slot?${queryString}`;
+    
+    const response = await apiService.get(url);
+    return response;
+  } catch (error) {
+    console.error("Error booking mentor slot:", error);
+    throw error;
+  }
+};

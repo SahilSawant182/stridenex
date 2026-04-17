@@ -72,11 +72,12 @@ export default function InternshipsTabContent() {
     }
   }, [searchParams]);
 
-  const fetchOptions = async (doctype: string, setter: (val: string[]) => void) => {
+  const fetchOptions = async (doctype: string, setter: (val: string[]) => void, extraPayload?: any) => {
     try {
-      const data = await getMasterData(doctype);
+      const data = await getMasterData(doctype, extraPayload);
       const apiData = data.data || data.message || [];
-      const options = Array.isArray(apiData) ? apiData.map((item: any) => item.name) : [];
+      const mapField = extraPayload?.fields || "name";
+      const options = Array.isArray(apiData) ? apiData.map((item: any) => item[mapField] || item.name) : [];
       setter(options);
     } catch (err) {
       console.error(`Error fetching ${doctype} options:`, err);
@@ -102,13 +103,14 @@ export default function InternshipsTabContent() {
 
   const internshipFields: IndustryField[] = useMemo(() => [
     { name: "title", label: "Internship Title", type: "text", icon: Briefcase, required: true, colSpan: 2, placeholder: "e.g. Backend Developer Intern" },
-    { name: "type", label: "Category", type: "select", icon: Target, options: categoryOptions.length > 0 ? categoryOptions : ["Technical", "Business", "Design", "Research", "Marketing", "Finance", "Operations"], required: true, placeholder: "Select Category" },
+    { name: "type", label: "Category", type: "select", icon: Target, options: categoryOptions, required: true, placeholder: "Select Category" },
     { name: "industry", label: "Industry", type: "text", icon: Globe, required: true, placeholder: "e.g. Razorpay Technologies", disabled: true },
     { name: "location", label: "Location Type", type: "select", icon: MapPin, options: ["Remote", "On-site", "Hybrid"], required: true, placeholder: "Select Location" },
     { name: "stipend", label: "Stipend (Monthly)", type: "number", icon: IndianRupee, required: true, placeholder: "e.g. 15000" },
     { name: "duration", label: "Duration (Days)", type: "number", icon: Clock, required: true, placeholder: "e.g. 90" },
     { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
     { name: "end_date", label: "End Date", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
+    { name: "openings", label: "Openings", type: "number", icon: Users, required: true, placeholder: "e.g. 10" },
     { name: "status", label: "Status", type: "select", icon: Zap, options: ["Active", "Draft", "Closed"], required: true, placeholder: "Select Status" },
     { name: "eligibility", label: "Eligibility", type: "text", icon: Users, required: true, colSpan: 2, placeholder: "e.g. 2025/2026 Batch Students" },
     {
@@ -167,7 +169,8 @@ export default function InternshipsTabContent() {
         ...formData,
         required_skills: skillsArray,
         duration: String(formData.duration),
-        stipend: Number(formData.stipend)
+        stipend: Number(formData.stipend),
+        openings: Number(formData.openings)
       };
 
       if (editingInternship) {
@@ -203,7 +206,12 @@ export default function InternshipsTabContent() {
     if (fieldName === "required_skills" && skillOptions.length === 0) {
       fetchOptions("Skill", setSkillOptions);
     } else if (fieldName === "type" && categoryOptions.length === 0) {
-      fetchOptions("Industry Skill Domain", setCategoryOptions);
+      fetchOptions("Industry Skill Domain", setCategoryOptions, {
+        fields: "skill_domain",
+        filters: {
+          industry: companyName
+        }
+      });
     }
   };
 
