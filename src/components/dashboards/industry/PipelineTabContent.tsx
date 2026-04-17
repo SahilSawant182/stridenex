@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { motion, Variants } from "framer-motion";
 import { getStudentApplicationList, getStudentByEmail, updateApplicationStatus } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
-import { Loader2, Zap } from "lucide-react";
+import { Loader2, Zap, Target } from "lucide-react";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -94,6 +94,7 @@ export default function PipelineTabContent() {
       await updateApplicationStatus(selectedCandidate.id, selectedStatus);
       await fetchApplications(companyName);
       setSelectedCandidate(prev => prev ? { ...prev, status: selectedStatus } : null);
+      setIsModalOpen(false);
     } catch (err) {
       alert("Failed to update status");
       console.error(err);
@@ -217,10 +218,8 @@ export default function PipelineTabContent() {
                 candidates[col.id].map((candidate) => (
                   <div 
                     key={candidate.id} 
-                    onClick={() => {
-                      if (col.id === "Applied") handleCardClick(candidate);
-                    }}
-                    className={`bg-white border border-slate-200 rounded-xl p-4 shadow-sm transition-all ${col.id === "Applied" ? "hover:shadow-md hover:border-slate-300 cursor-pointer" : "opacity-80 cursor-default"}`}
+                    onClick={() => handleCardClick(candidate)}
+                    className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer"
                   >
                     <div className="flex items-start gap-3 mb-3">
                       <div className={`w-10 h-10 rounded-full ${candidate.bgColor} text-white flex items-center justify-center text-sm font-bold shrink-0`}>
@@ -270,25 +269,34 @@ export default function PipelineTabContent() {
             animate={{ opacity: 1, scale: 1 }}
             className="bg-white rounded-2xl shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col"
           >
-            <div className="flex items-center justify-between p-6 border-b border-slate-100">
-              <h2 className="text-xl font-bold text-slate-800">Student Details</h2>
+            <div className="bg-slate-900 border-b border-slate-100 flex items-center justify-between p-6 relative overflow-hidden shrink-0">
+               <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-orange-500/20 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/4" />
+               <div className="relative z-10 flex items-center gap-4">
+                 <div className={`w-14 h-14 rounded-2xl ${selectedCandidate?.bgColor || 'bg-white/10'} border border-white/20 text-white flex items-center justify-center text-xl font-bold shadow-2xl`}>
+                    {selectedCandidate?.initials || "S"}
+                 </div>
+                 <div>
+                   <h2 className="text-xl font-bold text-white leading-tight">{selectedCandidate?.name || "Student Details"}</h2>
+                   <p className="text-xs font-semibold text-slate-400 mt-1">{selectedCandidate?.college || "Application Record"}</p>
+                 </div>
+               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 p-1.5 rounded-full hover:bg-slate-100 transition-colors"
+                className="relative z-10 text-white/50 hover:text-white p-2.5 rounded-full hover:bg-white/10 transition-colors"
                 title="Close"
               >
                 ✕
               </button>
             </div>
             
-            <div className="p-6 overflow-y-auto">
-              {loadingDetails ? (
+            <div className="p-6 overflow-y-auto bg-slate-50/50">
+               {loadingDetails ? (
                 <div className="flex justify-center items-center py-10">
-                  <Loader2 className="w-8 h-8 text-orange-600 animate-spin" />
+                   <Loader2 className="w-8 h-8 text-orange-600 animate-spin" />
                 </div>
-              ) : studentDetails ? (
+               ) : studentDetails ? (
                 <div className="space-y-4">
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
                      {[
                        { label: "Email", value: studentDetails.name },
                        { label: "First Name", value: studentDetails.first_name },
@@ -297,33 +305,48 @@ export default function PipelineTabContent() {
                        { label: "Stream", value: studentDetails.stream },
                        { label: "Course", value: studentDetails.course },
                      ].map((item, idx) => (
-                       <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200/50 pb-2 last:border-0 last:pb-0">
-                         <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{item.label}</span>
+                       <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-3 mb-1 last:border-0 last:mb-0 last:pb-0">
+                         <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">{item.label}</span>
                          <span className="text-sm font-bold text-slate-800 text-right break-all sm:max-w-[200px]">{item.value || "N/A"}</span>
                        </div>
                      ))}
                   </div>
                   
-                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3 mt-4">
-                    <h3 className="text-sm font-bold text-slate-800 uppercase tracking-widest text-left">Update Pipeline Status</h3>
-                    <div className="flex items-center gap-3 w-full">
-                      <select 
-                        value={selectedStatus}
-                        onChange={(e) => setSelectedStatus(e.target.value)}
-                        className="flex-1 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M7%2010L12%2015L17%2010%22%20stroke%3D%22%2394A3B8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.5em_1.5em] bg-no-repeat bg-[position:right_0.5rem_center]"
-                      >
-                         {pipelineColumns.map(col => (
-                           <option key={col.id} value={col.id}>{col.title}</option>
-                         ))}
-                      </select>
+                  <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mt-4">
+                    <h3 className="text-[11px] font-bold text-slate-800 uppercase tracking-widest text-left flex items-center gap-2 mb-4">
+                      <Target className="w-4 h-4 text-orange-500" /> Update Pipeline Status
+                    </h3>
+                    <div className="flex flex-col gap-3 w-full">
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                           <Zap className="h-4 w-4 text-slate-400" />
+                        </div>
+                        <select 
+                          value={selectedStatus}
+                          onChange={(e) => setSelectedStatus(e.target.value)}
+                          className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-orange-500/50 appearance-none transition-all hover:bg-white hover:border-orange-200 cursor-pointer"
+                        >
+                           {pipelineColumns.map(col => (
+                             <option key={col.id} value={col.id}>{col.title}</option>
+                           ))}
+                        </select>
+                        <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
+                           <svg className="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                           </svg>
+                        </div>
+                      </div>
+                      
                       {selectedStatus !== selectedCandidate?.status && (
-                         <button 
-                           onClick={handleChangeStatus}
-                           disabled={updateStatusLoading}
-                           className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap shadow-xl shadow-slate-900/10 active:scale-95"
-                         >
-                            {updateStatusLoading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : "Change Status"}
-                         </button>
+                         <div className="pt-1">
+                           <button 
+                             onClick={handleChangeStatus}
+                             disabled={updateStatusLoading}
+                             className="w-full bg-orange-500 hover:bg-orange-600 text-white px-5 py-3.5 rounded-xl text-sm font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-xl shadow-orange-500/20 active:scale-[0.98]"
+                           >
+                              {updateStatusLoading ? <Loader2 className="w-5 h-5 animate-spin text-white" /> : "Confirm Status Change"}
+                           </button>
+                         </div>
                       )}
                     </div>
                   </div>

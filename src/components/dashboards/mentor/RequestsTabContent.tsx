@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { 
   UserPlus, 
@@ -9,56 +10,79 @@ import {
   MessageSquare,
   Link as LinkIcon,
   X,
-  Check
+  Check,
+  Loader2
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { getPendingRequests } from "@/services/mentor.services";
 
-// Mock Data from screenshot 4
-const summaryStats = [
-  { label: "Unattended Student Requests", value: 4, icon: UserPlus, color: "bg-red-50", textColor: "text-red-500", borderColor: "border-red-100" },
-  { label: "Skill Verification Pending", value: 4, icon: ShieldCheck, color: "bg-amber-50", textColor: "text-amber-500", borderColor: "border-amber-100" },
-  { label: "Approved This Month", value: 31, icon: CheckCircle, color: "bg-emerald-50", textColor: "text-emerald-500", borderColor: "border-emerald-100" }
-];
-
-const actionRequiredRequests = [
-  { 
-    id: 1,
-    initials: "AK", name: "Aisha Khan", topic: "Product Management Intro", date: "Mar 2, 2025 • 3:00 PM", 
-    tag: "Career", priority: "high", 
-    message: "\"Placement interview in 10 days, need urgent guidance on PM roles vs data roles.\"",
-    color: "bg-pink-100 text-pink-700" 
-  },
-  { 
-    id: 2,
-    initials: "RM", name: "Rahul Mehta", topic: "DSA Mock Interview", date: "Mar 5, 2025 • 5:00 PM", 
-    tag: "Technical", priority: "medium", 
-    message: "\"Have Google interview scheduled. Need a 90-min mock session for arrays & graphs.\"",
-    color: "bg-blue-100 text-blue-700" 
-  },
-  { 
-    id: 3,
-    initials: "TG", name: "Tanya Gupta", topic: "Career Switch Counselling", date: "Mar 8, 2025 • 2:00 PM", 
-    tag: "Career", priority: "medium", 
-    message: "\"Currently a Mech student, want to transition to data science. Need a roadmap session.\"",
-    color: "bg-emerald-100 text-emerald-700" 
-  }
-];
-
-const skillVerifyQueue = [
-  { 
-    id: "SVR-0091", name: "Priya Sharma", skill: "Machine Learning", submitted: "Feb 22", 
-    priority: "normal", evidence: "3 projects + Kaggle rank 840" 
-  },
-  { 
-    id: "SVR-0089", name: "Arjun Nair", skill: "System Design", submitted: "Feb 20", 
-    priority: "high", evidence: "HLD document + peer review" 
-  },
-  { 
-    id: "SVR-0084", name: "Sneha Patel", skill: "Product Strategy", submitted: "Feb 15", 
-    priority: "normal", evidence: "Startup pitch deck + user research" 
-  }
-];
 
 export default function RequestsTabContent() {
+  const { currentUser } = useAuth();
+  const [requests, setRequests] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchRequests = async () => {
+    if (!currentUser) return;
+    try {
+      setLoading(true);
+      const response = await getPendingRequests(currentUser);
+      setRequests(response.message || []);
+    } catch (err) {
+      console.error("Failed to fetch requests", err);
+      setError("Failed to load requests.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRequests();
+  }, [currentUser]);
+
+  const getInitials = (name: string) => {
+    if (!name) return "??";
+    const parts = name.split(" ");
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const getRandomColorClass = (name: string) => {
+    const colors = [
+      "bg-pink-100 text-pink-700",
+      "bg-blue-100 text-blue-700",
+      "bg-emerald-100 text-emerald-700",
+      "bg-indigo-100 text-indigo-700",
+      "bg-amber-100 text-amber-700"
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  const summaryStats = useMemo(() => [
+    { label: "Unattended Student Requests", value: requests.length, icon: UserPlus, color: "bg-red-50", textColor: "text-red-500", borderColor: "border-red-100" },
+    { label: "Skill Verification Pending", value: 4, icon: ShieldCheck, color: "bg-amber-50", textColor: "text-amber-500", borderColor: "border-amber-100" },
+    { label: "Approved This Month", value: 31, icon: CheckCircle, color: "bg-emerald-50", textColor: "text-emerald-500", borderColor: "border-emerald-100" }
+  ], [requests.length]);
+
+  const skillVerifyQueue = [
+    { 
+      id: "SVR-0091", name: "Priya Sharma", skill: "Machine Learning", submitted: "Feb 22", 
+      priority: "normal", evidence: "3 projects + Kaggle rank 840" 
+    },
+    { 
+      id: "SVR-0089", name: "Arjun Nair", skill: "System Design", submitted: "Feb 20", 
+      priority: "high", evidence: "HLD document + peer review" 
+    },
+    { 
+      id: "SVR-0084", name: "Sneha Patel", skill: "Product Strategy", submitted: "Feb 15", 
+      priority: "normal", evidence: "Startup pitch deck + user research" 
+    }
+  ];
   return (
     <div className="space-y-6">
       {/* 3 Stats Widgets */}
@@ -90,60 +114,73 @@ export default function RequestsTabContent() {
           </h3>
           
           <div className="space-y-4">
-            {actionRequiredRequests.map((req, i) => (
-              <motion.div
-                key={req.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 + (i * 0.1) }}
-                className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
-              >
-                <div className="p-5">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-full ${req.color} flex items-center justify-center font-bold text-sm tracking-wide`}>
-                        {req.initials}
+            {loading ? (
+              <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-200">
+                <Loader2 className="w-8 h-8 text-orange-500 animate-spin mb-2" />
+                <p className="text-sm text-slate-500 font-medium">Fetching booking requests...</p>
+              </div>
+            ) : requests.length > 0 ? (
+              requests.map((req, i) => (
+                <motion.div
+                  key={req.name}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 + (i * 0.1) }}
+                  className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+                >
+                  <div className="p-5">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full ${getRandomColorClass(req.student_name || "Student")} flex items-center justify-center font-bold text-sm tracking-wide`}>
+                          {getInitials(req.student_name || "Student")}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-800 leading-tight">{req.student_name}</h4>
+                          <p className="text-sm font-semibold text-slate-500">{req.topic}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-bold text-slate-800 leading-tight">{req.name}</h4>
-                        <p className="text-sm font-semibold text-slate-500">{req.topic}</p>
-                      </div>
+                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${req.priority?.toLowerCase() === 'high' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'}`}>
+                        {req.priority || 'Normal'} priority
+                      </span>
                     </div>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${req.priority === 'high' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'}`}>
-                      {req.priority} priority
-                    </span>
-                  </div>
 
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-100 rounded-md px-2 py-1">
-                      <Clock className="w-3.5 h-3.5" /> {req.date}
-                    </span>
-                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
-                      {req.tag}
-                    </span>
-                  </div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-100 rounded-md px-2 py-1">
+                        <Clock className="w-3.5 h-3.5" /> {req.requested_date ? `${req.requested_date} • ${req.requested_time || 'No Time'}` : 'Flexible / TBD'}
+                      </span>
+                      <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
+                        {req.session_type}
+                      </span>
+                    </div>
 
-                  <div className="bg-slate-50 rounded-lg p-3.5 mb-5 border border-slate-100">
-                    <p className="text-sm text-slate-600 italic leading-relaxed flex items-start gap-2">
-                      <MessageSquare className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
-                      {req.message}
-                    </p>
-                  </div>
+                    <div className="bg-slate-50 rounded-lg p-3.5 mb-5 border border-slate-100">
+                      <p className="text-sm text-slate-600 italic leading-relaxed flex items-start gap-2">
+                        <MessageSquare className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                        {req.student_message || "No message provided by the student."}
+                      </p>
+                    </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-lg flex items-center justify-center gap-1.5 transition-colors">
-                      <Check className="w-4 h-4" /> Accept & Schedule
-                    </button>
-                    <button className="flex-none px-4 py-2 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors">
-                      <Clock className="w-4 h-4" /> Suggest Alt Time
-                    </button>
-                    <button className="flex-none px-4 py-2 hover:bg-red-50 border border-slate-200 text-slate-500 hover:text-red-600 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors">
-                      <X className="w-4 h-4" /> Decline
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-lg flex items-center justify-center gap-1.5 transition-colors">
+                        <Check className="w-4 h-4" /> Accept & Schedule
+                      </button>
+                      <button className="flex-none px-4 py-2 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors">
+                        <Clock className="w-4 h-4" /> Suggest Alt Time
+                      </button>
+                      <button className="flex-none px-4 py-2 hover:bg-red-50 border border-slate-200 text-slate-500 hover:text-red-600 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors">
+                        <X className="w-4 h-4" /> Decline
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))
+            ) : (
+              <div className="py-20 flex flex-col items-center justify-center bg-white border border-dashed border-slate-200 rounded-2xl">
+                <UserPlus className="w-12 h-12 text-slate-200 mb-4" />
+                <h3 className="text-lg font-bold text-slate-800">No Pending Requests</h3>
+                <p className="text-sm text-slate-500">You're all caught up! Student requests will appear here.</p>
+              </div>
+            )}
           </div>
         </div>
 
