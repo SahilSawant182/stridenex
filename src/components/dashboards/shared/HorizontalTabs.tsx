@@ -48,7 +48,6 @@ const tabConfig = {
     { name: "Mentors", icon: UserCircle, path: "/student/dashboard/mentors" },
     { name: "Events", icon: Calendar, path: "/student/dashboard/events" },
     { name: "Stories", icon: BookOpen, path: "/student/dashboard/stories" },
-    { name: "Plans", icon: Compass, path: "/student/dashboard/plans" },
   ],
   college: [
     { name: "Overview", path: "/college/dashboard", icon: LayoutDashboard },
@@ -58,7 +57,6 @@ const tabConfig = {
     { name: "Interventions", path: "/college/dashboard/interventions", icon: Target },
     { name: "Notice Board", path: "/college/dashboard/notice-board", icon: BookOpen },
     { name: "Reports", path: "/college/dashboard/reports", icon: BarChart },
-    { name: "Plans", path: "/college/dashboard/plans", icon: Award },
   ],
   mentor: [
     { name: "Overview", icon: LayoutDashboard, path: "/mentor/dashboard" },
@@ -78,7 +76,6 @@ const tabConfig = {
     { name: "Internships", icon: UserCheck, path: "/industry/dashboard/internships" },
     { name: "Feedback", icon: Star, path: "/industry/dashboard/feedback" },
     { name: "Analytics", icon: Calendar, path: "/industry/dashboard/analytics" },
-    { name: "Plans", icon: School, path: "/industry/dashboard/plan" },
     { name: "Settings", icon: Settings, path: "/industry/dashboard/settings" },
   ],
 };

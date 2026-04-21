@@ -1,7 +1,8 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { User, Bell, Menu, Search, LogOut } from "lucide-react";
+import { User, Bell, Menu, Search, LogOut, CreditCard } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { dashboardConfig, type DashboardRole } from "@/config/dashboardNavigation";
@@ -18,6 +19,26 @@ export default function Navbar({ role }: NavbarProps) {
   const displayName = fullName || currentUser?.split('@')[0] || config?.roleName || "User";
 
   if (!config) return null;
+
+  const getProfilePath = () => {
+    switch (role) {
+      case "student": return "/student/settings";
+      case "college": return "/college/settings";
+      case "mentor": return "/mentor/dashboard/profile";
+      case "industry": return "/industry/dashboard/company-profile";
+      default: return "#";
+    }
+  };
+
+  const getPlansPath = () => {
+    switch (role) {
+      case "student": return "/student/dashboard/plans";
+      case "college": return "/college/dashboard/plans";
+      case "mentor": return "/mentor/dashboard/plans";
+      case "industry": return "/industry/dashboard/plan";
+      default: return "#";
+    }
+  };
 
   return (
     <nav className="h-16 bg-white border-b border-slate-200 sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between shadow-sm">
@@ -75,9 +96,20 @@ export default function Navbar({ role }: NavbarProps) {
                     <p className="text-xs text-slate-500">Signed in as</p>
                     <p className="text-sm font-semibold text-slate-900 truncate">{currentUser}</p>
                   </div>
-                  <button className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2">
+                  <Link 
+                    href={getProfilePath()}
+                    onClick={() => setUserMenuOpen(false)}
+                    className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2"
+                  >
                     <User className="w-4 h-4" /> Profile
-                  </button>
+                  </Link>
+                  <Link 
+                    href={getPlansPath()}
+                    onClick={() => setUserMenuOpen(false)}
+                    className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2"
+                  >
+                    <CreditCard className="w-4 h-4" /> Plans
+                  </Link>
                   <button
                     onClick={() => {
                       logout();

@@ -126,3 +126,18 @@ export const bookMentorSlot = async (data: Record<string, string>) => {
     throw error;
   }
 };
+/**
+ * Fetch the next available slot for a mentor.
+ */
+export const getMentorNextAvailableSlot = async (mentorEmail: string) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_offering.mentor_offering._get_next_available_slot",
+      { mentor: mentorEmail }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching mentor next available slot:", error);
+    throw error;
+  }
+};

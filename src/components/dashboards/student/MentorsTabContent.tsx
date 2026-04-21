@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { getMentorListings, getMentorSlotCalendar, bookMentorSlot } from "@/services/student.services";
+import { getMentorListings, getMentorSlotCalendar, bookMentorSlot, getMentorNextAvailableSlot } from "@/services/student.services";
 
 // Types
 interface Mentor {
@@ -46,6 +46,7 @@ interface Mentor {
   tags: string[];
   avatarColor: string;
   profileImage: string;
+  nextAvailableSlot?: string;
 }
 
 const COLORS = [
@@ -213,6 +214,35 @@ export default function MentorsTabContent() {
     }
   };
 
+  // Fetch next available slots in background
+  useEffect(() => {
+    if (mentors.length > 0 && mentors.some(m => !m.nextAvailableSlot)) {
+      const fetchSlots = async () => {
+        const updateMentorSlot = async (mentorEmail: string) => {
+          try {
+            const response = await getMentorNextAvailableSlot(mentorEmail);
+            if (response && response.message) {
+              setMentors(currentMentors => 
+                currentMentors.map(m => 
+                  m.email === mentorEmail 
+                    ? { ...m, nextAvailableSlot: response.message } 
+                    : m
+                )
+              );
+            }
+          } catch (err) {
+            console.error(`Error fetching slot for ${mentorEmail}:`, err);
+          }
+        };
+
+        // Fetch concurrently for all mentors
+        await Promise.all(mentors.map(m => updateMentorSlot(m.email)));
+      };
+      
+      fetchSlots();
+    }
+  }, [mentors.length]);
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-20 text-slate-500">
@@ -324,7 +354,9 @@ export default function MentorsTabContent() {
                   <div className="flex items-center gap-2 mb-4 p-2 bg-slate-50 rounded-lg">
                     <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
                     <span className="text-xs text-slate-600">Next available: </span>
-                    <span className="text-xs font-medium text-slate-800 truncate">{mentor.availability}</span>
+                    <span className="text-xs font-medium text-slate-800 truncate">
+                      {mentor.nextAvailableSlot || mentor.availability}
+                    </span>
                   </div>
                 </div>
 

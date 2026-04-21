@@ -63,7 +63,6 @@ export const studentConfig: RoleConfig = {
     { name: "Mentors", href: "/student/dashboard/mentors", icon: UserCircle },
     { name: "Events", href: "/student/dashboard/events", icon: Calendar },
     { name: "Stories", href: "/student/dashboard/stories", icon: BookOpen },
-    { name: "Plans", href: "/student/dashboard/plans", icon: Compass },
   ],
   bottomLinks: [
     { name: "Settings", href: "/student/settings", icon: Settings },
@@ -85,7 +84,6 @@ export const collegeConfig: RoleConfig = {
     { name: "Interventions", href: "/college/dashboard/interventions", icon: Building2 },
     { name: "Notice Board", href: "/college/dashboard/noticeBoard", icon: BarChart },
     { name: "Reports", href: "/college/dashboard/reports", icon: Calendar },
-    { name: "Subscriptions", href: "/college/dashboard/plans", icon: Award },
   ],
   bottomLinks: [
     { name: "Settings", href: "/college/settings", icon: Settings },
@@ -129,7 +127,6 @@ export const industryConfig: RoleConfig = {
     { name: "Internship Posts", href: "/industry/dashboard/internships", icon: UserCheck },
     { name: "Student Feedback", href: "/industry/dashboard/feedback", icon: Star },
     { name: "Analytics", href: "/industry/dashboard/analytics", icon: Calendar },
-    { name: "Subscription", href: "/industry/dashboard/plan", icon: Award },
     { name: "Settings", href: "/industry/dashboard/settings", icon: Settings },
   ],
   bottomLinks: [
