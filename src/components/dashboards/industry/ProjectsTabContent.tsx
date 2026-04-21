@@ -79,7 +79,7 @@ export default function ProjectsTabContent() {
     { name: "project_name", label: "Project Name", type: "text", icon: Briefcase, required: true, colSpan: 2, placeholder: "e.g. AI Resume Screening System", disabled: !!projectToEdit },
     { name: "project_code", label: "Project Code", type: "text", icon: FileText, required: true, placeholder: "e.g. AI-001" },
     { name: "industry", label: "Industry", type: "text", icon: Layers, required: true, placeholder: "e.g. Razorpay Technologies", disabled: true },
-    { name: "status", label: "Status", type: "select", icon: Zap, options: ["Active", "Draft", "Completed"], required: true, placeholder: "Select Status" },
+    { name: "status", label: "Status", type: "select", icon: Zap, options: ["Active", "Draft", "Completed", "Disable"], required: true, placeholder: "Select Status" },
     { name: "duration", label: "Duration (Days)", type: "number", icon: Clock, required: true, placeholder: "e.g. 30" },
     { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
     { name: "end_date", label: "End Date", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
@@ -267,7 +267,7 @@ export default function ProjectsTabContent() {
       {/* 2. Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "ACTIVE PROJECTS", value: projects.length.toString(), icon: Briefcase, border: "border-t-purple-400", bg: "bg-purple-50/50", iconBg: "bg-purple-50" },
+          { label: "ACTIVE PROJECTS", value: projects.filter(p => p.status === "Active").length.toString(), icon: Briefcase, border: "border-t-purple-400", bg: "bg-purple-50/50", iconBg: "bg-purple-50" },
           { label: "TOTAL APPLICATIONS", value: "0", icon: Users, border: "border-t-blue-400", bg: "bg-blue-50/50", iconBg: "bg-blue-50" },
           { label: "STUDENTS AWARDED", value: "0", icon: Trophy, border: "border-t-emerald-400", bg: "bg-emerald-50/50", iconBg: "bg-emerald-50" },
           { label: "CONVERTED TO PPO", value: "0", icon: Target, border: "border-t-orange-400", bg: "bg-orange-50/50", iconBg: "bg-orange-50" },

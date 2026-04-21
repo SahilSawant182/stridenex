@@ -1,11 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion, Variants } from "framer-motion";
-import { Eye, Briefcase, Zap, IndianRupee } from "lucide-react";
+import { Eye, Briefcase, Zap, IndianRupee, Loader2 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import StatsWidget from "@/components/dashboards/widgets/StatsWidget";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
+import { useIndustry } from "@/context/IndustryContext";
+import { getApplicationStatusCount } from "@/services/industry.services";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -19,53 +22,6 @@ const item: Variants = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0, transition: { type: "spring" } },
 };
-
-const analyticsStats = [
-  {
-    id: 1,
-    title: "PROFILE VIEWS / MONTH",
-    value: "48.2K",
-    change: 18,
-    changeLabel: "increase",
-    icon: Eye,
-    iconBg: "bg-blue-50",
-    iconColor: "text-blue-600",
-    trend: "up"
-  },
-  {
-    id: 2,
-    title: "TOTAL APPLICATIONS",
-    value: "247",
-    change: 8,
-    changeLabel: "roles active",
-    icon: Briefcase,
-    iconBg: "bg-slate-100",
-    iconColor: "text-slate-600",
-    trend: "up"
-  },
-  {
-    id: 3,
-    title: "AVG TIME TO SHORTLIST",
-    value: "4.2d",
-    change: 68,
-    changeLabel: "faster",
-    icon: Zap,
-    iconBg: "bg-emerald-50",
-    iconColor: "text-emerald-500",
-    trend: "up"
-  },
-  {
-    id: 4,
-    title: "RECRUITMENT COST SAVED",
-    value: "₹2.4L",
-    change: 100,
-    changeLabel: "vs agency",
-    icon: IndianRupee,
-    iconBg: "bg-emerald-50",
-    iconColor: "text-emerald-600",
-    trend: "up"
-  }
-];
 
 const applicationsByRole = [
   { role: "Backend", count: 78 },
@@ -91,6 +47,88 @@ const collegeROI = [
 ];
 
 export default function AnalyticsTabContent() {
+  const { industryData, loading: industryLoading } = useIndustry();
+  const [newApplications, setNewApplications] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+
+  const companyName = industryData?.company_name || "";
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!companyName) return;
+      try {
+        setLoading(true);
+        const response = await getApplicationStatusCount(companyName);
+        const statusCounts = response?.message || {};
+        
+        // Map "New Applications" to "Applied" status from pipeline
+        setNewApplications(statusCounts["Applied"] || 0);
+      } catch (err) {
+        console.error("Error fetching application stats:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [companyName]);
+
+  const analyticsStats = [
+    {
+      id: 1,
+      title: "PROFILE VIEWS / MONTH",
+      value: "48.2K",
+      change: 18,
+      changeLabel: "increase",
+      icon: Eye,
+      iconBg: "bg-blue-50",
+      iconColor: "text-blue-600",
+      trend: "up"
+    },
+    {
+      id: 2,
+      title: "APPLICATIONS RECEIVED",
+      value: loading ? "..." : newApplications.toString(),
+      change: 8,
+      changeLabel: "new applicants",
+      icon: Briefcase,
+      iconBg: "bg-slate-100",
+      iconColor: "text-slate-600",
+      trend: "up"
+    },
+    {
+      id: 3,
+      title: "AVG TIME TO SHORTLIST",
+      value: "4.2d",
+      change: 68,
+      changeLabel: "faster",
+      icon: Zap,
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-500",
+      trend: "up"
+    },
+    {
+      id: 4,
+      title: "RECRUITMENT COST SAVED",
+      value: "₹2.4L",
+      change: 100,
+      changeLabel: "vs agency",
+      icon: IndianRupee,
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      trend: "up"
+    }
+  ];
+
+  if (industryLoading && !companyName) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+        <span className="text-sm font-medium italic tracking-widest uppercase opacity-70">Syncing Intelligence...</span>
+      </div>
+    );
+  }
+
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
       

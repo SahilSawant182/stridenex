@@ -45,52 +45,6 @@ const item: Variants = {
   },
 };
 
-const industryStats = [
-  {
-    id: 1,
-    title: "SEARCHABLE STUDENTS",
-    value: "12,840",
-    change: 2100,
-    changeLabel: "this month",
-    icon: Users,
-    iconBg: "bg-blue-50",
-    iconColor: "text-blue-600",
-    trend: "up"
-  },
-  {
-    id: 2,
-    title: "APPLICATIONS RECEIVED",
-    value: "247",
-    change: 8,
-    changeLabel: "roles active",
-    icon: ClipboardList,
-    iconBg: "bg-slate-100",
-    iconColor: "text-slate-600",
-    trend: "up"
-  },
-  {
-    id: 3,
-    title: "AVG SKILL MATCH",
-    value: "89%",
-    change: 17,
-    changeLabel: "vs 72% industry",
-    icon: Award,
-    iconBg: "bg-orange-50",
-    iconColor: "text-orange-500",
-    trend: "up"
-  },
-  {
-    id: 4,
-    title: "TIME TO SHORTLIST",
-    value: "4.2d",
-    change: 12,
-    changeLabel: "vs 12 days manual",
-    icon: Zap,
-    iconBg: "bg-emerald-50",
-    iconColor: "text-emerald-500",
-    trend: "up"
-  }
-];
 
 const topCandidates = [
   {
@@ -137,6 +91,8 @@ export default function IndustryOverviewPage() {
   const [pipelineStages, setPipelineStages] = useState(initialPipelineStages);
   const [loadingPipeline, setLoadingPipeline] = useState(false);
 
+  const [appliedCount, setAppliedCount] = useState<number>(0);
+
   useEffect(() => {
     const fetchPipelineCounts = async () => {
       if (industryData?.company_name) {
@@ -144,6 +100,9 @@ export default function IndustryOverviewPage() {
           setLoadingPipeline(true);
           const response = await getApplicationStatusCount(industryData.company_name);
           const apiData = response?.data || response?.message || {};
+
+          // Update total applied count for the stats card
+          setAppliedCount(Number(apiData["Applied"]) || 0);
 
           // Calculate max count for relative widths (funnel effect)
           const counts = Object.values(apiData).map(v => Number(v) || 0);
@@ -169,6 +128,54 @@ export default function IndustryOverviewPage() {
 
     fetchPipelineCounts();
   }, [industryData?.company_name]);
+
+  const industryStats = [
+    {
+      id: 1,
+      title: "SEARCHABLE STUDENTS",
+      value: "12,840",
+      change: 2100,
+      changeLabel: "this month",
+      icon: Users,
+      iconBg: "bg-blue-50",
+      iconColor: "text-blue-600",
+      trend: "up"
+    },
+    {
+      id: 2,
+      title: "APPLICATIONS RECEIVED",
+      value: loadingPipeline ? "..." : appliedCount.toString(),
+      change: 8,
+      changeLabel: "new applicants",
+      icon: ClipboardList,
+      iconBg: "bg-slate-100",
+      iconColor: "text-slate-600",
+      trend: "up"
+    },
+    {
+      id: 3,
+      title: "AVG SKILL MATCH",
+      value: "89%",
+      change: 17,
+      changeLabel: "vs 72% industry",
+      icon: Award,
+      iconBg: "bg-orange-50",
+      iconColor: "text-orange-500",
+      trend: "up"
+    },
+    {
+      id: 4,
+      title: "TIME TO SHORTLIST",
+      value: "4.2d",
+      change: 12,
+      changeLabel: "vs 12 days manual",
+      icon: Zap,
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-500",
+      trend: "up"
+    }
+  ];
+
   return (
     <motion.div
       variants={container}
