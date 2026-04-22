@@ -32,7 +32,7 @@ import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
 import { updateIndustry, addRequiredRole, updateIndustryRole, deleteIndustryRole, addHiringRound, getSkillDomain, createSkillDomain, updateSkillDomain, deleteSkillDomain, getCampusPartnerList, createCampusPartner, deleteCampusPartner, getMasterData, deleteHiringRound, updateHiringRound } from "@/services/industry.services";
 import { useIndustry, IndustryData, IndustryRole, HiringRound } from "@/context/IndustryContext";
-import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
+import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -175,7 +175,7 @@ export default function CompanyProfileTabContent() {
     fetchMasterOptions("College", setCollegeOptions);
   }, [data?.company_name]);
 
-  const profileFields: IndustryField[] = useMemo(() => [
+  const profileFields: DynamicField[] = useMemo(() => [
     { name: "company_name", label: "Company Name", type: "text", icon: Building2, required: true, colSpan: 2, placeholder: "e.g. Acme Corporation", disabled: true },
     { name: "business_type", label: "Business Type", type: "select", icon: Layout, options: businessTypeOptions.length > 0 ? businessTypeOptions : ["Enterprises", "Consultant and Agency", "Other"], required: true, placeholder: "Select Business Type" },
     { name: "industry_sector", label: "Industry Sector", type: "select", icon: Layers, options: industrySectorOptions.length > 0 ? industrySectorOptions : ["Information Services", "Manufacturing", "Finance", "Healthcare", "Education", "Other"], required: true, placeholder: "Select Industry Sector" },
@@ -187,7 +187,7 @@ export default function CompanyProfileTabContent() {
 
   ], [businessTypeOptions, industrySectorOptions]);
 
-  const roleFields: IndustryField[] = useMemo(() => [
+  const roleFields: DynamicField[] = useMemo(() => [
     { name: "role", label: "Job Role", type: "text", icon: Briefcase, required: true, colSpan: 2, placeholder: "e.g. Software Development Engineer" },
     { name: "duration", label: "Duration", type: "text", icon: Calendar, required: true, placeholder: "e.g. 6 Months" },
     { name: "semester", label: "Semester", type: "text", icon: GraduationCap, required: true, placeholder: "e.g. 6th or 8th" },
@@ -195,7 +195,7 @@ export default function CompanyProfileTabContent() {
     { name: "description", label: "Description", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "List key responsibilities and requirements..." },
   ], []);
 
-  const hiringFields: IndustryField[] = useMemo(() => [
+  const hiringFields: DynamicField[] = useMemo(() => [
     {
       name: "round",
       label: "Round Name",
@@ -210,13 +210,13 @@ export default function CompanyProfileTabContent() {
     { name: "duration", label: "Duration (min)", type: "number", icon: Clock, required: true, colSpan: 2, placeholder: "e.g. 45" },
   ], [hiringProcessOptions]);
 
-  const skillDomainFields: IndustryField[] = useMemo(() => [
+  const skillDomainFields: DynamicField[] = useMemo(() => [
     { name: "skill_domain", label: "Domain Name", type: "text", icon: TargetIcon, required: true, colSpan: 2, placeholder: "e.g. Backend Engineering" },
     { name: "skills", label: "Skills We Audit", type: "select", icon: Zap, options: skillOptions, required: true, colSpan: 2, placeholder: "Select Skills", multiple: true },
     { name: "roles", label: "Designations", type: "select", icon: Briefcase, options: designationOptions, required: true, colSpan: 2, placeholder: "Select Designations", multiple: true },
   ], [skillOptions, designationOptions]);
 
-  const campusPartnerFields: IndustryField[] = useMemo(() => [
+  const campusPartnerFields: DynamicField[] = useMemo(() => [
     { name: "college", label: "Select College", type: "select", icon: GraduationCap, options: collegeOptions, required: true, colSpan: 2, placeholder: "Select Campus Partner" },
   ], [collegeOptions]);
 
@@ -502,7 +502,7 @@ export default function CompanyProfileTabContent() {
       </motion.div>
 
       {/* Dynamic Modal */}
-      <IndustryDynamicModal
+      <DashboardDynamicModal
         isOpen={isModalOpen}
         onClose={() => {
           setIsModalOpen(false);

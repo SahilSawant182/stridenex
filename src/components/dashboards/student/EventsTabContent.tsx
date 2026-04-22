@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { 
-  Calendar, 
-  MapPin, 
-  Users, 
+import {
+  Calendar,
+  MapPin,
+  Users,
   IndianRupee,
   Clock,
   Trophy,
@@ -14,13 +14,15 @@ import {
   ChevronRight,
   Sparkles,
   Eye,
-  Loader2
+  Loader2,
+  CheckCircle2
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getMasterData, getStudentByEmail } from "@/services/student.services";
+import { getMasterData, getStudentByEmail, createStudentEventRegistration } from "@/services/student.services";
+import { useAuth } from "@/context/AuthContext";
 
 // Types
 interface Event {
@@ -137,19 +139,66 @@ const calculateDaysLeft = (dateString: string) => {
 };
 
 export default function EventsTabContent() {
+  const { currentUser } = useAuth();
   const [notices, setNotices] = useState<Notice[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [registeringId, setRegisteringId] = useState<number | null>(null);
+  const [registeredEventIds, setRegisteredEventIds] = useState<number[]>([]);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   useEffect(() => {
     fetchInitialData();
   }, []);
 
+  const handleRegister = async (event: Event) => {
+    if (!currentUser) {
+      alert("Authentication Required: Please log in to register for events.");
+      return;
+    }
+
+    try {
+      setRegisteringId(event.id);
+      const payload = {
+        student: currentUser,
+        name: event.title,
+        status: "Register"
+      };
+
+      const response = await createStudentEventRegistration(payload);
+
+      if (response && (response.status === 200 || response.status === "200" || response.message?.status === 200)) {
+        setRegisteredEventIds(prev => [...prev, event.id]);
+        setFeedback({
+          type: 'success',
+          message: `Successfully registered for ${event.title}!`
+        });
+      } else {
+        setFeedback({
+          type: 'error',
+          message: response?.message || "Registration failed. Please try again."
+        });
+      }
+
+      setTimeout(() => setFeedback(null), 5000);
+    } catch (err: any) {
+      console.error("Registration error:", err);
+      setFeedback({
+        type: 'error',
+        message: err?.message || "Registration failed. Please try again."
+      });
+      setTimeout(() => setFeedback(null), 5000);
+    } finally {
+      setRegisteringId(null);
+    }
+  };
+
   const fetchInitialData = async () => {
     try {
       setLoading(true);
-      const email = localStorage.getItem("currentUser") || "";
-      
+      // Use currentUser from context if available, otherwise fallback to localStorage
+      const email = currentUser || localStorage.getItem("currentUser") || "";
+
       if (!email) {
         setLoading(false);
         return;
@@ -247,6 +296,23 @@ export default function EventsTabContent() {
       animate="show"
       className="space-y-6"
     >
+      {feedback && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`p-4 rounded-xl border ${feedback.type === 'success'
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+            : 'bg-red-50 border-red-200 text-red-800'
+            } text-sm font-medium mb-4 flex items-center justify-between shadow-sm`}
+        >
+          <div className="flex items-center gap-2">
+            {feedback.type === 'success' ? <Sparkles className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+            {feedback.message}
+          </div>
+          <button onClick={() => setFeedback(null)} className="ml-4 opacity-50 hover:opacity-100 font-bold">×</button>
+        </motion.div>
+      )}
+
       {/* Header */}
       <motion.div variants={item}>
         <h1 className="text-2xl font-bold text-slate-800">Events & Competitions</h1>
@@ -304,11 +370,23 @@ export default function EventsTabContent() {
 
                     {/* Action Buttons - Register Now and Details */}
                     <div className="flex items-center gap-2">
-                      <Button className="flex-1 bg-orange-500 hover:bg-orange-600 text-white shadow-sm active:scale-95 transition-all">
-                        Register Now
+                      <Button
+                        onClick={() => handleRegister(event)}
+                        disabled={registeringId === event.id || registeredEventIds.includes(event.id)}
+                        className={`flex-1 ${registeredEventIds.includes(event.id)
+                          ? 'bg-emerald-500 hover:bg-emerald-600'
+                          : 'bg-orange-500 hover:bg-orange-600'
+                          } text-white shadow-sm active:scale-95 transition-all font-bold rounded-xl`}
+                      >
+                        {registeringId === event.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        ) : registeredEventIds.includes(event.id) ? (
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                        ) : null}
+                        {registeredEventIds.includes(event.id) ? "Registered" : "Register Now"}
                       </Button>
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         className="px-4 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-orange-600 hover:border-orange-200 transition-all active:scale-95 shadow-sm"
                       >
                         <Eye className="w-4 h-4 mr-1" />
@@ -331,12 +409,12 @@ export default function EventsTabContent() {
 
       {/* Digital Notice Board */}
       <motion.div variants={item} className="mt-8">
-        <CardHeader 
-          title="Digital Notice Board" 
+        <CardHeader
+          title="Digital Notice Board"
           icon={<Bell className="w-4 h-4 text-orange-500" />}
           action={{ label: "View All" }}
         />
-        
+
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 bg-white/50 rounded-2xl border border-dashed border-slate-200 mt-4">
             <Loader2 className="w-8 h-8 animate-spin text-orange-500 mb-2" />
@@ -400,8 +478,8 @@ export default function EventsTabContent() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="border-orange-200 text-orange-600 hover:bg-orange-100 hover:border-orange-300 transition-all"
               >
                 <Eye className="w-4 h-4 mr-1" />

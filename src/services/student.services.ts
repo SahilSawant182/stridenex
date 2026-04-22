@@ -202,3 +202,33 @@ export const getStudentByEmail = async (emailId: string) => {
     throw error;
   }
 };
+/**
+ * Update student details.
+ */
+export const updateStudent = async (emailId: string, data: any) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.api_stridenex_app.student.student.update_student?email_id=${encodeURIComponent(emailId)}`,
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating student:", error);
+    throw error;
+  }
+};
+/**
+ * Create a student event registration.
+ */
+export const createStudentEventRegistration = async (data: any) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.student_event_registeration.student_event_registeration.create_student_event_registeration",
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating student event registration:", error);
+    throw error;
+  }
+};

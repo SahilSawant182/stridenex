@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { getInternshipList, createInternship, updateInternship, deleteInternship, getMasterData } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
-import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
+import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { calculateEndDate } from "@/utils/date.utils";
 
 import { useSearchParams } from "next/navigation";
@@ -101,7 +101,7 @@ export default function InternshipsTabContent() {
     return dateString;
   };
 
-  const internshipFields: IndustryField[] = useMemo(() => [
+  const internshipFields: DynamicField[] = useMemo(() => [
     { name: "title", label: "Internship Title", type: "text", icon: Briefcase, required: true, colSpan: 2, placeholder: "e.g. Backend Developer Intern" },
     { name: "type", label: "Category", type: "select", icon: Target, options: categoryOptions, required: true, placeholder: "Select Category" },
     { name: "industry", label: "Industry", type: "text", icon: Globe, required: true, placeholder: "e.g. Razorpay Technologies", disabled: true },
@@ -391,7 +391,7 @@ export default function InternshipsTabContent() {
         </div>
       </motion.div>
 
-      <IndustryDynamicModal
+      <DashboardDynamicModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={editingInternship ? "Edit Internship" : "Post Internship"}

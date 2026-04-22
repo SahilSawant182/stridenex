@@ -20,7 +20,7 @@ import {
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { getProjectList, createProject, updateProject, deleteProject, getMasterData } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
-import IndustryDynamicModal, { IndustryField } from "./IndustryDynamicModal";
+import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { calculateEndDate } from "@/utils/date.utils";
 
 import { useSearchParams } from "next/navigation";
@@ -75,7 +75,7 @@ export default function ProjectsTabContent() {
     }
   };
 
-  const projectFields: IndustryField[] = useMemo(() => [
+  const projectFields: DynamicField[] = useMemo(() => [
     { name: "project_name", label: "Project Name", type: "text", icon: Briefcase, required: true, colSpan: 2, placeholder: "e.g. AI Resume Screening System", disabled: !!projectToEdit },
     { name: "project_code", label: "Project Code", type: "text", icon: FileText, required: true, placeholder: "e.g. AI-001" },
     { name: "industry", label: "Industry", type: "text", icon: Layers, required: true, placeholder: "e.g. Razorpay Technologies", disabled: true },
@@ -396,7 +396,7 @@ export default function ProjectsTabContent() {
         </AnimatePresence>
       </div>
 
-      <IndustryDynamicModal
+      <DashboardDynamicModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         title={projectToEdit ? "Manage Project" : "Post New Project"}

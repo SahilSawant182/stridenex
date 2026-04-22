@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export interface IndustryField {
+export interface DynamicField {
   name: string;
   label: string;
   type: "text" | "number" | "select" | "textarea" | "email" | "url" | "date";
@@ -22,14 +22,14 @@ export interface IndustryField {
   multiple?: boolean;
 }
 
-interface IndustryDynamicModalProps {
+interface DashboardDynamicModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   subtitle?: string;
   headerIcon: LucideIcon;
   iconBgColor?: string;
-  fields: IndustryField[];
+  fields: DynamicField[];
   initialValues?: Record<string, any>;
   onSubmit: (data: any) => Promise<void>;
   loading?: boolean;
@@ -38,7 +38,7 @@ interface IndustryDynamicModalProps {
   onValuesChange?: (values: Record<string, any>, changedFieldName: string) => Record<string, any> | void;
 }
 
-export default function IndustryDynamicModal({
+export default function DashboardDynamicModal({
   isOpen,
   onClose,
   title,
@@ -52,7 +52,7 @@ export default function IndustryDynamicModal({
   error = null,
   onFieldFocus,
   onValuesChange
-}: IndustryDynamicModalProps) {
+}: DashboardDynamicModalProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeSelect, setActiveSelect] = useState<string | null>(null);
@@ -62,9 +62,10 @@ export default function IndustryDynamicModal({
   const [lastInitialValues, setLastInitialValues] = useState<string>("");
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && initialValues) {
       const currentInitialStr = JSON.stringify(initialValues);
       
+      // Only update if the stringified values have actually changed or it's the first load
       if (lastInitialValues !== currentInitialStr) {
         const initial: Record<string, any> = {};
         fields.forEach(field => {
@@ -73,7 +74,7 @@ export default function IndustryDynamicModal({
         setFormData(initial);
         setLastInitialValues(currentInitialStr);
       }
-    } else {
+    } else if (!isOpen) {
       setLastInitialValues("");
       setActiveSelect(null);
       setSearchTerm("");
@@ -238,7 +239,7 @@ export default function IndustryDynamicModal({
                             }}
                             placeholder={field.placeholder}
                             rows={3}
-                            className={`w-full ${field.icon ? 'pl-12' : 'px-4'} pr-4 pt-3.5 rounded-[1.5rem] border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm resize-none outline-none min-h-[100px] disabled:bg-slate-50 disabled:text-slate-500`}
+                            className={`w-full ${field.icon ? 'pl-12' : 'px-4'} pr-4 pt-3.5 rounded-[1.5rem] border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm text-slate-900 resize-none outline-none min-h-[100px] disabled:bg-slate-50 disabled:text-slate-500`}
                             required={field.required}
                             disabled={field.disabled}
                           />
@@ -253,7 +254,7 @@ export default function IndustryDynamicModal({
                                   if (onFieldFocus) onFieldFocus(field.name);
                                 }
                               }}
-                              className={`w-full min-h-[3rem] ${field.icon ? 'pl-12' : 'px-4'} pr-10 py-2.5 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm bg-white cursor-pointer flex flex-wrap gap-2 ${field.disabled ? 'bg-slate-50 opacity-50 cursor-not-allowed' : ''}`}
+                              className={`w-full min-h-[3rem] ${field.icon ? 'pl-12' : 'px-4'} pr-10 py-2.5 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm bg-white cursor-pointer flex flex-wrap gap-2 ${field.disabled ? 'bg-slate-50 opacity-60 cursor-not-allowed grayscale' : ''}`}
                             >
                               {field.multiple ? (
                                 <>
@@ -272,7 +273,7 @@ export default function IndustryDynamicModal({
                                       }}
                                     >
                                       {val}
-                                      <X className="w-3 h-3 hover:text-red-400 transition-colors" />
+                                      {!field.disabled && <X className="w-3 h-3 hover:text-red-400 transition-colors" />}
                                     </span>
                                   ))}
                                 </>
@@ -281,7 +282,9 @@ export default function IndustryDynamicModal({
                                   {formData[field.name] || (field.options && field.options.length === 0 ? "No data found" : (field.placeholder || `Select ${field.label}`))}
                                 </span>
                               )}
-                              <ChevronDown className={`absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-transform ${activeSelect === field.name ? 'rotate-180' : ''}`} />
+                              {!field.disabled && (
+                                <ChevronDown className={`absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-transform ${activeSelect === field.name ? 'rotate-180' : ''}`} />
+                              )}
                             </div>
 
                             <AnimatePresence>
@@ -366,7 +369,7 @@ export default function IndustryDynamicModal({
                             required={field.required}
                             disabled={field.disabled}
                             style={field.textTransform ? { textTransform: field.textTransform } : {}}
-                            className={`${field.icon ? 'pl-12' : 'px-4'} h-12 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold ${field.textTransform === 'uppercase' ? 'placeholder:uppercase' : ''} disabled:bg-slate-50 disabled:text-slate-500`}
+                            className={`${field.icon ? 'pl-12' : 'px-4'} h-12 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-slate-900 ${field.textTransform === 'uppercase' ? 'placeholder:uppercase' : ''} disabled:bg-slate-50 disabled:text-slate-500`}
                           />
                         )}
                       </div>

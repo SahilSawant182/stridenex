@@ -14,8 +14,19 @@ import {
   Award,
   Calendar,
   TrendingUp,
-  AlertTriangle
+  AlertTriangle,
+  Pen,
+  Mail,
+  Phone,
+  Shield,
+  Layers,
+  Globe,
+  Github,
+  Linkedin
 } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { getStudentByEmail, updateStudent } from "@/services/student.services";
+import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 
 interface BannerMetric {
   key: string;
@@ -114,12 +125,107 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
   const { fullName, currentUser } = useAuth();
   const config = roleConfig[role];
 
+  // Student specific state
+  const [studentData, setStudentData] = useState<any>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+
+  const fetchStudentData = async () => {
+    if (role !== "student" || !currentUser) return;
+    try {
+      const response = await getStudentByEmail(currentUser);
+      // Handle the nested structure: response.message.data
+      const data = response?.data || response?.message?.data || response?.message;
+      if (data && typeof data === 'object') {
+        setStudentData(data);
+      }
+    } catch (error) {
+      console.error("Error fetching student data in banner:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchStudentData();
+  }, [role, currentUser]);
+
+  const studentFields: DynamicField[] = useMemo(() => [
+    { name: "first_name", label: "First Name", type: "text", icon: Users, required: true, disabled: true },
+    { name: "last_name", label: "Last Name", type: "text", icon: Users, required: true, disabled: true },
+    { name: "email_id", label: "Email ID", type: "email", icon: Mail, required: true, disabled: true, colSpan: 2 },
+    { name: "mobile_no", label: "Mobile No", type: "text", icon: Phone, required: true },
+    { name: "college", label: "College", type: "text", icon: Building2, required: true, disabled: true, colSpan: 2 },
+    { name: "department", label: "Department", type: "text", icon: Shield, required: true },
+    { name: "stream", label: "Stream", type: "text", icon: Layers, required: true },
+    { name: "course", label: "Course", type: "text", icon: GraduationCap, required: true },
+    { name: "semester", label: "Semester", type: "text", icon: Calendar, required: true },
+    { name: "academic_year", label: "Academic Year", type: "text", icon: Target, required: true },
+    { name: "date_of_birth", label: "Date of Birth", type: "date", icon: Calendar, required: true },
+    { name: "gender", label: "Gender", type: "select", icon: Users, options: ["Male", "Female", "Other"], required: true, disabled: true },
+    { name: "linkedin", label: "LinkedIn URL", type: "url", icon: Linkedin },
+    { name: "github", label: "GitHub URL", type: "url", icon: Github },
+  ], []);
+
+  const handleUpdateProfile = async (formData: any) => {
+    if (!currentUser) return;
+    setModalLoading(true);
+    setModalError(null);
+    try {
+      await updateStudent(currentUser, formData);
+      await fetchStudentData();
+      setIsModalOpen(false);
+    } catch (error: any) {
+      setModalError(error?.message || "Failed to update profile");
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Compute initial values for the modal
+  const computedInitialValues = useMemo(() => {
+    if (!studentData && !fullName) return {};
+    
+    // Split fullName from local storage for first/last name
+    const [firstName = "", ...lastNameParts] = (fullName || "").split(" ");
+    const lastName = lastNameParts.join(" ");
+
+    return {
+      // API Data
+      department: studentData?.department || "",
+      stream: studentData?.stream || "",
+      course: studentData?.course || "",
+      semester: studentData?.semester || "",
+      academic_year: studentData?.academic_year || "",
+      date_of_birth: studentData?.date_of_birth || "",
+      mobile_no: studentData?.mobile_no || "",
+      college: studentData?.college || "",
+      linkedin: studentData?.linkedin || "",
+      github: studentData?.github || "",
+      gender: studentData?.gender || "",
+      
+      // Local Storage priority
+      first_name: firstName || studentData?.first_name || "",
+      last_name: lastName || studentData?.last_name || "",
+      email_id: currentUser || studentData?.email_id || "",
+    };
+  }, [studentData, fullName, currentUser]);
+
   // Get title from customData or fullName or default
-  const title = customData?.title ||
-    (role === "college" ? config.defaultTitle : fullName || config.defaultTitle);
+  const title = customData?.title || fullName || config.defaultTitle;
 
   // Get subtitle from customData or default
-  const subtitle = customData?.subtitle || config.defaultSubtitle;
+  const subtitle = customData?.subtitle || 
+    (role === "student" && studentData ? (
+      <div className="space-y-0.5">
+        <p className="font-bold text-white flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-blue-300" />
+          {studentData.college || "College Not Specified"}
+        </p>
+        <p className={`text-xs ${config.textColor} opacity-80`}>
+          {studentData.course} • {studentData.department || ""} • Stream {studentData.stream || "N/A"}
+        </p>
+      </div>
+    ) : config.defaultSubtitle);
 
   // Get progress value
   const progressValue = customData?.profileProgress ?? config.defaultProgress;
@@ -170,12 +276,18 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
   };
 
   // Get metrics from customData or use defaults
-  const metrics = customData?.metrics || config.metrics.map(m => ({
-    key: m.key,
-    value: m.default,
-    label: m.label,
-    icon: m.icon
-  }));
+  const metrics = customData?.metrics || (
+    role === "student" && studentData ? [
+      { key: "employability", value: 73, label: "Employability", icon: TrendingUp },
+      { key: "cgpa", value: studentData.cgpa || 0, label: "Current CGPA", icon: Award },
+      { key: "semester", value: studentData.semester || "N/A", label: "Semester", icon: Calendar }
+    ] : config.metrics.map(m => ({
+      key: m.key,
+      value: m.default,
+      label: m.label,
+      icon: m.icon
+    }))
+  );
 
   return (
     <motion.div
@@ -199,12 +311,20 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
                 {config.roleName}
               </span>
             </p>
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-1">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-1 flex items-center gap-3">
               {title}
+              {role === "student" && (
+                <button 
+                  onClick={() => setIsModalOpen(true)}
+                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group/edit"
+                >
+                  <Pen className="w-4 h-4 text-white/50 group-hover/edit:text-white transition-colors" />
+                </button>
+              )}
             </h2>
-            <p className={`text-sm ${config.textColor}`}>
+            <div className={`text-sm ${config.textColor}`}>
               {subtitle}
-            </p>
+            </div>
           </div>
         </div>
 
@@ -252,6 +372,22 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
             </motion.div>
           </div>
         </div>
+      )}
+
+      {role === "student" && (
+        <DashboardDynamicModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          title="Update Profile"
+          subtitle="Keep your academic details up to date"
+          headerIcon={Pen}
+          iconBgColor="bg-orange-500"
+          fields={studentFields}
+          initialValues={computedInitialValues}
+          onSubmit={handleUpdateProfile}
+          loading={modalLoading}
+          error={modalError}
+        />
       )}
     </motion.div>
   );
