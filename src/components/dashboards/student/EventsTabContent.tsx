@@ -1,6 +1,6 @@
-// components/dashboards/student/EventsTabContent.tsx
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { 
   Calendar, 
@@ -13,12 +13,14 @@ import {
   Megaphone,
   ChevronRight,
   Sparkles,
-  Eye
+  Eye,
+  Loader2
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getMasterData, getStudentByEmail } from "@/services/student.services";
 
 // Types
 interface Event {
@@ -44,64 +46,8 @@ interface Notice {
   color: string;
 }
 
-// Events data
-const events: Event[] = [
-  {
-    id: 1,
-    title: "Hackathon",
-    type: "Hackathon",
-    daysLeft: 12,
-    date: "Mar 15–17",
-    participants: "150+ colleges",
-    prize: "5 Lakhs",
-    color: "text-orange-600",
-    bgColor: "bg-orange-50",
-    borderColor: "border-orange-200",
-    icon: Trophy
-  },
-  {
-    id: 2,
-    title: "DataFest National",
-    type: "Competition",
-    daysLeft: 0,
-    date: "Apr 2–3",
-    participants: "80+ colleges",
-    prize: "2 Lakhs",
-    color: "text-blue-600",
-    bgColor: "bg-blue-50",
-    borderColor: "border-blue-200",
-    icon: Trophy
-  },
-  {
-    id: 3,
-    title: "Startup Pitch Battle",
-    type: "Pitch Battle",
-    daysLeft: 20,
-    date: "Mar 25",
-    participants: "All colleges",
-    prize: "10 Lakhs",
-    color: "text-purple-600",
-    bgColor: "bg-purple-50",
-    borderColor: "border-purple-200",
-    icon: Trophy
-  },
-  {
-    id: 4,
-    title: "Case Study Champions",
-    type: "Case Study",
-    daysLeft: 0,
-    date: "Apr 10",
-    participants: "60+ colleges",
-    prize: "Internships",
-    color: "text-emerald-600",
-    bgColor: "bg-emerald-50",
-    borderColor: "border-emerald-200",
-    icon: Trophy
-  }
-];
-
 // Notice board data
-const notices: Notice[] = [
+const mockNotices: Notice[] = [
   {
     id: 1,
     title: "VJTI-TCS iON Internship Drive – Applications Open",
@@ -151,7 +97,149 @@ const item = {
   show: { opacity: 1, y: 0 }
 };
 
+const getNoticeStyles = (type: string) => {
+  switch (type) {
+    case "Placement":
+      return { icon: Bell, color: "text-blue-600" };
+    case "Events":
+      return { icon: Megaphone, color: "text-orange-600" };
+    case "Academic":
+      return { icon: Calendar, color: "text-purple-600" };
+    case "Compliance":
+      return { icon: Bell, color: "text-emerald-600" };
+    default:
+      return { icon: Bell, color: "text-slate-600" };
+  }
+};
+
+const getEventStyles = (type: string) => {
+  const styles: Record<string, any> = {
+    "Hackathon": { color: "text-orange-600", bgColor: "bg-orange-50", borderColor: "border-orange-200" },
+    "Competition": { color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-200" },
+    "Pitch Battle": { color: "text-purple-600", bgColor: "bg-purple-50", borderColor: "border-purple-200" },
+    "Case Study": { color: "text-emerald-600", bgColor: "bg-emerald-50", borderColor: "border-emerald-200" },
+    "Workshop": { color: "text-amber-600", bgColor: "bg-amber-50", borderColor: "border-amber-200" }
+  };
+  return styles[type] || { color: "text-slate-600", bgColor: "bg-slate-50", borderColor: "border-slate-200" };
+};
+
+const calculateDaysLeft = (dateString: string) => {
+  if (!dateString) return 0;
+  try {
+    const targetDate = new Date(dateString);
+    const now = new Date();
+    const diff = targetDate.getTime() - now.getTime();
+    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    return days > 0 ? days : 0;
+  } catch (e) {
+    return 0;
+  }
+};
+
 export default function EventsTabContent() {
+  const [notices, setNotices] = useState<Notice[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
+
+  const fetchInitialData = async () => {
+    try {
+      setLoading(true);
+      const email = localStorage.getItem("currentUser") || "";
+      
+      if (!email) {
+        setLoading(false);
+        return;
+      }
+
+      // 1. Fetch student details to get the college
+      const studentRes = await getStudentByEmail(email);
+      const studentCollege = studentRes?.message?.data?.college;
+
+      if (studentCollege) {
+        // 2. Fetch notices and events for that specific college in parallel
+        await Promise.all([
+          fetchNotices(studentCollege),
+          fetchEvents(studentCollege)
+        ]);
+      } else {
+        console.warn("No college found for student:", email);
+        setNotices([]);
+        setEvents([]);
+      }
+    } catch (error) {
+      console.error("Error fetching initial data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchNotices = async (college: string) => {
+    try {
+      const response = await getMasterData("College Notice", {
+        filters: { college: college },
+        fields: ["college", "notice", "notice_type", "date"]
+      });
+
+      const apiData = response?.data || response?.message || [];
+      if (Array.isArray(apiData)) {
+        const mappedNotices: Notice[] = apiData.map((item: any, index: number) => {
+          const styles = getNoticeStyles(item.notice_type);
+          return {
+            id: index + 1,
+            title: item.notice || "Untitled Notice",
+            category: item.notice_type || "General",
+            date: item.date || "",
+            icon: styles.icon,
+            color: styles.color
+          };
+        });
+        setNotices(mappedNotices);
+      } else {
+        setNotices([]);
+      }
+    } catch (error) {
+      console.error("Error fetching notices:", error);
+      setNotices([]);
+    }
+  };
+
+  const fetchEvents = async (college: string) => {
+    try {
+      const response = await getMasterData("College Event", {
+        filters: { college: college },
+        fields: ["college", "event", "event_type", "start_date"]
+      });
+
+      const apiData = response?.data || response?.message || [];
+      if (Array.isArray(apiData)) {
+        const mappedEvents: Event[] = apiData.map((item: any, index: number) => {
+          const styles = getEventStyles(item.event_type);
+          return {
+            id: index + 1,
+            title: item.event || "Untitled Event",
+            type: item.event_type || "Event",
+            daysLeft: calculateDaysLeft(item.start_date),
+            date: item.start_date || "",
+            participants: "Join Now",
+            prize: "Exciting Rewards",
+            ...styles,
+            icon: Trophy
+          };
+        });
+        setEvents(mappedEvents);
+      } else {
+        setEvents([]);
+      }
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      setEvents([]);
+    }
+  };
+
   return (
     <motion.div
       variants={container}
@@ -166,64 +254,79 @@ export default function EventsTabContent() {
       </motion.div>
 
       {/* Events Grid */}
-      <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {events.map((event) => {
-          const Icon = event.icon;
-          return (
-            <BaseCard key={event.id} className="overflow-hidden hover:shadow-lg transition-all group">
-              <div className="p-5">
-                {/* Header with Type and Days Left */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-10 h-10 rounded-lg ${event.bgColor} flex items-center justify-center`}>
-                      <Icon className={`w-5 h-5 ${event.color}`} />
+      <motion.div variants={item}>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-white/50 rounded-3xl border border-dashed border-slate-200">
+            <Loader2 className="w-10 h-10 animate-spin text-orange-500 mb-4" />
+            <p className="text-slate-500 font-medium tracking-wide">Syncing events & competitions...</p>
+          </div>
+        ) : events.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {events.map((event) => {
+              const Icon = event.icon;
+              return (
+                <BaseCard key={event.id} className="overflow-hidden hover:shadow-lg transition-all group">
+                  <div className="p-5">
+                    {/* Header with Type and Days Left */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-10 h-10 rounded-lg ${event.bgColor} flex items-center justify-center`}>
+                          <Icon className={`w-5 h-5 ${event.color}`} />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-800">{event.title}</h3>
+                          <p className="text-xs text-slate-500">{event.type}</p>
+                        </div>
+                      </div>
+                      {event.daysLeft > 0 && (
+                        <Badge variant="outline" className={`${event.bgColor} ${event.color} border-${event.borderColor} font-medium`}>
+                          <Clock className="w-3 h-3 mr-1" />
+                          {event.daysLeft} days left
+                        </Badge>
+                      )}
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-800">{event.title}</h3>
-                      <p className="text-xs text-slate-500">{event.type}</p>
+
+                    {/* Event Details */}
+                    <div className="space-y-3 mb-4">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Calendar className="w-4 h-4 text-slate-400" />
+                        <span className="text-slate-600">{event.date}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Users className="w-4 h-4 text-slate-400" />
+                        <span className="text-slate-600">{event.participants}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <IndianRupee className="w-4 h-4 text-slate-400" />
+                        <span className="font-semibold text-slate-800">{event.prize}</span>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons - Register Now and Details */}
+                    <div className="flex items-center gap-2">
+                      <Button className="flex-1 bg-orange-500 hover:bg-orange-600 text-white shadow-sm active:scale-95 transition-all">
+                        Register Now
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        className="px-4 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-orange-600 hover:border-orange-200 transition-all active:scale-95 shadow-sm"
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        Details
+                      </Button>
                     </div>
                   </div>
-                  {event.daysLeft > 0 && (
-                    <Badge variant="outline" className={`${event.bgColor} ${event.color} border-${event.borderColor} font-medium`}>
-                      <Clock className="w-3 h-3 mr-1" />
-                      {event.daysLeft} days left
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Event Details */}
-                <div className="space-y-3 mb-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="w-4 h-4 text-slate-400" />
-                    <span className="text-slate-600">{event.date}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="w-4 h-4 text-slate-400" />
-                    <span className="text-slate-600">{event.participants}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <IndianRupee className="w-4 h-4 text-slate-400" />
-                    <span className="font-semibold text-slate-800">{event.prize}</span>
-                  </div>
-                </div>
-
-                {/* Action Buttons - Register Now and Details */}
-                <div className="flex items-center gap-2">
-                  <Button className="flex-1 bg-orange-500 hover:bg-orange-600 text-white">
-                    Register Now
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="px-4 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-orange-600 hover:border-orange-200 transition-all"
-                  >
-                    <Eye className="w-4 h-4 mr-1" />
-                    Details
-                  </Button>
-                </div>
-              </div>
-            </BaseCard>
-          );
-        })}
+                </BaseCard>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-20 flex flex-col items-center justify-center bg-white border border-dashed border-slate-200 rounded-3xl">
+            <Trophy className="w-12 h-12 text-slate-200 mb-4" />
+            <h3 className="text-lg font-bold text-slate-800">No Events Found</h3>
+            <p className="text-sm text-slate-500">There are no upcoming events or competitions at the moment.</p>
+          </div>
+        )}
       </motion.div>
 
       {/* Digital Notice Board */}
@@ -234,30 +337,43 @@ export default function EventsTabContent() {
           action={{ label: "View All" }}
         />
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          {notices.map((notice) => {
-            const Icon = notice.icon;
-            return (
-              <BaseCard key={notice.id} className="hover:shadow-md transition-all cursor-pointer group">
-                <div className="p-4 flex items-start gap-3">
-                  <div className={`w-8 h-8 rounded-lg ${notice.color.replace('text', 'bg').replace('600', '50')} flex items-center justify-center flex-shrink-0`}>
-                    <Icon className={`w-4 h-4 ${notice.color}`} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-slate-800 group-hover:text-orange-600 transition-colors">{notice.title}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-xs">
-                        {notice.category}
-                      </Badge>
-                      <span className="text-xs text-slate-400">{notice.date}</span>
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12 bg-white/50 rounded-2xl border border-dashed border-slate-200 mt-4">
+            <Loader2 className="w-8 h-8 animate-spin text-orange-500 mb-2" />
+            <p className="text-sm text-slate-500 font-medium">Fetching notices...</p>
+          </div>
+        ) : notices.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {notices.map((notice) => {
+              const Icon = notice.icon;
+              return (
+                <BaseCard key={notice.id} className="hover:shadow-md transition-all cursor-pointer group">
+                  <div className="p-4 flex items-start gap-3">
+                    <div className={`w-8 h-8 rounded-lg ${notice.color.replace('text', 'bg').replace('600', '50')} flex items-center justify-center flex-shrink-0`}>
+                      <Icon className={`w-4 h-4 ${notice.color}`} />
                     </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-slate-800 group-hover:text-orange-600 transition-colors line-clamp-2">{notice.title}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-[10px] px-1.5 py-0">
+                          {notice.category}
+                        </Badge>
+                        <span className="text-[10px] text-slate-400 font-medium">{notice.date}</span>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-orange-500 transition-colors flex-shrink-0" />
                   </div>
-                  <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-orange-500 transition-colors" />
-                </div>
-              </BaseCard>
-            );
-          })}
-        </div>
+                </BaseCard>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-12 flex flex-col items-center justify-center bg-white/50 rounded-2xl border border-dashed border-slate-200 mt-4">
+            <Bell className="w-10 h-10 text-slate-200 mb-3" />
+            <h3 className="text-sm font-bold text-slate-800">No Notices Posted</h3>
+            <p className="text-xs text-slate-500">Check back later for updates from your college.</p>
+          </div>
+        )}
       </motion.div>
 
       {/* Featured Event */}

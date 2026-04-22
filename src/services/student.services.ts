@@ -67,11 +67,11 @@ export const getStudentProjectList = async () => {
 /**
  * Fetch master data for a specific doctype.
  */
-export const getMasterData = async (doctype: string) => {
+export const getMasterData = async (doctype: string, additionalPayload: any = {}) => {
   try {
     const response = await apiService.post(
       "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
-      { doctype }
+      { doctype, ...additionalPayload }
     );
     return response;
   } catch (error) {
@@ -184,6 +184,21 @@ export const createGroupSessionBooking = async (data: any) => {
     return response;
   } catch (error) {
     console.error("Error creating group session booking:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch student details by email.
+ */
+export const getStudentByEmail = async (emailId: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.api_stridenex_app.student.student.get_student_by_email?email_id=${encodeURIComponent(emailId)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching student by email:", error);
     throw error;
   }
 };

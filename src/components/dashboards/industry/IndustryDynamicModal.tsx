@@ -54,6 +54,7 @@ export default function IndustryDynamicModal({
   onValuesChange
 }: IndustryDynamicModalProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeSelect, setActiveSelect] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -76,6 +77,7 @@ export default function IndustryDynamicModal({
       setLastInitialValues("");
       setActiveSelect(null);
       setSearchTerm("");
+      setErrors({});
     }
   }, [isOpen, fields, initialValues, lastInitialValues]);
 
@@ -92,6 +94,15 @@ export default function IndustryDynamicModal({
       
       return updated;
     });
+
+    // Clear error when field is changed
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const toggleSelectValue = (fieldName: string, value: string, multiple: boolean) => {
@@ -116,6 +127,15 @@ export default function IndustryDynamicModal({
 
       return updated;
     });
+
+    // Clear error when value is toggled
+    if (errors[fieldName]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
   };
 
   const removeMultiSelectValue = (fieldName: string, value: string) => {
@@ -127,6 +147,29 @@ export default function IndustryDynamicModal({
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Perform validation
+    const newErrors: Record<string, string> = {};
+    fields.forEach(field => {
+      if (field.required) {
+        const value = formData[field.name];
+        const isEmpty = 
+          value === undefined || 
+          value === null || 
+          value === "" || 
+          (Array.isArray(value) && value.length === 0);
+        
+        if (isEmpty) {
+          newErrors[field.name] = "required";
+        }
+      }
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
     await onSubmit(formData);
   };
 
@@ -195,7 +238,7 @@ export default function IndustryDynamicModal({
                             }}
                             placeholder={field.placeholder}
                             rows={3}
-                            className={`w-full ${field.icon ? 'pl-12' : 'px-4'} pr-4 pt-3.5 rounded-[1.5rem] border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm resize-none outline-none min-h-[100px] disabled:bg-slate-50 disabled:text-slate-500`}
+                            className={`w-full ${field.icon ? 'pl-12' : 'px-4'} pr-4 pt-3.5 rounded-[1.5rem] border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm resize-none outline-none min-h-[100px] disabled:bg-slate-50 disabled:text-slate-500`}
                             required={field.required}
                             disabled={field.disabled}
                           />
@@ -210,7 +253,7 @@ export default function IndustryDynamicModal({
                                   if (onFieldFocus) onFieldFocus(field.name);
                                 }
                               }}
-                              className={`w-full min-h-[3rem] ${field.icon ? 'pl-12' : 'px-4'} pr-10 py-2.5 rounded-2xl border border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm bg-white cursor-pointer flex flex-wrap gap-2 ${field.disabled ? 'bg-slate-50 opacity-50 cursor-not-allowed' : ''}`}
+                              className={`w-full min-h-[3rem] ${field.icon ? 'pl-12' : 'px-4'} pr-10 py-2.5 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm bg-white cursor-pointer flex flex-wrap gap-2 ${field.disabled ? 'bg-slate-50 opacity-50 cursor-not-allowed' : ''}`}
                             >
                               {field.multiple ? (
                                 <>
@@ -323,10 +366,15 @@ export default function IndustryDynamicModal({
                             required={field.required}
                             disabled={field.disabled}
                             style={field.textTransform ? { textTransform: field.textTransform } : {}}
-                            className={`${field.icon ? 'pl-12' : 'px-4'} h-12 rounded-2xl border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold ${field.textTransform === 'uppercase' ? 'placeholder:uppercase' : ''} disabled:bg-slate-50 disabled:text-slate-500`}
+                            className={`${field.icon ? 'pl-12' : 'px-4'} h-12 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold ${field.textTransform === 'uppercase' ? 'placeholder:uppercase' : ''} disabled:bg-slate-50 disabled:text-slate-500`}
                           />
                         )}
                       </div>
+                      {errors[field.name] && (
+                        <p className="text-[10px] font-bold text-red-500 ml-1 mt-1 animate-pulse">
+                          * This field is mandatory
+                        </p>
+                      )}
                     </div>
                   ))}
                 </form>
