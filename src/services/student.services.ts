@@ -141,3 +141,49 @@ export const getMentorNextAvailableSlot = async (mentorEmail: string) => {
     throw error;
   }
 };
+/**
+ * Fetch skill ledger summary for a student.
+ */
+export const getSkillLedger = async (studentEmail: string) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.skill_ledger.doctype.student_skill.student_skill.get_skill_ledger",
+      { student: studentEmail }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching skill ledger:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch employability score for a student.
+ */
+export const getEmployabilityScore = async (studentEmail: string) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.skill_ledger.doctype.student_skill.student_skill.get_employability_score",
+      { student: studentEmail }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching employability score:", error);
+    throw error;
+  }
+};
+/**
+ * Create a group session booking.
+ */
+export const createGroupSessionBooking = async (data: any) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.create_group_session_booking",
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating group session booking:", error);
+    throw error;
+  }
+};

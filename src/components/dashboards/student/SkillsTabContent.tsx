@@ -1,12 +1,14 @@
 // components/dashboards/student/SkillsTabContent.tsx
 "use client";
 
-import { motion } from "framer-motion";
-import { CheckCircle2, ShieldCheck, Award, FileText, Lock, Star } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckCircle2, ShieldCheck, Award, FileText, Lock, Star, Loader2 } from "lucide-react";
 import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { SkillRadar } from "@/components/dashboards/shared/RadarChart";
 import { SummaryList } from "@/components/dashboards/shared/SummaryList";
 import { CircularScore } from "@/components/dashboards/shared/CircularScore";
+import { getSkillLedger, getEmployabilityScore } from "@/services/student.services";
+import { motion } from "framer-motion";
 
 // Types
 interface RadarData {
@@ -28,8 +30,8 @@ interface SkillRow {
   lastDemo: string;
 }
 
-// Data
-const radarData: RadarData[] = [
+// Fallback Mock Data for Radar and Table
+const mockRadarData: RadarData[] = [
   { subject: 'Python', value: 90, fullMark: 100 },
   { subject: 'ML', value: 70, fullMark: 100 },
   { subject: 'SQL', value: 85, fullMark: 100 },
@@ -38,59 +40,7 @@ const radarData: RadarData[] = [
   { subject: 'Data Viz', value: 75, fullMark: 100 },
 ];
 
-const ledgerItems = [
-  {
-    label: 'Total Skills',
-    value: 14,
-    icon: <span>🎯</span>,
-    bgColor: 'bg-red-50',
-    textColor: 'text-red-500'
-  },
-  {
-    label: 'AI Verified',
-    value: 6,
-    icon: <span>🤖</span>,
-    bgColor: 'bg-blue-50',
-    textColor: 'text-blue-500'
-  },
-  {
-    label: 'Mentor Endorsed',
-    value: 4,
-    icon: <Award className="w-3 h-3" />,
-    bgColor: 'bg-amber-50',
-    textColor: 'text-amber-500'
-  },
-  {
-    label: 'Industry Endorsed',
-    value: 2,
-    icon: <span>🏭</span>,
-    bgColor: 'bg-purple-50',
-    textColor: 'text-purple-500'
-  },
-  {
-    label: 'Evidence Items',
-    value: 23,
-    icon: <FileText className="w-3 h-3" />,
-    bgColor: 'bg-slate-100',
-    textColor: 'text-slate-500'
-  },
-];
-
-const ledgerFooter = (
-  <div className="flex justify-between items-center py-2">
-    <div className="flex items-center gap-2 text-sm text-slate-600">
-      <span className="w-5 h-5 flex items-center justify-center text-slate-400">
-        <Lock className="w-4 h-4" />
-      </span>
-      Ledger Integrity
-    </div>
-    <span className="font-bold text-slate-800 flex items-center gap-1">
-      <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Verified
-    </span>
-  </div>
-);
-
-const skillRows: SkillRow[] = [
+const mockSkillRows: SkillRow[] = [
   { id: '1', name: 'Python', category: 'Technical', categoryType: 'Technical', level: 'Advanced', levelType: 'Advanced', evidence: 5, endorsements: 2, aiVerified: true, lastDemo: 'Feb 14' },
   { id: '2', name: 'SQL', category: 'Technical', categoryType: 'Technical', level: 'Advanced', levelType: 'Advanced', evidence: 4, endorsements: 2, aiVerified: true, lastDemo: 'Feb 10' },
   { id: '3', name: 'Problem Solving', category: 'Cognitive', categoryType: 'Cognitive', level: 'Advanced', levelType: 'Advanced', evidence: 6, endorsements: 1, aiVerified: true, lastDemo: 'Feb 18' },
@@ -98,14 +48,13 @@ const skillRows: SkillRow[] = [
   { id: '5', name: 'Communication', category: 'Soft Skill', categoryType: 'Soft Skill', level: 'Intermediate', levelType: 'Intermediate', evidence: 2, endorsements: 1, aiVerified: false, lastDemo: 'Jan 20' },
 ];
 
-// Helper functions
 const getCategoryStyle = (category: string) => {
-  const styles = {
+  const styles: Record<string, string> = {
     Technical: "bg-slate-100 text-slate-600",
     Cognitive: "bg-purple-100 text-purple-600",
     "Soft Skill": "bg-emerald-100 text-emerald-600"
   };
-  return styles[category as keyof typeof styles] || "bg-slate-100 text-slate-600";
+  return styles[category] || styles.Technical;
 };
 
 const getLevelStyle = (level: string, type: string) => {
@@ -115,25 +64,86 @@ const getLevelStyle = (level: string, type: string) => {
 };
 
 export default function SkillsTabContent() {
+  const [ledgerItems, setLedgerItems] = useState<any[]>([]);
+  const [overallScore, setOverallScore] = useState<number>(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchSkillStats();
+  }, []);
+
+  const fetchSkillStats = async () => {
+    try {
+      setLoading(true);
+      const studentEmail = localStorage.getItem("currentUser") || "";
+
+      const [ledgerRes, scoreRes] = await Promise.all([
+        getSkillLedger(studentEmail),
+        getEmployabilityScore(studentEmail)
+      ]);
+
+      if (ledgerRes?.message) {
+        const ledger = [
+          { label: 'Total Skills', value: ledgerRes.message.total_skills || 0, icon: <span>🎯</span>, bgColor: 'bg-red-50', textColor: 'text-red-500' },
+          { label: 'AI Verified', value: ledgerRes.message.ai_verified || 0, icon: <span>🤖</span>, bgColor: 'bg-blue-50', textColor: 'text-blue-500' },
+          { label: 'Mentor Endorsed', value: ledgerRes.message.mentor_endorsed || 0, icon: <Award className="w-3 h-3" />, bgColor: 'bg-amber-50', textColor: 'text-amber-500' },
+          { label: 'Industry Endorsed', value: ledgerRes.message.industry_endorsed || 0, icon: <span>🏭</span>, bgColor: 'bg-purple-50', textColor: 'text-purple-500' },
+          { label: 'Evidence Items', value: ledgerRes.message.total_evidence || 0, icon: <FileText className="w-3 h-3" />, bgColor: 'bg-slate-100', textColor: 'text-slate-500' },
+        ];
+        setLedgerItems(ledger);
+      }
+
+      console.log(scoreRes)
+      if (scoreRes?.message) {
+        setOverallScore(scoreRes?.message || 0);
+      }
+    } catch (err) {
+      console.error("Error fetching skill stats:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+        <span className="text-sm font-medium italic tracking-widest uppercase opacity-70">Syncing Skill Ledger...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Top Row: Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Skill Radar */}
         <StatsCard title="Skill Radar" className="overflow-hidden">
-          <SkillRadar data={radarData} />
+          <SkillRadar data={mockRadarData} />
         </StatsCard>
 
         {/* Ledger Summary */}
         <StatsCard title="Ledger Summary">
-          <SummaryList items={ledgerItems} footer={ledgerFooter} />
+          <SummaryList items={ledgerItems} footer={
+            <div className="flex justify-between items-center py-2">
+              <div className="flex items-center gap-2 text-sm text-slate-600">
+                <span className="w-5 h-5 flex items-center justify-center text-slate-400">
+                  <Lock className="w-4 h-4" />
+                </span>
+                Ledger Integrity
+              </div>
+              <span className="font-bold text-slate-800 flex items-center gap-1">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Verified
+              </span>
+            </div>
+          } />
         </StatsCard>
 
         {/* Overall Score */}
         <StatsCard title="Overall Score" className="flex flex-col items-center justify-center relative overflow-hidden group">
-          <CircularScore score={73} label="Overall" color="stroke-orange-500" />
+          <CircularScore score={overallScore} label="Overall" color="stroke-orange-500" />
           <p className="text-[11px] font-medium text-slate-500 mt-6 group-hover:text-slate-700 transition-colors">
-            Top 15% in cohort · 6 skills verified
+            {overallScore > 70 ? 'Top 15% in cohort' : overallScore > 50 ? 'Above average profile' : 'Keep building your profile'}
           </p>
         </StatsCard>
       </div>
@@ -160,7 +170,7 @@ export default function SkillsTabContent() {
               </tr>
             </thead>
             <tbody className="text-sm divide-y divide-slate-100">
-              {skillRows.map((row) => (
+              {mockSkillRows.map((row) => (
                 <tr key={row.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="py-4 px-6 font-semibold text-slate-800">{row.name}</td>
                   <td className="py-4 px-6">

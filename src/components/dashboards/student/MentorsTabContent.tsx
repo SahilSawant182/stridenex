@@ -19,7 +19,8 @@ import {
   Search,
   Filter,
   ChevronRight,
-  X
+  X,
+  Users
 } from "lucide-react";
 import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
@@ -27,7 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { getMentorListings, getMentorSlotCalendar, bookMentorSlot, getMentorNextAvailableSlot } from "@/services/student.services";
+import { getMentorListings, getMentorSlotCalendar, bookMentorSlot, getMentorNextAvailableSlot, createGroupSessionBooking } from "@/services/student.services";
 
 // Types
 interface Mentor {
@@ -47,6 +48,8 @@ interface Mentor {
   avatarColor: string;
   profileImage: string;
   nextAvailableSlot?: string;
+  offering_type?: string;
+  batch_name?: string;
 }
 
 const COLORS = [
@@ -114,12 +117,49 @@ export default function MentorsTabContent() {
   };
 
   const handleConfirmBooking = async () => {
-    if (!selectedMentorForBooking || !selectedDate || !selectedSlotForBooking) return;
+    if (!selectedMentorForBooking) return;
+    
     setIsBooking(true);
     try {
+      const studentEmail = localStorage.getItem("currentUser") || "";
+
+      if (selectedMentorForBooking.offering_type === "Group Session") {
+        const payload = {
+          offering: selectedMentorForBooking.id,
+          batch_name: selectedMentorForBooking.batch_name || "offering-gs-1",
+          student: studentEmail
+        };
+        
+        const response = await createGroupSessionBooking(payload);
+        
+        if (response && response.exc_type) {
+          let errMsg = "Failed to book group session. Please try again.";
+          if (response._server_messages) {
+            try {
+              const messages = JSON.parse(response._server_messages);
+              const msgObj = JSON.parse(messages[0]);
+              errMsg = msgObj.message || errMsg;
+            } catch (e) {
+              console.error("Error parsing server messages:", e);
+            }
+          }
+          alert(errMsg);
+          return;
+        }
+
+        // Close modal and reset
+        setSelectedMentorForBooking(null);
+        alert(`Group Session booked successfully! ID: ${response?.message?.session_name || ""}`);
+        fetchMentors();
+        return;
+      }
+
+      // 1:1 Mentorship Logic
+      if (!selectedDate || !selectedSlotForBooking) return;
+
       const payload = {
         mentor: selectedMentorForBooking.email,
-        student: localStorage.getItem("currentUser") || "",
+        student: studentEmail,
         offering: selectedMentorForBooking.id,
         session_date: selectedDate,
         from_time: selectedSlotForBooking.from_time,
@@ -199,7 +239,9 @@ export default function MentorsTabContent() {
             availability: m.next_slot || "Contact for availability",
             tags: m.tags || [],
             avatarColor: COLORS[index % COLORS.length],
-            profileImage: m.profile_image || ""
+            profileImage: m.profile_image || "",
+            offering_type: m.offering_type || "1:1 Mentorship",
+            batch_name: m.batch_name || ""
           };
         });
         setMentors(mappedMentors);
@@ -410,7 +452,37 @@ export default function MentorsTabContent() {
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
-              {isLoadingSlots ? (
+              {selectedMentorForBooking.offering_type === "Group Session" ? (
+                <div className="space-y-6">
+                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-center">
+                    <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Users className="w-8 h-8 text-orange-600" />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800 mb-2">Group Session Enrollment</h3>
+                    <p className="text-sm text-slate-500 max-w-sm mx-auto">
+                      You are about to join a group mentorship session. Group sessions follow a preset schedule managed by the mentor.
+                    </p>
+                    <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-100 text-left">
+                       <div className="flex justify-between items-center mb-2">
+                         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Offering ID</span>
+                         <span className="text-sm font-bold text-slate-700">{selectedMentorForBooking.id}</span>
+                       </div>
+                       <div className="flex justify-between items-center">
+                         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Batch</span>
+                         <span className="text-sm font-bold text-slate-700">{selectedMentorForBooking.batch_name || "N/A"}</span>
+                       </div>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    className="w-full bg-orange-500 hover:bg-orange-600 text-white h-12 text-base font-bold shadow-xl shadow-orange-500/20"
+                    onClick={handleConfirmBooking}
+                    disabled={isBooking}
+                  >
+                    {isBooking ? "Enrolling..." : "Confirm Enrollment"}
+                  </Button>
+                </div>
+              ) : isLoadingSlots ? (
                 <div className="flex flex-col items-center justify-center py-20 text-slate-500">
                   <BookOpen className="animate-spin w-8 h-8 mb-4 text-orange-500" />
                   <span>Loading available slots...</span>
