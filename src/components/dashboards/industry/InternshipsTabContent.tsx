@@ -66,7 +66,7 @@ export default function InternshipsTabContent() {
     if (action === "post-new") {
       setEditingInternship(null);
       setIsModalOpen(true);
-      
+
       // Optional: Clear the parameter from the URL without refresh if needed
       // window.history.replaceState(null, '', window.location.pathname);
     }
@@ -103,7 +103,7 @@ export default function InternshipsTabContent() {
 
   const internshipFields: DynamicField[] = useMemo(() => [
     { name: "title", label: "Internship Title", type: "text", icon: Briefcase, required: true, colSpan: 2, placeholder: "e.g. Backend Developer Intern" },
-    { name: "type", label: "Category", type: "select", icon: Target, options: categoryOptions, required: true, placeholder: "Select Category" },
+    { name: "type", label: "Domain", type: "select", icon: Target, options: categoryOptions, required: false, placeholder: "Select Category" },
     { name: "industry", label: "Industry", type: "text", icon: Globe, required: true, placeholder: "e.g. Razorpay Technologies", disabled: true },
     { name: "location", label: "Location Type", type: "select", icon: MapPin, options: ["Remote", "On-site", "Hybrid"], required: true, placeholder: "Select Location" },
     { name: "stipend", label: "Stipend (Monthly)", type: "number", icon: IndianRupee, required: true, placeholder: "e.g. 15000" },

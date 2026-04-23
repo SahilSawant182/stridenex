@@ -160,7 +160,7 @@ export const getProjectList = async (industry: string) => {
 export const updateProject = async (projectName: string, data: any) => {
   try {
     const response = await apiService.post(
-      `method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.update_project?project_name=${encodeURIComponent(projectName)}`,
+      `method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.update_project?name=${encodeURIComponent(projectName)}`,
       data
     );
     return response;

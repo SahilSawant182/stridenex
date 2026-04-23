@@ -41,7 +41,7 @@ const item: Variants = {
 export default function ProjectsTabContent() {
   const { industryData, loading: industryLoading, refreshIndustryData } = useIndustry();
   const searchParams = useSearchParams();
-  
+
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,7 +79,7 @@ export default function ProjectsTabContent() {
     { name: "project_name", label: "Project Name", type: "text", icon: Briefcase, required: true, colSpan: 2, placeholder: "e.g. AI Resume Screening System", disabled: !!projectToEdit },
     { name: "project_code", label: "Project Code", type: "text", icon: FileText, required: true, placeholder: "e.g. AI-001" },
     { name: "industry", label: "Industry", type: "text", icon: Layers, required: true, placeholder: "e.g. Razorpay Technologies", disabled: true },
-    { name: "status", label: "Status", type: "select", icon: Zap, options: ["Active", "Draft", "Completed", "Disable"], required: true, placeholder: "Select Status" },
+    { name: "status", label: "Status", type: "select", icon: Zap, options: ["Active", "Completed", "Disable"], required: true, placeholder: "Select Status" },
     { name: "duration", label: "Duration (Days)", type: "number", icon: Clock, required: true, placeholder: "e.g. 30" },
     { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
     { name: "end_date", label: "End Date", type: "date", icon: Calendar, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
@@ -151,11 +151,12 @@ export default function ProjectsTabContent() {
       const payload = {
         ...formData,
         required_skills: skillsArray,
-        duration: String(formData.duration)
+        duration: String(formData.duration),
+        name: projectToEdit?.name || ""
       };
 
       if (projectToEdit) {
-        await updateProject(projectToEdit.project_name, payload);
+        await updateProject(projectToEdit.name, payload);
       } else {
         await createProject(payload);
       }
