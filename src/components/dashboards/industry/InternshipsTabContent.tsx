@@ -164,15 +164,11 @@ export default function InternshipsTabContent() {
     setModalError(null);
     try {
       const payload = {
+        ...formData,
         industry: companyName,
-        internship_name: formData.internship_name,
-        category: formData.category,
-        description: formData.description,
-        stipend: formData.stipend || 0,
-        duration: formData.duration,
-        start_date: formData.start_date,
-        end_date: formData.end_date,
-        status: formData.status || "Active",
+        internship_name: formData.title,
+        title: formData.title,
+        name: editingInternship?.name, // Add name for updates
         required_skills: Array.isArray(formData.required_skills)
           ? formData.required_skills.map((s: string) => ({ skill: s }))
           : []

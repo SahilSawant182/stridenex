@@ -21,6 +21,7 @@ export default function SignupPage() {
   const [appName, setAppName] = useState<string>("StrideNex");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [formValues, setFormValues] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -141,32 +142,40 @@ export default function SignupPage() {
   const handleSubmit = () => {
     // Use the stored form values
     const data = formValues || {};
+    const newFieldErrors: Record<string, string> = {};
 
     // Simple validation
-    if (!data.firstName || !data.lastName || !data.email || !data.password || !data.confirmPassword) {
-      setError("All fields are required");
-      return;
-    }
+    if (!data.firstName) newFieldErrors.firstName = "First name is required";
+    if (!data.lastName) newFieldErrors.lastName = "Last name is required";
+    if (!data.email) newFieldErrors.email = "Email is required";
+    if (!data.password) newFieldErrors.password = "Password is required";
+    if (!data.confirmPassword) newFieldErrors.confirmPassword = "Please confirm your password";
 
     // Password strength validation
-    const passwordValidation = validatePasswordStrength(data.password);
-    if (!passwordValidation.isValid) {
-      setError(passwordValidation.message);
-      return;
+    if (data.password) {
+      const passwordValidation = validatePasswordStrength(data.password);
+      if (!passwordValidation.isValid) {
+        newFieldErrors.password = passwordValidation.message;
+      }
     }
 
-    if (data.password !== data.confirmPassword) {
-      setError("Passwords do not match");
-      return;
+    if (data.password && data.confirmPassword && data.password !== data.confirmPassword) {
+      newFieldErrors.confirmPassword = "Passwords do not match";
     }
 
     if (!acceptTerms) {
-      setError("You must accept the Terms of Service");
+      newFieldErrors.terms = "You must accept the Terms of Service";
+    }
+
+    if (Object.keys(newFieldErrors).length > 0) {
+      setFieldErrors(newFieldErrors);
+      setError(""); // Clear global error for validation issues
       return;
     }
 
     setLoading(true);
     setError("");
+    setFieldErrors({});
     console.log('selected role', selectedRole)
     const rolePayload = [
       { student: selectedRole === "student" ? 1 : 0 },
@@ -213,7 +222,13 @@ export default function SignupPage() {
           const errorMsg = responseData?.message ||
             responseData?.message?.error ||
             "Signup failed";
-          setError(errorMsg);
+            
+          if (errorMsg.toLowerCase().includes("user already exists") || errorMsg.toLowerCase().includes("email already registered")) {
+            setFieldErrors(prev => ({ ...prev, email: "User already exists with this email" }));
+            setError("");
+          } else {
+            setError(errorMsg);
+          }
           setLoading(false);
         }
       })
@@ -290,6 +305,7 @@ export default function SignupPage() {
           buttonLabel=""
           loading={loading}
           onChange={handleFormChange}
+          errors={fieldErrors}
         />
 
         {/* Role Selection Cards - Smaller size with centered text */}
@@ -343,32 +359,45 @@ export default function SignupPage() {
           </div>
         </div>
 
-        {/* Terms Checkbox */}
-        <div className="flex items-start gap-3">
-          <Checkbox
-            id="terms"
-            checked={acceptTerms}
-            onCheckedChange={(checked) => setAcceptTerms(checked as boolean)}
-            className="mt-0.5"
-          />
-          <Label htmlFor="terms" className="text-sm text-slate-600 leading-relaxed">
-            I agree to the{" "}
-            <Link
-              href="/terms-of-use"
-              target="_blank"
-              className="text-accent hover:text-orange-600 font-medium"
-            >
-              Terms of Use
-            </Link>{" "}
-            and{" "}
-            <Link
-              href="/privacy-policy"
-              target="_blank"
-              className="text-accent hover:text-orange-600 font-medium"
-            >
-              Privacy Policy
-            </Link>
-          </Label>
+        <div className="space-y-1">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="terms"
+              checked={acceptTerms}
+              onCheckedChange={(checked) => {
+                const isChecked = checked as boolean;
+                setAcceptTerms(isChecked);
+                if (isChecked) {
+                  setFieldErrors(prev => {
+                    const { terms, ...rest } = prev;
+                    return rest;
+                  });
+                }
+              }}
+              className={`mt-0.5 ${fieldErrors.terms ? 'border-red-500' : ''}`}
+            />
+            <Label htmlFor="terms" className="text-sm text-slate-600 leading-relaxed">
+              I agree to the{" "}
+              <Link
+                href="/terms-of-use"
+                target="_blank"
+                className="text-accent hover:text-orange-600 font-medium"
+              >
+                Terms of Use
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="/privacy-policy"
+                target="_blank"
+                className="text-accent hover:text-orange-600 font-medium"
+              >
+                Privacy Policy
+              </Link>
+            </Label>
+          </div>
+          {fieldErrors.terms && (
+            <p className="text-xs text-red-500 ml-7">{fieldErrors.terms}</p>
+          )}
         </div>
 
         {/* Create Account Button */}

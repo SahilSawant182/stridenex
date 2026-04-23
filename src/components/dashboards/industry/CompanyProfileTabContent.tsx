@@ -85,7 +85,7 @@ export default function CompanyProfileTabContent() {
   } = useIndustry();
   const { showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<"profile" | "role" | "hiring" | "skill_domain" | "campus_partner">("profile");
+  const [modalMode, setModalMode] = useState<"role" | "hiring" | "skill_domain" | "campus_partner">("role");
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
@@ -184,17 +184,6 @@ export default function CompanyProfileTabContent() {
     fetchMasterOptions("College", setCollegeOptions);
   }, [data?.company_name]);
 
-  const profileFields: DynamicField[] = useMemo(() => [
-    { name: "company_name", label: "Company Name", type: "text", icon: Building2, required: true, colSpan: 2, placeholder: "e.g. Acme Corporation", disabled: true },
-    { name: "business_type", label: "Business Type", type: "select", icon: Layout, options: businessTypeOptions.length > 0 ? businessTypeOptions : ["Enterprises", "Consultant and Agency", "Other"], required: true, placeholder: "Select Business Type" },
-    { name: "industry_sector", label: "Industry Sector", type: "select", icon: Layers, options: industrySectorOptions.length > 0 ? industrySectorOptions : ["Information Services", "Manufacturing", "Finance", "Healthcare", "Education", "Other"], required: true, placeholder: "Select Industry Sector" },
-    { name: "employee_head_count", label: "Employee Count", type: "number", icon: Users, required: true, placeholder: "e.g. 500" },
-    { name: "headquarters", label: "Headquarters", type: "text", icon: MapPin, required: true, placeholder: "e.g. Mumbai, Maharashtra" },
-    { name: "company_website", label: "Website (URL)", type: "url", icon: Globe, required: true, placeholder: "https://www.company.com" },
-    { name: "cin", label: "CIN Number", type: "text", icon: FileText, required: true, placeholder: "Enter Corporate Identification Number" },
-    { name: "about", label: "About Company", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Briefly describe your company's mission and goals..." },
-
-  ], [businessTypeOptions, industrySectorOptions]);
 
   const roleFields: DynamicField[] = useMemo(() => [
     { name: "role", label: "Job Role", type: "text", icon: Briefcase, required: true, colSpan: 2, placeholder: "e.g. Software Development Engineer" },
@@ -230,27 +219,13 @@ export default function CompanyProfileTabContent() {
   ], [collegeOptions]);
 
   const activeFields = useMemo(() => {
-    if (modalMode === "profile") return profileFields;
     if (modalMode === "role") return roleFields;
     if (modalMode === "skill_domain") return skillDomainFields;
     if (modalMode === "campus_partner") return campusPartnerFields;
     return hiringFields;
-  }, [modalMode, profileFields, roleFields, hiringFields, skillDomainFields, campusPartnerFields]);
+  }, [modalMode, roleFields, hiringFields, skillDomainFields, campusPartnerFields]);
 
   const modalInitialValues = useMemo(() => {
-    if (modalMode === "profile") {
-      return {
-        company_name: data?.company_name,
-        business_type: data?.business_type,
-        industry_sector: data?.industry_sector,
-        employee_head_count: data?.employee_head_count,
-        headquarters: data?.headquarters,
-        company_website: data?.company_website,
-        cin: data?.cin,
-        about: data?.about
-      };
-
-    }
     if (modalMode === "role") {
       return roleToEdit ? { ...roleToEdit } : undefined;
     }
@@ -274,10 +249,7 @@ export default function CompanyProfileTabContent() {
     setModalLoading(true);
     setModalError(null);
     try {
-      if (modalMode === "profile") {
-        await updateIndustry(data?.company_name || "", formData);
-        await refreshIndustryData();
-      } else if (modalMode === "role") {
+      if (modalMode === "role") {
         const payload = {
           ...formData,
           industry: data?.company_name || formData.industry,
@@ -428,10 +400,6 @@ export default function CompanyProfileTabContent() {
     return str.charAt(0).toUpperCase() + str.slice(1);
   };
 
-  const handleProfileUpdate = () => {
-    setModalMode("profile");
-    setIsModalOpen(true);
-  };
 
   if (loading && !data) {
     return (
@@ -462,60 +430,6 @@ export default function CompanyProfileTabContent() {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
-      {/* COMPACT Premium Banner - More Color */}
-      <motion.div
-        variants={item}
-        className="bg-[#0f172a] rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl border border-white/10"
-      >
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2" />
-
-        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
-          <div className="flex flex-col md:flex-row items-center gap-8">
-            <div className="w-20 h-20 bg-white/10 rounded-3xl border border-white/20 flex items-center justify-center p-5 backdrop-blur-xl shrink-0 shadow-2xl group overflow-hidden">
-              <div className="w-full h-5 bg-yellow-400 rounded shadow-lg opacity-90 group-hover:scale-110 transition-transform" />
-            </div>
-            <div className="text-center md:text-left">
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-2">
-                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-white leading-tight">{capitalizeFirstLetter(data?.company_name || "Company Profile")}</h1>
-                <span className="flex items-center gap-2 px-3 py-1 bg-emerald-500 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-emerald-500/20">
-                  <ShieldCheck className="w-3.5 h-3.5" /> {data?.status === "Active" ? "VERIFIED" : (data?.status?.toUpperCase() || "PENDING")}
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-semibold text-slate-400 mb-6">
-                <span className="flex items-center gap-2 text-blue-400"><Factory className="w-4 h-4" /> {data?.business_type || "N/A"}</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-700" />
-                <span className="flex items-center gap-2 text-emerald-400"><MapPin className="w-4 h-4" /> {data?.headquarters?.split(',')[0] || "Location N/A"}</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-700" />
-                <span className="flex items-center gap-2 text-indigo-400"><Users className="w-4 h-4" /> {data?.employee_head_count ? parseInt(data.employee_head_count).toLocaleString() : "0"}+ Team</span>
-              </div>
-
-              {/* Stats Row - High Contrast */}
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
-                {[
-                  { label: "Open Roles", value: roleList?.reduce((acc, r) => acc + (Number(r.available_positions) || 0), 0)?.toString() || "0", color: "text-blue-400", bg: "bg-blue-500/10" },
-                  { label: "Avg CTC", value: "₹18.5L", color: "text-orange-400", bg: "bg-orange-500/10" },
-                  { label: "Rating", value: "4.1", icon: Star, color: "text-amber-400", bg: "bg-amber-500/10" },
-                  { label: "Hired", value: "247", color: "text-emerald-400", bg: "bg-emerald-500/10" },
-                ].map((stat, idx) => (
-                  <div key={idx} className={`${stat.bg} border border-white/10 rounded-2xl px-5 py-3 min-w-[110px] backdrop-blur-sm group hover:bg-white/10 transition-all cursor-default`}>
-                    <span className={`text-xl md:text-2xl font-bold ${stat.color} block leading-none mb-1 group-hover:scale-105 transition-transform`}>
-                      {stat.value}{stat.icon && <stat.icon className="w-4 h-4 inline-block ml-1 mb-1 fill-amber-400" />}
-                    </span>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-none">{stat.label}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <button
-            onClick={handleProfileUpdate}
-            className="bg-white hover:bg-slate-50 text-slate-900 px-8 py-3.5 rounded-2xl text-sm font-bold transition-all flex items-center gap-3 shadow-2xl hover:scale-105 active:scale-95 shrink-0"
-          >
-            <Edit3 className="w-5 h-5" /> Edit Profile
-          </button>
-        </div>
-      </motion.div>
 
       {/* Dynamic Modal */}
       <DashboardDynamicModal
@@ -527,22 +441,22 @@ export default function CompanyProfileTabContent() {
           setRoundToEdit(undefined);
         }}
         title={
-          modalMode === "profile" ? "Edit Company Profile" :
-            modalMode === "role" ? (roleToEdit ? "Edit Role" : "Add New Role") :
-              modalMode === "skill_domain" ? (skillDomainToEdit ? "Edit Skill Domain" : "Add Skill Domain") :
+          modalMode === "role" ? (roleToEdit ? "Edit Role" : "Add New Role") :
+            modalMode === "skill_domain" ? (skillDomainToEdit ? "Edit Skill Domain" : "Add Skill Domain") :
+              modalMode === "campus_partner" ? "Add Campus Partner" :
                 (roundToEdit ? "Edit Hiring Round" : "Add Hiring Round")
         }
         subtitle={capitalizeFirstLetter(data?.company_name || "")}
         headerIcon={
-          modalMode === "profile" ? Building2 :
-            modalMode === "role" ? Briefcase :
-              modalMode === "skill_domain" ? TargetIcon :
+          modalMode === "role" ? Briefcase :
+            modalMode === "skill_domain" ? TargetIcon :
+              modalMode === "campus_partner" ? GraduationCap :
                 ListChecks
         }
         iconBgColor={
-          modalMode === "profile" ? "bg-blue-600" :
-            modalMode === "role" ? "bg-indigo-600" :
-              modalMode === "skill_domain" ? "bg-red-600" :
+          modalMode === "role" ? "bg-indigo-600" :
+            modalMode === "skill_domain" ? "bg-red-600" :
+              modalMode === "campus_partner" ? "bg-emerald-600" :
                 "bg-emerald-600"
         }
         fields={activeFields}

@@ -75,7 +75,7 @@ export default function ProjectsTabContent() {
       setEnrolling(project.name);
       const payload = {
         student: currentUser,
-        project: project.project_name,
+        project: project.name,
         status: "Applied",
         applied_on: new Date().toISOString().slice(0, 19).replace('T', ' '),
         resume: null,
@@ -85,7 +85,7 @@ export default function ProjectsTabContent() {
       };
 
       const response = await createStudentProjectEnrollment(payload);
-      
+
       if (response && (response.status === 200 || response.status === "200")) {
         setSuccessfullyEnrolled(prev => [...prev, project.name]);
         setFeedback({
@@ -127,14 +127,13 @@ export default function ProjectsTabContent() {
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
       {feedback && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`p-4 rounded-xl border ${
-            feedback.type === 'success' 
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
-              : 'bg-red-50 border-red-200 text-red-800'
-          } text-sm font-medium mb-4 flex items-center justify-between`}
+          className={`p-4 rounded-xl border ${feedback.type === 'success'
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+            : 'bg-red-50 border-red-200 text-red-800'
+            } text-sm font-medium mb-4 flex items-center justify-between`}
         >
           {feedback.message}
           <button onClick={() => setFeedback(null)} className="ml-4 opacity-50 hover:opacity-100">×</button>
@@ -144,8 +143,8 @@ export default function ProjectsTabContent() {
       {/* Header Section */}
       <motion.div variants={item} className="flex flex-col md:flex-row items-center justify-between gap-6 px-1">
         <div className="text-center md:text-left">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">Industry Projects & R&D</h1>
-          <p className="text-sm md:text-base text-slate-500 font-medium mt-1.5 opacity-90 font-outfit">
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Industry Projects & R&D</h1>
+          <p className="text-xs md:text-sm text-slate-500 font-medium mt-1 opacity-90 font-outfit">
             Work on real-world challenges from top companies and earn certificates
           </p>
         </div>
@@ -163,27 +162,24 @@ export default function ProjectsTabContent() {
           <motion.div
             key={idx}
             variants={item}
-            className={`bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition-all border-t-4 ${
-              stat.color === 'orange' ? 'border-t-orange-400' : 
-              stat.color === 'blue' ? 'border-t-blue-400' : 
-              stat.color === 'emerald' ? 'border-t-emerald-400' : 'border-t-purple-400'
-            }`}
+            className={`bg-white rounded-2xl border border-slate-200 p-4 md:p-5 shadow-sm hover:shadow-md transition-all border-t-4 ${stat.color === 'orange' ? 'border-t-orange-400' :
+              stat.color === 'blue' ? 'border-t-blue-400' :
+                stat.color === 'emerald' ? 'border-t-emerald-400' : 'border-t-purple-400'
+              }`}
           >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-1">{stat.label}</p>
-                <p className="text-3xl font-black text-slate-900">{stat.value}</p>
+                <p className="text-2xl font-black text-slate-900">{stat.value}</p>
               </div>
-              <div className={`p-3 rounded-xl ${
-                stat.color === 'orange' ? 'bg-orange-50' : 
-                stat.color === 'blue' ? 'bg-blue-50' : 
-                stat.color === 'emerald' ? 'bg-emerald-50' : 'bg-purple-50'
-              }`}>
-                <stat.icon className={`w-6 h-6 ${
-                  stat.color === 'orange' ? 'text-orange-500' : 
-                  stat.color === 'blue' ? 'text-blue-500' : 
-                  stat.color === 'emerald' ? 'text-emerald-500' : 'text-purple-500'
-                }`} />
+              <div className={`p-3 rounded-xl ${stat.color === 'orange' ? 'bg-orange-50' :
+                stat.color === 'blue' ? 'bg-blue-50' :
+                  stat.color === 'emerald' ? 'bg-emerald-50' : 'bg-purple-50'
+                }`}>
+                <stat.icon className={`w-5 h-5 ${stat.color === 'orange' ? 'text-orange-500' :
+                  stat.color === 'blue' ? 'text-blue-500' :
+                    stat.color === 'emerald' ? 'text-emerald-500' : 'text-purple-500'
+                  }`} />
               </div>
             </div>
           </motion.div>
@@ -196,19 +192,18 @@ export default function ProjectsTabContent() {
         {projects.map((project, idx) => (
           <motion.div key={project.name || idx} variants={item}>
             <BaseCard padding="none" className="overflow-hidden group hover:border-orange-200 transition-all duration-300">
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-5">
-                  <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 group-hover:scale-105 transition-transform duration-500 shadow-sm">
-                    <Briefcase className="w-7 h-7 text-orange-500" />
+              <div className="p-5">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 group-hover:scale-105 transition-transform duration-500 shadow-sm">
+                    <Briefcase className="w-6 h-6 text-orange-500" />
                   </div>
 
-                  <Badge className={`${
-                    project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
-                      ? "bg-red-50 text-red-600 border-red-100" 
-                      : project.status === "Active" || project.status === "active" || !project.status
+                  <Badge className={`${project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
+                    ? "bg-red-50 text-red-600 border-red-100"
+                    : project.status === "Active" || project.status === "active" || !project.status
                       ? "bg-emerald-50 text-emerald-600 border-emerald-100"
                       : "bg-indigo-50 text-indigo-600 border-indigo-100"
-                  } rounded-full text-[10px] px-3 py-1 font-bold`}>
+                    } rounded-full text-[10px] px-3 py-1 font-bold`}>
                     {project.status || "Active"}
                   </Badge>
 
@@ -216,8 +211,8 @@ export default function ProjectsTabContent() {
 
                 </div>
 
-                <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-orange-600 transition-colors line-clamp-1">
-                  {project.project_name}
+                <h3 className="text-base font-bold text-slate-900 mb-1.5 group-hover:text-orange-600 transition-colors line-clamp-1">
+                  {project.project_name.trim()}
                 </h3>
 
                 <p className="text-[11px] text-slate-900 font-bold uppercase tracking-widest mb-4 flex items-center gap-1.5 opacity-80">
@@ -227,7 +222,7 @@ export default function ProjectsTabContent() {
 
 
 
-                <p className="text-sm text-slate-900 leading-relaxed font-medium mb-6 line-clamp-2 h-10 opacity-80">
+                <p className="text-xs text-slate-900 leading-relaxed font-medium mb-5 line-clamp-2 h-9 opacity-80">
 
                   {project.description || "Contribute to real-world industrial projects and build your portfolio with top industry mentors."}
                 </p>
@@ -252,16 +247,15 @@ export default function ProjectsTabContent() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <Button 
+                  <Button
                     onClick={() => handleEnroll(project)}
                     disabled={enrolling === project.name || project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"}
-                    className={`flex-1 ${
-                      project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
-                        ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-                        : "bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 active:scale-95 translate-y-0 hover:-translate-y-0.5"
+                    className={`flex-1 ${project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
+                      ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                      : "bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 active:scale-95 translate-y-0 hover:-translate-y-0.5"
 
 
-                    } font-bold h-11 rounded-xl transition-all text-xs`}
+                      } font-bold h-10 rounded-xl transition-all text-xs`}
                   >
                     {enrolling === project.name ? (
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
@@ -270,11 +264,11 @@ export default function ProjectsTabContent() {
                     ) : project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable" ? null : (
                       <ArrowRight className="w-4 h-4 mr-2" />
                     )}
-                    {project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable" 
-                      ? "Disabled" 
-                      : successfullyEnrolled.includes(project.name) 
-                      ? "Enrolled" 
-                      : "Enroll Now"}
+                    {project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
+                      ? "Disabled"
+                      : successfullyEnrolled.includes(project.name)
+                        ? "Enrolled"
+                        : "Enroll Now"}
                   </Button>
 
 

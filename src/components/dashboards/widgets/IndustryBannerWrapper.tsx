@@ -1,11 +1,29 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useIndustry } from "@/context/IndustryContext";
 import RoleBannerWidget from "./RoleBannerWidget";
-import { Briefcase, Users, Target } from "lucide-react";
+import { Briefcase, Users, Target, Star, Building2, Globe, FileText, Layout, Layers, MapPin, Factory } from "lucide-react";
 
 export default function IndustryBannerWrapper() {
-  const { industryData, roleList, loading, roleLoading } = useIndustry();
+  const { industryData, roleList, loading, refreshIndustryData } = useIndustry();
+  const [businessTypeOptions, setBusinessTypeOptions] = useState<string[]>([]);
+  const [industrySectorOptions, setIndustrySectorOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchOptions = async () => {
+      try {
+        const { getMasterData } = await import("@/services/industry.services");
+        const btData = await getMasterData("Business Type");
+        setBusinessTypeOptions((btData.data || btData.message || []).map((i: any) => i.name));
+        const isData = await getMasterData("Industry Sector");
+        setIndustrySectorOptions((isData.data || isData.message || []).map((i: any) => i.name));
+      } catch (err) {
+        console.error("Error fetching banner options:", err);
+      }
+    };
+    fetchOptions();
+  }, []);
 
   if (loading && !industryData) {
     return (
@@ -15,13 +33,31 @@ export default function IndustryBannerWrapper() {
     );
   }
 
-  // Construct dynamic subtitle
-  const subtitleParts = [];
-  if (industryData?.industry_sector) subtitleParts.push(industryData.industry_sector);
-  if (industryData?.headquarters) subtitleParts.push(industryData.headquarters);
-  if (industryData?.employee_head_count) subtitleParts.push(`${industryData.employee_head_count} employees`);
-  
-  const subtitle = subtitleParts.length > 0 ? subtitleParts.join(" • ") : "Industry Professional Plan";
+  // Construct dynamic colorful subtitle badges
+  const subtitle = (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
+      {industryData?.industry_sector && (
+        <span className="flex items-center gap-1 text-blue-300 text-[10px] font-bold uppercase tracking-wider">
+          <Layers className="w-3 h-3 opacity-80" /> {industryData.industry_sector}
+        </span>
+      )}
+      {industryData?.business_type && (
+        <span className="flex items-center gap-1 text-purple-300 text-[10px] font-bold uppercase tracking-wider">
+          <Factory className="w-3 h-3 opacity-80" /> {industryData.business_type}
+        </span>
+      )}
+      {industryData?.headquarters && (
+        <span className="flex items-center gap-1 text-emerald-300 text-[10px] font-bold uppercase tracking-wider">
+          <MapPin className="w-3 h-3 opacity-80" /> {industryData.headquarters.split(',')[0]}
+        </span>
+      )}
+      {industryData?.employee_head_count && (
+        <span className="flex items-center gap-1 text-orange-300 text-[10px] font-bold uppercase tracking-wider">
+          <Users className="w-3 h-3 opacity-80" /> {industryData.employee_head_count ? parseInt(industryData.employee_head_count).toLocaleString() : "0"}+
+        </span>
+      )}
+    </div>
+  );
 
   const openPositions = roleList?.reduce((acc, r) => acc + (Number(r.available_positions) || 0), 0) || 0;
 
@@ -35,15 +71,27 @@ export default function IndustryBannerWrapper() {
     },
     { 
       key: "applications", 
-      value: "247", // High-fidelity placeholder consistent with profile tab stats
+      value: "247", 
       label: "Applications", 
       icon: Users 
     },
     { 
-      key: "match", 
-      value: "94%", 
-      label: "Match Quality", 
+      key: "ctc", 
+      value: "₹18.5L", 
+      label: "Avg CTC", 
       icon: Target 
+    },
+    { 
+      key: "rating", 
+      value: "4.1", 
+      label: "Rating", 
+      icon: Star 
+    },
+    { 
+      key: "hired", 
+      value: "247", 
+      label: "Hired", 
+      icon: Users 
     }
   ];
 
@@ -52,13 +100,27 @@ export default function IndustryBannerWrapper() {
     return str.charAt(0).toUpperCase() + str.slice(1);
   };
 
+  const industryFields: any[] = [
+    { name: "company_name", label: "Company Name", type: "text", icon: Building2, required: true, colSpan: 2, placeholder: "e.g. Acme Corporation", disabled: true },
+    { name: "business_type", label: "Business Type", type: "select", icon: Layout, options: businessTypeOptions.length > 0 ? businessTypeOptions : ["Enterprises", "Consultant and Agency", "Other"], required: true, placeholder: "Select Business Type" },
+    { name: "industry_sector", label: "Industry Sector", type: "select", icon: Layers, options: industrySectorOptions.length > 0 ? industrySectorOptions : ["Information Services", "Manufacturing", "Finance", "Healthcare", "Education", "Other"], required: true, placeholder: "Select Industry Sector" },
+    { name: "employee_head_count", label: "Employee Count", type: "number", icon: Users, required: true, placeholder: "e.g. 500" },
+    { name: "headquarters", label: "Headquarters", type: "text", icon: MapPin, required: true, placeholder: "e.g. Mumbai, Maharashtra" },
+    { name: "company_website", label: "Website (URL)", type: "url", icon: Globe, required: true, placeholder: "https://www.company.com" },
+    { name: "cin", label: "CIN Number", type: "text", icon: FileText, required: true, placeholder: "Enter Corporate Identification Number" },
+    { name: "about", label: "About Company", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Briefly describe your company's mission and goals..." },
+  ];
+
   return (
     <RoleBannerWidget 
       role="industry" 
       customData={{
         title: capitalize(industryData?.company_name || ""),
         subtitle: subtitle,
-        metrics: customMetrics
+        metrics: customMetrics,
+        rawIndustryData: industryData,
+        onUpdateSuccess: refreshIndustryData,
+        fields: industryFields
       }}
     />
   );

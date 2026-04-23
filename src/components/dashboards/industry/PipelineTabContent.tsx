@@ -204,9 +204,9 @@ export default function PipelineTabContent() {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="h-full">
-      <div className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar min-h-[600px]">
+      <div className="flex gap-2 min-h-[600px] w-full">
         {pipelineColumns.map((col) => (
-          <motion.div variants={item} key={col.id} className="min-w-[280px] w-[280px] flex flex-col gap-3 bg-slate-50/50 rounded-2xl p-2 border border-slate-100">
+          <motion.div variants={item} key={col.id} className="flex-1 min-w-0 flex flex-col gap-3 bg-slate-50/50 rounded-2xl p-1.5 border border-slate-100">
             {/* Column Header */}
             <div className={`${col.color} text-white px-4 py-3 rounded-xl flex items-center justify-between shadow-sm`}>
               <h3 className="font-bold text-sm tracking-wide">{col.title}</h3>
@@ -222,32 +222,32 @@ export default function PipelineTabContent() {
                   <div 
                     key={candidate.id} 
                     onClick={() => handleCardClick(candidate)}
-                    className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer"
+                    className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:shadow-md hover:border-slate-300 transition-all cursor-pointer"
                   >
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className={`w-10 h-10 rounded-full ${candidate.bgColor} text-white flex items-center justify-center text-sm font-bold shrink-0`}>
+                    <div className="flex items-start gap-2 mb-2">
+                      <div className={`w-8 h-8 rounded-full ${candidate.bgColor} text-white flex items-center justify-center text-[10px] font-bold shrink-0`}>
                         {candidate.initials}
                       </div>
                       <div className="overflow-hidden flex-1">
-                        <h4 className="font-bold text-slate-800 text-sm truncate" title={candidate.name}>{candidate.name}</h4>
-                        <p className="text-xs text-slate-500 font-semibold truncate" title={candidate.owner}>Owner: {candidate.owner}</p>
-                        <p className="text-xs text-slate-500 font-semibold truncate flex items-center gap-1 mt-0.5" title={candidate.status}>
-                          <span className={`w-2 h-2 rounded-full ${candidate.status === 'Applied' ? 'bg-orange-500' : 'bg-emerald-500'}`}></span>
+                        <h4 className="font-bold text-slate-800 text-[11px] truncate" title={candidate.name}>{candidate.name}</h4>
+                        <p className="text-[9px] text-slate-400 font-semibold truncate" title={candidate.owner}>Owner: {candidate.owner}</p>
+                        <p className="text-[9px] text-slate-400 font-semibold truncate flex items-center gap-1 mt-0.5" title={candidate.status}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${candidate.status === 'Applied' ? 'bg-orange-500' : 'bg-emerald-500'}`}></span>
                           {candidate.status}
                         </p>
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between mt-2">
+                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-50">
                       <div className="flex flex-wrap gap-1">
-                        {candidate.skills.map(skill => (
-                          <span key={skill} className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded-md border border-slate-200">
+                        {candidate.skills.slice(0, 2).map(skill => (
+                          <span key={skill} className="px-1.5 py-0.5 bg-slate-50 text-slate-500 text-[8px] font-semibold rounded border border-slate-100">
                             {skill}
                           </span>
                         ))}
                       </div>
                       {candidate.match > 0 && (
-                        <div className="text-emerald-600 font-bold text-xs bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                        <div className="text-emerald-600 font-bold text-[9px] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100">
                           {candidate.match}%
                         </div>
                       )}

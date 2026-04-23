@@ -19,14 +19,18 @@ import {
   Mail,
   Phone,
   Shield,
+  FileText,
   Layers,
   Globe,
+  MapPin,
   Github,
   Linkedin
 } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { getStudentByEmail, updateStudent } from "@/services/student.services";
+import { updateIndustry } from "@/services/industry.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
+import { useToast } from "@/context/ToastContext";
 
 interface BannerMetric {
   key: string;
@@ -40,9 +44,12 @@ interface RoleBannerWidgetProps {
   role: "student" | "college" | "mentor" | "industry";
   customData?: {
     title?: string;
-    subtitle?: string;
+    subtitle?: string | React.ReactNode;
     metrics?: BannerMetric[];
     profileProgress?: number;
+    rawIndustryData?: any;
+    onUpdateSuccess?: () => Promise<void>;
+    fields?: DynamicField[];
   };
 }
 
@@ -130,6 +137,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
   const fetchStudentData = async () => {
     if (role !== "student" || !currentUser) return;
@@ -166,16 +174,36 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     { name: "github", label: "GitHub URL", type: "url", icon: Github },
   ], []);
 
+  const industryFields: DynamicField[] = useMemo(() => [
+    { name: "company_name", label: "Company Name", type: "text", icon: Building2, required: true, colSpan: 2 },
+    { name: "industry_sector", label: "Industry Sector", type: "text", icon: Target, required: true },
+    { name: "business_type", label: "Business Type", type: "text", icon: Layers, required: true },
+    { name: "company_website", label: "Website", type: "url", icon: Globe, required: true, colSpan: 2 },
+    { name: "headquarters", label: "Headquarters", type: "text", icon: MapPin, required: true, colSpan: 2 },
+    { name: "employee_head_count", label: "Employee Count", type: "number", icon: Users, required: true },
+    { name: "cin", label: "CIN", type: "text", icon: Mail, required: true },
+    { name: "about", label: "About Company", type: "textarea", icon: FileText, required: true, colSpan: 2 },
+  ], []);
+
   const handleUpdateProfile = async (formData: any) => {
     if (!currentUser) return;
     setModalLoading(true);
     setModalError(null);
     try {
-      await updateStudent(currentUser, formData);
-      await fetchStudentData();
+      if (role === "student") {
+        await updateStudent(currentUser, formData);
+        await fetchStudentData();
+      } else if (role === "industry") {
+        await updateIndustry(formData.company_name, formData);
+        if (customData?.onUpdateSuccess) {
+          await customData.onUpdateSuccess();
+        }
+      }
+      showToast("Profile updated successfully", "success");
       setIsModalOpen(false);
     } catch (error: any) {
       setModalError(error?.message || "Failed to update profile");
+      showToast(error?.message || "Failed to update profile", "error");
     } finally {
       setModalLoading(false);
     }
@@ -183,6 +211,10 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
 
   // Compute initial values for the modal
   const computedInitialValues = useMemo(() => {
+    if (role === "industry") {
+      return customData?.rawIndustryData || {};
+    }
+
     if (!studentData && !fullName) return {};
     
     // Split fullName from local storage for first/last name
@@ -208,7 +240,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       last_name: lastName || studentData?.last_name || "",
       email_id: currentUser || studentData?.email_id || "",
     };
-  }, [studentData, fullName, currentUser]);
+  }, [studentData, fullName, currentUser, customData?.rawIndustryData, role]);
 
   // Get title from customData or fullName or default
   const title = customData?.title || fullName || config.defaultTitle;
@@ -293,7 +325,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-gradient-to-r ${config.gradient} rounded-2xl p-6 md:p-8 text-white relative overflow-hidden`}
+      className={`bg-gradient-to-r ${config.gradient} rounded-2xl p-4 md:p-6 text-white relative overflow-hidden`}
     >
       {/* Background shapes for aesthetics */}
       <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
@@ -301,19 +333,24 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
 
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <div className={`w-16 h-16 rounded-full bg-gradient-to-r ${getProgressGradient()} flex items-center justify-center shadow-lg border-2 border-white/20`}>
-            <span className="text-2xl font-bold text-white">{getInitials()}</span>
+          <div className={`w-14 h-14 rounded-full bg-gradient-to-r ${getProgressGradient()} flex items-center justify-center shadow-lg border-2 border-white/20`}>
+            <span className="text-xl font-bold text-white">{getInitials()}</span>
           </div>
           <div>
-            <p className={`text-sm ${config.textColor} font-medium uppercase tracking-wider mb-1 flex items-center gap-1`}>
+            <p className={`text-[10px] ${config.textColor} font-medium uppercase tracking-wider mb-0.5 flex items-center gap-1`}>
               {config.greeting} {role !== "industry" && <span>👋</span>}
               <span className="ml-2 text-xs bg-white/10 px-2 py-0.5 rounded-full">
                 {config.roleName}
               </span>
             </p>
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-1 flex items-center gap-3">
+            <h2 className="text-xl md:text-2xl font-bold text-white mb-0.5 flex items-center gap-3">
               {title}
-              {role === "student" && (
+              {role === "industry" && customData?.rawIndustryData?.status === "Active" && (
+                <span className="flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-500 text-white rounded-lg text-[9px] font-bold uppercase tracking-widest shadow-lg shadow-emerald-500/20">
+                  <Shield className="w-3 h-3" /> VERIFIED
+                </span>
+              )}
+              {(role === "student" || role === "industry") && (
                 <button 
                   onClick={() => setIsModalOpen(true)}
                   className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group/edit"
@@ -332,14 +369,14 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
           {metrics.map((metric) => (
             <div
               key={metric.key}
-              className={`${getMetricBg()} backdrop-blur-md rounded-xl p-3 flex flex-col items-center justify-center min-w-[100px] cursor-pointer hover:scale-105 transition-transform`}
+              className={`${getMetricBg()} backdrop-blur-md rounded-xl p-2.5 flex flex-col items-center justify-center min-w-[90px] cursor-pointer hover:scale-105 transition-transform`}
             >
               <div className="flex items-center gap-1 mb-0.5">
-                <span className="text-2xl font-bold text-white">
+                <span className="text-xl font-bold text-white">
                   {metric.value}
                 </span>
                 {metric.icon && (
-                  <metric.icon className={`w-5 h-5 ${getIconColor()}`} />
+                  <metric.icon className={`w-4 h-4 ${getIconColor()}`} />
                 )}
               </div>
               <span className={`text-[10px] ${config.textColor} uppercase tracking-wide`}>
@@ -352,9 +389,9 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
 
       {/* Progress Bar - Only for student and college */}
       {(role === "student" || role === "college") && (
-        <div className="relative z-10 mt-8">
-          <div className="flex items-center justify-between mb-2">
-            <span className={`text-xs ${config.textColor} font-medium`}>
+        <div className="relative z-10 mt-6">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className={`text-[10px] ${config.textColor} font-medium`}>
               {role === "student" ? "Profile Completeness" : "Placement Target Progress"}
             </span>
             <span className="text-xs font-bold text-white">
@@ -374,15 +411,15 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
         </div>
       )}
 
-      {role === "student" && (
+      {(role === "student" || role === "industry") && (
         <DashboardDynamicModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          title="Update Profile"
-          subtitle="Keep your academic details up to date"
-          headerIcon={Pen}
-          iconBgColor="bg-orange-500"
-          fields={studentFields}
+          title={role === "student" ? "Update Profile" : "Edit Company Profile"}
+          subtitle={role === "student" ? "Keep your academic details up to date" : (customData?.title || "Manage your company's presence")}
+          headerIcon={role === "student" ? Pen : Building2}
+          iconBgColor={role === "student" ? "bg-orange-500" : "bg-blue-600"}
+          fields={role === "student" ? studentFields : (customData?.fields || industryFields)}
           initialValues={computedInitialValues}
           onSubmit={handleUpdateProfile}
           loading={modalLoading}
