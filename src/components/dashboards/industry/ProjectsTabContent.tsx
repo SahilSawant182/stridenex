@@ -143,7 +143,6 @@ export default function ProjectsTabContent() {
   }, [companyName, industryLoading]);
 
   const handleModalSubmit = async (formData: any) => {
-    setIsModalOpen(false);
     setModalLoading(true);
     setModalError(null);
     try {
@@ -166,6 +165,7 @@ export default function ProjectsTabContent() {
 
       await fetchProjects(companyName);
       showToast(`Project ${projectToEdit ? 'updated' : 'created'} successfully`, "success");
+      setIsModalOpen(false);
     } catch (err: any) {
       console.error("Error saving project:", err);
       const msg = err?.message || `Failed to ${projectToEdit ? 'update' : 'create'} project`;

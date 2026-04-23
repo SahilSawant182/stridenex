@@ -91,13 +91,13 @@ export default function PipelineTabContent() {
 
   const handleChangeStatus = async () => {
     if (!selectedCandidate) return;
-    setIsModalOpen(false);
     try {
       setUpdateStatusLoading(true);
       await updateApplicationStatus(selectedCandidate.id, selectedStatus);
       await fetchApplications(companyName);
       setSelectedCandidate(prev => prev ? { ...prev, status: selectedStatus } : null);
       showToast(`Status updated to ${selectedStatus}`, "success");
+      setIsModalOpen(false);
     } catch (err: any) {
       showToast(err?.message || "Failed to update status", "error");
       console.error(err);

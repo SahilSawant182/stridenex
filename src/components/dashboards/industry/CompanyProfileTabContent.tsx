@@ -271,7 +271,6 @@ export default function CompanyProfileTabContent() {
   }, [modalMode, data, roleToEdit, roundToEdit, skillDomainToEdit]);
 
   const handleModalSubmit = async (formData: any) => {
-    setIsModalOpen(false);
     setModalLoading(true);
     setModalError(null);
     try {
@@ -327,6 +326,7 @@ export default function CompanyProfileTabContent() {
         await fetchCampusPartners();
       }
       showToast(`${modalMode.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} saved successfully`, "success");
+      setIsModalOpen(false);
     } catch (err: any) {
       const msg = err?.message || "Failed to save data";
       setModalError(msg);

@@ -160,30 +160,33 @@ export default function InternshipsTabContent() {
   }, [companyName, industryLoading]);
 
   const handleModalSubmit = async (formData: any) => {
-    setIsModalOpen(false);
     setModalLoading(true);
     setModalError(null);
     try {
-      const skillsArray = Array.isArray(formData.required_skills)
-        ? formData.required_skills.map((s: string) => ({ skill: s }))
-        : (typeof formData.required_skills === 'string' ? [{ skill: formData.required_skills }] : []);
-
       const payload = {
-        ...formData,
-        required_skills: skillsArray,
-        duration: String(formData.duration),
-        stipend: Number(formData.stipend),
-        openings: Number(formData.openings)
+        industry: companyName,
+        internship_name: formData.internship_name,
+        category: formData.category,
+        description: formData.description,
+        stipend: formData.stipend || 0,
+        duration: formData.duration,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        status: formData.status || "Active",
+        required_skills: Array.isArray(formData.required_skills)
+          ? formData.required_skills.map((s: string) => ({ skill: s }))
+          : []
       };
 
       if (editingInternship) {
-        await updateInternship(editingInternship.name, { ...payload, name: editingInternship.name });
+        await updateInternship(editingInternship.name, payload);
       } else {
         await createInternship(payload);
       }
 
       await fetchInternships(companyName);
       showToast(`Internship ${editingInternship ? 'updated' : 'posted'} successfully`, "success");
+      setIsModalOpen(false);
     } catch (err: any) {
       console.error("Error saving internship:", err);
       const msg = err?.message || `Failed to ${editingInternship ? 'update' : 'post'} internship`;
