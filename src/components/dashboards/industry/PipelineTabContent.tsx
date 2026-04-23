@@ -144,7 +144,7 @@ export default function PipelineTabContent() {
             bgColor: randomColor,
             college: app.college || "N/A",
             skills: app.applied_on ? [new Date(app.applied_on).toLocaleDateString()] : [],
-            match: Math.round(app.match_score * 100) || 0
+            match: Math.round(app.match_score) || 0
           };
           
           if (newCandidates[candidate.status]) {

@@ -358,9 +358,9 @@ export default function ProjectsTabContent() {
                     </div>
                     <div className="flex items-center gap-3 w-full md:w-auto">
                       <button
-                        onClick={() => handleDeleteProject(project.project_name)}
-                        disabled={isDeleting === project.project_name || project.status === "Disable"}
-                        className={`p-2.5 rounded-xl border border-slate-200 text-slate-400 transition-all flex items-center justify-center active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed ${project.status === 'Disable' ? '' : 'hover:text-red-500 hover:border-red-100 hover:bg-red-50'}`}
+                        onClick={() => handleDeleteProject(project?.name)}
+                        disabled={isDeleting === project?.name || project?.status === "Disable"}
+                        className={`p-2.5 rounded-xl border border-slate-200 text-slate-400 transition-all flex items-center justify-center active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed ${project?.status === 'Disable' ? '' : 'hover:text-red-500 hover:border-red-100 hover:bg-red-50'}`}
                         title={project.status === "Disable" ? "Project is disabled" : "Delete Project"}
                       >
                         {isDeleting === project.project_name ? (
