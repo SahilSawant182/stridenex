@@ -50,26 +50,29 @@ export default function AnalyticsTabContent() {
   const { industryData, loading: industryLoading } = useIndustry();
   const [newApplications, setNewApplications] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const companyName = industryData?.company_name || "";
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      if (!companyName) return;
-      try {
-        setLoading(true);
-        const response = await getApplicationStatusCount(companyName);
-        const statusCounts = response?.message || {};
-        
-        // Map "New Applications" to "Applied" status from pipeline
-        setNewApplications(statusCounts["Applied"] || 0);
-      } catch (err) {
-        console.error("Error fetching application stats:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchStats = async () => {
+    if (!companyName) return;
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getApplicationStatusCount(companyName);
+      const statusCounts = response?.message || {};
+      
+      // Map "New Applications" to "Applied" status from pipeline
+      setNewApplications(statusCounts["Applied"] || 0);
+    } catch (err: any) {
+      console.error("Error fetching application stats:", err);
+      setError(err?.message || "Failed to load application statistics");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchStats();
   }, [companyName]);
 
@@ -132,6 +135,8 @@ export default function AnalyticsTabContent() {
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
       
+      {/* Error Display */}
+
       {/* Top Stats */}
       <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {analyticsStats.map((stat) => (

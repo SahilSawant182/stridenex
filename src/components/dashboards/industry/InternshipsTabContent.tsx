@@ -25,6 +25,7 @@ import { getInternshipList, createInternship, updateInternship, deleteInternship
 import { useIndustry } from "@/context/IndustryContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { calculateEndDate } from "@/utils/date.utils";
+import { useToast } from "@/context/ToastContext";
 
 import { useSearchParams } from "next/navigation";
 
@@ -43,6 +44,7 @@ const item: Variants = {
 
 export default function InternshipsTabContent() {
   const { industryData, loading: industryLoading } = useIndustry();
+  const { showToast } = useToast();
   const searchParams = useSearchParams();
 
   const [internships, setInternships] = useState<any[]>([]);
@@ -158,6 +160,7 @@ export default function InternshipsTabContent() {
   }, [companyName, industryLoading]);
 
   const handleModalSubmit = async (formData: any) => {
+    setIsModalOpen(false);
     setModalLoading(true);
     setModalError(null);
     try {
@@ -180,9 +183,12 @@ export default function InternshipsTabContent() {
       }
 
       await fetchInternships(companyName);
-      setIsModalOpen(false);
+      showToast(`Internship ${editingInternship ? 'updated' : 'posted'} successfully`, "success");
     } catch (err: any) {
-      setModalError(err?.message || `Failed to ${editingInternship ? 'update' : 'post'} internship`);
+      console.error("Error saving internship:", err);
+      const msg = err?.message || `Failed to ${editingInternship ? 'update' : 'post'} internship`;
+      setModalError(msg);
+      showToast(msg, "error");
     } finally {
       setModalLoading(false);
     }
@@ -195,8 +201,9 @@ export default function InternshipsTabContent() {
       setIsDeleting(name);
       await deleteInternship(name);
       await fetchInternships(companyName);
+      showToast("Internship deleted successfully", "success");
     } catch (err: any) {
-      alert(err?.message || "Failed to delete internship");
+      showToast(err?.message || "Failed to delete internship", "error");
     } finally {
       setIsDeleting(null);
     }
@@ -277,6 +284,8 @@ export default function InternshipsTabContent() {
           <Plus className="w-4 h-4" /> Post Internship
         </button>
       </div>
+
+      {/* Error Display */}
 
       <motion.div variants={item} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto hide-scrollbar">

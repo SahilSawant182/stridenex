@@ -22,6 +22,7 @@ import { getProjectList, createProject, updateProject, deleteProject, getMasterD
 import { useIndustry } from "@/context/IndustryContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { calculateEndDate } from "@/utils/date.utils";
+import { useToast } from "@/context/ToastContext";
 
 import { useSearchParams } from "next/navigation";
 
@@ -40,6 +41,7 @@ const item: Variants = {
 
 export default function ProjectsTabContent() {
   const { industryData, loading: industryLoading, refreshIndustryData } = useIndustry();
+  const { showToast } = useToast();
   const searchParams = useSearchParams();
 
   const [projects, setProjects] = useState<any[]>([]);
@@ -141,6 +143,7 @@ export default function ProjectsTabContent() {
   }, [companyName, industryLoading]);
 
   const handleModalSubmit = async (formData: any) => {
+    setIsModalOpen(false);
     setModalLoading(true);
     setModalError(null);
     try {
@@ -162,9 +165,12 @@ export default function ProjectsTabContent() {
       }
 
       await fetchProjects(companyName);
-      setIsModalOpen(false);
+      showToast(`Project ${projectToEdit ? 'updated' : 'created'} successfully`, "success");
     } catch (err: any) {
-      setModalError(err?.message || `Failed to ${projectToEdit ? 'update' : 'create'} project`);
+      console.error("Error saving project:", err);
+      const msg = err?.message || `Failed to ${projectToEdit ? 'update' : 'create'} project`;
+      setModalError(msg);
+      showToast(msg, "error");
     } finally {
       setModalLoading(false);
     }
@@ -177,8 +183,9 @@ export default function ProjectsTabContent() {
       setIsDeleting(projectName);
       await deleteProject(projectName);
       await fetchProjects(companyName);
+      showToast("Project deleted successfully", "success");
     } catch (err: any) {
-      alert(err?.message || "Failed to delete project");
+      showToast(err?.message || "Failed to delete project", "error");
     } finally {
       setIsDeleting(null);
     }
@@ -264,6 +271,8 @@ export default function ProjectsTabContent() {
           <Plus className="w-4 h-4" /> Post New Project
         </button>
       </motion.div>
+
+      {/* Error Display */}
 
       {/* 2. Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { motion, Variants } from "framer-motion";
 import { getStudentApplicationList, getStudentByEmail, updateApplicationStatus } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
+import { useToast } from "@/context/ToastContext";
 import { Loader2, Zap, Target } from "lucide-react";
 
 const container: Variants = {
@@ -44,6 +45,7 @@ interface Candidate {
 
 export default function PipelineTabContent() {
   const { industryData, loading: industryLoading, error: industryError } = useIndustry();
+  const { showToast } = useToast();
   const [candidates, setCandidates] = useState<Record<string, Candidate[]>>({
     "Applied": [],
     "Shortlisted": [],
@@ -89,14 +91,15 @@ export default function PipelineTabContent() {
 
   const handleChangeStatus = async () => {
     if (!selectedCandidate) return;
+    setIsModalOpen(false);
     try {
       setUpdateStatusLoading(true);
       await updateApplicationStatus(selectedCandidate.id, selectedStatus);
       await fetchApplications(companyName);
       setSelectedCandidate(prev => prev ? { ...prev, status: selectedStatus } : null);
-      setIsModalOpen(false);
-    } catch (err) {
-      alert("Failed to update status");
+      showToast(`Status updated to ${selectedStatus}`, "success");
+    } catch (err: any) {
+      showToast(err?.message || "Failed to update status", "error");
       console.error(err);
     } finally {
       setUpdateStatusLoading(false);

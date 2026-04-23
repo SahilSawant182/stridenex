@@ -26,12 +26,14 @@ import {
   ListChecks,
   Clock,
   Pen,
-  Trash2
+  Trash2,
+  CheckCircle2
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
 import { updateIndustry, addRequiredRole, updateIndustryRole, deleteIndustryRole, addHiringRound, getSkillDomain, createSkillDomain, updateSkillDomain, deleteSkillDomain, getCampusPartnerList, createCampusPartner, deleteCampusPartner, getMasterData, deleteHiringRound, updateHiringRound } from "@/services/industry.services";
 import { useIndustry, IndustryData, IndustryRole, HiringRound } from "@/context/IndustryContext";
+import { useToast } from "@/context/ToastContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 
 const container: Variants = {
@@ -81,6 +83,7 @@ export default function CompanyProfileTabContent() {
     refreshIndustryData,
     refreshRoleList
   } = useIndustry();
+  const { showToast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"profile" | "role" | "hiring" | "skill_domain" | "campus_partner">("profile");
   const [modalLoading, setModalLoading] = useState(false);
@@ -106,6 +109,9 @@ export default function CompanyProfileTabContent() {
   const [campusPartners, setCampusPartners] = useState<any[]>([]);
   const [campusPartnersLoading, setCampusPartnersLoading] = useState(false);
   const [collegeOptions, setCollegeOptions] = useState<string[]>([]);
+
+  const [skillsError, setSkillsError] = useState<string | null>(null);
+  const [partnersError, setPartnersError] = useState<string | null>(null);
 
   const fetchSkillsList = async () => {
     if (!data?.company_name) return;
@@ -144,8 +150,9 @@ export default function CompanyProfileTabContent() {
       });
       console.log("SUCCESSFULLY MAPPED:", mapped.length, "domains for", data.company_name);
       setSkillDomains(mapped);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error in fetchSkillsList:", err);
+      setSkillsError(err?.message || "Failed to load skill domains");
       setSkillDomains([]);
     } finally {
       setSkillsLoading(false);
@@ -156,11 +163,13 @@ export default function CompanyProfileTabContent() {
     if (!data?.company_name) return;
     try {
       setCampusPartnersLoading(true);
+      setPartnersError(null);
       const response = await getCampusPartnerList(data.company_name);
       const apiData = response?.data || response?.message?.data || response?.message || [];
       setCampusPartners(Array.isArray(apiData) ? apiData : []);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching campus partners:", err);
+      setPartnersError(err?.message || "Failed to load campus partners");
     } finally {
       setCampusPartnersLoading(false);
     }
@@ -262,6 +271,7 @@ export default function CompanyProfileTabContent() {
   }, [modalMode, data, roleToEdit, roundToEdit, skillDomainToEdit]);
 
   const handleModalSubmit = async (formData: any) => {
+    setIsModalOpen(false);
     setModalLoading(true);
     setModalError(null);
     try {
@@ -316,9 +326,11 @@ export default function CompanyProfileTabContent() {
         await createCampusPartner(payload);
         await fetchCampusPartners();
       }
-      setIsModalOpen(false);
+      showToast(`${modalMode.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} saved successfully`, "success");
     } catch (err: any) {
-      setModalError(err?.message || "Failed to save data");
+      const msg = err?.message || "Failed to save data";
+      setModalError(msg);
+      showToast(msg, "error");
     } finally {
       setModalLoading(false);
     }
@@ -330,9 +342,10 @@ export default function CompanyProfileTabContent() {
       setIsDeletingSkillDomain(name);
       await deleteSkillDomain(name);
       await fetchSkillsList();
+      showToast("Skill domain deleted", "success");
     } catch (err: any) {
       console.error("Error deleting skill domain:", err);
-      alert(err || "Failed to delete skill domain");
+      showToast(err?.message || "Failed to delete skill domain", "error");
     } finally {
       setIsDeletingSkillDomain(null);
     }
@@ -344,9 +357,10 @@ export default function CompanyProfileTabContent() {
       setIsDeletingPartner(name);
       await deleteCampusPartner(name);
       await fetchCampusPartners();
+      showToast("Campus partner removed", "success");
     } catch (err: any) {
       console.error("Error deleting campus partner:", err);
-      alert(err?.message || "Failed to delete campus partner");
+      showToast(err?.message || "Failed to delete campus partner", "error");
     } finally {
       setIsDeletingPartner(null);
     }
@@ -358,9 +372,10 @@ export default function CompanyProfileTabContent() {
       setIsDeletingHiringRound(rowName);
       await deleteHiringRound(data?.company_name || "", rowName);
       await refreshIndustryData();
+      showToast("Hiring round deleted", "success");
     } catch (err: any) {
       console.error("Error deleting hiring round:", err);
-      alert(err || "Failed to delete hiring round");
+      showToast(err?.message || "Failed to delete hiring round", "error");
     } finally {
       setIsDeletingHiringRound(null);
     }
@@ -372,9 +387,10 @@ export default function CompanyProfileTabContent() {
       setIsDeletingRole(name);
       await deleteIndustryRole(name);
       await refreshRoleList();
+      showToast("Role deleted", "success");
     } catch (err: any) {
       console.error("Error deleting role:", err);
-      alert(err || "Failed to delete role");
+      showToast(err?.message || "Failed to delete role", "error");
     } finally {
       setIsDeletingRole(null);
     }
@@ -610,6 +626,19 @@ export default function CompanyProfileTabContent() {
                 <div className="py-10 flex flex-col items-center justify-center space-y-4 bg-slate-50/50 rounded-3xl border-2 border-dashed border-slate-100">
                   <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
                   <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Fetching Skill Domains...</p>
+                </div>
+              ) : skillsError ? (
+                <div className="py-10 flex flex-col items-center justify-center space-y-4 bg-red-50/50 rounded-3xl border-2 border-dashed border-red-100 text-center px-6">
+                  <Zap className="w-8 h-8 text-red-500" />
+                  <div>
+                    <p className="text-sm font-bold text-red-700">{skillsError}</p>
+                    <button 
+                      onClick={fetchSkillsList}
+                      className="mt-3 bg-white text-red-600 px-4 py-1.5 rounded-xl text-xs font-bold border border-red-200 hover:bg-red-50 transition-all"
+                    >
+                      Retry
+                    </button>
+                  </div>
                 </div>
               ) : skillDomains.length > 0 ? (
                 skillDomains.map((domain) => (
@@ -891,6 +920,16 @@ export default function CompanyProfileTabContent() {
                 {campusPartnersLoading ? (
                   <div className="w-full py-4 flex items-center justify-center">
                     <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                  </div>
+                ) : partnersError ? (
+                  <div className="w-full py-4 text-center">
+                    <p className="text-[10px] font-bold text-red-500 uppercase mb-2">{partnersError}</p>
+                    <button 
+                      onClick={fetchCampusPartners}
+                      className="text-[10px] font-bold text-blue-600 hover:underline"
+                    >
+                      Retry
+                    </button>
                   </div>
                 ) : campusPartners.length > 0 ? (
                   campusPartners.map((partner, idx) => {
