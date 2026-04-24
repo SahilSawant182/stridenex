@@ -546,7 +546,7 @@ export default function CompanyProfileTabContent() {
                   <Zap className="w-8 h-8 text-red-500" />
                   <div>
                     <p className="text-sm font-bold text-red-700">{skillsError}</p>
-                    <button 
+                    <button
                       onClick={fetchSkillsList}
                       className="mt-3 bg-white text-red-600 px-4 py-1.5 rounded-xl text-xs font-bold border border-red-200 hover:bg-red-50 transition-all"
                     >
@@ -637,7 +637,7 @@ export default function CompanyProfileTabContent() {
 
         {/* Right Column */}
         <div className="lg:col-span-4 space-y-8">
-          <BaseCard className="border-slate-200 rounded-3xl overflow-hidden shadow-sm">
+          {/* <BaseCard className="border-slate-200 rounded-3xl overflow-hidden shadow-sm">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Roles We Offer</h3>
               <button
@@ -736,7 +736,7 @@ export default function CompanyProfileTabContent() {
                 </div>
               )}
             </div>
-          </BaseCard>
+          </BaseCard> */}
 
           {/* Hiring Pipeline */}
           <BaseCard className="border-slate-200 rounded-3xl overflow-hidden shadow-sm">
@@ -812,7 +812,8 @@ export default function CompanyProfileTabContent() {
             </div>
           </BaseCard>
 
-          <BaseCard className="border-slate-200 rounded-3xl overflow-hidden shadow-sm bg-gradient-to-br from-slate-50 to-white">
+          {/* Campus Partners */}
+          {/* <BaseCard className="border-slate-200 rounded-3xl overflow-hidden shadow-sm bg-gradient-to-br from-slate-50 to-white">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between">
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
                 Campus Partners
@@ -838,7 +839,7 @@ export default function CompanyProfileTabContent() {
                 ) : partnersError ? (
                   <div className="w-full py-4 text-center">
                     <p className="text-[10px] font-bold text-red-500 uppercase mb-2">{partnersError}</p>
-                    <button 
+                    <button
                       onClick={fetchCampusPartners}
                       className="text-[10px] font-bold text-blue-600 hover:underline"
                     >
@@ -886,7 +887,7 @@ export default function CompanyProfileTabContent() {
                 )}
               </div>
             </div>
-          </BaseCard>
+          </BaseCard> */}
         </div>
       </div>
     </motion.div>
