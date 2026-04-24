@@ -47,8 +47,9 @@ export default function IndustryOnboarding({
     const router = useRouter();
     const searchParams = useSearchParams();
     const isMobileSource = searchParams.get("source") === "mobile";
-    const { apiKey, apiSecret } = useAuth();
+    const { apiKey, apiSecret, isOnboarded, isInitialized, currentUser } = useAuth();
     const [currentStep, setCurrentStep] = useState<Step>(1);
+    const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
@@ -98,12 +99,93 @@ export default function IndustryOnboarding({
     });
 
     useEffect(() => {
-        const savedEmail = localStorage.getItem("userEmail") || "";
-        setFormData(prev => ({
-            ...prev,
-            email: savedEmail
-        }));
-    }, []);
+        const fetchInitialData = async () => {
+            const userEmail = localStorage.getItem("userEmail") || currentUser || "";
+            if (!userEmail) return;
+
+            // Determine initial step based on isOnboarded flag
+            // 0 -> Step 1, 1 -> Step 2, 2 -> Step 3
+            const flag = parseInt(isOnboarded || "0");
+            if (flag === 1) {
+                setCurrentStep(2);
+                setCompletedSteps(new Set([1]));
+            } else if (flag === 2) {
+                setCurrentStep(3);
+                setCompletedSteps(new Set([1, 2]));
+            } else if (flag === 3) {
+                router.push("/industry/dashboard");
+                return;
+            }
+
+            // Always set the email in formData
+            setFormData(prev => ({
+                ...prev,
+                email: userEmail
+            }));
+
+            // If we are at step 2 or 3, fetch data to pre-fill
+            if (flag > 0) {
+                await fetchIndustryData(userEmail);
+            }
+        };
+
+        if (isInitialized) {
+            fetchInitialData();
+        }
+    }, [isOnboarded, isInitialized, currentUser]);
+
+    const fetchIndustryData = async (email: string) => {
+        setLoading(true);
+        try {
+            const response = await axios.get(`${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.industry.industry.get_industry_by_name?email=${email}`);
+            console.log("Industry API Response:", response.data);
+            if (response.data?.message) {
+                const messageObj = response.data.message;
+                const data = messageObj.data || messageObj; // Handle both direct and nested data
+                
+                console.log("Extracted Industry Data:", data);
+                if (data) {
+                    // Map data to formData
+                    setFormData(prev => ({
+                        ...prev,
+                        company_name: data.company_name || "",
+                        business_type: data.business_type || "",
+                        gst_number: data.gst_number || "",
+                        industry_sector: data.industry_sector || "",
+                        employee_head_count: data.employee_head_count?.toString() || "",
+                        internship_per_year: data.internship_per_year?.toString() || "",
+                        average_fresher_recruited_per_year: data.average_fresher_recruited_per_year?.toString() || "",
+                        country: data.country || "India",
+                        state: data.state || "",
+                        district: data.district || "",
+                        tahsil: data.tahsil || "", // Key matches the response (tahsil)
+                        city: data.city || "",
+                        turn_over_in_cr: data.turn_over_in_cr?.toString() || "",
+                        company_website: data.company_website || "",
+                        job_function: (data.job_function || []).map((jf: any) => jf.job_function) // Key is singular job_function
+                    }));
+
+                    // Map contact persons
+                    if (data.contact_details && data.contact_details.length > 0) {
+                        setContactPersons(data.contact_details.map((cp: any) => ({
+                            title: cp.title || "",
+                            first_name: cp.first_name || "",
+                            last_name: cp.last_name || "",
+                            designation: cp.designation || "",
+                            contact_no: cp.contact_no?.replace(/^\+91-/, '') || "",
+                            is_admin: cp.is_admin === 1,
+                            email: cp.email || ""
+                        })));
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Error fetching industry data:", err);
+            setError("Failed to load existing profile data.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -227,7 +309,7 @@ export default function IndustryOnboarding({
 
     const validateStep2 = (): boolean => {
         const errors: Record<string, string> = {};
-        if (!formData.job_function || formData.job_function.length === 0) errors.job_function = "Job function is required";
+        // job_function removed from mandatory check
         if (!formData.state) errors.state = "State is required";
         if (!formData.district) errors.district = "District is required";
         if (!formData.tahsil) errors.tahsil = "Taluka is required";
@@ -246,17 +328,197 @@ export default function IndustryOnboarding({
         return Object.keys(errors).length === 0;
     };
 
+    const submitStepData = async (step: Step) => {
+        setLoading(true);
+        setError("");
+        setSuccess("");
+
+        try {
+            const userEmail = localStorage.getItem("userEmail") || "";
+
+            const validContactPersons = contactPersons.filter(
+                person => person.title && person.first_name && person.last_name && person.designation && person.contact_no
+            );
+
+            const formattedContactPersons = validContactPersons.map(person => ({
+                title: person.title,
+                first_name: person.first_name,
+                last_name: person.last_name,
+                designation: person.designation,
+                contact_no: `+91-${person.contact_no.replace(/\D/g, '')}`,
+                is_admin: person.is_admin ? 1 : 0,
+                email: person.email
+            }));
+
+            const jobFunctionArray = (formData.job_function || []).map((jobFunc: string) => ({
+                job_function: jobFunc
+            }));
+
+            let payload: any = {
+                email: userEmail,
+                company_name: formData.company_name, // Mandatory for updates
+                contact_details: [],
+                business_type: "",
+                gst_number: "",
+                industry_sector: "",
+                employee_head_count: 0,
+                internship_per_year: 0,
+                job_function: [], // Key is singular job_function
+                country: "",
+                state: "",
+                district: "",
+                tahsil: "", // Key is tahsil
+                city: "",
+                turn_over_in_cr: 0,
+                company_website: "",
+                average_fresher_recruited_per_year: 0
+            };
+
+            let endpoint = `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.industry.industry.create_industry`;
+            let method: 'post' | 'put' = 'post';
+
+            if (step === 1) {
+                // Step 1: POST to create_industry with Step 1 data
+                payload.business_type = formData.business_type;
+                payload.gst_number = formData.gst_number || "";
+                payload.industry_sector = formData.industry_sector;
+                payload.employee_head_count = formData.employee_head_count ? parseInt(formData.employee_head_count) : 0;
+                payload.internship_per_year = formData.internship_per_year ? parseInt(formData.internship_per_year) : 0;
+                payload.average_fresher_recruited_per_year = formData.average_fresher_recruited_per_year ? 
+                    parseInt(formData.average_fresher_recruited_per_year) : 0;
+            } else {
+                // Step 2 & 3: PUT to update_industry with cumulative data
+                endpoint = `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.industry.industry.update_industry?company_name=${encodeURIComponent(formData.company_name)}`;
+                method = 'put';
+
+                // Always include Step 1 data for cumulative payload
+                payload.business_type = formData.business_type;
+                payload.gst_number = formData.gst_number || "";
+                payload.industry_sector = formData.industry_sector;
+                payload.employee_head_count = formData.employee_head_count ? parseInt(formData.employee_head_count) : 0;
+                payload.internship_per_year = formData.internship_per_year ? parseInt(formData.internship_per_year) : 0;
+                payload.average_fresher_recruited_per_year = formData.average_fresher_recruited_per_year ? 
+                    parseInt(formData.average_fresher_recruited_per_year) : 0;
+
+                // Step 2 and 3 include Step 2 data
+                if (step >= 2) {
+                    payload.job_function = jobFunctionArray;
+                    payload.country = formData.country;
+                    payload.state = formData.state;
+                    payload.district = formData.district;
+                    payload.tahsil = formData.tahsil;
+                    payload.city = formData.city;
+                    payload.turn_over_in_cr = formData.turn_over_in_cr ? parseFloat(formData.turn_over_in_cr) : 0;
+                    payload.company_website = formData.company_website || "";
+                }
+
+                // Step 3 includes Step 3 data
+                if (step === 3) {
+                    payload.contact_details = formattedContactPersons;
+                }
+            }
+
+            console.log(`Submitting Step ${step} payload to ${endpoint} via ${method.toUpperCase()}:`, payload);
+
+            const response = await axios({
+                method: method,
+                url: endpoint,
+                data: payload,
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            const internalStatus = response.data?.message?.status;
+            const isSuccess = response.status === 200 && (internalStatus === 200 || internalStatus === undefined || internalStatus === "success");
+
+            if (isSuccess) {
+                // Mark step as completed on success
+                setCompletedSteps(prev => new Set([...prev, step]));
+
+                if (step === 1) {
+                    setCurrentStep(2);
+                    setSuccess("Step 1 saved successfully!");
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else if (step === 2) {
+                    setCurrentStep(3);
+                    setSuccess("Step 2 saved successfully!");
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    setSuccess("Industry onboarding completed successfully!");
+                    localStorage.clear();
+                    setTimeout(() => {
+                        window.location.href = "/login";
+                    }, 1500);
+                }
+            } else {
+                let errorMsg = "Action failed. Please try again.";
+                if (response.data?._server_messages) {
+                    try {
+                        const messages = JSON.parse(response.data._server_messages);
+                        const parsedMessage = JSON.parse(messages[0]);
+                        errorMsg = parsedMessage.message || errorMsg;
+                    } catch (e) {
+                        errorMsg = response.data?.message?.message || response.data?.message || errorMsg;
+                    }
+                } else {
+                    errorMsg = response.data?.message?.message || response.data?.message || errorMsg;
+                }
+                setError(errorMsg);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        } catch (err: any) {
+            console.error(`Error submitting Step ${step} data:`, err);
+            let errorMessage = `Error submitting step ${step} data`;
+            if (err?.response?.data?._server_messages) {
+                try {
+                    const messages = JSON.parse(err.response.data._server_messages);
+                    const parsedMessage = JSON.parse(messages[0]);
+                    errorMessage = parsedMessage.message || errorMessage;
+                } catch (parseError) {
+                    errorMessage = err?.response?.data?.message || err?.message || errorMessage;
+                }
+            } else {
+                const nestedMessage = err?.response?.data?.message;
+                if (typeof nestedMessage === 'object' && nestedMessage !== null) {
+                    errorMessage = nestedMessage.message || errorMessage;
+                } else if (typeof nestedMessage === 'string') {
+                    errorMessage = nestedMessage;
+                } else {
+                    errorMessage = err?.message || errorMessage;
+                }
+            }
+            setError(errorMessage);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleContinueToStep2 = () => {
         if (validateStep1()) {
-            setCurrentStep(2);
-            setSuccess("");
+            if (completedSteps.has(1)) {
+                setCurrentStep(2);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                submitStepData(1);
+            }
         }
     };
 
     const handleContinueToStep3 = () => {
         if (validateStep2()) {
-            setCurrentStep(3);
-            setSuccess("");
+            if (completedSteps.has(2)) {
+                setCurrentStep(3);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                submitStepData(2);
+            }
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (validateStep3()) {
+            submitStepData(3);
         }
     };
 
@@ -264,12 +526,16 @@ export default function IndustryOnboarding({
         setCurrentStep(1);
         setSuccess("");
         setError("");
+        const userEmail = localStorage.getItem("userEmail") || currentUser || "";
+        if (userEmail) fetchIndustryData(userEmail);
     };
 
     const goToStep2 = () => {
         setCurrentStep(2);
         setSuccess("");
         setError("");
+        const userEmail = localStorage.getItem("userEmail") || currentUser || "";
+        if (userEmail) fetchIndustryData(userEmail);
     };
 
     const getStepTitle = () => {
@@ -290,143 +556,6 @@ export default function IndustryOnboarding({
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
-        if (!validateStep3()) {
-            const firstError = Object.values(fieldErrors)[0];
-            setError(firstError);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            return;
-        }
-
-        setLoading(true);
-        setError("");
-        setSuccess("");
-
-        try {
-            const validContactPersons = contactPersons.filter(
-                person => person.title && person.first_name && person.last_name && person.designation && person.contact_no
-            );
-
-            const formattedContactPersons = validContactPersons.map(person => ({
-                title: person.title,
-                first_name: person.first_name,
-                last_name: person.last_name,
-                designation: person.designation,
-                contact_no: `+91-${person.contact_no.replace(/\D/g, '')}`,
-                is_admin: person.is_admin ? 1 : 0,
-                email: person.email
-            }));
-
-            const jobFunctionArray = (formData.job_function || []).map((jobFunc: string) => ({
-                job_function: jobFunc
-            }));
-
-            // Get email from localStorage (MANDATORY)
-            const userEmail = localStorage.getItem("userEmail");
-
-
-            const payload = {
-                company_name: formData.company_name,
-                contact_details: formattedContactPersons,
-                business_type: formData.business_type,
-                gst_number: formData.gst_number || undefined,
-                industry_sector: formData.industry_sector,
-                employee_head_count: formData.employee_head_count ? parseInt(formData.employee_head_count) : undefined,
-                internship_per_year: formData.internship_per_year ? parseInt(formData.internship_per_year) : undefined,
-                job_functions: jobFunctionArray,
-                country: formData.country,
-                state: formData.state,
-                district: formData.district,
-                taluka: formData.tahsil,
-                city: formData.city,
-                turn_over_in_cr: formData.turn_over_in_cr ? parseFloat(formData.turn_over_in_cr) : undefined,
-                company_website: formData.company_website || undefined,
-                average_fresher_recruited_per_year: formData.average_fresher_recruited_per_year ?
-                    parseInt(formData.average_fresher_recruited_per_year) : undefined,
-                email: userEmail  // MANDATORY - always passed
-            };
-
-            // Create cleanPayload but ALWAYS keep email even if empty
-            const cleanPayload = Object.fromEntries(
-                Object.entries(payload).filter(([_, v]) => v !== undefined && v !== null)
-            );
-            // Ensure email is always present
-            cleanPayload.email = userEmail;
-            console.log(cleanPayload, payload, 'payload');
-
-            const response = await axios.post(
-                `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.industry.industry.create_industry`,
-                cleanPayload,
-                { headers: { 'Content-Type': 'application/json' } }
-            );
-
-            // Strict check: HTTP 200 and internal message status must be 200 (if present)
-            const internalStatus = response.data?.message?.status;
-            const isSuccess = response.status === 200 && (internalStatus === 200 || internalStatus === undefined || internalStatus === "success");
-
-            if (isSuccess) {
-                setSuccess("Industry onboarding completed successfully!");
-
-                // Clear onboarding-specific localStorage items
-                localStorage.clear();
-
-                setTimeout(() => {
-                    if (isMobileSource) {
-                        window.location.href = "/login";
-                    } else {
-                        window.location.href = "/login";
-                    }
-                }, 1500);
-            } else {
-                // Handle internal status 500 or other non-200 cases
-                let errorMsg = "Failed to create industry. Please try again.";
-
-                if (response.data?._server_messages) {
-                    try {
-                        const messages = JSON.parse(response.data._server_messages);
-                        const parsedMessage = JSON.parse(messages[0]);
-                        errorMsg = parsedMessage.message || errorMsg;
-                    } catch (e) {
-                        errorMsg = response.data?.message?.message || response.data?.message || errorMsg;
-                    }
-                } else {
-                    errorMsg = response.data?.message?.message || response.data?.message || errorMsg;
-                }
-
-                setError(errorMsg);
-            }
-        } catch (err: any) {
-            console.error("Error submitting industry data:", err);
-
-            let errorMessage = "Error submitting industry data";
-
-            if (err?.response?.data?._server_messages) {
-                try {
-                    const messages = JSON.parse(err.response.data._server_messages);
-                    const parsedMessage = JSON.parse(messages[0]);
-                    errorMessage = parsedMessage.message || errorMessage;
-                } catch (parseError) {
-                    errorMessage = err?.response?.data?.message || err?.message || errorMessage;
-                }
-            } else {
-                // Extract precise message if available
-                const nestedMessage = err?.response?.data?.message;
-                if (typeof nestedMessage === 'object' && nestedMessage !== null) {
-                    errorMessage = nestedMessage.message || errorMessage;
-                } else if (typeof nestedMessage === 'string') {
-                    errorMessage = nestedMessage;
-                } else {
-                    errorMessage = err?.message || errorMessage;
-                }
-            }
-
-            setError(errorMessage);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const handleSkip = () => {
         if (onSkip) {
@@ -485,7 +614,7 @@ export default function IndustryOnboarding({
                 fieldname: "job_function",
                 label: "Job Function",
                 fieldtype: "Data",
-                required: true,
+                required: false,
                 placeholder: "Select Job Function",
                 multiSelect: true,
                 layout: "half",
@@ -671,7 +800,7 @@ export default function IndustryOnboarding({
 
                 <div className="flex gap-3 pt-6">
                     <Button type="button" variant="outline" onClick={goToStep2}>Back</Button>
-                    <Button type="submit" variant="accent" className="flex-1" loading={loading} disabled={loading} onClick={handleSubmit}>
+                    <Button type="submit" variant="accent" className="flex-1" loading={loading} disabled={loading}>
                         Complete Registration
                     </Button>
                 </div>

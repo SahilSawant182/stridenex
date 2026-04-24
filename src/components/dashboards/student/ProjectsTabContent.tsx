@@ -54,7 +54,8 @@ export default function ProjectsTabContent() {
   const fetchProjects = async () => {
     try {
       setLoading(true);
-      const response = await getStudentProjectList();
+      const studentEmail = localStorage.getItem("userEmail") || currentUser || "";
+      const response = await getStudentProjectList(studentEmail);
       const projectData = response?.message?.data || response?.data || response || [];
       setProjects(Array.isArray(projectData) ? projectData : []);
     } catch (err) {
@@ -86,12 +87,14 @@ export default function ProjectsTabContent() {
 
       const response = await createStudentProjectEnrollment(payload);
 
-      if (response && (response.status === 200 || response.status === "200")) {
+      if (response && (response.status === 200 || response.status === "200" || response.message?.status === 200)) {
         setSuccessfullyEnrolled(prev => [...prev, project.name]);
         setFeedback({
           type: 'success',
           message: `Successfully enrolled in ${project.project_name}!`
         });
+        // Refresh project list to update status from backend
+        setTimeout(fetchProjects, 1000);
       } else {
         // Handle non-200 responses (e.g., 409 Conflict)
         setFeedback({
@@ -154,9 +157,8 @@ export default function ProjectsTabContent() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {[
           { label: "AVAILABLE PROJECTS", value: projects.length.toString(), icon: Briefcase, color: "orange" },
-
-          { label: "MY ENROLLMENTS", value: "0", icon: Target, color: "blue" },
-          { label: "COMPLETED", value: "0", icon: CheckCircle2, color: "emerald" },
+          { label: "MY ENROLLMENTS", value: projects.filter(p => p.applied_status === "Applied").length.toString(), icon: Target, color: "blue" },
+          { label: "COMPLETED", value: projects.filter(p => p.status === "Completed").length.toString(), icon: CheckCircle2, color: "emerald" },
           { label: "CERTIFICATIONS", value: "0", icon: Trophy, color: "purple" },
         ].map((stat, idx) => (
           <motion.div
@@ -249,24 +251,30 @@ export default function ProjectsTabContent() {
                 <div className="flex items-center gap-3">
                   <Button
                     onClick={() => handleEnroll(project)}
-                    disabled={enrolling === project.name || project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"}
+                    disabled={
+                      enrolling === project.name || 
+                      project.status?.toLowerCase() === "disabled" || 
+                      project.status?.toLowerCase() === "disable" ||
+                      project.applied_status === "Applied" ||
+                      successfullyEnrolled.includes(project.name)
+                    }
                     className={`flex-1 ${project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
                       ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-                      : "bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 active:scale-95 translate-y-0 hover:-translate-y-0.5"
-
-
+                      : (project.applied_status === "Applied" || successfullyEnrolled.includes(project.name))
+                        ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 active:scale-95 translate-y-0 hover:-translate-y-0.5"
+                        : "bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 active:scale-95 translate-y-0 hover:-translate-y-0.5"
                       } font-bold h-10 rounded-xl transition-all text-xs`}
                   >
                     {enrolling === project.name ? (
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : successfullyEnrolled.includes(project.name) ? (
+                    ) : (project.applied_status === "Applied" || successfullyEnrolled.includes(project.name)) ? (
                       <CheckCircle2 className="w-4 h-4 mr-2" />
                     ) : project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable" ? null : (
                       <ArrowRight className="w-4 h-4 mr-2" />
                     )}
                     {project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
                       ? "Disabled"
-                      : successfullyEnrolled.includes(project.name)
+                      : (project.applied_status === "Applied" || successfullyEnrolled.includes(project.name))
                         ? "Enrolled"
                         : "Enroll Now"}
                   </Button>

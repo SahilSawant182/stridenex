@@ -75,11 +75,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    if (field.apiEndpoint && value && options.length === 0 && !loading) {
-      fetchOptions();
-    }
-  }, [value]);
+  // Removed automatic fetch effects to strictly call API only on click
 
   // Focus search input when dropdown opens
   useEffect(() => {
@@ -107,14 +103,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
     }
   }, [searchTerm, options]);
 
-  // Special case: Only fetch Country options on mount
-  useEffect(() => {
-    // Only fetch for country field on initial mount
-    if (field.fieldname === "country" && field.apiEndpoint && !initialFetchDone && !loading && !fetchError) {
-      fetchOptions();
-      setInitialFetchDone(true);
-    }
-  }, []);
+  // Removed initial country fetch
 
   const fetchOptions = async () => {
     if (!field.apiEndpoint) return;
@@ -311,7 +300,9 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
   const getSelectedLabel = () => {
     if (!value) return field.placeholder || `Select ${field.label}`;
     const selected = options.find(opt => opt.value === value);
-    return selected ? selected.label : field.placeholder || `Select ${field.label}`;
+    // If we have a value but options aren't loaded yet, show the value itself
+    // This allows pre-filled data to be visible without triggering an API call
+    return selected ? selected.label : value;
   };
 
   const highlightMatch = (text: string, search: string) => {
