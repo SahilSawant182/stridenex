@@ -74,8 +74,8 @@ const tabConfig = {
     { name: "Pipeline", icon: Mail, path: "/industry/dashboard/pipeline" },
     { name: "Projects", icon: FolderGit2, path: "/industry/dashboard/projects" },
     { name: "Internships", icon: UserCheck, path: "/industry/dashboard/internships" },
-    { name: "Feedback", icon: Star, path: "/industry/dashboard/feedback" },
-    { name: "Analytics", icon: Calendar, path: "/industry/dashboard/analytics" },
+    // { name: "Feedback", icon: Star, path: "/industry/dashboard/feedback" },
+    // { name: "Analytics", icon: Calendar, path: "/industry/dashboard/analytics" },
     { name: "Settings", icon: Settings, path: "/industry/dashboard/settings" },
   ],
 };
