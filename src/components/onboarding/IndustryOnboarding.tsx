@@ -377,8 +377,11 @@ export default function IndustryOnboarding({
             let endpoint = `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.industry.industry.create_industry`;
             let method: 'post' | 'put' = 'post';
 
-            if (step === 1) {
-                // Step 1: POST to create_industry with Step 1 data
+            // If is_onboarded flag is already 1 or more, the record exists, so use PUT for updates
+            const recordExists = parseInt(isOnboarded || "0") > 0;
+
+            if (step === 1 && !recordExists) {
+                // Step 1: Initial POST to create_industry
                 payload.business_type = formData.business_type;
                 payload.gst_number = formData.gst_number || "";
                 payload.industry_sector = formData.industry_sector;
@@ -387,11 +390,11 @@ export default function IndustryOnboarding({
                 payload.average_fresher_recruited_per_year = formData.average_fresher_recruited_per_year ? 
                     parseInt(formData.average_fresher_recruited_per_year) : 0;
             } else {
-                // Step 2 & 3: PUT to update_industry with cumulative data
+                // Step 2, Step 3, OR Step 1 update: Use PUT to update_industry
                 endpoint = `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.industry.industry.update_industry?company_name=${encodeURIComponent(formData.company_name)}`;
                 method = 'put';
 
-                // Always include Step 1 data for cumulative payload
+                // Always include Step 1 data for cumulative/update payload
                 payload.business_type = formData.business_type;
                 payload.gst_number = formData.gst_number || "";
                 payload.industry_sector = formData.industry_sector;
@@ -400,8 +403,8 @@ export default function IndustryOnboarding({
                 payload.average_fresher_recruited_per_year = formData.average_fresher_recruited_per_year ? 
                     parseInt(formData.average_fresher_recruited_per_year) : 0;
 
-                // Step 2 and 3 include Step 2 data
-                if (step >= 2) {
+                // Include Step 2 data
+                if (step >= 2 || recordExists) {
                     payload.job_function = jobFunctionArray;
                     payload.country = formData.country;
                     payload.state = formData.state;
@@ -412,8 +415,8 @@ export default function IndustryOnboarding({
                     payload.company_website = formData.company_website || "";
                 }
 
-                // Step 3 includes Step 3 data
-                if (step === 3) {
+                // Include Step 3 data
+                if (step === 3 || recordExists) {
                     payload.contact_details = formattedContactPersons;
                 }
             }
@@ -495,23 +498,13 @@ export default function IndustryOnboarding({
 
     const handleContinueToStep2 = () => {
         if (validateStep1()) {
-            if (completedSteps.has(1)) {
-                setCurrentStep(2);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            } else {
-                submitStepData(1);
-            }
+            submitStepData(1);
         }
     };
 
     const handleContinueToStep3 = () => {
         if (validateStep2()) {
-            if (completedSteps.has(2)) {
-                setCurrentStep(3);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            } else {
-                submitStepData(2);
-            }
+            submitStepData(2);
         }
     };
 
