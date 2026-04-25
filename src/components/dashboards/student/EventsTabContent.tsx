@@ -39,6 +39,7 @@ interface Event {
   icon: any;
   registrationStatus: string;
   name: string; // Document name
+  college?: string;
 }
 
 interface Notice {
@@ -279,6 +280,7 @@ export default function EventsTabContent() {
             name: item.name,
             title: item.event || "Untitled Event",
             type: item.event_type || "Event",
+            college: item.college,
             daysLeft: calculateDaysLeft(item.start_date),
             date: `${item.start_date}${item.end_date ? ` - ${item.end_date}` : ''}`,
             participants: "Join Now",
