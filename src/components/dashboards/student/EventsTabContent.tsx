@@ -165,7 +165,7 @@ export default function EventsTabContent() {
       setRegisteringId(event.name);
       const payload = {
         student: currentUser,
-        event: event.title,
+        event: event.name,
         college: studentCollege || event.college || "", 
         status: "Register"
       };
