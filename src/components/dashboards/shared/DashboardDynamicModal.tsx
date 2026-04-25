@@ -452,11 +452,13 @@ function DynamicFieldItem({
                       ) : (
                         <>
                           {currentOptions?.filter((opt: any) => {
-                            const label = typeof opt === 'string' ? opt : opt.label;
+                            if (!opt) return false;
+                            const label = typeof opt === 'string' ? opt : opt?.label;
+                            if (!label) return false;
                             return label.toLowerCase().includes(searchTerm.toLowerCase());
                           }).map((opt: any) => {
-                            const value = typeof opt === 'string' ? opt : opt.value;
-                            const label = typeof opt === 'string' ? opt : opt.label;
+                            const value = typeof opt === 'string' ? opt : opt?.value;
+                            const label = typeof opt === 'string' ? opt : opt?.label;
                             const isSelected = field.multiple 
                               ? (formData[field.name] || []).includes(value)
                               : formData[field.name] === value;
@@ -473,7 +475,9 @@ function DynamicFieldItem({
                             );
                           })}
                           {currentOptions?.filter((opt: any) => {
-                            const label = typeof opt === 'string' ? opt : opt.label;
+                            if (!opt) return false;
+                            const label = typeof opt === 'string' ? opt : opt?.label;
+                            if (!label) return false;
                             return label.toLowerCase().includes(searchTerm.toLowerCase());
                           }).length === 0 && (
                             <div className="py-8 text-center">
