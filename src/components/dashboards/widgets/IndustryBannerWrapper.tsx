@@ -36,14 +36,14 @@ export default function IndustryBannerWrapper() {
   // Construct dynamic colorful subtitle badges
   const subtitle = (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
-      {industryData?.industry_sector && (
+      {(industryData?.industry_sector || industryData?.other_industry_sector) && (
         <span className="flex items-center gap-1 text-blue-300 text-[10px] font-bold uppercase tracking-wider">
-          <Layers className="w-3 h-3 opacity-80" /> {industryData.industry_sector}
+          <Layers className="w-3 h-3 opacity-80" /> {industryData.industry_sector || industryData.other_industry_sector}
         </span>
       )}
-      {industryData?.business_type && (
+      {(industryData?.business_type || industryData?.other_business_type) && (
         <span className="flex items-center gap-1 text-purple-300 text-[10px] font-bold uppercase tracking-wider">
-          <Factory className="w-3 h-3 opacity-80" /> {industryData.business_type}
+          <Factory className="w-3 h-3 opacity-80" /> {industryData.business_type || industryData.other_business_type}
         </span>
       )}
       {industryData?.headquarters && (
@@ -102,14 +102,28 @@ export default function IndustryBannerWrapper() {
 
   const industryFields: any[] = [
     { name: "company_name", label: "Company Name", type: "text", icon: Building2, required: true, colSpan: 2, placeholder: "e.g. Acme Corporation", disabled: true },
-    { name: "business_type", label: "Business Type", type: "select", icon: Layout, options: businessTypeOptions.length > 0 ? businessTypeOptions : ["Enterprises", "Consultant and Agency", "Other"], required: true, placeholder: "Select Business Type" },
-    { name: "industry_sector", label: "Industry Sector", type: "select", icon: Layers, options: industrySectorOptions.length > 0 ? industrySectorOptions : ["Information Services", "Manufacturing", "Finance", "Healthcare", "Education", "Other"], required: true, placeholder: "Select Industry Sector" },
+    { name: "business_type", label: "Business Type", type: "select", icon: Layout, options: businessTypeOptions.length > 0 ? businessTypeOptions : ["Enterprises", "Consultant and Agency", "Other"], required: false, placeholder: "Select Business Type" },
+  ];
+
+  if (industryData?.other_business_type) {
+    industryFields.push({ name: "other_business_type", label: "Other Business Type", type: "text", icon: Layout, required: false, placeholder: "Enter other business type" });
+  }
+
+  industryFields.push(
+    { name: "industry_sector", label: "Industry Sector", type: "select", icon: Layers, options: industrySectorOptions.length > 0 ? industrySectorOptions : ["Information Services", "Manufacturing", "Finance", "Healthcare", "Education", "Other"], required: false, placeholder: "Select Industry Sector" }
+  );
+
+  if (industryData?.other_industry_sector) {
+    industryFields.push({ name: "other_industry_sector", label: "Other Industry Sector", type: "text", icon: Layers, required: false, placeholder: "Enter other industry sector" });
+  }
+
+  industryFields.push(
     { name: "employee_head_count", label: "Employee Count", type: "number", icon: Users, required: true, placeholder: "e.g. 500" },
     { name: "headquarters", label: "Headquarters", type: "text", icon: MapPin, required: true, placeholder: "e.g. Mumbai, Maharashtra" },
     { name: "company_website", label: "Website (URL)", type: "url", icon: Globe, required: true, placeholder: "https://www.company.com" },
     { name: "cin", label: "CIN Number", type: "text", icon: FileText, required: true, placeholder: "Enter Corporate Identification Number" },
     { name: "about", label: "About Company", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Briefly describe your company's mission and goals..." },
-  ];
+  );
 
   return (
     <RoleBannerWidget 

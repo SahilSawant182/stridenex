@@ -149,9 +149,9 @@ export default function IndustryOnboarding({
                     setFormData(prev => ({
                         ...prev,
                         company_name: data.company_name || "",
-                        business_type: data.business_type || "",
+                        business_type: data.business_type || data.other_business_type || "",
                         gst_number: data.gst_number || "",
-                        industry_sector: data.industry_sector || "",
+                        industry_sector: data.industry_sector || data.other_industry_sector || "",
                         employee_head_count: data.employee_head_count?.toString() || "",
                         internship_per_year: data.internship_per_year?.toString() || "",
                         average_fresher_recruited_per_year: data.average_fresher_recruited_per_year?.toString() || "",
@@ -350,6 +350,9 @@ export default function IndustryOnboarding({
                 email: person.email
             }));
 
+            const isCustomBusinessType = formData.business_type && !businessTypeOptions.some(opt => opt.value === formData.business_type);
+            const isCustomIndustrySector = formData.industry_sector && !industrySectorOptions.some(opt => opt.value === formData.industry_sector);
+
             const jobFunctionArray = (formData.job_function || []).map((jobFunc: string) => ({
                 job_function: jobFunc
             }));
@@ -358,9 +361,11 @@ export default function IndustryOnboarding({
                 email: userEmail,
                 company_name: formData.company_name, // Mandatory for updates
                 contact_details: [],
-                business_type: "",
+                business_type: isCustomBusinessType ? "" : (formData.business_type || ""),
+                other_business_type: isCustomBusinessType ? formData.business_type : "",
                 gst_number: "",
-                industry_sector: "",
+                industry_sector: isCustomIndustrySector ? "" : (formData.industry_sector || ""),
+                other_industry_sector: isCustomIndustrySector ? formData.industry_sector : "",
                 employee_head_count: 0,
                 internship_per_year: 0,
                 job_function: [], // Key is singular job_function
@@ -382,9 +387,11 @@ export default function IndustryOnboarding({
 
             if (step === 1 && !recordExists) {
                 // Step 1: Initial POST to create_industry
-                payload.business_type = formData.business_type;
+                payload.business_type = isCustomBusinessType ? "" : (formData.business_type || "");
+                payload.other_business_type = isCustomBusinessType ? formData.business_type : "";
+                payload.industry_sector = isCustomIndustrySector ? "" : (formData.industry_sector || "");
+                payload.other_industry_sector = isCustomIndustrySector ? formData.industry_sector : "";
                 payload.gst_number = formData.gst_number || "";
-                payload.industry_sector = formData.industry_sector;
                 payload.employee_head_count = formData.employee_head_count ? parseInt(formData.employee_head_count) : 0;
                 payload.internship_per_year = formData.internship_per_year ? parseInt(formData.internship_per_year) : 0;
                 payload.average_fresher_recruited_per_year = formData.average_fresher_recruited_per_year ? 
@@ -395,9 +402,11 @@ export default function IndustryOnboarding({
                 method = 'put';
 
                 // Always include Step 1 data for cumulative/update payload
-                payload.business_type = formData.business_type;
+                payload.business_type = isCustomBusinessType ? "" : (formData.business_type || "");
+                payload.other_business_type = isCustomBusinessType ? formData.business_type : "";
+                payload.industry_sector = isCustomIndustrySector ? "" : (formData.industry_sector || "");
+                payload.other_industry_sector = isCustomIndustrySector ? formData.industry_sector : "";
                 payload.gst_number = formData.gst_number || "";
-                payload.industry_sector = formData.industry_sector;
                 payload.employee_head_count = formData.employee_head_count ? parseInt(formData.employee_head_count) : 0;
                 payload.internship_per_year = formData.internship_per_year ? parseInt(formData.internship_per_year) : 0;
                 payload.average_fresher_recruited_per_year = formData.average_fresher_recruited_per_year ? 
@@ -564,12 +573,16 @@ export default function IndustryOnboarding({
             {
                 fieldname: "business_type", label: "Business Type", fieldtype: "Data", required: true, placeholder: "Select Business Type", layout: "half",
                 apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`, apiParams: { doctype: "Business Type" },
+                allowCustom: true,
+                customPlaceholder: "Enter custom business type",
                 mapOptions: (data) => data.map((item: any) => ({ value: item.name, label: item.name }))
             },
             { fieldname: "gst_number", label: "GST Number", fieldtype: "Data", required: false, placeholder: "Enter GST number", layout: "half" },
             {
                 fieldname: "industry_sector", label: "Industry Sector", fieldtype: "Data", required: true, placeholder: "Select Industry Sector", layout: "half",
                 apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`, apiParams: { doctype: "Industry Sector" },
+                allowCustom: true,
+                customPlaceholder: "Enter custom industry sector",
                 mapOptions: (data) => data.map((item: any) => ({ value: item.name, label: item.name }))
             },
             { fieldname: "employee_head_count", label: "Employee Head Count", fieldtype: "Data", required: true, placeholder: "Enter employee count", layout: "half" },

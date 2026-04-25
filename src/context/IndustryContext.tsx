@@ -24,8 +24,10 @@ export interface IndustryData {
   company_name: string;
   about: string | null;
   business_type: string;
+  other_business_type: string;
   gst_number: string;
   industry_sector: string;
+  other_industry_sector: string;
   headquarters: string | null;
   employee_head_count: string;
   cin: string | null;

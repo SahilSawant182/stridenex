@@ -379,7 +379,7 @@ function DynamicFieldItem({
                 <>
                   {(formData[field.name] || []).length === 0 && (
                     <span className="text-slate-400">{
-                      apiLoading ? "Loading..." : (currentOptions.length === 0 ? "No data found" : (field.placeholder || `Select ${field.label}`))
+                      apiLoading ? "Loading..." : (field.placeholder || `Select ${field.label}`)
                     }</span>
                   )}
                   {(formData[field.name] || []).map((val: string) => (
@@ -398,7 +398,7 @@ function DynamicFieldItem({
                 </>
               ) : (
                 <span className={!formData[field.name] ? "text-slate-400" : "text-slate-900"}>
-                  {apiLoading ? "Loading..." : (formData[field.name] || (currentOptions.length === 0 ? "No data found" : (field.placeholder || `Select ${field.label}`)))}
+                  {apiLoading ? "Loading..." : (formData[field.name] || (field.placeholder || `Select ${field.label}`))}
                 </span>
               )}
               {!field.disabled && (

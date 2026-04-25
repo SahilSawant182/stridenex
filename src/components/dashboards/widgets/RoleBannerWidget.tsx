@@ -174,16 +174,32 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     { name: "github", label: "GitHub URL", type: "url", icon: Github },
   ], []);
 
-  const industryFields: DynamicField[] = useMemo(() => [
-    { name: "company_name", label: "Company Name", type: "text", icon: Building2, required: true, colSpan: 2 },
-    { name: "industry_sector", label: "Industry Sector", type: "text", icon: Target, required: true },
-    { name: "business_type", label: "Business Type", type: "text", icon: Layers, required: true },
-    { name: "company_website", label: "Website", type: "url", icon: Globe, required: true, colSpan: 2 },
-    { name: "headquarters", label: "Headquarters", type: "text", icon: MapPin, required: true, colSpan: 2 },
-    { name: "employee_head_count", label: "Employee Count", type: "number", icon: Users, required: true },
-    { name: "cin", label: "CIN", type: "text", icon: Mail, required: true },
-    { name: "about", label: "About Company", type: "textarea", icon: FileText, required: true, colSpan: 2 },
-  ], []);
+  const industryFields: DynamicField[] = useMemo(() => {
+    const fields: DynamicField[] = [
+      { name: "company_name", label: "Company Name", type: "text", icon: Building2, required: true, colSpan: 2 },
+      { name: "business_type", label: "Business Type", type: "text", icon: Layers, required: false },
+    ];
+
+    if (customData?.rawIndustryData?.other_business_type) {
+      fields.push({ name: "other_business_type", label: "Other Business Type", type: "text", icon: Layers, required: false });
+    }
+
+    fields.push({ name: "industry_sector", label: "Industry Sector", type: "text", icon: Target, required: false });
+
+    if (customData?.rawIndustryData?.other_industry_sector) {
+      fields.push({ name: "other_industry_sector", label: "Other Industry Sector", type: "text", icon: Target, required: false });
+    }
+
+    fields.push(
+      { name: "company_website", label: "Website", type: "url", icon: Globe, required: true, colSpan: 2 },
+      { name: "headquarters", label: "Headquarters", type: "text", icon: MapPin, required: true, colSpan: 2 },
+      { name: "employee_head_count", label: "Employee Count", type: "number", icon: Users, required: true },
+      { name: "cin", label: "CIN", type: "text", icon: Mail, required: true },
+      { name: "about", label: "About Company", type: "textarea", icon: FileText, required: true, colSpan: 2 },
+    );
+
+    return fields;
+  }, [customData?.rawIndustryData]);
 
   const handleUpdateProfile = async (formData: any) => {
     if (!currentUser) return;

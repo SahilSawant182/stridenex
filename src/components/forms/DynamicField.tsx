@@ -257,9 +257,13 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
         setFilteredOptions(prev => [...prev, newOption]);
       }
       
-      // Add to selected values if not already selected
-      if (!currentValues.includes(customOptionValue)) {
-        onChange(field.fieldname, [...currentValues, customOptionValue]);
+      // Add to selected values
+      if (field.multiSelect) {
+        if (!currentValues.includes(customOptionValue)) {
+          onChange(field.fieldname, [...currentValues, customOptionValue]);
+        }
+      } else {
+        onChange(field.fieldname, customOptionValue);
       }
       
       setCustomValue("");

@@ -88,6 +88,7 @@ export default function CompanyProfileTabContent() {
   const [modalMode, setModalMode] = useState<"role" | "hiring" | "skill_domain" | "campus_partner">("role");
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [modalValues, setModalValues] = useState<Record<string, any>>({});
 
   const [roleToEdit, setRoleToEdit] = useState<IndustryRole | undefined>(undefined);
   const [roundToEdit, setRoundToEdit] = useState<HiringRound | undefined>(undefined);
@@ -140,7 +141,7 @@ export default function CompanyProfileTabContent() {
         const theme = colorThemes[idx % colorThemes.length] || colorThemes[0];
         return {
           id: domain.name || `domain-${idx}-${Date.now()}`,
-          title: domain.skill_domain || "Untitled Domain",
+          title: domain.domain || domain.skill_domain || "Untitled Domain",
           tags: Array.isArray(domain.skills) ? domain.skills.map((s: any) => s.skill).filter(Boolean) : [],
           roles: Array.isArray(domain.roles) && domain.roles.length > 0 ? domain.roles.map((r: any) => r.designation).filter(Boolean).join(" • ") : "N/A",
           openings: Number(domain.openings) || 0,
@@ -209,10 +210,42 @@ export default function CompanyProfileTabContent() {
   ], [hiringProcessOptions]);
 
   const skillDomainFields: DynamicField[] = useMemo(() => [
-    { name: "skill_domain", label: "Domain Name", type: "text", icon: TargetIcon, required: true, colSpan: 2, placeholder: "e.g. Backend Engineering" },
+    { 
+      name: "domain", 
+      label: "Domain Name", 
+      type: "select", 
+      icon: TargetIcon, 
+      required: true, 
+      colSpan: 2, 
+      placeholder: "Select Domain",
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: { doctype: "Domain" }
+    },
+    { 
+      name: "sub_domain", 
+      label: "Sub Domain", 
+      type: "select", 
+      icon: TargetIcon, 
+      required: false, 
+      colSpan: 2, 
+      placeholder: modalValues.domain ? "Select Sub Domain" : "Select Domain first",
+      disabled: !modalValues.domain,
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: { doctype: "Sub Domain", 
+        filters: { domain: modalValues.domain } 
+      }
+    },
     { name: "skills", label: "Skills We Audit", type: "select", icon: Zap, options: skillOptions, required: true, colSpan: 2, placeholder: "Select Skills", multiple: true },
     { name: "roles", label: "Designations", type: "select", icon: Briefcase, options: designationOptions, required: true, colSpan: 2, placeholder: "Select Designations", multiple: true },
-  ], [skillOptions, designationOptions]);
+  ], [skillOptions, designationOptions, modalValues.domain]);
+
+  const handleModalValuesChange = (values: Record<string, any>, changedField: string) => {
+    setModalValues(values);
+    if (changedField === "domain") {
+      setModalValues(prev => ({ ...prev, sub_domain: "" }));
+      return { sub_domain: "" };
+    }
+  };
 
   const campusPartnerFields: DynamicField[] = useMemo(() => [
     { name: "college", label: "Select College", type: "select", icon: GraduationCap, options: collegeOptions, required: true, colSpan: 2, placeholder: "Select Campus Partner" },
@@ -232,7 +265,8 @@ export default function CompanyProfileTabContent() {
     if (modalMode === "skill_domain") {
       if (skillDomainToEdit) {
         return {
-          skill_domain: skillDomainToEdit.skill_domain,
+          domain: skillDomainToEdit.domain || skillDomainToEdit.skill_domain || "",
+          sub_domain: skillDomainToEdit.sub_domain || "",
           skills: Array.isArray(skillDomainToEdit.skills) ? skillDomainToEdit.skills.map((s: any) => s.skill) : [],
           roles: Array.isArray(skillDomainToEdit.roles) ? skillDomainToEdit.roles.map((r: any) => r.designation) : [],
         };
@@ -244,6 +278,15 @@ export default function CompanyProfileTabContent() {
     }
     return roundToEdit ? { ...roundToEdit } : undefined;
   }, [modalMode, data, roleToEdit, roundToEdit, skillDomainToEdit]);
+
+  // Sync modalValues when modal opens or initial values change
+  useEffect(() => {
+    if (isModalOpen && modalInitialValues) {
+      setModalValues(modalInitialValues);
+    } else if (!isModalOpen) {
+      setModalValues({});
+    }
+  }, [isModalOpen, modalInitialValues]);
 
   const handleModalSubmit = async (formData: any) => {
     setModalLoading(true);
@@ -278,7 +321,9 @@ export default function CompanyProfileTabContent() {
       } else if (modalMode === "skill_domain") {
         const payload = {
           industry: data?.company_name,
-          skill_domain: formData.skill_domain,
+          skill_domain: "",
+          domain: formData.domain,
+          sub_domain: formData.sub_domain,
           skills: Array.isArray(formData.skills) ? formData.skills.map((s: string) => ({ skill: s })) : [],
           roles: Array.isArray(formData.roles) ? formData.roles.map((r: string) => ({ designation: r })) : [],
         };
@@ -465,6 +510,7 @@ export default function CompanyProfileTabContent() {
         loading={modalLoading}
         error={modalError}
         onFieldFocus={handleFieldFocus}
+        onValuesChange={handleModalValuesChange}
       />
 
       {/* Main Grid Stories */}
