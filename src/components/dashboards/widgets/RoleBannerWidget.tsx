@@ -172,6 +172,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     { name: "gender", label: "Gender", type: "select", icon: Users, options: ["Male", "Female", "Other"], required: true, disabled: true },
     { name: "linkedin", label: "LinkedIn URL", type: "url", icon: Linkedin },
     { name: "github", label: "GitHub URL", type: "url", icon: Github },
+    { name: "cgpa", label: "CGPA", type: "number", icon: Award, required: true },
   ], []);
 
   const industryFields: DynamicField[] = useMemo(() => {
@@ -207,7 +208,8 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     setModalError(null);
     try {
       if (role === "student") {
-        await updateStudent(currentUser, formData);
+        const payload = { ...formData, name: currentUser };
+        await updateStudent(currentUser, payload);
         await fetchStudentData();
       } else if (role === "industry") {
         await updateIndustry(formData.company_name, formData);
@@ -250,6 +252,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       linkedin: studentData?.linkedin || "",
       github: studentData?.github || "",
       gender: studentData?.gender || "",
+      cgpa: studentData?.cgpa || "",
       
       // Local Storage priority
       first_name: firstName || studentData?.first_name || "",

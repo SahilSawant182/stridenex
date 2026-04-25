@@ -37,11 +37,12 @@ export const createStudentProjectEnrollment = async (data: any) => {
 /**
  * Fetch all available internships for students.
  */
-export const getStudentInternshipList = async () => {
+export const getStudentInternshipList = async (studentEmail?: string) => {
   try {
-    const response = await apiService.get(
-      "method/stridenex_app.stridenex_app.doctype.internship.internship.get_internship_list"
-    );
+    const url = studentEmail 
+      ? `method/stridenex_app.stridenex_app.doctype.internship.internship.get_internship_list?student=${encodeURIComponent(studentEmail)}`
+      : "method/stridenex_app.stridenex_app.doctype.internship.internship.get_internship_list";
+    const response = await apiService.get(url);
     return response;
   } catch (error) {
     console.error("Error fetching student internship list:", error);
@@ -230,6 +231,21 @@ export const createStudentEventRegistration = async (data: any) => {
     return response;
   } catch (error) {
     console.error("Error creating student event registration:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch college event list for a specific college and student.
+ */
+export const getCollegeEventList = async (college: string, studentEmail: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.college_event.college_event.get_college_event_list?college=${encodeURIComponent(college)}&student=${encodeURIComponent(studentEmail)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching college event list:", error);
     throw error;
   }
 };

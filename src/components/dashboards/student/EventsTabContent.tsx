@@ -21,7 +21,7 @@ import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getMasterData, getStudentByEmail, createStudentEventRegistration } from "@/services/student.services";
+import { getMasterData, getStudentByEmail, createStudentEventRegistration, getCollegeEventList } from "@/services/student.services";
 import { useAuth } from "@/context/AuthContext";
 
 // Types
@@ -37,6 +37,8 @@ interface Event {
   bgColor: string;
   borderColor: string;
   icon: any;
+  registrationStatus: string;
+  name: string; // Document name
 }
 
 interface Notice {
@@ -143,9 +145,10 @@ export default function EventsTabContent() {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
-  const [registeringId, setRegisteringId] = useState<number | null>(null);
-  const [registeredEventIds, setRegisteredEventIds] = useState<number[]>([]);
+  const [registeringId, setRegisteringId] = useState<string | null>(null);
+  const [registeredEventIds, setRegisteredEventIds] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [studentCollege, setStudentCollege] = useState<string>("");
 
   useEffect(() => {
     fetchInitialData();
@@ -158,21 +161,24 @@ export default function EventsTabContent() {
     }
 
     try {
-      setRegisteringId(event.id);
+      setRegisteringId(event.name);
       const payload = {
         student: currentUser,
-        name: event.title,
+        event: event.title,
+        college: studentCollege || event.college || "", 
         status: "Register"
       };
 
       const response = await createStudentEventRegistration(payload);
 
       if (response && (response.status === 200 || response.status === "200" || response.message?.status === 200)) {
-        setRegisteredEventIds(prev => [...prev, event.id]);
+        setRegisteredEventIds(prev => [...prev, event.name]);
         setFeedback({
           type: 'success',
           message: `Successfully registered for ${event.title}!`
         });
+        // Refresh events to get updated registration status
+        fetchInitialData();
       } else {
         setFeedback({
           type: 'error',
@@ -206,13 +212,14 @@ export default function EventsTabContent() {
 
       // 1. Fetch student details to get the college
       const studentRes = await getStudentByEmail(email);
-      const studentCollege = studentRes?.message?.data?.college;
+      const collegeName = studentRes?.message?.data?.college;
 
-      if (studentCollege) {
+      if (collegeName) {
+        setStudentCollege(collegeName);
         // 2. Fetch notices and events for that specific college in parallel
         await Promise.all([
-          fetchNotices(studentCollege),
-          fetchEvents(studentCollege)
+          fetchNotices(collegeName),
+          fetchEvents(collegeName)
         ]);
       } else {
         console.warn("No college found for student:", email);
@@ -258,23 +265,25 @@ export default function EventsTabContent() {
 
   const fetchEvents = async (college: string) => {
     try {
-      const response = await getMasterData("College Event", {
-        filters: { college: college },
-        fields: ["college", "event", "event_type", "start_date"]
-      });
+      const email = currentUser || localStorage.getItem("currentUser") || "";
+      if (!email) return;
 
-      const apiData = response?.data || response?.message || [];
+      const response = await getCollegeEventList(college, email);
+      const apiData = response?.data || response?.message?.data || [];
+      
       if (Array.isArray(apiData)) {
         const mappedEvents: Event[] = apiData.map((item: any, index: number) => {
           const styles = getEventStyles(item.event_type);
           return {
             id: index + 1,
+            name: item.name,
             title: item.event || "Untitled Event",
             type: item.event_type || "Event",
             daysLeft: calculateDaysLeft(item.start_date),
-            date: item.start_date || "",
+            date: `${item.start_date}${item.end_date ? ` - ${item.end_date}` : ''}`,
             participants: "Join Now",
-            prize: "Exciting Rewards",
+            prize: item.price || "Exciting Rewards",
+            registrationStatus: item.registration_status || "Not Registered",
             ...styles,
             icon: Trophy
           };
@@ -372,18 +381,23 @@ export default function EventsTabContent() {
                     <div className="flex items-center gap-2">
                       <Button
                         onClick={() => handleRegister(event)}
-                        disabled={registeringId === event.id || registeredEventIds.includes(event.id)}
-                        className={`flex-1 ${registeredEventIds.includes(event.id)
-                          ? 'bg-emerald-500 hover:bg-emerald-600'
-                          : 'bg-orange-500 hover:bg-orange-600'
+                        disabled={
+                          registeringId === event.name || 
+                          registeredEventIds.includes(event.name) || 
+                          event.registrationStatus === "Register"
+                        }
+                        className={`flex-1 ${
+                          registeredEventIds.includes(event.name) || event.registrationStatus === "Register"
+                            ? 'bg-emerald-500 hover:bg-emerald-600'
+                            : 'bg-orange-500 hover:bg-orange-600'
                           } text-white shadow-sm active:scale-95 transition-all font-bold rounded-xl`}
                       >
-                        {registeringId === event.id ? (
+                        {registeringId === event.name ? (
                           <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        ) : registeredEventIds.includes(event.id) ? (
+                        ) : (registeredEventIds.includes(event.name) || event.registrationStatus === "Register") ? (
                           <CheckCircle2 className="w-4 h-4 mr-2" />
                         ) : null}
-                        {registeredEventIds.includes(event.id) ? "Registered" : "Register Now"}
+                        {registeredEventIds.includes(event.name) || event.registrationStatus === "Register" ? "Registered" : "Register Now"}
                       </Button>
                       <Button
                         variant="outline"

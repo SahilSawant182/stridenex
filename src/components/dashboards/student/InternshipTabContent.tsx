@@ -12,7 +12,14 @@ import {
   MapPin, 
   Clock, 
   IndianRupee,
-  Loader2
+  Loader2,
+  Info,
+  Building2,
+  Globe,
+  Zap,
+  Target,
+  GraduationCap,
+  X
 } from "lucide-react";
 import StatsWidget from "@/components/dashboards/widgets/StatsWidget";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
@@ -47,6 +54,8 @@ export default function InternshipTabContent() {
   const [applying, setApplying] = useState<string | null>(null);
   const [successfullyApplied, setSuccessfullyApplied] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [selectedInternship, setSelectedInternship] = useState<any>(null);
+  const [showDetails, setShowDetails] = useState(false);
 
 
 
@@ -57,7 +66,7 @@ export default function InternshipTabContent() {
   const fetchInternships = async () => {
     try {
       setLoading(true);
-      const response = await getStudentInternshipList();
+      const response = await getStudentInternshipList(currentUser || undefined);
       const internshipData = response?.message?.data || response?.data || response || [];
       setInternships(Array.isArray(internshipData) ? internshipData : []);
     } catch (err) {
@@ -93,6 +102,8 @@ export default function InternshipTabContent() {
           type: 'success',
           message: `Application sent successfully for ${internship.role_name || internship.title || 'the internship'}!`
         });
+        // Refresh the list to update statuses from the server
+        fetchInternships();
       } else {
         // Handle non-200 responses (e.g., 409 Conflict)
         setFeedback({
@@ -116,12 +127,31 @@ export default function InternshipTabContent() {
 
   };
 
-  // Stats data - Keep static for now or potentially fetch from a 'get_stats' API if available
+  // Helper for status styling
+  const getStatusConfig = (status: string) => {
+    const s = status?.toLowerCase();
+    switch (s) {
+      case 'applied':
+        return { bg: "bg-blue-50", text: "text-blue-600", border: "border-blue-100", label: "Applied" };
+      case 'shortlisted':
+        return { bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-100", label: "Shortlisted" };
+      case 'interview scheduled':
+        return { bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-100", label: "Interview Scheduled" };
+      case 'rejected':
+        return { bg: "bg-red-50", text: "text-red-600", border: "border-red-100", label: "Rejected" };
+      case 'selected':
+        return { bg: "bg-amber-50", text: "text-amber-600", border: "border-amber-100", label: "Selected" };
+      default:
+        return { bg: "bg-slate-50", text: "text-slate-600", border: "border-slate-100", label: status || "N/A" };
+    }
+  };
+
+  // Stats data - Computed dynamically
   const statsData = [
     {
       id: 1,
       title: "APPLIED",
-      value: "0",
+      value: internships.filter(i => i.applied_status === "Applied").length.toString(),
       icon: Send,
       iconBg: "bg-blue-50",
       iconColor: "text-blue-600"
@@ -129,7 +159,7 @@ export default function InternshipTabContent() {
     {
       id: 2,
       title: "SHORTLISTED",
-      value: "0",
+      value: internships.filter(i => i.applied_status === "Shortlisted").length.toString(),
       icon: CheckCircle2,
       iconBg: "bg-emerald-50",
       iconColor: "text-emerald-600"
@@ -137,7 +167,7 @@ export default function InternshipTabContent() {
     {
       id: 3,
       title: "INTERVIEW SCHEDULED",
-      value: "0",
+      value: internships.filter(i => i.applied_status === "Interview Scheduled").length.toString(),
       icon: Calendar,
       iconBg: "bg-purple-50",
       iconColor: "text-purple-600"
@@ -215,21 +245,22 @@ export default function InternshipTabContent() {
                     <p className="text-xs text-slate-500 font-medium">{internship.industry || "Industry Partner"}</p>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1">
+                <div className="flex flex-col items-end gap-1.5 mt-1">
                   <div className={`text-lg font-bold text-emerald-600`}>
                     {internship.match_score || 100}%
                   </div>
                   <Badge className={`${
                     internship.status?.toLowerCase() === "closed"
                       ? "bg-red-50 text-red-600 border-red-100" 
-                      : internship.status?.toLowerCase() === "active" || internship.status?.toLowerCase() === "open" || !internship.status
-                      ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                      : "bg-indigo-50 text-indigo-600 border-indigo-100"
-                  } rounded-full text-[9px] px-2 py-0.5 font-bold`}>
+                      : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                  } rounded-full text-[9px] px-2 py-0.5 font-bold border`}>
                     {internship.status || "Active"}
                   </Badge>
-
-
+                  {internship.applied_status && internship.applied_status !== "Not Applied" && (
+                    <Badge className={`${getStatusConfig(internship.applied_status).bg} ${getStatusConfig(internship.applied_status).text} ${getStatusConfig(internship.applied_status).border} rounded-full text-[9px] px-2 py-0.5 font-bold border animate-pulse`}>
+                      {internship.applied_status}
+                    </Badge>
+                  )}
                 </div>
               </div>
 
@@ -254,24 +285,38 @@ export default function InternshipTabContent() {
               <div className="flex items-center gap-2">
                 <Button 
                   onClick={() => handleApply(internship)}
-                  disabled={applying === internship.name || internship.status?.toLowerCase() === "closed"}
+                  disabled={
+                    applying === internship.name || 
+                    internship.status?.toLowerCase() === "closed" || 
+                    successfullyApplied.includes(internship.name) ||
+                    (internship.applied_status && internship.applied_status !== "Not Applied")
+                  }
                   className={`flex-1 ${
                     internship.status?.toLowerCase() === "closed"
                       ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                      : (internship.applied_status && internship.applied_status !== "Not Applied") || successfullyApplied.includes(internship.name)
+                      ? `${getStatusConfig(internship.applied_status || "Applied").bg} ${getStatusConfig(internship.applied_status || "Applied").text} border ${getStatusConfig(internship.applied_status || "Applied").border} shadow-sm`
                       : "bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/10 active:scale-95"
                   } font-bold rounded-xl h-10 transition-all`}
                 >
-
-
                   {applying === internship.name ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : successfullyApplied.includes(internship.name) ? (
+                  ) : (successfullyApplied.includes(internship.name) || (internship.applied_status && internship.applied_status !== "Not Applied")) ? (
                     <CheckCircle2 className="w-4 h-4 mr-2" />
                   ) : null}
-                  {successfullyApplied.includes(internship.name) ? "Applied" : "Apply Now"}
+                  {successfullyApplied.includes(internship.name) || (internship.applied_status && internship.applied_status !== "Not Applied") 
+                    ? (internship.applied_status && internship.applied_status !== "Not Applied" ? internship.applied_status : "Applied") 
+                    : "Apply Now"}
                 </Button>
 
-                <Button variant="outline" className="px-4 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl h-10 font-bold text-xs">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setSelectedInternship(internship);
+                    setShowDetails(true);
+                  }}
+                  className="px-4 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl h-10 font-bold text-xs"
+                >
                   Details
                 </Button>
               </div>
@@ -279,6 +324,172 @@ export default function InternshipTabContent() {
           </BaseCard>
         ))}
       </motion.div>
+
+      {/* Details Modal */}
+      {showDetails && selectedInternship && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-100"
+          >
+            {/* Modal Header */}
+            <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-orange-500 flex items-center justify-center shadow-lg shadow-orange-200">
+                  <Briefcase className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800">{selectedInternship.title || "Internship Details"}</h2>
+                  <p className="text-sm text-slate-500 font-semibold">{selectedInternship.industry || "Industry Partner"}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowDetails(false)}
+                className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all shadow-sm"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Left Column: Core Info */}
+                <div className="space-y-6">
+                  <section>
+                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Info className="w-3 h-3" /> Basic Information
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                            <MapPin className="w-4 h-4 text-blue-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Location</p>
+                            <p className="text-sm font-bold text-slate-700">{selectedInternship.location || "Remote"}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                            <IndianRupee className="w-4 h-4 text-emerald-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Stipend</p>
+                            <p className="text-sm font-bold text-slate-700">₹{selectedInternship.stipend || "Not specified"}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
+                            <Clock className="w-4 h-4 text-purple-500" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Duration</p>
+                            <p className="text-sm font-bold text-slate-700">{selectedInternship.duration ? `${selectedInternship.duration} Days` : "Not specified"}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section>
+                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Target className="w-3 h-3" /> Skills Required
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {Array.isArray(selectedInternship.skills) && selectedInternship.skills.length > 0 ? (
+                        selectedInternship.skills.map((s: any, idx: number) => (
+                          <Badge key={idx} variant="outline" className="bg-white border-slate-200 text-slate-700 px-3 py-1 text-[11px] font-bold rounded-lg">
+                            {s.skill}
+                          </Badge>
+                        ))
+                      ) : (
+                        <p className="text-xs text-slate-400 italic">No specific skills listed</p>
+                      )}
+                    </div>
+                  </section>
+                </div>
+
+                {/* Right Column: Descriptions */}
+                <div className="space-y-6">
+                  <section>
+                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Zap className="w-3 h-3" /> About the Internship
+                    </h3>
+                    <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100">
+                      <p className="text-sm text-slate-600 leading-relaxed font-medium">
+                        {selectedInternship.description || "No description provided by the industry partner."}
+                      </p>
+                    </div>
+                  </section>
+
+                  <section>
+                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <GraduationCap className="w-3 h-3" /> Eligibility
+                    </h3>
+                    <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100">
+                      <p className="text-sm text-slate-600 font-bold">
+                        {selectedInternship.eligibility || "Open to all relevant backgrounds."}
+                      </p>
+                    </div>
+                  </section>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-orange-50 rounded-2xl border border-orange-100">
+                      <p className="text-[10px] font-bold text-orange-400 uppercase">Openings</p>
+                      <p className="text-lg font-bold text-orange-600">{selectedInternship.openings || 0}</p>
+                    </div>
+                    <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                      <p className="text-[10px] font-bold text-blue-400 uppercase">Start Date</p>
+                      <p className="text-sm font-bold text-blue-600">{selectedInternship.start_date || "TBD"}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-8 border-t border-slate-50 flex items-center justify-end gap-3 bg-slate-50/50">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowDetails(false)}
+                className="px-8 h-12 rounded-xl text-sm font-bold border-slate-200 text-slate-600 hover:bg-white transition-all"
+              >
+                Close
+              </Button>
+              <Button 
+                onClick={() => {
+                  handleApply(selectedInternship);
+                  setShowDetails(false);
+                }}
+                disabled={
+                  applying === selectedInternship.name || 
+                  selectedInternship.status?.toLowerCase() === "closed" || 
+                  successfullyApplied.includes(selectedInternship.name) ||
+                  (selectedInternship.applied_status && selectedInternship.applied_status !== "Not Applied")
+                }
+                className={`px-10 h-12 rounded-xl text-sm font-bold ${
+                  selectedInternship.status?.toLowerCase() === "closed"
+                    ? "bg-slate-100 text-slate-400 border-slate-200"
+                    : (selectedInternship.applied_status && selectedInternship.applied_status !== "Not Applied") || successfullyApplied.includes(selectedInternship.name)
+                    ? `${getStatusConfig(selectedInternship.applied_status || "Applied").bg} ${getStatusConfig(selectedInternship.applied_status || "Applied").text} border ${getStatusConfig(selectedInternship.applied_status || "Applied").border}`
+                    : "bg-orange-500 hover:bg-orange-600 text-white shadow-xl shadow-orange-500/10"
+                } transition-all`}
+              >
+                {successfullyApplied.includes(selectedInternship.name) || (selectedInternship.applied_status && selectedInternship.applied_status !== "Not Applied") 
+                  ? (selectedInternship.applied_status && selectedInternship.applied_status !== "Not Applied" ? selectedInternship.applied_status : "Applied") 
+                  : "Apply Now"}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {internships.length === 0 && !loading && (
         <div className="py-20 flex flex-col items-center justify-center bg-white border border-dashed border-slate-200 rounded-3xl">
