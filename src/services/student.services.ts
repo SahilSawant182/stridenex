@@ -249,3 +249,19 @@ export const getCollegeEventList = async (college: string, studentEmail: string)
     throw error;
   }
 };
+
+/**
+ * Create a new student skill.
+ */
+export const createStudentSkill = async (data: any) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.skill_ledger.doctype.student_skill.student_skill.create_student_skill",
+      { data }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating student skill:", error);
+    throw error;
+  }
+};
