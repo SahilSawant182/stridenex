@@ -568,19 +568,8 @@ export default function MentorsTabContent() {
                       animate={{ opacity: 1, height: "auto" }}
                       className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4"
                     >
-                      <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">
-                          Session Topic / Agenda
-                        </label>
-                        <Input
-                          placeholder="e.g., Python Basics, Architecture Review..."
-                          value={bookingTopic}
-                          onChange={(e) => setBookingTopic(e.target.value)}
-                          className="bg-slate-50 border-slate-200 focus-visible:ring-emerald-500"
-                        />
-                      </div>
                       <Button 
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-base font-bold shadow-xl shadow-emerald-500/10"
                         onClick={handleConfirmBooking}
                         disabled={isBooking}
                       >
