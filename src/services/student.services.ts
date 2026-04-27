@@ -22,6 +22,7 @@ export const createStudentApplication = async (data: any) => {
  * Endpoint for students to enroll in an industry project.
  */
 export const createStudentProjectEnrollment = async (data: any) => {
+  console.log("data", data);
   try {
     const response = await apiService.post(
       "method/stridenex_app.stridenex_app.doctype.student_project_enrollment.student_project_enrollment.create_student_project_enrollment",
@@ -39,7 +40,7 @@ export const createStudentProjectEnrollment = async (data: any) => {
  */
 export const getStudentInternshipList = async (studentEmail?: string) => {
   try {
-    const url = studentEmail 
+    const url = studentEmail
       ? `method/stridenex_app.stridenex_app.doctype.internship.internship.get_internship_list?student=${encodeURIComponent(studentEmail)}`
       : "method/stridenex_app.stridenex_app.doctype.internship.internship.get_internship_list";
     const response = await apiService.get(url);
@@ -55,7 +56,7 @@ export const getStudentInternshipList = async (studentEmail?: string) => {
  */
 export const getStudentProjectList = async (studentEmail?: string) => {
   try {
-    const url = studentEmail 
+    const url = studentEmail
       ? `method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.get_project_list?student=${encodeURIComponent(studentEmail)}`
       : "method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.get_project_list";
     const response = await apiService.get(url);
@@ -120,7 +121,7 @@ export const bookMentorSlot = async (data: Record<string, string>) => {
   try {
     const queryString = new URLSearchParams(data).toString();
     const url = `method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.book_slot?${queryString}`;
-    
+
     const response = await apiService.get(url);
     return response;
   } catch (error) {

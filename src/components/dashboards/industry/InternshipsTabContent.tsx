@@ -213,7 +213,7 @@ export default function InternshipsTabContent() {
       fetchOptions("Skill", setSkillOptions);
     } else if (fieldName === "type" && categoryOptions.length === 0) {
       fetchOptions("Industry Skill Domain", setCategoryOptions, {
-        fields: "skill_domain",
+        fields: "domain",
         filters: {
           industry: companyName
         }

@@ -66,56 +66,71 @@ export default function ProjectsTabContent() {
   };
 
   const handleEnroll = async (project: any) => {
+    // ✅ Freeze values immediately (prevents mutation issues)
+    const { name, industry, project_name } = { ...project };
+
+    console.log("Clicked project:", project);
+    console.log("Industry at click:", industry);
+
     if (!currentUser) {
       alert("Authentication Required: Please log in to enroll in projects.");
       return;
     }
 
-
     try {
-      setEnrolling(project.name);
+      setEnrolling(name);
+
       const payload = {
         student: currentUser,
-        project: project.name,
+        project: name,
+        industry: industry || "", // ✅ safe fallback
         status: "Applied",
-        applied_on: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        applied_on: new Date().toISOString().slice(0, 19).replace("T", " "),
         resume: null,
         match_score: 0.0,
         notes: "Enrolled from Student Dashboard",
-        industry: project.industry
       };
+
+      console.log("Payload:", payload);
 
       const response = await createStudentProjectEnrollment(payload);
 
-      if (response && (response.status === 200 || response.status === "200" || response.message?.status === 200)) {
-        setSuccessfullyEnrolled(prev => [...prev, project.name]);
+      if (
+        response &&
+        (response.status === 200 ||
+          response.status === "200" ||
+          response.message?.status === 200)
+      ) {
+        setSuccessfullyEnrolled((prev) => [...prev, name]);
+
         setFeedback({
-          type: 'success',
-          message: `Successfully enrolled in ${project.project_name}!`
+          type: "success",
+          message: `Successfully enrolled in ${project_name}!`,
         });
-        // Refresh project list to update status from backend
-        setTimeout(fetchProjects, 1000);
+
+        // ✅ Better than setTimeout
+        await fetchProjects();
       } else {
-        // Handle non-200 responses (e.g., 409 Conflict)
         setFeedback({
-          type: 'error',
-          message: response?.message || "Something went wrong. Please try again."
+          type: "error",
+          message:
+            response?.message || "Something went wrong. Please try again.",
         });
       }
+
       setTimeout(() => setFeedback(null), 5000);
-
-
     } catch (err: any) {
       console.error("Enrollment error:", err);
+
       setFeedback({
-        type: 'error',
-        message: err?.message || "Something went wrong. Please try again."
+        type: "error",
+        message: err?.message || "Something went wrong. Please try again.",
       });
+
       setTimeout(() => setFeedback(null), 5000);
     } finally {
       setEnrolling(null);
     }
-
   };
 
   if (loading && projects.length === 0) {
@@ -250,10 +265,10 @@ export default function ProjectsTabContent() {
 
                 <div className="flex items-center gap-3">
                   <Button
-                    onClick={() => handleEnroll(project)}
+                    onClick={() => handleEnroll({ ...project })}
                     disabled={
-                      enrolling === project.name || 
-                      project.status?.toLowerCase() === "disabled" || 
+                      enrolling === project.name ||
+                      project.status?.toLowerCase() === "disabled" ||
                       project.status?.toLowerCase() === "disable" ||
                       project.applied_status === "Applied" ||
                       successfullyEnrolled.includes(project.name)
@@ -275,8 +290,8 @@ export default function ProjectsTabContent() {
                     {project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
                       ? "Disabled"
                       : (project.applied_status === "Applied" || successfullyEnrolled.includes(project.name))
-                        ? "Enrolled"
-                        : "Enroll Now"}
+                        ? "Applied"
+                        : "Apply Now"}
                   </Button>
 
 
