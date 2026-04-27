@@ -60,6 +60,7 @@ export default function InternshipsTabContent() {
   const [skillOptions, setSkillOptions] = useState<string[]>([]);
   const [editingInternship, setEditingInternship] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [modalValues, setModalValues] = useState<Record<string, any>>({});
 
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
 
@@ -68,11 +69,10 @@ export default function InternshipsTabContent() {
     if (action === "post-new") {
       setEditingInternship(null);
       setIsModalOpen(true);
-
-      // Optional: Clear the parameter from the URL without refresh if needed
-      // window.history.replaceState(null, '', window.location.pathname);
     }
   }, [searchParams]);
+
+
 
   const fetchOptions = async (doctype: string, setter: (val: string[]) => void, extraPayload?: any) => {
     try {
@@ -108,7 +108,8 @@ export default function InternshipsTabContent() {
     { name: "type", label: "Domain", type: "select", icon: Target, options: categoryOptions, required: false, placeholder: "Select Category" },
     { name: "industry", label: "Industry", type: "text", icon: Globe, required: true, placeholder: "e.g. Razorpay Technologies", disabled: true },
     { name: "location", label: "Location Type", type: "select", icon: MapPin, options: ["Remote", "On-site", "Hybrid"], required: true, placeholder: "Select Location" },
-    { name: "stipend", label: "Stipend (Monthly)", type: "number", icon: IndianRupee, required: true, placeholder: "e.g. 15000" },
+    { name: "payment_mode", label: "Payment", type: "select", icon: IndianRupee, options: ["Paid", "Unpaid"], required: true, placeholder: "Select Payment Mode" },
+    { name: "stipend", label: "Stipend (Monthly)", type: "number", icon: IndianRupee, required: modalValues.payment_mode === "Paid", placeholder: "e.g. 15000", disabled: modalValues.payment_mode === "Unpaid" },
     { name: "duration", label: "Duration (Days)", type: "number", icon: Clock, required: true, placeholder: "e.g. 90" },
     { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
     { name: "end_date", label: "End Date", type: "date", icon: Calendar, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
@@ -127,7 +128,7 @@ export default function InternshipsTabContent() {
       multiple: true
     },
     { name: "description", label: "Description", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Describe the roles and responsibilities..." },
-  ], [skillOptions, categoryOptions]);
+  ], [skillOptions, categoryOptions, modalValues.payment_mode]);
 
   const fetchInternships = async (industry: string) => {
     try {
@@ -222,6 +223,10 @@ export default function InternshipsTabContent() {
   };
 
   const handleValuesChange = (values: Record<string, any>, changedFieldName: string) => {
+    setModalValues(values);
+    if (changedFieldName === "payment_mode" && values.payment_mode === "Unpaid") {
+      return { stipend: 0 };
+    }
     if (changedFieldName === "start_date" || changedFieldName === "duration") {
       const newEndDate = calculateEndDate(values.start_date, values.duration);
       if (newEndDate) {
@@ -252,10 +257,17 @@ export default function InternshipsTabContent() {
       industry: companyName || "Razorpay Technologies",
       status: "Active",
       location: "Remote",
+      payment_mode: "Paid",
       type: "",
       required_skills: []
     };
   }, [editingInternship, companyName]);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      setModalValues(modalInitialValues);
+    }
+  }, [isModalOpen, modalInitialValues]);
 
   if ((loading || industryLoading) && internships.length === 0) {
     return (

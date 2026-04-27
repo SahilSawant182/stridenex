@@ -396,7 +396,8 @@ export default function StudentOnboarding({
       multiSelect: true, // This makes it multi-select
       apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
       apiParams: {
-        doctype: "Student Skill" // Updated doctype
+        doctype: "Skill",
+        fields: ["skill_name"],
       },
       mapOptions: (data) => {
         console.log("Skills data received:", data);
@@ -780,7 +781,7 @@ export default function StudentOnboarding({
       } else {
         // Handle error response - this will show in red Alert
         let errorMsg = "Registration failed. Please try again.";
-        
+
         if (responseData?._server_messages) {
           try {
             const messages = JSON.parse(responseData._server_messages);
@@ -792,7 +793,7 @@ export default function StudentOnboarding({
         } else {
           errorMsg = responseData?.message?.message || responseData?.message || responseData?.error || errorMsg;
         }
-        
+
         setError(errorMsg);
       }
     } catch (err: any) {
@@ -819,7 +820,7 @@ export default function StudentOnboarding({
           errorMessage = err?.response?.data?.error || err?.message || errorMessage;
         }
       }
-      
+
       setError(errorMessage);
     } finally {
       setLoading(false);

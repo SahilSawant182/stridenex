@@ -37,7 +37,7 @@ export default function OnboardingLayout({
   return (
     <div className="flex flex-col lg:flex-row w-screen h-screen overflow-hidden">
       {/* LEFT SIDE - Branding */}
-      <div className="w-full lg:w-2/5 h-full relative bg-gradient-to-br from-navy to-royal overflow-hidden">
+      <div className="w-full lg:w-[30%] h-full relative bg-gradient-to-br from-navy to-royal overflow-hidden">
         {/* Decorative Elements */}
         <div className="absolute inset-0">
           <div className="absolute -top-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
@@ -79,7 +79,7 @@ export default function OnboardingLayout({
         </div>
 
         {/* Content */}
-        <div className="relative z-20 h-full flex flex-col justify-between p-12 text-white">
+        <div className="relative z-20 h-full flex flex-col justify-between p-10 text-white">
           {/* Logo */}
           <div>
             <div className="flex items-center gap-4 mb-12">
@@ -91,17 +91,17 @@ export default function OnboardingLayout({
                 />
               </div>
               <div>
-                <h1 className="text-3xl font-bold">{appName}</h1>
-                <p className="text-sm text-white/70 mt-1">Pathways to Your Future</p>
+                <h1 className="text-2xl font-bold">{appName}</h1>
+                <p className="text-xs text-white/70 mt-1">Pathways to Your Future</p>
               </div>
             </div>
 
             {/* Hero Content */}
             <div className="max-w-lg">
-              <h2 className="text-4xl md:text-5xl font-black leading-tight mb-6">
+              <h2 className="text-3xl md:text-4xl font-black leading-tight mb-6">
                 Bridge Your Learning to <span className="text-gradient-orange">Real Industry Success</span>
               </h2>
-              <p className="text-lg text-white/80 leading-relaxed">
+              <p className="text-base text-white/80 leading-relaxed">
                 One platform connecting Students, Institutes, and Industry to create measurable career outcomes through structured development and real-world exposure.
               </p>
             </div>
@@ -110,18 +110,18 @@ export default function OnboardingLayout({
           {/* Stats and Roles */}
           <div>
             {/* Stats */}
-            <div className="flex gap-8 mb-8">
+            <div className="flex gap-4 mb-8">
               <div>
-                <p className="text-3xl font-bold">10k+</p>
-                <p className="text-sm text-white/70">Active Students</p>
+                <p className="text-2xl font-bold">10k+</p>
+                <p className="text-[10px] text-white/70 uppercase tracking-wider">Active Students</p>
               </div>
               <div>
-                <p className="text-3xl font-bold">500+</p>
-                <p className="text-sm text-white/70">Partner Institutes</p>
+                <p className="text-2xl font-bold">500+</p>
+                <p className="text-[10px] text-white/70 uppercase tracking-wider">Institutes</p>
               </div>
               <div>
-                <p className="text-3xl font-bold">200+</p>
-                <p className="text-sm text-white/70">Industry Partners</p>
+                <p className="text-2xl font-bold">200+</p>
+                <p className="text-[10px] text-white/70 uppercase tracking-wider">Partners</p>
               </div>
             </div>
 
@@ -145,9 +145,9 @@ export default function OnboardingLayout({
       </div>
 
       {/* RIGHT SIDE - Form */}
-      <div className="w-full lg:w-3/5 h-full bg-white overflow-y-auto">
+      <div className="w-full lg:w-[70%] h-full bg-white overflow-y-auto">
         <div className="min-h-full flex items-center justify-center px-8 lg:px-16 py-12">
-          <div className="w-full max-w-[560px]">
+          <div className="w-full max-w-[850px]">
             {/* Mobile Branding */}
             <div className="lg:hidden flex items-center gap-3 mb-10">
               <div className="w-6 h-6 bg-white rounded-xl shadow-lg flex items-center justify-center p-3">

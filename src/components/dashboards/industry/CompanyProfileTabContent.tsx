@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
-import { updateIndustry, addRequiredRole, updateIndustryRole, deleteIndustryRole, addHiringRound, getSkillDomain, createSkillDomain, updateSkillDomain, deleteSkillDomain, getCampusPartnerList, createCampusPartner, deleteCampusPartner, getMasterData, deleteHiringRound, updateHiringRound } from "@/services/industry.services";
+import { updateIndustry, addRequiredRole, updateIndustryRole, deleteIndustryRole, addHiringRound, getProjectApplicationCount, getSkillDomain, createSkillDomain, updateSkillDomain, deleteSkillDomain, getCampusPartnerList, createCampusPartner, deleteCampusPartner, getMasterData, deleteHiringRound, updateHiringRound, createDomain, createSubDomain } from "@/services/industry.services";
 import { useIndustry, IndustryData, IndustryRole, HiringRound } from "@/context/IndustryContext";
 import { useToast } from "@/context/ToastContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
@@ -103,6 +103,7 @@ export default function CompanyProfileTabContent() {
   const [hiringProcessOptions, setHiringProcessOptions] = useState<string[]>([]);
   const [skillOptions, setSkillOptions] = useState<string[]>([]);
   const [designationOptions, setDesignationOptions] = useState<string[]>([]);
+  const [domainOptions, setDomainOptions] = useState<string[]>([]);
 
   const [skillDomains, setSkillDomains] = useState<any[]>([]);
   const [skillsLoading, setSkillsLoading] = useState(false);
@@ -183,6 +184,7 @@ export default function CompanyProfileTabContent() {
     fetchMasterOptions("Skill", setSkillOptions);
     fetchMasterOptions("Industry Designation", setDesignationOptions);
     fetchMasterOptions("College", setCollegeOptions);
+    fetchMasterOptions("Domain", setDomainOptions);
   }, [data?.company_name]);
 
 
@@ -218,18 +220,42 @@ export default function CompanyProfileTabContent() {
       required: true, 
       colSpan: 2, 
       placeholder: "Select Domain",
+      allowCustom: true,
+      customPlaceholder: "Enter custom domain...",
+      onCreateCustomValue: async (val: string) => {
+        try {
+          await createDomain(val);
+          // Refresh local options list to include the new domain
+          fetchMasterOptions("Domain", setDomainOptions);
+        } catch (err) {
+          console.error("Failed to create domain master record:", err);
+          throw err;
+        }
+      },
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "Domain" }
     },
     { 
       name: "sub_domain", 
       label: "Sub Domain", 
-      type: "select", 
+      type: (modalValues.domain && domainOptions.length > 0 && !domainOptions.includes(modalValues.domain)) ? "text" : "select", 
       icon: TargetIcon, 
       required: false, 
       colSpan: 2, 
       placeholder: modalValues.domain ? "Select Sub Domain" : "Select Domain first",
       disabled: !modalValues.domain,
+      allowCustom: true,
+      customPlaceholder: "Enter custom sub domain...",
+      onCreateCustomValue: async (val: string) => {
+        try {
+          await createSubDomain(val, modalValues.domain);
+          // Sub-domain API results are usually filtered by domain, so we don't necessarily 
+          // need to refresh a global list here like we did for domains.
+        } catch (err) {
+          console.error("Failed to create sub-domain master record:", err);
+          throw err;
+        }
+      },
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "Sub Domain", 
         filters: { domain: modalValues.domain } 
@@ -237,7 +263,7 @@ export default function CompanyProfileTabContent() {
     },
     { name: "skills", label: "Skills We Audit", type: "select", icon: Zap, options: skillOptions, required: true, colSpan: 2, placeholder: "Select Skills", multiple: true },
     { name: "roles", label: "Designations", type: "select", icon: Briefcase, options: designationOptions, required: true, colSpan: 2, placeholder: "Select Designations", multiple: true },
-  ], [skillOptions, designationOptions, modalValues.domain]);
+  ], [skillOptions, designationOptions, modalValues.domain, domainOptions]);
 
   const handleModalValuesChange = (values: Record<string, any>, changedField: string) => {
     setModalValues(values);
@@ -437,6 +463,8 @@ export default function CompanyProfileTabContent() {
       fetchMasterOptions("Industry Designation", setDesignationOptions);
     } else if (fieldName === "college" && collegeOptions.length === 0) {
       fetchMasterOptions("College", setCollegeOptions);
+    } else if (fieldName === "domain" && domainOptions.length === 0) {
+      fetchMasterOptions("Domain", setDomainOptions);
     }
   };
 

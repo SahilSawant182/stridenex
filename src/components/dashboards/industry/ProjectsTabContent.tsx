@@ -18,7 +18,7 @@ import {
   Trash2
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
-import { getProjectList, createProject, updateProject, deleteProject, getMasterData } from "@/services/industry.services";
+import { getProjectList, createProject, updateProject, deleteProject, getMasterData, getProjectApplicationCount } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { calculateEndDate } from "@/utils/date.utils";
@@ -57,6 +57,7 @@ export default function ProjectsTabContent() {
   const [skillOptions, setSkillOptions] = useState<string[]>([]);
   const [projectToEdit, setProjectToEdit] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [applicationCount, setApplicationCount] = useState<number>(0);
 
   useEffect(() => {
     const action = searchParams.get("action");
@@ -131,7 +132,15 @@ export default function ProjectsTabContent() {
     }
   };
 
-
+  const fetchApplicationCount = async (industry: string) => {
+    try {
+      const response = await getProjectApplicationCount(industry);
+      // Accessing data.total_applications as per the provided API response structure
+      setApplicationCount(response?.data?.total_applications || 0);
+    } catch (err) {
+      console.error("Error fetching application count:", err);
+    }
+  };
 
   useEffect(() => {
     // if (companyName) {
@@ -140,6 +149,7 @@ export default function ProjectsTabContent() {
     //   setLoading(false);
     // }
     fetchProjects(companyName);
+    fetchApplicationCount(companyName);
   }, [companyName, industryLoading]);
 
   const handleModalSubmit = async (formData: any) => {
@@ -278,7 +288,7 @@ export default function ProjectsTabContent() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "ACTIVE PROJECTS", value: projects.filter(p => p.status === "Active").length.toString(), icon: Briefcase, border: "border-t-purple-400", bg: "bg-purple-50/50", iconBg: "bg-purple-50" },
-          { label: "TOTAL APPLICATIONS", value: "0", icon: Users, border: "border-t-blue-400", bg: "bg-blue-50/50", iconBg: "bg-blue-50" },
+          { label: "TOTAL APPLICATIONS", value: applicationCount.toString(), icon: Users, border: "border-t-blue-400", bg: "bg-blue-50/50", iconBg: "bg-blue-50" },
           { label: "STUDENTS AWARDED", value: "0", icon: Trophy, border: "border-t-emerald-400", bg: "bg-emerald-50/50", iconBg: "bg-emerald-50" },
           { label: "CONVERTED TO PPO", value: "0", icon: Target, border: "border-t-orange-400", bg: "bg-orange-50/50", iconBg: "bg-orange-50" },
         ].map((stat, idx) => (

@@ -383,3 +383,41 @@ export const updateApplicationStatus = async (name: string, status: string) => {
   }
 };
 
+export const getProjectApplicationCount = async (industry: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.student_project_enrollment.student_project_enrollment.get_application_count_by_industry?industry=${encodeURIComponent(industry)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching project application count:", error);
+    throw error;
+  }
+};
+
+export const createDomain = async (domain: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.sub_domain.sub_domain.create_domain`,
+      { domain }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating domain:", error);
+    throw error;
+  }
+};
+
+export const createSubDomain = async (subDomain: string, domain?: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.sub_domain.sub_domain.create_sub_domain`,
+      { sub_domain: subDomain, domain }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating sub-domain:", error);
+    throw error;
+  }
+};
+

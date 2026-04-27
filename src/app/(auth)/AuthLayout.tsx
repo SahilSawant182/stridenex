@@ -67,7 +67,7 @@ export default function AuthLayout({
 
       <div className="flex w-full h-screen bg-white overflow-hidden shadow-2xl relative z-10">
         {/* LEFT SIDE - Branding - Fixed, no scroll */}
-        <div className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-16 overflow-hidden bg-gradient-to-br from-navy to-royal text-white">
+        <div className="hidden lg:flex lg:w-[30%] relative flex-col justify-between p-10 overflow-hidden bg-gradient-to-br from-navy to-royal text-white">
           {/* Background Image */}
           {bgImage && (
             <>
@@ -99,39 +99,39 @@ export default function AuthLayout({
                 />
               </div>
               <div>
-                <h1 className="text-3xl font-bold">{appName}</h1>
-                <p className="text-sm text-white/70 mt-1">Pathways to Your Future</p>
+                <h1 className="text-2xl font-bold">{appName}</h1>
+                <p className="text-xs text-white/70 mt-1">Pathways to Your Future</p>
               </div>
             </div>
 
             {/* Hero Content */}
             <div className="max-w-lg">
-              <h2 className="text-4xl md:text-5xl font-black leading-tight mb-6">
+              <h2 className="text-3xl md:text-4xl font-black leading-tight mb-6">
                 Bridge Your Learning to <span className="text-gradient-orange">Real Industry Success</span>
               </h2>
-              <p className="text-lg text-white/80 leading-relaxed">
+              <p className="text-base text-white/80 leading-relaxed">
                 One platform connecting Students, Institutes, and Industry to create measurable career outcomes through structured development and real-world exposure.
               </p>
             </div>
 
             {/* Stats */}
-            <div className="flex gap-8 mt-12">
+            <div className="flex gap-4 mt-10">
               <div>
-                <p className="text-3xl font-bold">10k+</p>
-                <p className="text-sm text-white/70">Active Students</p>
+                <p className="text-2xl font-bold">10k+</p>
+                <p className="text-[10px] text-white/70 uppercase tracking-wider">Active Students</p>
               </div>
               <div>
-                <p className="text-3xl font-bold">500+</p>
-                <p className="text-sm text-white/70">Partner Institutes</p>
+                <p className="text-2xl font-bold">500+</p>
+                <p className="text-[10px] text-white/70 uppercase tracking-wider">Institutes</p>
               </div>
               <div>
-                <p className="text-3xl font-bold">200+</p>
-                <p className="text-sm text-white/70">Industry Partners</p>
+                <p className="text-2xl font-bold">200+</p>
+                <p className="text-[10px] text-white/70 uppercase tracking-wider">Partners</p>
               </div>
             </div>
 
             {/* Role Icons */}
-            <div className="flex gap-4 mt-12">
+            <div className="flex gap-3 mt-10">
               <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
                 <GraduationCap className="w-4 h-4" />
                 <span className="text-xs">Students</span>
@@ -149,7 +149,7 @@ export default function AuthLayout({
         </div>
 
         {/* RIGHT SIDE - Form - Scrollable */}
-        <div className="w-full lg:w-1/2 overflow-y-auto relative bg-white">
+        <div className="w-full lg:w-[70%] overflow-y-auto relative bg-white">
 
           <Link
             href="/"
@@ -160,7 +160,7 @@ export default function AuthLayout({
           </Link>
 
           <div className="flex flex-col justify-center items-center px-6 py-16 md:px-16 lg:px-24 min-h-full">
-            <div className="w-full max-w-[440px]">
+            <div className="w-full max-w-[600px]">
 
               {/* Mobile Branding */}
               <div className="lg:hidden flex items-center gap-4 mb-10">

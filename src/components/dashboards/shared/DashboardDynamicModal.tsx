@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Loader2, Save, LucideIcon, ChevronDown, Check, Search } from "lucide-react";
+import { X, Loader2, Save, LucideIcon, ChevronDown, Check, Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,9 @@ export interface DynamicField {
   apiEndpoint?: string;
   apiParams?: Record<string, any>;
   mapOptions?: (data: any) => Array<{ value: string; label: string }>;
+  allowCustom?: boolean;
+  customPlaceholder?: string;
+  onCreateCustomValue?: (value: string) => Promise<any>;
 }
 
 interface DashboardDynamicModalProps {
@@ -68,7 +71,7 @@ export default function DashboardDynamicModal({
   useEffect(() => {
     if (isOpen && initialValues) {
       const currentInitialStr = JSON.stringify(initialValues);
-      
+
       // Only update if the stringified values have actually changed or it's the first load
       if (lastInitialValuesRef.current !== currentInitialStr) {
         const initial: Record<string, any> = {};
@@ -91,18 +94,18 @@ export default function DashboardDynamicModal({
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const newValue = type === "number" ? (value === "" ? "" : Number(value)) : value;
-    
+
     // Calculate new state first to handle side effects cleanly
     const updated = { ...formData, [name]: newValue };
     let finalData = updated;
-    
+
     if (onValuesChange) {
       const sideEffects = onValuesChange(updated, name);
       if (sideEffects) {
         finalData = { ...updated, ...sideEffects };
       }
     }
-    
+
     setFormData(finalData);
 
     // Clear error when field is changed
@@ -158,18 +161,18 @@ export default function DashboardDynamicModal({
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Perform validation
     const newErrors: Record<string, string> = {};
     fields.forEach(field => {
       if (field.required) {
         const value = formData[field.name];
-        const isEmpty = 
-          value === undefined || 
-          value === null || 
-          value === "" || 
+        const isEmpty =
+          value === undefined ||
+          value === null ||
+          value === "" ||
           (Array.isArray(value) && value.length === 0);
-        
+
         if (isEmpty) {
           newErrors[field.name] = "required";
         }
@@ -279,19 +282,19 @@ export default function DashboardDynamicModal({
   );
 }
 
-function DynamicFieldItem({ 
-  field, 
-  formData, 
-  handleChange, 
-  onFieldFocus, 
-  activeSelect, 
-  setActiveSelect, 
-  searchTerm, 
-  setSearchTerm, 
-  toggleSelectValue, 
-  removeMultiSelectValue, 
-  errors 
-}: { 
+function DynamicFieldItem({
+  field,
+  formData,
+  handleChange,
+  onFieldFocus,
+  activeSelect,
+  setActiveSelect,
+  searchTerm,
+  setSearchTerm,
+  toggleSelectValue,
+  removeMultiSelectValue,
+  errors
+}: {
   field: DynamicField;
   formData: any;
   handleChange: any;
@@ -307,6 +310,19 @@ function DynamicFieldItem({
   const [apiOptions, setApiOptions] = useState<{ value: string; label: string }[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customValue, setCustomValue] = useState("");
+  const [customLoading, setCustomLoading] = useState(false);
+  const [customError, setCustomError] = useState<string | null>(null);
+  const customInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showCustomInput && customInputRef.current) {
+      setTimeout(() => {
+        customInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showCustomInput]);
 
   const fetchApiOptions = async () => {
     if (!field.apiEndpoint || apiLoading) return;
@@ -345,7 +361,7 @@ function DynamicFieldItem({
         {field.icon && (
           <field.icon className={`absolute left-4 ${field.type === 'textarea' ? 'top-4' : 'top-1/2 -translate-y-1/2'} w-4 h-4 text-slate-400 z-10`} />
         )}
-        
+
         {field.type === "textarea" ? (
           <textarea
             name={field.name}
@@ -363,7 +379,7 @@ function DynamicFieldItem({
           />
         ) : field.type === "select" ? (
           <div className="relative">
-            <div 
+            <div
               onClick={() => {
                 if (!field.disabled) {
                   setActiveSelect(activeSelect === field.name ? null : field.name);
@@ -383,8 +399,8 @@ function DynamicFieldItem({
                     }</span>
                   )}
                   {(formData[field.name] || []).map((val: string) => (
-                    <span 
-                      key={val} 
+                    <span
+                      key={val}
                       className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg shadow-sm"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -409,13 +425,13 @@ function DynamicFieldItem({
             <AnimatePresence>
               {activeSelect === field.name && (
                 <>
-                  <div 
-                    className="fixed inset-0 z-[110]" 
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      setActiveSelect(null); 
-                      setSearchTerm(""); 
-                    }} 
+                  <div
+                    className="fixed inset-0 z-[110]"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActiveSelect(null);
+                      setSearchTerm("");
+                    }}
                   />
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
@@ -427,7 +443,7 @@ function DynamicFieldItem({
                     <div className="px-2 pt-1 pb-2 border-b border-slate-50 mb-1">
                       <div className="relative">
                         <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input 
+                        <input
                           type="text"
                           autoFocus
                           placeholder="Search..."
@@ -439,15 +455,109 @@ function DynamicFieldItem({
                     </div>
 
                     <div className="overflow-y-auto custom-scrollbar flex-1">
-                      {apiError ? (
+                      {showCustomInput ? (
+                        <div className="p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Add Custom Value</span>
+                            <button
+                              onClick={() => setShowCustomInput(false)}
+                              className="p-1 hover:bg-slate-100 rounded-lg text-slate-400"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <div className="relative">
+                            <input
+                              ref={customInputRef}
+                              type="text"
+                              value={customValue}
+                              onChange={(e) => {
+                                setCustomValue(e.target.value);
+                                if (customError) setCustomError(null);
+                              }}
+                              placeholder={field.customPlaceholder || "Enter custom value..."}
+                              className={`w-full h-11 px-4 bg-slate-50 border ${customError ? 'border-red-500 ring-4 ring-red-500/10' : 'border-slate-200'} rounded-xl text-sm font-semibold outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all`}
+                              onKeyDown={async (e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  if (customValue.trim() && !customLoading) {
+                                    setCustomError(null);
+                                    if (field.onCreateCustomValue) {
+                                      try {
+                                        setCustomLoading(true);
+                                        await field.onCreateCustomValue(customValue.trim());
+                                      } catch (err: any) {
+                                        console.error("Error creating custom value:", err);
+                                        setCustomError(err?.message || "Failed to create value");
+                                        return; // Don't add to list if creation failed
+                                      } finally {
+                                        setCustomLoading(false);
+                                      }
+                                    }
+                                    toggleSelectValue(field.name, customValue.trim(), !!field.multiple);
+                                    setShowCustomInput(false);
+                                    setCustomValue("");
+                                  }
+                                }
+                              }}
+                            />
+                          </div>
+                          {customError && (
+                            <p className="text-[10px] font-bold text-red-500 ml-1 px-1 py-1 rounded-lg bg-red-50 inline-block">
+                              {customError}
+                            </p>
+                          )}
+                          <Button
+                            onClick={async () => {
+                              if (customValue.trim() && !customLoading) {
+                                setCustomError(null);
+                                if (field.onCreateCustomValue) {
+                                  try {
+                                    setCustomLoading(true);
+                                    await field.onCreateCustomValue(customValue.trim());
+                                  } catch (err: any) {
+                                    console.error("Error creating custom value:", err);
+                                    setCustomError(err?.message || "Failed to create value");
+                                    return;
+                                  } finally {
+                                    setCustomLoading(false);
+                                  }
+                                }
+                                toggleSelectValue(field.name, customValue.trim(), !!field.multiple);
+                                setShowCustomInput(false);
+                                setCustomValue("");
+                              }
+                            }}
+                            disabled={!customValue.trim() || customLoading}
+                            className="w-full h-11 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
+                          >
+                            {customLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add Value"}
+                          </Button>
+                        </div>
+                      ) : apiError ? (
                         <div className="py-8 text-center px-4">
                           <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest">{apiError}</p>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); fetchApiOptions(); }}
-                            className="mt-2 text-[10px] font-bold text-blue-600 hover:underline"
-                          >
-                            Retry
-                          </button>
+                          <div className="flex flex-col gap-2 mt-4">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); fetchApiOptions(); }}
+                              className="text-[10px] font-bold text-blue-600 hover:underline"
+                            >
+                              Retry Loading Options
+                            </button>
+                            
+                            {field.allowCustom && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowCustomInput(true);
+                                }}
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-blue-100 transition-all"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Add Custom Value Instead
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ) : (
                         <>
@@ -459,7 +569,7 @@ function DynamicFieldItem({
                           }).map((opt: any) => {
                             const value = typeof opt === 'string' ? opt : opt?.value;
                             const label = typeof opt === 'string' ? opt : opt?.label;
-                            const isSelected = field.multiple 
+                            const isSelected = field.multiple
                               ? (formData[field.name] || []).includes(value)
                               : formData[field.name] === value;
 
@@ -474,16 +584,30 @@ function DynamicFieldItem({
                               </div>
                             );
                           })}
+
+                          {field.allowCustom && (
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowCustomInput(true);
+                              }}
+                              className="flex items-center gap-2 px-4 py-3 rounded-xl cursor-pointer transition-all mb-0.5 text-blue-600 hover:bg-blue-50"
+                            >
+                              <Plus className="w-4 h-4" />
+                              <span className="text-sm font-bold leading-tight">Others (Add Custom)</span>
+                            </div>
+                          )}
+
                           {currentOptions?.filter((opt: any) => {
                             if (!opt) return false;
                             const label = typeof opt === 'string' ? opt : opt?.label;
                             if (!label) return false;
                             return label.toLowerCase().includes(searchTerm.toLowerCase());
-                          }).length === 0 && (
-                            <div className="py-8 text-center">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No results found</p>
-                            </div>
-                          )}
+                          }).length === 0 && !field.allowCustom && (
+                              <div className="py-8 text-center">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No results found</p>
+                              </div>
+                            )}
                         </>
                       )}
                     </div>
