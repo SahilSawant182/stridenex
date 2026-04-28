@@ -43,6 +43,9 @@ interface DashboardDynamicModalProps {
   error?: string | null;
   onFieldFocus?: (fieldName: string) => void;
   onValuesChange?: (values: Record<string, any>, changedFieldName: string) => Record<string, any> | void;
+  children?: React.ReactNode;
+  maxWidth?: string;
+  hideFooter?: boolean;
 }
 
 export default function DashboardDynamicModal({
@@ -58,7 +61,10 @@ export default function DashboardDynamicModal({
   loading = false,
   error = null,
   onFieldFocus,
-  onValuesChange
+  onValuesChange,
+  children,
+  maxWidth = "max-w-2xl",
+  hideFooter = false
 }: DashboardDynamicModalProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -208,7 +214,7 @@ export default function DashboardDynamicModal({
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-100"
+              className={`bg-white rounded-[2rem] shadow-2xl w-full ${maxWidth} max-h-[90vh] overflow-hidden flex flex-col border border-slate-100`}
             >
               {/* Header */}
               <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -231,49 +237,60 @@ export default function DashboardDynamicModal({
 
               {/* Form Content */}
               <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                <form id="dynamic-industry-form" onSubmit={handleFormSubmit} className="grid grid-cols-2 gap-6 pb-40">
-                  {fields.map((field) => (
-                    <DynamicFieldItem
-                      key={field.name}
-                      field={field}
-                      formData={formData}
-                      handleChange={handleChange}
-                      onFieldFocus={onFieldFocus}
-                      activeSelect={activeSelect}
-                      setActiveSelect={setActiveSelect}
-                      searchTerm={searchTerm}
-                      setSearchTerm={setSearchTerm}
-                      toggleSelectValue={toggleSelectValue}
-                      removeMultiSelectValue={removeMultiSelectValue}
-                      errors={errors}
-                    />
-                  ))}
-                </form>
+                {fields.length > 0 && (
+                  <form id="dynamic-industry-form" onSubmit={handleFormSubmit} className="grid grid-cols-2 gap-6 pb-20">
+                    {fields.map((field) => (
+                      <DynamicFieldItem
+                        key={field.name}
+                        field={field}
+                        formData={formData}
+                        handleChange={handleChange}
+                        onFieldFocus={onFieldFocus}
+                        activeSelect={activeSelect}
+                        setActiveSelect={setActiveSelect}
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        toggleSelectValue={toggleSelectValue}
+                        removeMultiSelectValue={removeMultiSelectValue}
+                        errors={errors}
+                      />
+                    ))}
+                  </form>
+                )}
+                
+                {children && (
+                  <div className={fields.length > 0 ? "pt-4 pb-10" : "pb-4"}>
+                    {children}
+                  </div>
+                )}
+
                 {error && <p className="mt-4 text-sm font-semibold text-red-500 text-center">{error}</p>}
               </div>
 
               {/* Footer */}
-              <div className="p-8 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <Button
-                  variant="outline"
-                  onClick={onClose}
-                  className="px-8 h-14 rounded-2xl text-sm font-bold border-slate-200 text-slate-600 hover:bg-slate-200 transition-all"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleFormSubmit}
-                  disabled={loading}
-                  className="px-10 h-14 rounded-2xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10 flex items-center gap-3 disabled:opacity-50"
-                >
-                  {loading ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Save className="w-5 h-5" />
-                  )}
-                  Save Changes
-                </Button>
-              </div>
+              {!hideFooter && (
+                <div className="p-8 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <Button
+                    variant="outline"
+                    onClick={onClose}
+                    className="px-8 h-14 rounded-2xl text-sm font-bold border-slate-200 text-slate-600 hover:bg-slate-200 transition-all"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleFormSubmit}
+                    disabled={loading}
+                    className="px-10 h-14 rounded-2xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10 flex items-center gap-3 disabled:opacity-50"
+                  >
+                    {loading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Save className="w-5 h-5" />
+                    )}
+                    Save Changes
+                  </Button>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         </>

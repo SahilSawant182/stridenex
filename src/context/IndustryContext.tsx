@@ -83,12 +83,12 @@ export const IndustryProvider = ({ children }: { children: React.ReactNode }) =>
 
       if (apiData && (apiData.status === 200 || apiData.status === "200")) {
         const data = Array.isArray(apiData.data) ? apiData.data[0] : apiData.data;
-        
+
         // Standardize keys (e.g., CIN to cin)
         if (data && data.CIN && !data.cin) {
           data.cin = data.CIN;
         }
-        
+
         setIndustryData(data || null);
 
         setError(null);

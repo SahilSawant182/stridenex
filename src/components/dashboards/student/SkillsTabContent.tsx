@@ -2,12 +2,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CheckCircle2, ShieldCheck, Award, FileText, Lock, Star, Loader2 } from "lucide-react";
+import { CheckCircle2, ShieldCheck, Award, FileText, Lock, Star, Loader2, Clock, Globe } from "lucide-react";
 import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { SkillRadar } from "@/components/dashboards/shared/RadarChart";
 import { SummaryList } from "@/components/dashboards/shared/SummaryList";
 import { CircularScore } from "@/components/dashboards/shared/CircularScore";
-import { getSkillLedger, getEmployabilityScore, createStudentSkill } from "@/services/student.services";
+import { getSkillLedger, getEmployabilityScore, createStudentSkill, addSkillEvidence } from "@/services/student.services";
 import { motion } from "framer-motion";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -44,14 +44,6 @@ const mockRadarData: RadarData[] = [
   { subject: 'Data Viz', value: 75, fullMark: 100 },
 ];
 
-const mockSkillRows: SkillRow[] = [
-  { id: '1', name: 'Python', category: 'Technical', categoryType: 'Technical', level: 'Advanced', levelType: 'Advanced', evidence: 5, endorsements: 2, aiVerified: true, lastDemo: 'Feb 14' },
-  { id: '2', name: 'SQL', category: 'Technical', categoryType: 'Technical', level: 'Advanced', levelType: 'Advanced', evidence: 4, endorsements: 2, aiVerified: true, lastDemo: 'Feb 10' },
-  { id: '3', name: 'Problem Solving', category: 'Cognitive', categoryType: 'Cognitive', level: 'Advanced', levelType: 'Advanced', evidence: 6, endorsements: 1, aiVerified: true, lastDemo: 'Feb 18' },
-  { id: '4', name: 'Machine Learning', category: 'Technical', categoryType: 'Technical', level: 'Intermediate', levelType: 'Intermediate', evidence: 3, endorsements: 1, aiVerified: true, lastDemo: 'Jan 30' },
-  { id: '5', name: 'Communication', category: 'Soft Skill', categoryType: 'Soft Skill', level: 'Intermediate', levelType: 'Intermediate', evidence: 2, endorsements: 1, aiVerified: false, lastDemo: 'Jan 20' },
-];
-
 const getCategoryStyle = (category: string) => {
   const styles: Record<string, string> = {
     Technical: "bg-slate-100 text-slate-600",
@@ -74,6 +66,8 @@ export default function SkillsTabContent() {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedSkill, setSelectedSkill] = useState<SkillRow | null>(null);
+  const [isEvidenceModalOpen, setIsEvidenceModalOpen] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -134,7 +128,7 @@ export default function SkillsTabContent() {
     try {
       setIsSubmitting(true);
       const studentEmail = localStorage.getItem("currentUser") || "";
-      
+
       const payload = {
         student: studentEmail,
         skill: formData.skill,
@@ -148,7 +142,7 @@ export default function SkillsTabContent() {
       };
 
       const response = await createStudentSkill(payload);
-      
+
       if (response && (response.status === 200 || response.status === "200" || response.message?.name)) {
         showToast("Skill created successfully!", "success");
         setIsModalOpen(false);
@@ -165,23 +159,64 @@ export default function SkillsTabContent() {
   };
 
   const skillFields: DynamicField[] = [
-    { 
-      name: "skill", 
-      label: "Skill Name", 
-      type: "select", 
+    {
+      name: "skill",
+      label: "Skill Name",
+      type: "select",
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "Skill" },
-      placeholder: "Select a skill", 
-      required: true 
+      placeholder: "Select a skill",
+      required: true
     },
-    { 
-      name: "current_level", 
-      label: "Current Level", 
-      type: "select", 
-      options: ["Beginner", "Intermediate", "Advanced"], 
-      required: true 
+    {
+      name: "current_level",
+      label: "Current Level",
+      type: "select",
+      options: ["Beginner", "Intermediate", "Advanced"],
+      required: true
     }
   ];
+
+  const evidenceFields: DynamicField[] = [
+    { name: "evidence_type", label: "Evidence Type", type: "select", icon: FileText, options: ["Project", "Certification", "Work Experience", "Competition", "Other"], required: true },
+    { name: "evidence_date", label: "Evidence Date", type: "date", icon: Clock, required: true, textTransform: "uppercase" },
+    { name: "description", label: "Description", type: "textarea", icon: FileText, placeholder: "Built a full-stack web application using React and Frappe", required: true, colSpan: 2 },
+    { name: "document_url", label: "Document URL", type: "url", icon: Globe, placeholder: "https://github.com/user/project", required: false, colSpan: 2 }
+  ];
+
+  const handleAddEvidence = async (formData: any) => {
+    if (!selectedSkill) return;
+
+    try {
+      setIsSubmitting(true);
+      const studentEmail = localStorage.getItem("currentUser") || "";
+
+      const payload = {
+        student_skill: `${studentEmail}-${selectedSkill.name.toLowerCase()}`,
+        evidence_type: formData.evidence_type,
+        evidence_date: formData.evidence_date,
+        description: formData.description,
+        reference_doctype: "",
+        reference_name: "",
+        document_url: formData.document_url || ""
+      };
+
+      const response = await addSkillEvidence(payload);
+
+      if (response && (response.status === 200 || response.status === "200" || response.message === "Evidence added successfully")) {
+        showToast("Evidence added successfully!", "success");
+        setIsEvidenceModalOpen(false);
+        fetchSkillStats(); // Refresh ledger to see updated evidence count
+      } else {
+        showToast(response?.message || "Failed to add evidence", "error");
+      }
+    } catch (err: any) {
+      console.error("Error adding evidence:", err);
+      showToast(err?.message || "Something went wrong", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -236,7 +271,7 @@ export default function SkillsTabContent() {
       >
         <div className="p-6 border-b border-slate-100 flex items-center justify-between">
           <h3 className="text-sm font-bold text-slate-800">Full Skill Ledger</h3>
-          <Button 
+          <Button
             onClick={() => setIsModalOpen(true)}
             className="bg-orange-500 hover:bg-orange-600 text-white h-9 rounded-xl text-xs font-bold gap-2 shadow-lg shadow-orange-500/20 active:scale-95 transition-all"
           >
@@ -264,7 +299,11 @@ export default function SkillsTabContent() {
                 </tr>
               ) : (
                 skillRows.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <tr
+                    key={row.id}
+                    onClick={() => setSelectedSkill(row)}
+                    className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                  >
                     <td className="py-4 px-6 font-semibold text-slate-800">{row.name}</td>
                     <td className="py-4 px-6">
                       <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium ${getCategoryStyle(row.categoryType)}`}>
@@ -309,6 +348,65 @@ export default function SkillsTabContent() {
         iconBgColor="bg-orange-500"
         fields={skillFields}
         onSubmit={handleCreateSkill}
+        loading={isSubmitting}
+      />
+
+      {/* Skill Info & Evidence Option Modal */}
+      {selectedSkill && (
+        <DashboardDynamicModal
+          isOpen={!!selectedSkill && !isEvidenceModalOpen}
+          onClose={() => setSelectedSkill(null)}
+          title={selectedSkill.name}
+          subtitle={`${selectedSkill.category} • ${selectedSkill.level}`}
+          headerIcon={Award}
+          iconBgColor={selectedSkill.categoryType === 'Technical' ? 'bg-blue-500' : selectedSkill.categoryType === 'Soft Skill' ? 'bg-emerald-500' : 'bg-purple-500'}
+          fields={[]} // Read-only info view usually doesn't need input fields
+          onSubmit={async () => {
+            setIsEvidenceModalOpen(true);
+          }}
+        >
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Evidence</p>
+                <p className="text-xl font-bold text-slate-800">{selectedSkill.evidence} items</p>
+              </div>
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Endorsements</p>
+                <p className="text-xl font-bold text-slate-800">{selectedSkill.endorsements} points</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-4 bg-orange-50 rounded-2xl border border-orange-100/50">
+              <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-orange-500/20">
+                <Plus className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-800">Strengthen this skill</h4>
+                <p className="text-xs text-slate-500">Add a project, certificate or experience as evidence.</p>
+              </div>
+            </div>
+
+            <Button
+              onClick={() => setIsEvidenceModalOpen(true)}
+              className="w-full bg-slate-900 text-white h-12 rounded-xl font-bold hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10"
+            >
+              Add New Evidence
+            </Button>
+          </div>
+        </DashboardDynamicModal>
+      )}
+
+      {/* Add Evidence Modal */}
+      <DashboardDynamicModal
+        isOpen={isEvidenceModalOpen}
+        onClose={() => setIsEvidenceModalOpen(false)}
+        title="Add Skill Evidence"
+        subtitle={`Proving your proficiency in ${selectedSkill?.name}`}
+        headerIcon={FileText}
+        iconBgColor="bg-blue-600"
+        fields={evidenceFields}
+        onSubmit={handleAddEvidence}
         loading={isSubmitting}
       />
     </div>

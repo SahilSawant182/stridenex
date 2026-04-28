@@ -266,3 +266,19 @@ export const createStudentSkill = async (data: any) => {
     throw error;
   }
 };
+
+/**
+ * Add skill evidence for a student.
+ */
+export const addSkillEvidence = async (data: any) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.skill_ledger.doctype.skill_evidence.skill_evidence.add_evidence",
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error("Error adding skill evidence:", error);
+    throw error;
+  }
+};

@@ -212,13 +212,13 @@ export default function CompanyProfileTabContent() {
   ], [hiringProcessOptions]);
 
   const skillDomainFields: DynamicField[] = useMemo(() => [
-    { 
-      name: "domain", 
-      label: "Domain Name", 
-      type: "select", 
-      icon: TargetIcon, 
-      required: true, 
-      colSpan: 2, 
+    {
+      name: "domain",
+      label: "Domain Name",
+      type: "select",
+      icon: TargetIcon,
+      required: true,
+      colSpan: 2,
       placeholder: "Select Domain",
       allowCustom: true,
       customPlaceholder: "Enter custom domain...",
@@ -235,13 +235,13 @@ export default function CompanyProfileTabContent() {
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "Domain" }
     },
-    { 
-      name: "sub_domain", 
-      label: "Sub Domain", 
-      type: (modalValues.domain && domainOptions.length > 0 && !domainOptions.includes(modalValues.domain)) ? "text" : "select", 
-      icon: TargetIcon, 
-      required: false, 
-      colSpan: 2, 
+    {
+      name: "sub_domain",
+      label: "Sub Domain",
+      type: (modalValues.domain && domainOptions.length > 0 && !domainOptions.includes(modalValues.domain)) ? "text" : "select",
+      icon: TargetIcon,
+      required: false,
+      colSpan: 2,
       placeholder: modalValues.domain ? "Select Sub Domain" : "Select Domain first",
       disabled: !modalValues.domain,
       allowCustom: true,
@@ -257,8 +257,9 @@ export default function CompanyProfileTabContent() {
         }
       },
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
-      apiParams: { doctype: "Sub Domain", 
-        filters: { domain: modalValues.domain } 
+      apiParams: {
+        doctype: "Sub Domain",
+        filters: { domain: modalValues.domain }
       }
     },
     { name: "skills", label: "Skills We Audit", type: "select", icon: Zap, options: skillOptions, required: true, colSpan: 2, placeholder: "Select Skills", multiple: true },
