@@ -395,6 +395,19 @@ export const getProjectApplicationCount = async (industry: string) => {
   }
 };
 
+export const updateProjectApplicationStatus = async (payload: { name: string, industry: string, status: string }) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.student_project_enrollment.student_project_enrollment.update_student_project_enrollment`,
+      payload
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating project application status:", error);
+    throw error;
+  }
+};
+
 export const createDomain = async (domain: string) => {
   try {
     const response = await apiService.post(

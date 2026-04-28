@@ -17,10 +17,10 @@ import {
   Loader2,
   Trash2
 } from "lucide-react";
-import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { getProjectList, createProject, updateProject, deleteProject, getMasterData, getProjectApplicationCount } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
+import ApplicationsPipelineModal from "./ApplicationsPipelineModal";
 import { calculateEndDate } from "@/utils/date.utils";
 import { useToast } from "@/context/ToastContext";
 
@@ -58,6 +58,11 @@ export default function ProjectsTabContent() {
   const [projectToEdit, setProjectToEdit] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [applicationCount, setApplicationCount] = useState<number>(0);
+
+  // Applications modal states
+  const [applicationsModalOpen, setApplicationsModalOpen] = useState(false);
+  const [applicationsLoading, setApplicationsLoading] = useState(false);
+  const [applicationsData, setApplicationsData] = useState<any[]>([]);
 
   useEffect(() => {
     const action = searchParams.get("action");
@@ -139,6 +144,31 @@ export default function ProjectsTabContent() {
       setApplicationCount(response?.data?.total_applications || 0);
     } catch (err) {
       console.error("Error fetching application count:", err);
+    }
+  };
+
+  const handleTotalApplicationsClick = async () => {
+    setApplicationsModalOpen(true);
+    setApplicationsLoading(true);
+    try {
+      const response = await getMasterData("Student Project Enrollment", {
+        filters: { industry: companyName },
+        fields: ["name", "student", "project", "industry", "status", "applied_on", "resume"]
+      });
+      let data = [];
+      if (Array.isArray(response?.message?.data)) {
+        data = response.message.data;
+      } else if (Array.isArray(response?.data)) {
+        data = response.data;
+      } else if (Array.isArray(response?.message)) {
+        data = response.message;
+      }
+      setApplicationsData(data);
+    } catch (err) {
+      console.error("Error fetching applications:", err);
+      showToast("Failed to fetch applications", "error");
+    } finally {
+      setApplicationsLoading(false);
     }
   };
 
@@ -288,11 +318,16 @@ export default function ProjectsTabContent() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: "ACTIVE PROJECTS", value: projects.filter(p => p.status === "Active").length.toString(), icon: Briefcase, border: "border-t-purple-400", bg: "bg-purple-50/50", iconBg: "bg-purple-50" },
-          { label: "TOTAL APPLICATIONS", value: applicationCount.toString(), icon: Users, border: "border-t-blue-400", bg: "bg-blue-50/50", iconBg: "bg-blue-50" },
+          { label: "TOTAL APPLICATIONS", value: applicationCount.toString(), icon: Users, border: "border-t-blue-400", bg: "bg-blue-50/50", iconBg: "bg-blue-50", onClick: handleTotalApplicationsClick },
           { label: "STUDENTS AWARDED", value: "0", icon: Trophy, border: "border-t-emerald-400", bg: "bg-emerald-50/50", iconBg: "bg-emerald-50" },
           { label: "CONVERTED TO PPO", value: "0", icon: Target, border: "border-t-orange-400", bg: "bg-orange-50/50", iconBg: "bg-orange-50" },
         ].map((stat, idx) => (
-          <motion.div key={idx} variants={item} className={`bg-white rounded-xl border border-slate-200 ${stat.border} border-t-2 p-5 shadow-sm flex items-start justify-between group`}>
+          <motion.div 
+            key={idx} 
+            variants={item} 
+            onClick={stat.onClick}
+            className={`bg-white rounded-xl border border-slate-200 ${stat.border} border-t-2 p-5 shadow-sm flex items-start justify-between group ${stat.onClick ? 'cursor-pointer hover:shadow-md hover:border-slate-300' : ''}`}
+          >
             <div className="space-y-2">
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{stat.label}</p>
               <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
@@ -430,6 +465,15 @@ export default function ProjectsTabContent() {
         error={modalError}
         onFieldFocus={handleFieldFocus}
         onValuesChange={handleValuesChange}
+      />
+
+      <ApplicationsPipelineModal
+        isOpen={applicationsModalOpen}
+        onClose={() => setApplicationsModalOpen(false)}
+        applicationsData={applicationsData}
+        applicationsLoading={applicationsLoading}
+        companyName={companyName}
+        onStatusUpdated={(updatedData) => setApplicationsData(updatedData)}
       />
     </motion.div>
   );
