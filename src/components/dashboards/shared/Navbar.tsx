@@ -1,9 +1,132 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { User, Bell, Menu, Search, LogOut, CreditCard } from "lucide-react";
+import { User, Bell, Menu, Search, LogOut, CreditCard, ChevronRight, Pen, Mail, Building2, Phone, Globe } from "lucide-react";
+import { getStudentByEmail } from "@/services/student.services";
+import { getIndustryByEmail } from "@/services/industry.services";
+
+function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }: any) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchDetails() {
+      try {
+        if (role === 'student') {
+          const res = await getStudentByEmail(currentUser);
+          setData(res?.data || res?.message?.data || res?.message);
+        } else if (role === 'industry') {
+          const res = await getIndustryByEmail(currentUser);
+          setData(res?.data || res?.message?.data || res?.message);
+        }
+      } catch (err) {
+        console.error("Failed to fetch profile details", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchDetails();
+  }, [role, currentUser]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 10 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 10 }}
+      className="absolute top-0 right-full mr-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden cursor-default z-50"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 text-white">
+        <h3 className="font-semibold text-lg">{fullName || currentUser}</h3>
+        <p className="text-blue-100 text-sm">{config.roleName}</p>
+      </div>
+      
+      <div className="p-4 space-y-3 text-slate-800">
+        {loading ? (
+          <div className="flex justify-center py-4">
+            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : (
+          <div className="space-y-3 text-sm">
+            <div className="flex items-start gap-2">
+              <Mail className="w-4 h-4 text-slate-400 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-xs text-slate-500 mb-0.5">Email</p>
+                <p className="font-medium break-all">{currentUser}</p>
+              </div>
+            </div>
+            
+            {role === 'student' && data && (
+              <>
+                {(data.college || data.department) && (
+                  <div className="flex items-start gap-2">
+                    <Building2 className="w-4 h-4 text-slate-400 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs text-slate-500 mb-0.5">Education</p>
+                      <p className="font-medium">{data.college}</p>
+                      <p className="text-slate-600 text-xs mt-0.5">{data.course} {data.department ? `• ${data.department}` : ''}</p>
+                    </div>
+                  </div>
+                )}
+                {data.mobile_no && (
+                  <div className="flex items-start gap-2">
+                    <Phone className="w-4 h-4 text-slate-400 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs text-slate-500 mb-0.5">Phone</p>
+                      <p className="font-medium">{data.mobile_no}</p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {role === 'industry' && data && (
+              <>
+                {data.company_name && (
+                  <div className="flex items-start gap-2">
+                    <Building2 className="w-4 h-4 text-slate-400 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs text-slate-500 mb-0.5">Company</p>
+                      <p className="font-medium">{data.company_name}</p>
+                      {data.industry_sector && <p className="text-slate-600 text-xs mt-0.5">{data.industry_sector}</p>}
+                    </div>
+                  </div>
+                )}
+                {data.company_website && (
+                  <div className="flex items-start gap-2">
+                    <Globe className="w-4 h-4 text-slate-400 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs text-slate-500 mb-0.5">Website</p>
+                      <a href={data.company_website} target="_blank" rel="noreferrer" className="font-medium text-blue-600 hover:underline">{data.company_website}</a>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            
+            {(!data || (role !== 'student' && role !== 'industry')) && (
+               <p className="text-xs text-slate-500 italic">Basic profile details shown.</p>
+            )}
+          </div>
+        )}
+
+        <div className="pt-3 border-t border-slate-100 mt-4">
+          <button
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('open-update-profile'));
+              onClose();
+            }}
+            className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-medium"
+          >
+            <Pen className="w-4 h-4" /> Edit Profile
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { dashboardConfig, type DashboardRole } from "@/config/dashboardNavigation";
 
@@ -14,21 +137,31 @@ interface NavbarProps {
 export default function Navbar({ role }: NavbarProps) {
   const { currentUser, fullName, logout } = useAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [showProfileBox, setShowProfileBox] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+        setShowProfileBox(false);
+      }
+    };
+
+    if (userMenuOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [userMenuOpen]);
 
   const config = dashboardConfig[role];
   const displayName = fullName || currentUser?.split('@')[0] || config?.roleName || "User";
 
   if (!config) return null;
 
-  const getProfilePath = () => {
-    switch (role) {
-      case "student": return "/student/settings";
-      case "college": return "/college/settings";
-      case "mentor": return "/mentor/dashboard/profile";
-      case "industry": return "/industry/dashboard/company-profile";
-      default: return "#";
-    }
-  };
+
 
   const getPlansPath = () => {
     switch (role) {
@@ -64,7 +197,7 @@ export default function Navbar({ role }: NavbarProps) {
           )}
         </button>
 
-        <div className="relative">
+        <div className="relative" ref={menuRef}>
           <button
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             className="flex items-center gap-2 p-1 pl-2 pr-3 bg-slate-50 hover:bg-slate-100 rounded-full border border-slate-200 transition-colors"
@@ -89,20 +222,40 @@ export default function Navbar({ role }: NavbarProps) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
-                className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 overflow-hidden"
+                className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-100 z-50"
               >
                 <div className="p-2 space-y-1">
                   <div className="px-3 py-2 border-b border-slate-100 mb-1">
                     <p className="text-xs text-slate-500">Signed in as</p>
                     <p className="text-sm font-semibold text-slate-900 truncate">{currentUser}</p>
                   </div>
-                  <Link 
-                    href={getProfilePath()}
-                    onClick={() => setUserMenuOpen(false)}
-                    className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2"
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowProfileBox(!showProfileBox);
+                    }}
+                    className={`w-full text-left px-3 py-2 text-sm rounded-lg flex items-center justify-between transition-colors ${showProfileBox ? 'bg-slate-100 text-slate-900' : 'text-slate-700 hover:bg-slate-50'}`}
                   >
-                    <User className="w-4 h-4" /> Profile
-                  </Link>
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4" /> Profile
+                    </div>
+                    <ChevronRight className={`w-4 h-4 transition-transform ${showProfileBox ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  <AnimatePresence>
+                    {showProfileBox && (
+                      <ProfileDetailsPopover
+                        role={role}
+                        currentUser={currentUser}
+                        fullName={fullName}
+                        config={config}
+                        onClose={() => {
+                          setShowProfileBox(false);
+                          setUserMenuOpen(false);
+                        }}
+                      />
+                    )}
+                  </AnimatePresence>
                   <Link 
                     href={getPlansPath()}
                     onClick={() => setUserMenuOpen(false)}

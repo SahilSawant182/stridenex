@@ -157,6 +157,12 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     fetchStudentData();
   }, [role, currentUser]);
 
+  useEffect(() => {
+    const handleOpenModal = () => setIsModalOpen(true);
+    window.addEventListener("open-update-profile", handleOpenModal);
+    return () => window.removeEventListener("open-update-profile", handleOpenModal);
+  }, []);
+
   const studentFields: DynamicField[] = useMemo(() => [
     { name: "first_name", label: "First Name", type: "text", icon: Users, required: true, disabled: true },
     { name: "last_name", label: "Last Name", type: "text", icon: Users, required: true, disabled: true },
