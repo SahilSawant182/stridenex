@@ -218,7 +218,7 @@ export default function DashboardDynamicModal({
               className={`bg-white rounded-[2rem] shadow-2xl w-full ${maxWidth} max-h-[90vh] overflow-hidden flex flex-col border border-slate-100`}
             >
               {/* Header */}
-              <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 ${iconBgColor} rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200/50`}>
                     <HeaderIcon className="w-6 h-6 text-white" />
@@ -237,9 +237,9 @@ export default function DashboardDynamicModal({
               </div>
 
               {/* Form Content */}
-              <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
                 {fields.length > 0 && (
-                  <form id="dynamic-industry-form" onSubmit={handleFormSubmit} className="grid grid-cols-2 gap-6 pb-20">
+                  <form id="dynamic-industry-form" onSubmit={handleFormSubmit} className={`grid grid-cols-2 gap-6 ${activeSelect ? 'pb-[240px]' : 'pb-6'}`}>
                     {fields.map((field) => (
                       <DynamicFieldItem
                         key={field.name}
@@ -270,18 +270,18 @@ export default function DashboardDynamicModal({
 
               {/* Footer */}
               {!hideFooter && (
-                <div className="p-8 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="p-4 px-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
                   <Button
                     variant="outline"
                     onClick={onClose}
-                    className="px-8 h-14 rounded-2xl text-sm font-bold border-slate-200 text-slate-600 hover:bg-slate-200 transition-all"
+                    className="px-6 h-12 rounded-xl text-sm font-bold border-slate-200 text-slate-600 hover:bg-slate-200 transition-all"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleFormSubmit}
                     disabled={loading}
-                    className="px-10 h-14 rounded-2xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10 flex items-center gap-3 disabled:opacity-50"
+                    className="px-8 h-12 rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10 flex items-center gap-2 disabled:opacity-50"
                   >
                     {loading ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
@@ -333,6 +333,25 @@ function DynamicFieldItem({
   const [customLoading, setCustomLoading] = useState(false);
   const [customError, setCustomError] = useState<string | null>(null);
   const customInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (activeSelect === field.name && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setActiveSelect(null);
+        setSearchTerm("");
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [activeSelect, field.name, setActiveSelect, setSearchTerm]);
+
+  useEffect(() => {
+    if (field.apiEndpoint && apiOptions.length === 0) {
+      fetchApiOptions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [field.apiEndpoint]);
 
   useEffect(() => {
     if (showCustomInput && customInputRef.current) {
@@ -396,13 +415,13 @@ function DynamicFieldItem({
             disabled={field.disabled}
           />
         ) : field.type === "select" ? (
-          <div className="relative">
+          <div className="relative" ref={dropdownRef}>
             <div
               onClick={() => {
                 if (!field.disabled) {
                   setActiveSelect(activeSelect === field.name ? null : field.name);
                   setSearchTerm("");
-                  if (field.apiEndpoint) fetchApiOptions();
+                  if (field.apiEndpoint && apiOptions.length === 0) fetchApiOptions();
                   if (field.onFocus) field.onFocus(field.name);
                   if (onFieldFocus) onFieldFocus(field.name);
                 }
@@ -443,14 +462,6 @@ function DynamicFieldItem({
             <AnimatePresence>
               {activeSelect === field.name && (
                 <>
-                  <div
-                    className="fixed inset-0 z-[110]"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveSelect(null);
-                      setSearchTerm("");
-                    }}
-                  />
                   <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}

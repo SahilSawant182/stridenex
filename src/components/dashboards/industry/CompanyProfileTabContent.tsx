@@ -262,8 +262,8 @@ export default function CompanyProfileTabContent() {
         filters: { domain: modalValues.domain }
       }
     },
-    { name: "skills", label: "Skills We Audit", type: "select", icon: Zap, options: skillOptions, required: true, colSpan: 2, placeholder: "Select Skills", multiple: true },
-    { name: "roles", label: "Designations", type: "select", icon: Briefcase, options: designationOptions, required: true, colSpan: 2, placeholder: "Select Designations", multiple: true },
+    { name: "skills", label: "Skills We Audit", type: "select", icon: Zap, options: skillOptions, required: true, colSpan: 2, placeholder: "Select Skills", multiple: true, allowCustom: true, customPlaceholder: "Enter custom skill..." },
+    { name: "roles", label: "Designations", type: "select", icon: Briefcase, options: designationOptions, required: true, colSpan: 2, placeholder: "Select Designations", multiple: true, allowCustom: true, customPlaceholder: "Enter custom designation..." },
   ], [skillOptions, designationOptions, modalValues.domain, domainOptions]);
 
   const handleModalValuesChange = (values: Record<string, any>, changedField: string) => {
