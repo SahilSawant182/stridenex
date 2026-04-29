@@ -40,6 +40,8 @@ interface Event {
   registrationStatus: string;
   name: string; // Document name
   college?: string;
+  description?: string;
+  location?: string;
 }
 
 interface Notice {
@@ -150,6 +152,7 @@ export default function EventsTabContent() {
   const [registeredEventIds, setRegisteredEventIds] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [studentCollege, setStudentCollege] = useState<string>("");
+  const [selectedEventForDetails, setSelectedEventForDetails] = useState<Event | null>(null);
 
   useEffect(() => {
     fetchInitialData();
@@ -286,6 +289,8 @@ export default function EventsTabContent() {
             participants: "Join Now",
             prize: item.price || "Exciting Rewards",
             registrationStatus: item.registration_status || "Not Registered",
+            description: item.description || "Detailed information about this event will be updated soon.",
+            location: item.location || "Campus / Virtual",
             ...styles,
             icon: Trophy
           };
@@ -403,6 +408,7 @@ export default function EventsTabContent() {
                       </Button>
                       <Button
                         variant="outline"
+                        onClick={() => setSelectedEventForDetails(event)}
                         className="px-4 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-orange-600 hover:border-orange-200 transition-all active:scale-95 shadow-sm"
                       >
                         <Eye className="w-4 h-4 mr-1" />
@@ -508,6 +514,120 @@ export default function EventsTabContent() {
           </div>
         </BaseCard>
       </motion.div>
+
+      {/* Event Details Modal */}
+      {selectedEventForDetails && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+            onClick={() => setSelectedEventForDetails(null)}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="relative w-full max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden z-10"
+          >
+            {/* Modal Header */}
+            <div className={`p-6 ${selectedEventForDetails.bgColor} border-b ${selectedEventForDetails.borderColor} relative`}>
+              <button 
+                onClick={() => setSelectedEventForDetails(null)}
+                className="absolute top-4 right-4 p-2 text-slate-500 hover:text-slate-800 bg-white/50 hover:bg-white rounded-full transition-colors font-bold"
+              >
+                ✕
+              </button>
+              <div className="flex items-center gap-4">
+                <div className={`w-14 h-14 rounded-xl bg-white shadow-sm flex items-center justify-center ${selectedEventForDetails.color}`}>
+                  {selectedEventForDetails.icon && <selectedEventForDetails.icon className="w-7 h-7" />}
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800 pr-8">{selectedEventForDetails.title}</h2>
+                  <Badge variant="outline" className={`mt-2 ${selectedEventForDetails.bgColor} ${selectedEventForDetails.color} border-${selectedEventForDetails.borderColor} font-bold`}>
+                    {selectedEventForDetails.type}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-6">
+              {/* Event Info Grid */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <Calendar className="w-5 h-5 text-slate-400" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-500">Date & Time</p>
+                    <p className="text-sm font-semibold text-slate-800">{selectedEventForDetails.date}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <MapPin className="w-5 h-5 text-slate-400" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-500">Location</p>
+                    <p className="text-sm font-semibold text-slate-800">{selectedEventForDetails.location}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <IndianRupee className="w-5 h-5 text-slate-400" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-500">Prize Pool</p>
+                    <p className="text-sm font-semibold text-slate-800">{selectedEventForDetails.prize}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <Users className="w-5 h-5 text-slate-400" />
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-slate-500">Eligibility</p>
+                    <p className="text-sm font-semibold text-slate-800">{selectedEventForDetails.participants}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 mb-2">About the Event</h3>
+                <div className="text-sm text-slate-600 leading-relaxed max-h-[200px] overflow-y-auto custom-scrollbar bg-slate-50/50 p-4 rounded-xl border border-slate-100" dangerouslySetInnerHTML={{ __html: selectedEventForDetails.description || '' }}>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-6 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => setSelectedEventForDetails(null)}
+                className="font-bold border-slate-200"
+              >
+                Close
+              </Button>
+              <Button
+                onClick={() => {
+                  const eventToRegister = selectedEventForDetails;
+                  setSelectedEventForDetails(null);
+                  handleRegister(eventToRegister);
+                }}
+                disabled={
+                  registeringId === selectedEventForDetails.name || 
+                  registeredEventIds.includes(selectedEventForDetails.name) || 
+                  selectedEventForDetails.registrationStatus === "Register"
+                }
+                className={`font-bold shadow-sm ${
+                  registeredEventIds.includes(selectedEventForDetails.name) || selectedEventForDetails.registrationStatus === "Register"
+                    ? 'bg-emerald-500 hover:bg-emerald-600'
+                    : 'bg-orange-500 hover:bg-orange-600'
+                } text-white`}
+              >
+                {registeredEventIds.includes(selectedEventForDetails.name) || selectedEventForDetails.registrationStatus === "Register" ? (
+                  <><CheckCircle2 className="w-4 h-4 mr-2" /> Registered</>
+                ) : (
+                  "Register Now"
+                )}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 }
