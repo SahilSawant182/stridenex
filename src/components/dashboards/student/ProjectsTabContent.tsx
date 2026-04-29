@@ -172,7 +172,7 @@ export default function ProjectsTabContent() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {[
           { label: "AVAILABLE PROJECTS", value: projects.length.toString(), icon: Briefcase, color: "orange" },
-          { label: "MY ENROLLMENTS", value: projects.filter(p => p.applied_status === "Applied").length.toString(), icon: Target, color: "blue" },
+          { label: "APPLIED PROJECTS", value: projects.filter(p => p.applied_status && p.applied_status !== "Not Applied").length.toString(), icon: Target, color: "blue" },
           { label: "COMPLETED", value: projects.filter(p => p.status === "Completed").length.toString(), icon: CheckCircle2, color: "emerald" },
           { label: "CERTIFICATIONS", value: "0", icon: Trophy, color: "purple" },
         ].map((stat, idx) => (
@@ -215,14 +215,21 @@ export default function ProjectsTabContent() {
                     <Briefcase className="w-6 h-6 text-orange-500" />
                   </div>
 
-                  <Badge className={`${project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
-                    ? "bg-red-50 text-red-600 border-red-100"
-                    : project.status === "Active" || project.status === "active" || !project.status
-                      ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                      : "bg-indigo-50 text-indigo-600 border-indigo-100"
-                    } rounded-full text-[10px] px-3 py-1 font-bold`}>
-                    {project.status || "Active"}
-                  </Badge>
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    <Badge className={`${project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
+                      ? "bg-red-50 text-red-600 border-red-100"
+                      : project.status === "Active" || project.status === "active" || !project.status
+                        ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                        : "bg-indigo-50 text-indigo-600 border-indigo-100"
+                      } rounded-full text-[10px] px-3 py-1 font-bold`}>
+                      {project.status || "Active"}
+                    </Badge>
+                    {project.applied_status && project.applied_status !== "Not Applied" && (
+                      <Badge className="bg-blue-50 text-blue-600 border-blue-100 rounded-full text-[10px] px-3 py-1 font-bold shadow-sm whitespace-nowrap">
+                        {project.applied_status}
+                      </Badge>
+                    )}
+                  </div>
 
 
 
@@ -270,26 +277,26 @@ export default function ProjectsTabContent() {
                       enrolling === project.name ||
                       project.status?.toLowerCase() === "disabled" ||
                       project.status?.toLowerCase() === "disable" ||
-                      project.applied_status === "Applied" ||
+                      (project.applied_status && project.applied_status !== "Not Applied") ||
                       successfullyEnrolled.includes(project.name)
                     }
                     className={`flex-1 ${project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
                       ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-                      : (project.applied_status === "Applied" || successfullyEnrolled.includes(project.name))
+                      : ((project.applied_status && project.applied_status !== "Not Applied") || successfullyEnrolled.includes(project.name))
                         ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 active:scale-95 translate-y-0 hover:-translate-y-0.5"
                         : "bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 active:scale-95 translate-y-0 hover:-translate-y-0.5"
                       } font-bold h-10 rounded-xl transition-all text-xs`}
                   >
                     {enrolling === project.name ? (
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : (project.applied_status === "Applied" || successfullyEnrolled.includes(project.name)) ? (
+                    ) : ((project.applied_status && project.applied_status !== "Not Applied") || successfullyEnrolled.includes(project.name)) ? (
                       <CheckCircle2 className="w-4 h-4 mr-2" />
                     ) : project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable" ? null : (
                       <ArrowRight className="w-4 h-4 mr-2" />
                     )}
                     {project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
                       ? "Disabled"
-                      : (project.applied_status === "Applied" || successfullyEnrolled.includes(project.name))
+                      : ((project.applied_status && project.applied_status !== "Not Applied") || successfullyEnrolled.includes(project.name))
                         ? "Applied"
                         : "Apply Now"}
                   </Button>
