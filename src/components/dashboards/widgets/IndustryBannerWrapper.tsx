@@ -63,35 +63,35 @@ export default function IndustryBannerWrapper() {
 
   // Construct dynamic metrics
   const customMetrics = [
-    { 
-      key: "positions", 
-      value: openPositions, 
-      label: "Open Roles", 
-      icon: Briefcase 
+    {
+      key: "positions",
+      value: openPositions,
+      label: "Open Roles",
+      icon: Briefcase
     },
-    { 
-      key: "applications", 
-      value: "247", 
-      label: "Applications", 
-      icon: Users 
+    {
+      key: "applications",
+      value: "247",
+      label: "Applications",
+      icon: Users
     },
-    { 
-      key: "ctc", 
-      value: "₹18.5L", 
-      label: "Avg CTC", 
-      icon: Target 
+    {
+      key: "ctc",
+      value: "₹18.5L",
+      label: "Avg CTC",
+      icon: Target
     },
-    { 
-      key: "rating", 
-      value: "4.1", 
-      label: "Rating", 
-      icon: Star 
+    {
+      key: "rating",
+      value: "4.1",
+      label: "Rating",
+      icon: Star
     },
-    { 
-      key: "hired", 
-      value: "247", 
-      label: "Hired", 
-      icon: Users 
+    {
+      key: "hired",
+      value: "247",
+      label: "Hired",
+      icon: Users
     }
   ];
 
@@ -102,11 +102,11 @@ export default function IndustryBannerWrapper() {
 
   const industryFields: any[] = [
     { name: "company_name", label: "Company Name", type: "text", icon: Building2, required: true, colSpan: 2, placeholder: "e.g. Acme Corporation", disabled: true },
-    { name: "business_type", label: "Business Type", type: "select", icon: Layout, options: businessTypeOptions.length > 0 ? businessTypeOptions : ["Enterprises", "Consultant and Agency", "Other"], required: false, placeholder: "Select Business Type" },
+    { name: "business_type", label: "Company Type", type: "select", icon: Layout, options: businessTypeOptions.length > 0 ? businessTypeOptions : ["Enterprises", "Consultant and Agency", "Other"], required: false, placeholder: "Select Company Type" },
   ];
 
   if (industryData?.other_business_type) {
-    industryFields.push({ name: "other_business_type", label: "Other Business Type", type: "text", icon: Layout, required: false, placeholder: "Enter other business type" });
+    industryFields.push({ name: "other_business_type", label: "Other Company Type", type: "text", icon: Layout, required: false, placeholder: "Enter other business type" });
   }
 
   industryFields.push(
@@ -126,8 +126,8 @@ export default function IndustryBannerWrapper() {
   );
 
   return (
-    <RoleBannerWidget 
-      role="industry" 
+    <RoleBannerWidget
+      role="industry"
       customData={{
         title: capitalize(industryData?.company_name || ""),
         subtitle: subtitle,

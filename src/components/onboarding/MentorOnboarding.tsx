@@ -456,7 +456,8 @@ export default function MentorOnboarding({
         if (onSkip) {
             onSkip();
         } else {
-            router.push("/portal/dashboard");
+            localStorage.clear();
+            router.push("/login");
         }
     };
 

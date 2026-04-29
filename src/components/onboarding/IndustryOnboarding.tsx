@@ -563,7 +563,8 @@ export default function IndustryOnboarding({
         if (onSkip) {
             onSkip();
         } else {
-            router.push("/industry/dashboard");
+            localStorage.clear();
+            router.push("/login");
         }
     };
 

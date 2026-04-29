@@ -111,7 +111,7 @@ export default function InternshipsTabContent() {
     { name: "payment_mode", label: "Payment", type: "select", icon: IndianRupee, options: ["Paid", "Unpaid"], required: true, placeholder: "Select Payment Mode" },
     { name: "stipend", label: "Stipend (Monthly)", type: "number", icon: IndianRupee, required: modalValues.payment_mode === "Paid", placeholder: "e.g. 15000", disabled: modalValues.payment_mode === "Unpaid" },
     { name: "duration", label: "Duration (Days)", type: "number", icon: Clock, required: true, placeholder: "e.g. 90" },
-    { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
+    { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase", min: new Date().toISOString().split('T')[0] },
     { name: "end_date", label: "End Date", type: "date", icon: Calendar, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
     { name: "openings", label: "Openings", type: "number", icon: Users, required: true, placeholder: "e.g. 10" },
     { name: "status", label: "Status", type: "select", icon: Zap, options: ["Active", "Draft", "Closed"], required: true, placeholder: "Select Status" },

@@ -467,7 +467,8 @@ export default function CollegeOnboarding({
     if (onSkip) {
       onSkip();
     } else {
-      router.push("/college/dashboard");
+      localStorage.clear();
+      router.push("/login");
     }
   };
 

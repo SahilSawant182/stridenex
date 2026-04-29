@@ -831,7 +831,8 @@ export default function StudentOnboarding({
     if (onSkip) {
       onSkip();
     } else {
-      router.push("/student/dashboard");
+      localStorage.clear();
+      router.push("/login");
     }
   };
 
