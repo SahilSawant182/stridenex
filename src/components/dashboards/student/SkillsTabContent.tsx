@@ -143,7 +143,26 @@ export default function SkillsTabContent() {
 
       const response = await createStudentSkill(payload);
 
-      if (response && (response.status === 200 || response.status === "200" || response.message?.name)) {
+      // Handle responses that return 200 OK but contain an error message payload (common in Frappe)
+      const isErrorObj = response?.message?.status === "error" || response?.status === "error";
+      const errMsg = response?.message?.message || response?.message || "";
+      const serverMsgStr = response?._server_messages || "";
+      
+      const isDuplicate = 
+        (typeof errMsg === 'string' && (errMsg.includes("Duplicate entry") || errMsg.includes("already exists") || errMsg.includes("IntegrityError"))) ||
+        (typeof serverMsgStr === 'string' && serverMsgStr.includes("already exists"));
+
+      if (isErrorObj && isDuplicate) {
+        showToast(`You have already added "${formData.skill}" to your skills!`, "error");
+        setIsSubmitting(false);
+        return;
+      } else if (isErrorObj) {
+        showToast("Failed to create skill", "error");
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (response && (response.status === 200 || response.status === "200" || response.message?.name || response.data)) {
         showToast("Skill created successfully!", "success");
         setIsModalOpen(false);
         fetchSkillStats(); // Refresh ledger
@@ -152,7 +171,20 @@ export default function SkillsTabContent() {
       }
     } catch (err: any) {
       console.error("Error creating skill:", err);
-      showToast(err?.message || "Something went wrong", "error");
+      
+      // Also catch exceptions thrown by axios on 4xx/5xx status codes
+      const serverMsgStr = err?.response?.data?._server_messages || "";
+      const innerErrMsg = err?.response?.data?.message?.message || err?.response?.data?.message || err?.message || "";
+      
+      const isDuplicate = 
+        (typeof innerErrMsg === 'string' && (innerErrMsg.includes("Duplicate entry") || innerErrMsg.includes("already exists") || innerErrMsg.includes("IntegrityError"))) ||
+        (typeof serverMsgStr === 'string' && serverMsgStr.includes("already exists"));
+
+      if (isDuplicate) {
+        showToast(`You have already added "${formData.skill}" to your skills!`, "error");
+      } else {
+        showToast(err?.message || "Something went wrong", "error");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -203,9 +235,18 @@ export default function SkillsTabContent() {
 
       const response = await addSkillEvidence(payload);
 
-      if (response && (response.status === 200 || response.status === "200" || response.message === "Evidence added successfully")) {
+      const isSuccess = response && (
+        response.status === 200 || 
+        response.status === "200" || 
+        response.message === "Evidence added successfully" ||
+        (typeof response.message === 'string' && response.message.startsWith("SE-")) ||
+        response.data
+      );
+
+      if (isSuccess) {
         showToast("Evidence added successfully!", "success");
         setIsEvidenceModalOpen(false);
+        setSelectedSkill(null); // Close the skill details modal as well
         fetchSkillStats(); // Refresh ledger to see updated evidence count
       } else {
         showToast(response?.message || "Failed to add evidence", "error");
@@ -279,10 +320,10 @@ export default function SkillsTabContent() {
             Add New Skill
           </Button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50">
+        <div className="overflow-x-auto overflow-y-auto max-h-[360px] custom-scrollbar">
+          <table className="w-full text-left border-collapse relative">
+            <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm shadow-slate-100/50 outline outline-1 outline-slate-100">
+              <tr>
                 {['Skill', 'Category', 'Level', 'Evidence', 'Endorsements', 'AI Verified', 'Last Demo'].map((header) => (
                   <th key={header} className="py-3 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                     {header}

@@ -13,13 +13,8 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   
   const showToast = useCallback((message: string, type: ToastType) => {
-    // Only show native alerts for errors/warnings as requested
-    if (type === "error" || type === "warning") {
-      window.alert(message);
-    } else {
-      // Just log success messages to console instead of alerting the user
-      console.log(`[Notification] ${type}: ${message}`);
-    }
+    // Show native alerts for all messages so the user sees them
+    window.alert(message);
   }, []);
 
   return (
