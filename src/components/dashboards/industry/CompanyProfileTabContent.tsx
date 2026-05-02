@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
-import { updateIndustry, addRequiredRole, updateIndustryRole, deleteIndustryRole, addHiringRound, getProjectApplicationCount, getSkillDomain, createSkillDomain, updateSkillDomain, deleteSkillDomain, getCampusPartnerList, createCampusPartner, deleteCampusPartner, getMasterData, deleteHiringRound, updateHiringRound, createDomain, createSubDomain } from "@/services/industry.services";
+import { updateIndustry, addRequiredRole, updateIndustryRole, deleteIndustryRole, addHiringRound, getProjectApplicationCount, getSkillDomain, createSkillDomain, updateSkillDomain, deleteSkillDomain, getCampusPartnerList, createCampusPartner, deleteCampusPartner, getMasterData, deleteHiringRound, updateHiringRound, createDomain, createSubDomain, createDesignation, createSkill } from "@/services/industry.services";
 import { useIndustry, IndustryData, IndustryRole, HiringRound } from "@/context/IndustryContext";
 import { useToast } from "@/context/ToastContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
@@ -182,7 +182,7 @@ export default function CompanyProfileTabContent() {
     fetchCampusPartners();
     // Fetch critical options on mount to ensure they are available for the modal
     fetchMasterOptions("Skill", setSkillOptions);
-    fetchMasterOptions("Industry Designation", setDesignationOptions);
+    fetchMasterOptions("Designation", setDesignationOptions);
     fetchMasterOptions("College", setCollegeOptions);
     fetchMasterOptions("Domain", setDomainOptions);
   }, [data?.company_name]);
@@ -262,8 +262,50 @@ export default function CompanyProfileTabContent() {
         filters: { domain: modalValues.domain }
       }
     },
-    { name: "skills", label: "Skills We Audit", type: "select", icon: Zap, options: skillOptions, required: true, colSpan: 2, placeholder: "Select Skills", multiple: true, allowCustom: true, customPlaceholder: "Enter custom skill..." },
-    { name: "roles", label: "Designations", type: "select", icon: Briefcase, options: designationOptions, required: true, colSpan: 2, placeholder: "Select Designations", multiple: true, allowCustom: true, customPlaceholder: "Enter custom designation..." },
+    { 
+      name: "skills", 
+      label: "Skills We Audit", 
+      type: "select", 
+      icon: Zap, 
+      options: skillOptions, 
+      required: true, 
+      colSpan: 2, 
+      placeholder: "Select Skills", 
+      multiple: true, 
+      allowCustom: true, 
+      customPlaceholder: "Enter custom skill...",
+      onCreateCustomValue: async (val: string) => {
+        try {
+          await createSkill(val);
+          fetchMasterOptions("Skill", setSkillOptions);
+        } catch (err) {
+          console.error("Failed to create skill record:", err);
+          throw err;
+        }
+      }
+    },
+    { 
+      name: "roles", 
+      label: "Designations", 
+      type: "select", 
+      icon: Briefcase, 
+      options: designationOptions, 
+      required: true, 
+      colSpan: 2, 
+      placeholder: "Select Designations", 
+      multiple: true, 
+      allowCustom: true, 
+      customPlaceholder: "Enter custom designation...",
+      onCreateCustomValue: async (val: string) => {
+        try {
+          await createDesignation(val);
+          fetchMasterOptions("Designation", setDesignationOptions);
+        } catch (err) {
+          console.error("Failed to create designation record:", err);
+          throw err;
+        }
+      }
+    },
   ], [skillOptions, designationOptions, modalValues.domain, domainOptions]);
 
   const handleModalValuesChange = (values: Record<string, any>, changedField: string) => {
@@ -461,7 +503,7 @@ export default function CompanyProfileTabContent() {
     } else if (fieldName === "skills" && skillOptions.length === 0) {
       fetchMasterOptions("Skill", setSkillOptions);
     } else if (fieldName === "roles" && designationOptions.length === 0) {
-      fetchMasterOptions("Industry Designation", setDesignationOptions);
+      fetchMasterOptions("Designation", setDesignationOptions);
     } else if (fieldName === "college" && collegeOptions.length === 0) {
       fetchMasterOptions("College", setCollegeOptions);
     } else if (fieldName === "domain" && domainOptions.length === 0) {

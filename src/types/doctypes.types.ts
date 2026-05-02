@@ -22,6 +22,7 @@ export interface FormField {
   minLetters?: number;
   allowCustom?: boolean;
   customPlaceholder?: string;
+  onCreateCustomValue?: (value: string) => Promise<any>;
 }
 
 export interface FormConfig {

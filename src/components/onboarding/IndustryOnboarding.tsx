@@ -15,6 +15,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown } from "lucide-react";
 import axios from "axios";
 import { ContactPersonsTable } from "@/components/ContactPersonsTable";
+import { validateEmail } from "@/lib/validators";
+import {
+    sendMobileOTP,
+    verifyMobileOTP,
+    sendEmailOTP,
+    verifyEmailOTP
+} from "@/services/onboarding.services";
 
 interface IndustryOnboardingProps {
     onSubmit?: (data: any) => Promise<void>;
@@ -36,7 +43,7 @@ interface Option {
     label: string;
 }
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 
 const API_BASE_URL = "https://devstridenex.quantcloud.in";
 
@@ -51,6 +58,7 @@ export default function IndustryOnboarding({
     const [currentStep, setCurrentStep] = useState<Step>(1);
     const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
     const [loading, setLoading] = useState(false);
+    const [hasCreatedRecord, setHasCreatedRecord] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
@@ -79,6 +87,13 @@ export default function IndustryOnboarding({
         { title: "", first_name: "", last_name: "", designation: "", contact_no: "", is_admin: false, email: "" }
     ]);
 
+    const [emailVerificationCode, setEmailVerificationCode] = useState("");
+    const [mobileVerificationCode, setMobileVerificationCode] = useState("");
+    const [emailOtpSent, setEmailOtpSent] = useState(false);
+    const [mobileOtpSent, setMobileOtpSent] = useState(false);
+    const [emailTimer, setEmailTimer] = useState(0);
+    const [mobileTimer, setMobileTimer] = useState(0);
+
     const [formData, setFormData] = useState({
         company_name: "",
         business_type: "",
@@ -95,7 +110,10 @@ export default function IndustryOnboarding({
         turn_over_in_cr: "",
         company_website: "",
         average_fresher_recruited_per_year: "",
-        email: ""
+        email: "",
+        emailVerified: false,
+        mobileNo: "",
+        mobileVerified: false
     });
 
     useEffect(() => {
@@ -104,7 +122,6 @@ export default function IndustryOnboarding({
             if (!userEmail) return;
 
             // Determine initial step based on isOnboarded flag
-            // 0 -> Step 1, 1 -> Step 2, 2 -> Step 3
             const flag = parseInt(isOnboarded || "0");
             if (flag === 1) {
                 setCurrentStep(2);
@@ -113,6 +130,9 @@ export default function IndustryOnboarding({
                 setCurrentStep(3);
                 setCompletedSteps(new Set([1, 2]));
             } else if (flag === 3) {
+                setCurrentStep(4);
+                setCompletedSteps(new Set([1, 2, 3]));
+            } else if (flag >= 4) {
                 router.push("/industry/dashboard");
                 return;
             }
@@ -132,7 +152,27 @@ export default function IndustryOnboarding({
         if (isInitialized) {
             fetchInitialData();
         }
-    }, [isOnboarded, isInitialized, currentUser]);
+    }, [isOnboarded, isInitialized, currentUser, router]);
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (emailTimer > 0) {
+            interval = setInterval(() => {
+                setEmailTimer(prev => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [emailTimer]);
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (mobileTimer > 0) {
+            interval = setInterval(() => {
+                setMobileTimer(prev => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [mobileTimer]);
 
     const fetchIndustryData = async (email: string) => {
         setLoading(true);
@@ -142,7 +182,7 @@ export default function IndustryOnboarding({
             if (response.data?.message) {
                 const messageObj = response.data.message;
                 const data = messageObj.data || messageObj; // Handle both direct and nested data
-                
+
                 console.log("Extracted Industry Data:", data);
                 if (data) {
                     // Map data to formData
@@ -297,6 +337,14 @@ export default function IndustryOnboarding({
 
     const validateStep1 = (): boolean => {
         const errors: Record<string, string> = {};
+        if (!formData.emailVerified) errors.email = "Please verify your email first";
+        if (!formData.mobileVerified) errors.mobileNo = "Please verify your mobile number first";
+        setFieldErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    const validateStep2 = (): boolean => {
+        const errors: Record<string, string> = {};
         if (!formData.company_name) errors.company_name = "Company name is required";
         if (!formData.business_type) errors.business_type = "Business type is required";
         if (!formData.industry_sector) errors.industry_sector = "Industry sector is required";
@@ -307,9 +355,8 @@ export default function IndustryOnboarding({
         return Object.keys(errors).length === 0;
     };
 
-    const validateStep2 = (): boolean => {
+    const validateStep3 = (): boolean => {
         const errors: Record<string, string> = {};
-        // job_function removed from mandatory check
         if (!formData.state) errors.state = "State is required";
         if (!formData.district) errors.district = "District is required";
         if (!formData.tahsil) errors.tahsil = "Taluka is required";
@@ -318,7 +365,7 @@ export default function IndustryOnboarding({
         return Object.keys(errors).length === 0;
     };
 
-    const validateStep3 = (): boolean => {
+    const validateStep4 = (): boolean => {
         const errors: Record<string, string> = {};
         const invalidContact = contactPersons.some(
             person => !person.title || !person.first_name || !person.last_name || !person.designation || !person.contact_no
@@ -334,7 +381,7 @@ export default function IndustryOnboarding({
         setSuccess("");
 
         try {
-            const userEmail = localStorage.getItem("userEmail") || "";
+            const userEmail = formData.email || currentUser || localStorage.getItem("userEmail") || "";
 
             const validContactPersons = contactPersons.filter(
                 person => person.title && person.first_name && person.last_name && person.designation && person.contact_no
@@ -356,6 +403,8 @@ export default function IndustryOnboarding({
             const jobFunctionArray = (formData.job_function || []).map((jobFunc: string) => ({
                 job_function: jobFunc
             }));
+
+
 
             let payload: any = {
                 email: userEmail,
@@ -382,11 +431,10 @@ export default function IndustryOnboarding({
             let endpoint = `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.industry.industry.create_industry`;
             let method: 'post' | 'put' = 'post';
 
-            // If is_onboarded flag is already 1 or more, the record exists, so use PUT for updates
-            const recordExists = parseInt(isOnboarded || "0") > 0;
+            const recordExists = parseInt(isOnboarded || "0") > 1 || hasCreatedRecord;
 
-            if (step === 1 && !recordExists) {
-                // Step 1: Initial POST to create_industry
+            if (step === 2 && !recordExists) {
+                // Step 2: Initial POST to create_industry
                 payload.business_type = isCustomBusinessType ? "" : (formData.business_type || "");
                 payload.other_business_type = isCustomBusinessType ? formData.business_type : "";
                 payload.industry_sector = isCustomIndustrySector ? "" : (formData.industry_sector || "");
@@ -394,14 +442,14 @@ export default function IndustryOnboarding({
                 payload.gst_number = formData.gst_number || "";
                 payload.employee_head_count = formData.employee_head_count ? parseInt(formData.employee_head_count) : 0;
                 payload.internship_per_year = formData.internship_per_year ? parseInt(formData.internship_per_year) : 0;
-                payload.average_fresher_recruited_per_year = formData.average_fresher_recruited_per_year ? 
+                payload.average_fresher_recruited_per_year = formData.average_fresher_recruited_per_year ?
                     parseInt(formData.average_fresher_recruited_per_year) : 0;
             } else {
-                // Step 2, Step 3, OR Step 1 update: Use PUT to update_industry
+                // Step 3, Step 4, OR Step 2 update: Use PUT to update_industry
                 endpoint = `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.industry.industry.update_industry?company_name=${encodeURIComponent(formData.company_name)}`;
                 method = 'put';
 
-                // Always include Step 1 data for cumulative/update payload
+                // Always include Step 2 data for cumulative/update payload
                 payload.business_type = isCustomBusinessType ? "" : (formData.business_type || "");
                 payload.other_business_type = isCustomBusinessType ? formData.business_type : "";
                 payload.industry_sector = isCustomIndustrySector ? "" : (formData.industry_sector || "");
@@ -409,11 +457,11 @@ export default function IndustryOnboarding({
                 payload.gst_number = formData.gst_number || "";
                 payload.employee_head_count = formData.employee_head_count ? parseInt(formData.employee_head_count) : 0;
                 payload.internship_per_year = formData.internship_per_year ? parseInt(formData.internship_per_year) : 0;
-                payload.average_fresher_recruited_per_year = formData.average_fresher_recruited_per_year ? 
+                payload.average_fresher_recruited_per_year = formData.average_fresher_recruited_per_year ?
                     parseInt(formData.average_fresher_recruited_per_year) : 0;
 
-                // Include Step 2 data
-                if (step >= 2 || recordExists) {
+                // Include Step 3 data
+                if (step >= 3 || recordExists) {
                     payload.job_function = jobFunctionArray;
                     payload.country = formData.country;
                     payload.state = formData.state;
@@ -424,8 +472,8 @@ export default function IndustryOnboarding({
                     payload.company_website = formData.company_website || "";
                 }
 
-                // Include Step 3 data
-                if (step === 3 || recordExists) {
+                // Include Step 4 data
+                if (step === 4 || recordExists) {
                     payload.contact_details = formattedContactPersons;
                 }
             }
@@ -446,13 +494,17 @@ export default function IndustryOnboarding({
                 // Mark step as completed on success
                 setCompletedSteps(prev => new Set([...prev, step]));
 
-                if (step === 1) {
-                    setCurrentStep(2);
-                    setSuccess("Step 1 saved successfully!");
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                } else if (step === 2) {
+                if (method === 'post') {
+                    setHasCreatedRecord(true);
+                }
+
+                if (step === 2) {
                     setCurrentStep(3);
                     setSuccess("Step 2 saved successfully!");
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else if (step === 3) {
+                    setCurrentStep(4);
+                    setSuccess("Step 3 saved successfully!");
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else {
                     setSuccess("Industry onboarding completed successfully!");
@@ -505,9 +557,98 @@ export default function IndustryOnboarding({
         }
     };
 
+    const handleSendEmailOTP = async () => {
+        const emailValidation = validateEmail(formData.email);
+        if (!emailValidation.isValid) {
+            setFieldErrors(prev => ({ ...prev, email: emailValidation.error || "Invalid email" }));
+            return;
+        }
+        setError("");
+        setSuccess("");
+        setLoading(true);
+        try {
+            const response = await sendEmailOTP(formData.email);
+            if (response?.message?.status === "success") {
+                setSuccess(response.message.message || "OTP sent successfully");
+                setEmailOtpSent(true);
+                setEmailTimer(120);
+            } else {
+                setError(response?.message?.message || "Failed to send OTP");
+            }
+        } catch (err: any) {
+            setError(err?.response?.data?.message?.message || "Failed to send verification code");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerifyEmail = async () => {
+        setError("");
+        setSuccess("");
+        setLoading(true);
+        try {
+            const response = await verifyEmailOTP(formData.email, emailVerificationCode);
+            if (response?.message === "Email verified successfully") {
+                setFormData(prev => ({ ...prev, emailVerified: true }));
+                setSuccess(response.message);
+            } else {
+                setError(response?.message || "Invalid verification code");
+            }
+        } catch (err: any) {
+            setError(err?.response?.data?.message || "Verification failed");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSendMobileOTP = async () => {
+        setError("");
+        setSuccess("");
+        if (!formData.mobileNo || formData.mobileNo.length !== 10) {
+            setFieldErrors(prev => ({ ...prev, mobileNo: "Please enter a valid 10-digit mobile number" }));
+            return;
+        }
+        setLoading(true);
+        try {
+            const response = await sendMobileOTP(formData.mobileNo);
+            if (response?.message === "OTP sent successfully") {
+                setSuccess(response.message);
+                setMobileOtpSent(true);
+                setMobileTimer(120);
+            } else {
+                setError(response?.message || "Failed to send OTP");
+            }
+        } catch (err: any) {
+            setError(err?.response?.data?.message || "Failed to send verification code");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerifyMobile = async () => {
+        setError("");
+        setSuccess("");
+        setLoading(true);
+        try {
+            const response = await verifyMobileOTP(formData.mobileNo, mobileVerificationCode);
+            if (response?.message === "Mobile number verified successfully") {
+                setFormData(prev => ({ ...prev, mobileVerified: true }));
+                setSuccess(response.message);
+            } else {
+                setError(response?.message || "Invalid verification code");
+            }
+        } catch (err: any) {
+            setError(err?.response?.data?.message || "Verification failed");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleContinueToStep2 = () => {
         if (validateStep1()) {
-            submitStepData(1);
+            setCurrentStep(2);
+            setSuccess("");
+            setError("");
         }
     };
 
@@ -517,10 +658,16 @@ export default function IndustryOnboarding({
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleContinueToStep4 = () => {
         if (validateStep3()) {
             submitStepData(3);
+        }
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (validateStep4()) {
+            submitStepData(4);
         }
     };
 
@@ -528,8 +675,6 @@ export default function IndustryOnboarding({
         setCurrentStep(1);
         setSuccess("");
         setError("");
-        const userEmail = localStorage.getItem("userEmail") || currentUser || "";
-        if (userEmail) fetchIndustryData(userEmail);
     };
 
     const goToStep2 = () => {
@@ -540,20 +685,30 @@ export default function IndustryOnboarding({
         if (userEmail) fetchIndustryData(userEmail);
     };
 
+    const goToStep3 = () => {
+        setCurrentStep(3);
+        setSuccess("");
+        setError("");
+        const userEmail = localStorage.getItem("userEmail") || currentUser || "";
+        if (userEmail) fetchIndustryData(userEmail);
+    };
+
     const getStepTitle = () => {
         switch (currentStep) {
-            case 1: return "Company Information";
-            case 2: return "Location & Job Functions";
-            case 3: return "Contact Details";
+            case 1: return "Verification";
+            case 2: return "Company Information";
+            case 3: return "Location & Job Functions";
+            case 4: return "Contact Details";
             default: return "Industry Onboarding";
         }
     };
 
     const getStepDescription = () => {
         switch (currentStep) {
-            case 1: return "Please provide your company's basic information.";
-            case 2: return "Tell us about your location and job functions.";
-            case 3: return "Add contact persons.";
+            case 1: return "Please verify your email and mobile number.";
+            case 2: return "Please provide your company's basic information.";
+            case 3: return "Tell us about your location and job functions.";
+            case 4: return "Add contact persons.";
             default: return "";
         }
     };
@@ -561,15 +716,129 @@ export default function IndustryOnboarding({
 
     const handleSkip = () => {
         if (onSkip) {
+            console.log("skip1");
             onSkip();
         } else {
+            console.log("skip2");
             localStorage.clear();
-            router.push("/login");
+            window.location.href = "/login";
         }
     };
 
     const renderStep1 = () => {
-        const step1Fields: FormField[] = [
+        const emailField: FormField[] = [
+            { fieldname: "email", label: "Email Address", fieldtype: "Data", required: true, placeholder: "Enter your email address", layout: "full" }
+        ];
+        const mobileField: FormField[] = [
+            { fieldname: "mobileNo", label: "Mobile Number", fieldtype: "Data", required: true, placeholder: "Enter 10-digit mobile number", layout: "full", maxLength: 10 }
+        ];
+
+        return (
+            <div className="space-y-6">
+                <div className="space-y-4">
+                    <div className="flex gap-2 items-start">
+                        <div className="flex-1">
+                            <DynamicForm
+                                fields={emailField}
+                                onSubmit={() => { }}
+                                buttonLabel=""
+                                loading={loading}
+                                initialValues={{ email: formData.email }}
+                                onChange={(data) => {
+                                    setSuccess('');
+                                    setError('');
+                                    if (data.email !== formData.email) {
+                                        setEmailOtpSent(false);
+                                        setEmailVerificationCode('');
+                                        setFormData(prev => ({ ...prev, email: data.email, emailVerified: false }));
+                                    }
+                                }}
+                            />
+                        </div>
+                        {!formData.emailVerified && !emailOtpSent && (
+                            <Button type="button" onClick={handleSendEmailOTP} disabled={!formData.email || emailTimer > 0} variant="accent" className="mt-7 whitespace-nowrap">
+                                {emailTimer > 0 ? `Resend in ${emailTimer}s` : "Send OTP"}
+                            </Button>
+                        )}
+                        {emailOtpSent && !formData.emailVerified && (
+                            <Button type="button" onClick={handleSendEmailOTP} disabled={emailTimer > 0} variant="accent" className="mt-7 whitespace-nowrap">
+                                {emailTimer > 0 ? `Resend in ${emailTimer}s` : "Resend OTP"}
+                            </Button>
+                        )}
+                    </div>
+                    {emailOtpSent && !formData.emailVerified && (
+                        <div>
+                            <Label htmlFor="emailOtp" className="text-sm font-medium text-slate-700">Verification Code <span className="text-red-500">*</span></Label>
+                            <div className="flex gap-2 mt-1">
+                                <Input id="emailOtp" value={emailVerificationCode} onChange={(e) => setEmailVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Enter 6-digit code" maxLength={6} className="flex-1" disabled={loading} />
+                                <Button type="button" onClick={handleVerifyEmail} disabled={emailVerificationCode.length !== 6 || loading} variant="accent" className="whitespace-nowrap">Verify</Button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {formData.emailVerified && (
+                    <div className="space-y-4 pt-4 border-t">
+                        <div className="flex gap-2 items-start">
+                            <div className="flex-1">
+                                <DynamicForm
+                                    fields={mobileField}
+                                    onSubmit={() => { }}
+                                    buttonLabel=""
+                                    loading={loading}
+                                    errors={fieldErrors}
+                                    onChange={(data) => {
+                                        setSuccess("");
+                                        setError("");
+                                        let mobileNo = data.mobileNo || "";
+                                        mobileNo = mobileNo.replace(/\D/g, '').slice(0, 10);
+                                        setFieldErrors(prev => {
+                                            const newErrors = { ...prev };
+                                            delete newErrors.mobileNo;
+                                            return newErrors;
+                                        });
+                                        if (mobileNo !== formData.mobileNo) {
+                                            setMobileOtpSent(false);
+                                            setMobileVerificationCode('');
+                                            setFormData(prev => ({ ...prev, mobileNo, mobileVerified: false }));
+                                        }
+                                    }}
+                                />
+                            </div>
+                            {!formData.mobileVerified && !mobileOtpSent && (
+                                <Button type="button" onClick={handleSendMobileOTP} disabled={!formData.mobileNo || formData.mobileNo.length !== 10 || loading || mobileTimer > 0} variant="accent" className="mt-7 whitespace-nowrap">
+                                    {mobileTimer > 0 ? `Resend in ${mobileTimer}s` : "Send OTP"}
+                                </Button>
+                            )}
+                            {mobileOtpSent && !formData.mobileVerified && (
+                                <Button type="button" onClick={handleSendMobileOTP} disabled={loading || mobileTimer > 0} variant="accent" className="mt-7 whitespace-nowrap">
+                                    {mobileTimer > 0 ? `Resend in ${mobileTimer}s` : "Resend OTP"}
+                                </Button>
+                            )}
+                        </div>
+                        {mobileOtpSent && !formData.mobileVerified && (
+                            <div>
+                                <Label htmlFor="mobileOtp" className="text-sm font-medium text-slate-700">Verification Code <span className="text-red-500">*</span></Label>
+                                <div className="flex gap-2 mt-1">
+                                    <Input id="mobileOtp" value={mobileVerificationCode} onChange={(e) => setMobileVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="Enter 6-digit code" maxLength={6} className="flex-1" disabled={loading} />
+                                    <Button type="button" onClick={handleVerifyMobile} disabled={mobileVerificationCode.length !== 6 || loading} variant="accent" className="whitespace-nowrap">Verify</Button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {formData.emailVerified && formData.mobileVerified && (
+                    <Button type="button" onClick={handleContinueToStep2} variant="accent" className="w-full">
+                        Continue to Company Information
+                    </Button>
+                )}
+            </div>
+        );
+    };
+
+    const renderStep2 = () => {
+        const step2Fields: FormField[] = [
             { fieldname: "company_name", label: "Company Name", fieldtype: "Data", required: true, placeholder: "Enter company name", layout: "half" },
             {
                 fieldname: "business_type", label: "Business Type", fieldtype: "Data", required: true, placeholder: "Select Business Type", layout: "half",
@@ -594,7 +863,7 @@ export default function IndustryOnboarding({
         return (
             <div className="space-y-4">
                 <DynamicForm
-                    fields={step1Fields}
+                    fields={step2Fields}
                     onSubmit={() => { }}
                     buttonLabel=""
                     loading={loading}
@@ -608,15 +877,18 @@ export default function IndustryOnboarding({
                         setError("");
                     }}
                 />
-                <Button type="button" onClick={handleContinueToStep2} variant="accent" className="w-full" disabled={loading}>
-                    Continue to Location & Job Functions
-                </Button>
+                <div className="flex gap-3">
+                    <Button type="button" variant="outline" onClick={goToStep1}>Back</Button>
+                    <Button type="button" onClick={handleContinueToStep3} variant="accent" className="flex-1" disabled={loading}>
+                        Continue to Location & Job Functions
+                    </Button>
+                </div>
             </div>
         );
     };
 
-    const renderStep2 = () => {
-        const step2Fields: FormField[] = [
+    const renderStep3 = () => {
+        const step3Fields: FormField[] = [
             {
                 fieldname: "job_function",
                 label: "Job Function",
@@ -627,7 +899,24 @@ export default function IndustryOnboarding({
                 layout: "half",
                 apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: {
-                    doctype: "Job Function Table"
+                    doctype: "Job Function"
+                },
+                allowCustom: true,
+                customPlaceholder: "Enter custom job function",
+                onCreateCustomValue: async (val: string) => {
+                    const apiKey = typeof window !== 'undefined' ? localStorage.getItem("apiKey") : "";
+                    const apiSecret = typeof window !== 'undefined' ? localStorage.getItem("apiSecret") : "";
+                    await axios.post(`${API_BASE_URL}/api/method/stridenex_app.stridenex_app.doctype.job_function.job_function.create_job_function`, {
+                        job_function: val
+                    }, {
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Accept": "application/json",
+                            "Authorization": `token ${apiKey}:${apiSecret}`
+                        }
+                    });
+                    // Refresh options to include newly created one
+                    fetchJobFunctions();
                 },
                 mapOptions: (data) => data.map((item: any) => ({
                     value: item.name,
@@ -749,7 +1038,7 @@ export default function IndustryOnboarding({
         return (
             <div className="space-y-4">
                 <DynamicForm
-                    fields={step2Fields}
+                    fields={step3Fields}
                     onSubmit={() => { }}
                     buttonLabel=""
                     loading={loading}
@@ -768,13 +1057,13 @@ export default function IndustryOnboarding({
                     <Button
                         type="button"
                         variant="outline"
-                        onClick={goToStep1}
+                        onClick={goToStep2}
                     >
                         Back
                     </Button>
                     <Button
                         type="button"
-                        onClick={handleContinueToStep3}
+                        onClick={handleContinueToStep4}
                         variant="accent"
                         className="flex-1"
                         disabled={loading}
@@ -786,7 +1075,7 @@ export default function IndustryOnboarding({
         );
     };
 
-    const renderStep3 = () => {
+    const renderStep4 = () => {
         return (
             <div className="space-y-6">
                 <div className="relative">
@@ -802,11 +1091,25 @@ export default function IndustryOnboarding({
                         onRemovePerson={removeContactPerson}
                         onAddPerson={addContactPerson}
                         getSelectedDesignationLabel={getSelectedDesignationLabel}
+                        onCreateCustomDesignation={async (val: string) => {
+                            const apiKey = typeof window !== 'undefined' ? localStorage.getItem("apiKey") : "";
+                            const apiSecret = typeof window !== 'undefined' ? localStorage.getItem("apiSecret") : "";
+                            await axios.post(`${API_BASE_URL}/api/method/stridenex_app.stridenex_app.doctype.job_function.job_function.create_designation`, {
+                                designation_name: val
+                            }, {
+                                headers: {
+                                    "Content-Type": "application/json",
+                                    "Accept": "application/json",
+                                    "Authorization": `token ${apiKey}:${apiSecret}`
+                                }
+                            });
+                            fetchDesignations();
+                        }}
                     />
                 </div>
 
                 <div className="flex gap-3 pt-6">
-                    <Button type="button" variant="outline" onClick={goToStep2}>Back</Button>
+                    <Button type="button" variant="outline" onClick={goToStep3}>Back</Button>
                     <Button type="submit" variant="accent" className="flex-1" loading={loading} disabled={loading}>
                         Complete Registration
                     </Button>
@@ -818,7 +1121,7 @@ export default function IndustryOnboarding({
     return (
         <OnboardingLayout
             currentStep={currentStep}
-            totalSteps={3}
+            totalSteps={4}
             title={getStepTitle()}
             description={getStepDescription()}
             onSkip={handleSkip}
@@ -830,6 +1133,7 @@ export default function IndustryOnboarding({
                 {currentStep === 1 && renderStep1()}
                 {currentStep === 2 && renderStep2()}
                 {currentStep === 3 && renderStep3()}
+                {currentStep === 4 && renderStep4()}
             </form>
         </OnboardingLayout>
     );

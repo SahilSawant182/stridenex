@@ -434,3 +434,28 @@ export const createSubDomain = async (subDomain: string, domain?: string) => {
   }
 };
 
+export const createDesignation = async (designation_name: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.job_function.job_function.create_designation`,
+      { designation_name }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating designation:", error);
+    throw error;
+  }
+};
+
+export const createSkill = async (skill_name: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.student.student.create_skill`,
+      { skill_name }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating skill:", error);
+    throw error;
+  }
+};

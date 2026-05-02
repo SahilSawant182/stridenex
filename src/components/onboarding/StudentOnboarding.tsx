@@ -832,7 +832,7 @@ export default function StudentOnboarding({
       onSkip();
     } else {
       localStorage.clear();
-      router.push("/login");
+      window.location.href = "/login";
     }
   };
 

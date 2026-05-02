@@ -2,8 +2,9 @@
 
 import { FormField } from "@/types/doctypes.types";
 import { useState, useEffect, useRef } from "react";
-import { ChevronDown, X, Check, Eye, EyeOff, Search, Plus } from "lucide-react";
+import { ChevronDown, X, Check, Eye, EyeOff, Search, Plus, Loader2 } from "lucide-react";
 import axios from "axios";
+import { parseBackendError } from "@/utils/error.utils";
 
 interface Props {
   field: FormField;
@@ -40,6 +41,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customValue, setCustomValue] = useState("");
+  const [customError, setCustomError] = useState<string | null>(null);
   const [initialFetchDone, setInitialFetchDone] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const customInputRef = useRef<HTMLInputElement>(null);
@@ -238,12 +240,27 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
     // Keep dropdown open for multi-select
   };
 
-  const handleAddCustomValue = () => {
+  const handleAddCustomValue = async () => {
     if (customValue.trim()) {
       const currentValues = Array.isArray(value) ? value : [];
       // Use the actual custom value text
       const customOptionValue = customValue.trim();
       
+      if (field.onCreateCustomValue) {
+        try {
+          setCustomError(null);
+          setLoading(true);
+          await field.onCreateCustomValue(customOptionValue);
+        } catch (err) {
+          console.error("Failed to create custom value:", err);
+          setCustomError(parseBackendError(err));
+          setLoading(false);
+          return;
+        } finally {
+          setLoading(false);
+        }
+      }
+
       // Add to options list for display
       const newOption = { 
         value: customOptionValue, 
@@ -451,28 +468,37 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
                       ref={customInputRef}
                       type="text"
                       value={customValue}
-                      onChange={(e) => setCustomValue(e.target.value)}
+                      onChange={(e) => {
+                        setCustomValue(e.target.value);
+                        if (customError) setCustomError(null);
+                      }}
                       onKeyDown={handleCustomInputKeyDown}
                       placeholder="Type here..."
-                      className="flex-1 px-3 py-2 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                      className={`flex-1 px-3 py-2 text-sm border ${customError ? 'border-red-500' : 'border-slate-200'} rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent`}
                       autoFocus
                     />
                     <Button
                       onClick={handleAddCustomValue}
-                      disabled={!customValue.trim()}
+                      disabled={!customValue.trim() || loading}
                     >
-                      Add
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add"}
                     </Button>
                     <Button
                       onClick={() => {
                         setShowCustomInput(false);
                         setCustomValue("");
+                        setCustomError(null);
                       }}
                       variant="outline"
                     >
                       Cancel
                     </Button>
                   </div>
+                  {customError && (
+                    <p className="text-xs text-red-500 mt-2 font-medium">
+                      {customError}
+                    </p>
+                  )}
                 </div>
               )}
             </div>

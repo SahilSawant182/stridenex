@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, X, Plus } from "lucide-react";
+import { parseBackendError } from "@/utils/error.utils";
 
 interface ContactPerson {
     title: string;
@@ -39,6 +40,7 @@ interface Props {
     onRemovePerson: (index: number) => void;
     onAddPerson: () => void;
     getSelectedDesignationLabel: (value: string) => string;
+    onCreateCustomDesignation?: (value: string) => Promise<any>;
 }
 
 export const ContactPersonsTable: React.FC<Props> = ({
@@ -51,11 +53,16 @@ export const ContactPersonsTable: React.FC<Props> = ({
     onPersonChange,
     onRemovePerson,
     onAddPerson,
-    getSelectedDesignationLabel
+    getSelectedDesignationLabel,
+    onCreateCustomDesignation
 }) => {
 
     const [openTitle, setOpenTitle] = useState<number | null>(null);
     const [openDesignation, setOpenDesignation] = useState<number | null>(null);
+    const [showCustomDesignation, setShowCustomDesignation] = useState(false);
+    const [customDesignationValue, setCustomDesignationValue] = useState("");
+    const [customDesignationLoading, setCustomDesignationLoading] = useState(false);
+    const [customDesignationError, setCustomDesignationError] = useState<string | null>(null);
 
     const titleButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
     const designationButtonRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -202,7 +209,33 @@ export const ContactPersonsTable: React.FC<Props> = ({
                 setOpenDesignation(index);
                 setOpenTitle(null);
                 setTitleDropdownPos(null);
+                setShowCustomDesignation(false);
+                setCustomDesignationValue("");
             }
+        }
+    };
+
+    const handleAddCustomDesignation = async () => {
+        if (customDesignationValue.trim() && designationDropdownPos) {
+            if (onCreateCustomDesignation) {
+                try {
+                    setCustomDesignationError(null);
+                    setCustomDesignationLoading(true);
+                    await onCreateCustomDesignation(customDesignationValue.trim());
+                } catch (err) {
+                    console.error("Failed to create custom designation:", err);
+                    setCustomDesignationError(parseBackendError(err));
+                    setCustomDesignationLoading(false);
+                    return;
+                } finally {
+                    setCustomDesignationLoading(false);
+                }
+            }
+            onSelectDesignation(designationDropdownPos.index, customDesignationValue.trim());
+            setOpenDesignation(null);
+            setDesignationDropdownPos(null);
+            setShowCustomDesignation(false);
+            setCustomDesignationValue("");
         }
     };
 
@@ -225,6 +258,9 @@ export const ContactPersonsTable: React.FC<Props> = ({
                 setOpenDesignation(null);
                 setTitleDropdownPos(null);
                 setDesignationDropdownPos(null);
+                setShowCustomDesignation(false);
+                setCustomDesignationValue("");
+                setCustomDesignationError(null);
             }
         };
 
@@ -430,33 +466,98 @@ export const ContactPersonsTable: React.FC<Props> = ({
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
                 >
-                    <div className="py-1">
-                        {designationOptions.map((opt: any) => {
-                            const val = opt.value || opt.name;
-                            return (
-                                <button
-                                    key={val}
-                                    type="button"
-                                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2"
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        onSelectDesignation(designationDropdownPos.index, val);
-                                        setOpenDesignation(null);
-                                        setDesignationDropdownPos(null);
+                    {!showCustomDesignation ? (
+                        <div className="py-1">
+                            {designationOptions.map((opt: any) => {
+                                const val = opt.value || opt.name;
+                                return (
+                                    <button
+                                        key={val}
+                                        type="button"
+                                        className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            onSelectDesignation(designationDropdownPos.index, val);
+                                            setOpenDesignation(null);
+                                            setDesignationDropdownPos(null);
+                                        }}
+                                    >
+                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${contactPersons[designationDropdownPos.index]?.designation === val ? "border-accent" : "border-slate-300"
+                                            }`}>
+                                            {contactPersons[designationDropdownPos.index]?.designation === val && (
+                                                <div className="w-2 h-2 rounded-full bg-accent" />
+                                            )}
+                                        </div>
+                                        <span className="truncate">{opt.label || opt.name}</span>
+                                    </button>
+                                );
+                            })}
+                            <div
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowCustomDesignation(true);
+                                }}
+                                className="px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors border-t border-slate-200 text-accent font-medium"
+                            >
+                                <Plus className="w-4 h-4" />
+                                <span>Add Others (Custom Value)</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="p-3 w-64">
+                            <p className="text-sm font-medium text-slate-700 mb-2">
+                                Enter custom designation
+                            </p>
+                            <div className="flex flex-col gap-2">
+                                <input
+                                    type="text"
+                                    value={customDesignationValue}
+                                    onChange={(e) => {
+                                        setCustomDesignationValue(e.target.value);
+                                        if (customDesignationError) setCustomDesignationError(null);
                                     }}
-                                >
-                                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${contactPersons[designationDropdownPos.index]?.designation === val ? "border-accent" : "border-slate-300"
-                                        }`}>
-                                        {contactPersons[designationDropdownPos.index]?.designation === val && (
-                                            <div className="w-2 h-2 rounded-full bg-accent" />
-                                        )}
-                                    </div>
-                                    <span className="truncate">{opt.label || opt.name}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
+                                    placeholder="Type here..."
+                                    className={`w-full px-3 py-2 text-sm border ${customDesignationError ? 'border-red-500' : 'border-slate-200'} rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent`}
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && customDesignationValue.trim()) {
+                                            e.preventDefault();
+                                            handleAddCustomDesignation();
+                                        }
+                                    }}
+                                />
+                                {customDesignationError && (
+                                    <p className="text-xs text-red-500 font-medium">
+                                        {customDesignationError}
+                                    </p>
+                                )}
+                                <div className="flex gap-2 w-full mt-1">
+                                    <Button
+                                        type="button"
+                                        onClick={handleAddCustomDesignation}
+                                        disabled={!customDesignationValue.trim() || customDesignationLoading}
+                                        className="flex-1 py-1 h-8 text-xs"
+                                    >
+                                        {customDesignationLoading ? "Adding..." : "Add"}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowCustomDesignation(false);
+                                            setCustomDesignationValue("");
+                                            setCustomDesignationError(null);
+                                        }}
+                                        variant="outline"
+                                        className="flex-1 py-1 h-8 text-xs"
+                                        disabled={customDesignationLoading}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>,
                 document.body
             )}

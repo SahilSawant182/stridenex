@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiService } from "@/services/api.services";
+import { parseBackendError } from "@/utils/error.utils";
 
 export interface DynamicField {
   name: string;
@@ -517,7 +518,7 @@ function DynamicFieldItem({
                                         await field.onCreateCustomValue(customValue.trim());
                                       } catch (err: any) {
                                         console.error("Error creating custom value:", err);
-                                        setCustomError(err?.message || "Failed to create value");
+                                        setCustomError(parseBackendError(err));
                                         return; // Don't add to list if creation failed
                                       } finally {
                                         setCustomLoading(false);
@@ -546,7 +547,7 @@ function DynamicFieldItem({
                                     await field.onCreateCustomValue(customValue.trim());
                                   } catch (err: any) {
                                     console.error("Error creating custom value:", err);
-                                    setCustomError(err?.message || "Failed to create value");
+                                    setCustomError(parseBackendError(err));
                                     return;
                                   } finally {
                                     setCustomLoading(false);
