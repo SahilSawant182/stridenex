@@ -119,7 +119,7 @@ export default function InternshipsTabContent() {
     { name: "status", label: "Status", type: "select", icon: Zap, options: ["Active", "Draft", "Closed"], required: true, placeholder: "Select Status" },
     { name: "course", label: "Course", type: "select", icon: Briefcase, options: courseOptions, required: true, placeholder: "Select Course" },
     { name: "department", label: "Department", type: "select", icon: Briefcase, options: departmentOptions, required: true, placeholder: "Select Department" },
-    { name: "academic_year", label: "Academic Year", type: "select", icon: Calendar, options: ["1", "2", "3", "4"], required: true, placeholder: "Select Year" },
+    { name: "academic_year", label: "Academic Year", type: "select", icon: Calendar, options: ["2", "3", "4"], required: true, placeholder: "Select Year" },
     {
       name: "required_skills",
       label: "Required Skills",

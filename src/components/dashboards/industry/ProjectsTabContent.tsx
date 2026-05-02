@@ -96,7 +96,7 @@ export default function ProjectsTabContent() {
     { name: "end_date", label: "End Date", type: "date", icon: Calendar, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
     { name: "course", label: "Course", type: "select", icon: Briefcase, options: courseOptions, required: true, placeholder: "Select Course" },
     { name: "department", label: "Department", type: "select", icon: Briefcase, options: departmentOptions, required: true, placeholder: "Select Department" },
-    { name: "academic_year", label: "Academic Year", type: "select", icon: Calendar, options: ["1", "2", "3", "4"], required: true, placeholder: "Select Year" },
+    { name: "academic_year", label: "Academic Year", type: "select", icon: Calendar, options: ["2", "3", "4"], required: true, placeholder: "Select Year" },
     {
       name: "required_skills",
       label: "Required Skills",
@@ -337,9 +337,9 @@ export default function ProjectsTabContent() {
           { label: "STUDENTS AWARDED", value: "0", icon: Trophy, border: "border-t-emerald-400", bg: "bg-emerald-50/50", iconBg: "bg-emerald-50" },
           { label: "CONVERTED TO PPO", value: "0", icon: Target, border: "border-t-orange-400", bg: "bg-orange-50/50", iconBg: "bg-orange-50" },
         ].map((stat, idx) => (
-          <motion.div 
-            key={idx} 
-            variants={item} 
+          <motion.div
+            key={idx}
+            variants={item}
             onClick={stat.onClick}
             className={`bg-white rounded-xl border border-slate-200 ${stat.border} border-t-2 p-5 shadow-sm flex items-start justify-between group ${stat.onClick ? 'cursor-pointer hover:shadow-md hover:border-slate-300' : ''}`}
           >
