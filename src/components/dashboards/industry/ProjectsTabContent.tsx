@@ -58,6 +58,9 @@ export default function ProjectsTabContent() {
   const [projectToEdit, setProjectToEdit] = useState<any | null>(null);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [applicationCount, setApplicationCount] = useState<number>(0);
+  const [courseOptions, setCourseOptions] = useState<string[]>([]);
+  const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
+  const [modalValues, setModalValues] = useState<Record<string, any>>({});
 
   // Applications modal states
   const [applicationsModalOpen, setApplicationsModalOpen] = useState(false);
@@ -72,9 +75,9 @@ export default function ProjectsTabContent() {
     }
   }, [searchParams]);
 
-  const fetchOptions = async (doctype: string, setter: (val: string[]) => void) => {
+  const fetchOptions = async (doctype: string, setter: (val: string[]) => void, extraPayload?: any) => {
     try {
-      const data = await getMasterData(doctype);
+      const data = await getMasterData(doctype, extraPayload);
       const apiData = data.data || data.message || [];
       const options = Array.isArray(apiData) ? apiData.map((item: any) => item.name) : [];
       setter(options);
@@ -91,7 +94,9 @@ export default function ProjectsTabContent() {
     { name: "duration", label: "Duration (Days)", type: "number", icon: Clock, required: true, placeholder: "e.g. 30" },
     { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase", min: new Date().toISOString().split('T')[0] },
     { name: "end_date", label: "End Date", type: "date", icon: Calendar, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
-    { name: "eligibility", label: "Eligibility", type: "text", icon: Users, required: true, colSpan: 2, placeholder: "e.g. Final Year Students" },
+    { name: "course", label: "Course", type: "select", icon: Briefcase, options: courseOptions, required: true, placeholder: "Select Course" },
+    { name: "department", label: "Department", type: "select", icon: Briefcase, options: departmentOptions, required: true, placeholder: "Select Department" },
+    { name: "academic_year", label: "Academic Year", type: "select", icon: Calendar, options: ["1", "2", "3", "4"], required: true, placeholder: "Select Year" },
     {
       name: "required_skills",
       label: "Required Skills",
@@ -104,7 +109,7 @@ export default function ProjectsTabContent() {
       multiple: true
     },
     { name: "description", label: "Description", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Describe the project objective and tasks..." },
-  ], [skillOptions, projectToEdit]);
+  ], [skillOptions, courseOptions, departmentOptions, projectToEdit]);
 
   const fetchProjects = async (industry: string) => {
     try {
@@ -234,10 +239,20 @@ export default function ProjectsTabContent() {
   const handleFieldFocus = (fieldName: string) => {
     if (fieldName === "required_skills" && skillOptions.length === 0) {
       fetchOptions("Skill", setSkillOptions);
+    } else if (fieldName === "course" && courseOptions.length === 0) {
+      fetchOptions("Courses", setCourseOptions);
+    } else if (fieldName === "department" && departmentOptions.length === 0) {
+      const filters = modalValues.course ? { courses: modalValues.course } : {};
+      fetchOptions("College Department", setDepartmentOptions, { filters });
     }
   };
 
   const handleValuesChange = (values: Record<string, any>, changedFieldName: string) => {
+    setModalValues(values);
+    if (changedFieldName === "course") {
+      setDepartmentOptions([]);
+      return { department: "" };
+    }
     if (changedFieldName === "start_date" || changedFieldName === "duration") {
       const newEndDate = calculateEndDate(values.start_date, values.duration);
       if (newEndDate) {

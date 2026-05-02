@@ -17,7 +17,7 @@ import {
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getStudentProjectList, createStudentProjectEnrollment } from "@/services/student.services";
+import { getStudentProjectList, createStudentProjectEnrollment, getStudentByEmail } from "@/services/student.services";
 import { useAuth } from "@/context/AuthContext";
 // import { useToast } from "@/components/ui/use-toast"; // use-toast not available
 
@@ -55,7 +55,24 @@ export default function ProjectsTabContent() {
     try {
       setLoading(true);
       const studentEmail = localStorage.getItem("userEmail") || currentUser || "";
-      const response = await getStudentProjectList(studentEmail);
+      
+      let course = null;
+      let department = null;
+      let academicYear = null;
+
+      if (studentEmail) {
+        try {
+          const studentRes = await getStudentByEmail(studentEmail);
+          const profile = studentRes?.message?.data || studentRes?.data || {};
+          course = profile.course || null;
+          department = profile.department || null;
+          academicYear = profile.academic_year || null;
+        } catch (err) {
+          console.error("Error fetching student profile:", err);
+        }
+      }
+
+      const response = await getStudentProjectList(studentEmail, course, department, academicYear);
       const projectData = response?.message?.data || response?.data || response || [];
       setProjects(Array.isArray(projectData) ? projectData : []);
     } catch (err) {

@@ -25,7 +25,7 @@ import StatsWidget from "@/components/dashboards/widgets/StatsWidget";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getStudentInternshipList, createStudentApplication } from "@/services/student.services";
+import { getStudentInternshipList, createStudentApplication, getStudentByEmail } from "@/services/student.services";
 import { useAuth } from "@/context/AuthContext";
 // import { useToast } from "@/components/ui/use-toast"; // use-toast not available
 
@@ -66,7 +66,23 @@ export default function InternshipTabContent() {
   const fetchInternships = async () => {
     try {
       setLoading(true);
-      const response = await getStudentInternshipList(currentUser || undefined);
+      let course = null;
+      let department = null;
+      let academicYear = null;
+
+      if (currentUser) {
+        try {
+          const studentRes = await getStudentByEmail(currentUser);
+          const profile = studentRes?.message?.data || studentRes?.data || {};
+          course = profile.course || null;
+          department = profile.department || null;
+          academicYear = profile.academic_year || null;
+        } catch (err) {
+          console.error("Error fetching student profile:", err);
+        }
+      }
+
+      const response = await getStudentInternshipList(currentUser || undefined, course, department, academicYear);
       const internshipData = response?.message?.data || response?.data || response || [];
       setInternships(Array.isArray(internshipData) ? internshipData : []);
     } catch (err) {

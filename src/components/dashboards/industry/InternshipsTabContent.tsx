@@ -63,6 +63,8 @@ export default function InternshipsTabContent() {
   const [modalValues, setModalValues] = useState<Record<string, any>>({});
 
   const [categoryOptions, setCategoryOptions] = useState<string[]>([]);
+  const [courseOptions, setCourseOptions] = useState<string[]>([]);
+  const [departmentOptions, setDepartmentOptions] = useState<string[]>([]);
 
   useEffect(() => {
     const action = searchParams.get("action");
@@ -115,7 +117,9 @@ export default function InternshipsTabContent() {
     { name: "end_date", label: "End Date", type: "date", icon: Calendar, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
     { name: "openings", label: "Openings", type: "number", icon: Users, required: true, placeholder: "e.g. 10" },
     { name: "status", label: "Status", type: "select", icon: Zap, options: ["Active", "Draft", "Closed"], required: true, placeholder: "Select Status" },
-    { name: "eligibility", label: "Eligibility", type: "text", icon: Users, required: true, colSpan: 2, placeholder: "e.g. 2025/2026 Batch Students" },
+    { name: "course", label: "Course", type: "select", icon: Briefcase, options: courseOptions, required: true, placeholder: "Select Course" },
+    { name: "department", label: "Department", type: "select", icon: Briefcase, options: departmentOptions, required: true, placeholder: "Select Department" },
+    { name: "academic_year", label: "Academic Year", type: "select", icon: Calendar, options: ["1", "2", "3", "4"], required: true, placeholder: "Select Year" },
     {
       name: "required_skills",
       label: "Required Skills",
@@ -128,7 +132,7 @@ export default function InternshipsTabContent() {
       multiple: true
     },
     { name: "description", label: "Description", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Describe the roles and responsibilities..." },
-  ], [skillOptions, categoryOptions, modalValues.payment_mode]);
+  ], [skillOptions, categoryOptions, courseOptions, departmentOptions, modalValues.payment_mode]);
 
   const fetchInternships = async (industry: string) => {
     try {
@@ -219,11 +223,20 @@ export default function InternshipsTabContent() {
           industry: companyName
         }
       });
+    } else if (fieldName === "course" && courseOptions.length === 0) {
+      fetchOptions("Courses", setCourseOptions);
+    } else if (fieldName === "department" && departmentOptions.length === 0) {
+      const filters = modalValues.course ? { courses: modalValues.course } : {};
+      fetchOptions("College Department", setDepartmentOptions, { filters });
     }
   };
 
   const handleValuesChange = (values: Record<string, any>, changedFieldName: string) => {
     setModalValues(values);
+    if (changedFieldName === "course") {
+      setDepartmentOptions([]);
+      return { department: "" };
+    }
     if (changedFieldName === "payment_mode" && values.payment_mode === "Unpaid") {
       return { stipend: 0 };
     }

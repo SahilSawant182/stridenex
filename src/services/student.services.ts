@@ -38,11 +38,26 @@ export const createStudentProjectEnrollment = async (data: any) => {
 /**
  * Fetch all available internships for students.
  */
-export const getStudentInternshipList = async (studentEmail?: string) => {
+export const getStudentInternshipList = async (
+  studentEmail?: string,
+  course?: string | null,
+  department?: string | null,
+  academicYear?: string | null
+) => {
   try {
-    const url = studentEmail
-      ? `method/stridenex_app.stridenex_app.doctype.internship.internship.get_internship_list?student=${encodeURIComponent(studentEmail)}`
-      : "method/stridenex_app.stridenex_app.doctype.internship.internship.get_internship_list";
+    let url = "method/stridenex_app.stridenex_app.doctype.internship.internship.get_internship_list";
+    const params = new URLSearchParams();
+    
+    if (studentEmail) params.append("student", studentEmail);
+    params.append("course", course || "null");
+    params.append("department", department || "null");
+    params.append("academic_year", academicYear || "null");
+
+    const queryString = params.toString();
+    if (queryString) {
+      url += `?${queryString}`;
+    }
+    
     const response = await apiService.get(url);
     return response;
   } catch (error) {
@@ -54,11 +69,26 @@ export const getStudentInternshipList = async (studentEmail?: string) => {
 /**
  * Fetch all available projects for students.
  */
-export const getStudentProjectList = async (studentEmail?: string) => {
+export const getStudentProjectList = async (
+  studentEmail?: string,
+  course?: string | null,
+  department?: string | null,
+  academicYear?: string | null
+) => {
   try {
-    const url = studentEmail
-      ? `method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.get_project_list?student=${encodeURIComponent(studentEmail)}`
-      : "method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.get_project_list";
+    let url = "method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.get_project_list";
+    const params = new URLSearchParams();
+    
+    if (studentEmail) params.append("student", studentEmail);
+    params.append("course", course || "null");
+    params.append("department", department || "null");
+    params.append("academic_year", academicYear || "null");
+
+    const queryString = params.toString();
+    if (queryString) {
+      url += `?${queryString}`;
+    }
+
     const response = await apiService.get(url);
     return response;
   } catch (error) {

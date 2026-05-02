@@ -143,16 +143,21 @@ export default function IndustryOnboarding({
                 email: userEmail
             }));
 
-            // If we are at step 2 or 3, fetch data to pre-fill
-            if (flag > 0) {
-                await fetchIndustryData(userEmail);
-            }
+            // If we are at step 2 or 3, data will be fetched by the currentStep useEffect
         };
 
         if (isInitialized) {
             fetchInitialData();
         }
     }, [isOnboarded, isInitialized, currentUser, router]);
+
+    // Fetch industry data whenever the user lands on step 2, 3, or 4
+    useEffect(() => {
+        const userEmail = localStorage.getItem("userEmail") || currentUser || "";
+        if (userEmail && currentStep >= 2) {
+            fetchIndustryData(userEmail);
+        }
+    }, [currentStep, currentUser]);
 
     useEffect(() => {
         let interval: NodeJS.Timeout;
@@ -681,16 +686,12 @@ export default function IndustryOnboarding({
         setCurrentStep(2);
         setSuccess("");
         setError("");
-        const userEmail = localStorage.getItem("userEmail") || currentUser || "";
-        if (userEmail) fetchIndustryData(userEmail);
     };
 
     const goToStep3 = () => {
         setCurrentStep(3);
         setSuccess("");
         setError("");
-        const userEmail = localStorage.getItem("userEmail") || currentUser || "";
-        if (userEmail) fetchIndustryData(userEmail);
     };
 
     const getStepTitle = () => {
