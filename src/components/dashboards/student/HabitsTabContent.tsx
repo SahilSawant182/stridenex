@@ -11,12 +11,15 @@ import {
     MessageSquare,
     Code,
     Plus,
-    Calendar
+    Calendar,
+    Loader2
 } from "lucide-react";
 import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from "react";
+import { getStudentDashboardHabits, getHabitStreaks, getStudentPlans } from "@/services/student.services";
 
 // Types
 interface HabitPlan {
@@ -55,7 +58,7 @@ interface StatsData {
 // Dynamic data
 const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const statsData: StatsData = {
+const defaultStatsData: StatsData = {
     streak: {
         current: 18,
         longest: 24
@@ -81,7 +84,7 @@ const statsData: StatsData = {
     }
 };
 
-const habitPlans: HabitPlan[] = [
+const defaultHabitPlans: HabitPlan[] = [
     {
         id: 1,
         title: "Solve 2 LeetCode Problems",
@@ -159,13 +162,133 @@ const statusConfig = {
     }
 };
 
-const last30DaysItems = [
-    { key: 'done', label: 'Done', value: statsData.last30Days.done },
-    { key: 'partial', label: 'Partial', value: statsData.last30Days.partial },
-    { key: 'missed', label: 'Missed', value: statsData.last30Days.missed }
-];
-
 export default function HabitsTabContent() {
+    const [statsData, setStatsData] = useState<StatsData>(defaultStatsData);
+    const [habitPlans, setHabitPlans] = useState<HabitPlan[]>(defaultHabitPlans);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const fetchData = async () => {
+        try {
+            setLoading(true);
+            const studentEmail = localStorage.getItem("currentUser") || "";
+            if (!studentEmail) {
+                setLoading(false);
+                return;
+            }
+
+            // Fetch main dashboard data
+            const dashboardRes = await getStudentDashboardHabits(studentEmail);
+            
+            if (dashboardRes?.message) {
+                const data = dashboardRes.message;
+                
+                if (data.streak) setStatsData(prev => ({ ...prev, streak: data.streak }));
+                if (data.last30Days) setStatsData(prev => ({ ...prev, last30Days: data.last30Days }));
+                if (data.thisWeek) setStatsData(prev => ({ ...prev, thisWeek: data.thisWeek }));
+                
+                if (data.habitPlans && Array.isArray(data.habitPlans)) {
+                    const mappedPlans = data.habitPlans.map((p: any, i: number) => ({
+                        id: p.id || i,
+                        title: p.title || p.habit_name || p.plan_name || "Untitled Habit",
+                        streak: p.streak || 0,
+                        category: p.category || p.habit_type || "General",
+                        icon: Target, // fallback icon
+                        color: "text-blue-600",
+                        bgColor: "bg-blue-50",
+                        progress: p.progress || 0,
+                        weeklyData: p.weeklyData || [false, false, false, false, false, false, false]
+                    }));
+                    setHabitPlans(mappedPlans.length > 0 ? mappedPlans : defaultHabitPlans);
+                } else {
+                    // Try fetching individual plans if dashboard doesn't provide them
+                    const plansRes = await getStudentPlans(studentEmail, "Active");
+                    if (plansRes?.message && Array.isArray(plansRes.message)) {
+                        const mappedPlans = plansRes.message.map((p: any, i: number) => ({
+                            id: p.name || p.id || i,
+                            title: p.plan_name || p.habit_name || "Untitled Habit",
+                            streak: p.streak || 0,
+                            category: p.habit_type || "General",
+                            icon: Target,
+                            color: "text-blue-600",
+                            bgColor: "bg-blue-50",
+                            progress: p.progress || 0,
+                            weeklyData: p.weeklyData || [false, false, false, false, false, false, false]
+                        }));
+                        setHabitPlans(mappedPlans.length > 0 ? mappedPlans : defaultHabitPlans);
+                    }
+                }
+
+                // Also try to get streaks individually if dashboard didn't have it
+                if (!data.streak) {
+                    const streaksRes = await getHabitStreaks(studentEmail);
+                    if (streaksRes?.message) {
+                        setStatsData(prev => ({
+                            ...prev,
+                            streak: {
+                                current: streaksRes.message.current || streaksRes.message.current_streak || 0,
+                                longest: streaksRes.message.longest || streaksRes.message.longest_streak || 0
+                            }
+                        }));
+                    }
+                }
+            } else {
+                // Try fallback individual API calls if dashboard fails entirely
+                const [plansRes, streaksRes] = await Promise.all([
+                    getStudentPlans(studentEmail, "Active"),
+                    getHabitStreaks(studentEmail)
+                ]);
+
+                if (streaksRes?.message) {
+                    setStatsData(prev => ({
+                        ...prev,
+                        streak: {
+                            current: streaksRes.message.current || streaksRes.message.current_streak || 0,
+                            longest: streaksRes.message.longest || streaksRes.message.longest_streak || 0
+                        }
+                    }));
+                }
+
+                if (plansRes?.message && Array.isArray(plansRes.message)) {
+                    const mappedPlans = plansRes.message.map((p: any, i: number) => ({
+                        id: p.name || p.id || i,
+                        title: p.plan_name || p.habit_name || "Untitled Habit",
+                        streak: p.streak || 0,
+                        category: p.habit_type || "General",
+                        icon: Target,
+                        color: "text-blue-600",
+                        bgColor: "bg-blue-50",
+                        progress: p.progress || 0,
+                        weeklyData: p.weeklyData || [false, false, false, false, false, false, false]
+                    }));
+                    if (mappedPlans.length > 0) setHabitPlans(mappedPlans);
+                }
+            }
+        } catch (err) {
+            console.error("Error fetching dashboard stats:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const last30DaysItems = [
+        { key: 'done', label: 'Done', value: statsData.last30Days.done },
+        { key: 'partial', label: 'Partial', value: statsData.last30Days.partial },
+        { key: 'missed', label: 'Missed', value: statsData.last30Days.missed }
+    ];
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-4">
+                <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                <span className="text-sm font-medium italic tracking-widest uppercase opacity-70">Syncing Habits...</span>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             {/* Top Row: Stats Cards */}
