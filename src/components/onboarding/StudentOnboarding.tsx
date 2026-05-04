@@ -261,7 +261,7 @@ export default function StudentOnboarding({
         const courses = data.data || data || [];
 
         return courses.map((course: any) => ({
-          value: course.name,
+          value: course.name || course.course_type,
           label: course.course_type || course.name
         }));
       }
@@ -403,8 +403,8 @@ export default function StudentOnboarding({
         console.log("Skills data received:", data);
         const items = data.data || data || [];
         return items.map((item: any) => ({
-          value: item.name,
-          label: item.name || item.skill_name
+          value: item.name || item.skill_name,
+          label: item.skill_name || item.name
         }));
       }
     },
@@ -424,8 +424,8 @@ export default function StudentOnboarding({
         console.log("Career Interest data received:", data);
         const items = data.data || data || [];
         return items.map((item: any) => ({
-          value: item.name,
-          label: item.name || item.career_interest_name
+          value: item.name || item.career_interest_name,
+          label: item.career_interest_name || item.name
         }));
       }
     },
