@@ -26,10 +26,12 @@ export default function LoginPage() {
   useEffect(() => {
     if (!isAuthenticated || !role || isOnboarded === null) return;
 
-    // Industry requires 3 steps (is_onboarded === "3")
+    // Industry requires 3 steps (is_onboarded === "4")
+    // Student requires 2 steps (is_onboarded === "2")
     // Other modules require 1 step (is_onboarded === "1")
     const isIndustry = role === "industry";
-    const isFullyOnboarded = isIndustry ? isOnboarded === "4" : isOnboarded === "1";
+    const isStudent = role === "student";
+    const isFullyOnboarded = isIndustry ? isOnboarded === "4" : isStudent ? isOnboarded === "2" : isOnboarded === "1";
 
     if (isFullyOnboarded) {
       router.push(`/${role}/dashboard`);

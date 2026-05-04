@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
-import { User, Bell, Menu, Search, LogOut, CreditCard, ChevronRight, Pen, Mail, Building2, Phone, Globe } from "lucide-react";
+import { User, Bell, Menu, Search, LogOut, CreditCard, ChevronRight, Pen, Mail, Building2, Phone, Globe, MapPin, CheckCircle2, FileText, Target, Clock, Linkedin, Instagram, Map } from "lucide-react";
 import { getStudentByEmail } from "@/services/student.services";
 import { getIndustryByEmail } from "@/services/industry.services";
 
@@ -28,6 +28,216 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
     fetchDetails();
   }, [role, currentUser]);
 
+  const getAddress = (d: any) => {
+    const parts = [];
+    if (d.city) parts.push(d.city);
+    if (d.tahsil && d.tahsil !== d.city) parts.push(d.tahsil);
+    if (d.district) parts.push(d.district);
+    if (d.state) parts.push(d.state);
+    if (d.country) parts.push(d.country);
+    return parts.length > 0 ? parts.join(", ") : "Address not provided";
+  };
+
+  if (loading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: 10 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 10 }}
+        className="absolute top-0 right-full mr-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden cursor-default z-50"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex justify-center items-center h-48">
+          <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (role === 'industry' && data) {
+    const contactPhone = data.contact_details && data.contact_details.length > 0 ? data.contact_details[0].contact_no : null;
+    const contactEmail = data.contact_details && data.contact_details.length > 0 && data.contact_details[0].email ? data.contact_details[0].email : currentUser;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, x: 10 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 10 }}
+        className="absolute top-0 right-full mr-2 w-96 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden cursor-default z-50 max-h-[85vh] overflow-y-auto custom-scrollbar"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header Profile Section */}
+        <div className="p-4 border-b border-slate-100 flex gap-4 items-start">
+          <div className="w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-3xl shadow-sm flex-shrink-0">
+            {data.company_name ? data.company_name.charAt(0).toUpperCase() : "I"}
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> Verified Business
+              </span>
+            </div>
+            <h2 className="text-lg font-bold text-slate-900 truncate" title={data.company_name}>
+              {data.company_name || "Company Name"}
+            </h2>
+            <p className="text-sm text-slate-500 truncate mt-0.5" title={data.industry_sector || data.business_type}>
+              {data.industry_sector || data.business_type || "Industry Sector"}
+            </p>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* ABOUT */}
+          <div>
+            <h3 className="text-[11px] font-bold text-slate-900 mb-3 tracking-widest uppercase">About</h3>
+            
+            {data.about_company && (
+              <div className="flex items-start gap-3 mb-4">
+                <FileText className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-slate-600 leading-relaxed">
+                  <span className="font-semibold text-slate-900">Description: </span>
+                  {data.about_company}
+                </div>
+              </div>
+            )}
+            
+            {data.job_function && data.job_function.length > 0 ? (
+              <div className="flex items-start gap-3">
+                <Target className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <span className="text-sm font-semibold text-slate-900 mb-2 block">Specialisations</span>
+                  <div className="flex flex-wrap gap-2">
+                    {data.job_function.map((jf: any, idx: number) => (
+                      <span key={idx} className="bg-slate-100 border border-slate-200 text-slate-600 text-xs px-2.5 py-1 rounded-md font-medium">
+                        {jf.job_function || jf}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+               <p className="text-xs text-slate-500 italic">No specialisations listed.</p>
+            )}
+          </div>
+
+          {/* CONTACT */}
+          <div>
+            <h3 className="text-[11px] font-bold text-slate-900 mb-3 tracking-widest uppercase border-t border-slate-100 pt-3">Contact</h3>
+            <div className="space-y-3">
+              {contactPhone && (
+                <div className="flex items-center gap-3 text-sm">
+                  <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <span className="text-slate-700 font-medium">{contactPhone}</span>
+                </div>
+              )}
+              <div className="flex items-center gap-3 text-sm">
+                <Mail className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                <a href={`mailto:${contactEmail}`} className="text-blue-600 font-medium hover:underline truncate">{contactEmail}</a>
+              </div>
+              {data.company_website && (
+                <div className="flex items-center gap-3 text-sm">
+                  <Globe className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                  <a href={data.company_website.startsWith('http') ? data.company_website : `https://${data.company_website}`} target="_blank" rel="noreferrer" className="text-blue-600 font-medium hover:underline truncate">
+                    {data.company_website}
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* LOCATION */}
+          <div>
+            <h3 className="text-[11px] font-bold text-slate-900 mb-3 tracking-widest uppercase border-t border-slate-100 pt-3">Location</h3>
+            <div className="flex items-start gap-3 text-sm mb-4">
+              <MapPin className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <span className="text-slate-700 font-medium leading-relaxed block">{getAddress(data)}</span>
+                <a 
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(getAddress(data))}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-slate-100 text-blue-600 rounded-md hover:bg-slate-200 transition-colors text-xs font-semibold shadow-sm"
+                >
+                  <Map className="w-3.5 h-3.5" /> View on map
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* OPERATING HOURS */}
+          <div>
+            <h3 className="text-[11px] font-bold text-slate-900 mb-3 tracking-widest uppercase border-t border-slate-100 pt-3">Operating Hours</h3>
+            <div className="flex items-start gap-3 text-sm">
+              <Clock className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                {data.business_hours && data.business_hours.length > 0 ? (
+                  data.business_hours.map((bh: any, i: number) => (
+                    <div key={i} className="flex justify-between items-center text-sm">
+                      <span className="text-slate-600 font-medium flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span> {bh.days}
+                      </span>
+                      <span className={`font-semibold ${bh.is_closed ? 'text-red-500' : 'text-slate-800'}`}>
+                        {bh.is_closed ? 'Closed' : `${bh.open_time} - ${bh.close_time}`}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-slate-500 italic">Not provided</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* SOCIAL MEDIA */}
+          <div>
+            <h3 className="text-[11px] font-bold text-slate-900 mb-3 tracking-widest uppercase border-t border-slate-100 pt-3">Social Media</h3>
+            <div className="space-y-3">
+              {(data.linkedin || data.instagram) ? (
+                <>
+                  {data.linkedin && (
+                    <div className="flex items-center gap-3 text-sm">
+                      <Linkedin className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <span className="text-slate-500 font-medium w-20">LinkedIn: </span>
+                      <a href={data.linkedin.startsWith('http') ? data.linkedin : `https://${data.linkedin}`} target="_blank" rel="noreferrer" className="text-blue-600 font-medium hover:underline truncate flex-1">
+                        {data.linkedin.replace(/^https?:\/\//, '')}
+                      </a>
+                    </div>
+                  )}
+                  {data.instagram && (
+                    <div className="flex items-center gap-3 text-sm">
+                      <Instagram className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <span className="text-slate-500 font-medium w-20">Instagram: </span>
+                      <a href={data.instagram.startsWith('http') ? data.instagram : `https://${data.instagram}`} target="_blank" rel="noreferrer" className="text-blue-600 font-medium hover:underline truncate flex-1">
+                        {data.instagram.replace(/^https?:\/\//, '')}
+                      </a>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-slate-500 italic">Not provided</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* EDIT PROFILE BUTTON */}
+        <div className="p-4 pt-0 border-t border-slate-100 bg-white sticky bottom-0 z-10">
+          <div className="pt-3">
+            <button
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('open-update-profile'));
+                onClose();
+              }}
+              className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 font-medium shadow-sm"
+            >
+              <Pen className="w-4 h-4" /> Edit Profile
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, x: 10 }}
@@ -42,73 +252,43 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
       </div>
       
       <div className="p-4 space-y-3 text-slate-800">
-        {loading ? (
-          <div className="flex justify-center py-4">
-            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        ) : (
-          <div className="space-y-3 text-sm">
-            <div className="flex items-start gap-2">
-              <Mail className="w-4 h-4 text-slate-400 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-xs text-slate-500 mb-0.5">Email</p>
-                <p className="font-medium break-all">{currentUser}</p>
-              </div>
+        <div className="space-y-3 text-sm">
+          <div className="flex items-start gap-2">
+            <Mail className="w-4 h-4 text-slate-400 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-xs text-slate-500 mb-0.5">Email</p>
+              <p className="font-medium break-all">{currentUser}</p>
             </div>
-            
-            {role === 'student' && data && (
-              <>
-                {(data.college || data.department) && (
-                  <div className="flex items-start gap-2">
-                    <Building2 className="w-4 h-4 text-slate-400 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-xs text-slate-500 mb-0.5">Education</p>
-                      <p className="font-medium">{data.college}</p>
-                      <p className="text-slate-600 text-xs mt-0.5">{data.course} {data.department ? `• ${data.department}` : ''}</p>
-                    </div>
-                  </div>
-                )}
-                {data.mobile_no && (
-                  <div className="flex items-start gap-2">
-                    <Phone className="w-4 h-4 text-slate-400 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-xs text-slate-500 mb-0.5">Phone</p>
-                      <p className="font-medium">{data.mobile_no}</p>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-
-            {role === 'industry' && data && (
-              <>
-                {data.company_name && (
-                  <div className="flex items-start gap-2">
-                    <Building2 className="w-4 h-4 text-slate-400 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-xs text-slate-500 mb-0.5">Company</p>
-                      <p className="font-medium">{data.company_name}</p>
-                      {data.industry_sector && <p className="text-slate-600 text-xs mt-0.5">{data.industry_sector}</p>}
-                    </div>
-                  </div>
-                )}
-                {data.company_website && (
-                  <div className="flex items-start gap-2">
-                    <Globe className="w-4 h-4 text-slate-400 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="text-xs text-slate-500 mb-0.5">Website</p>
-                      <a href={data.company_website} target="_blank" rel="noreferrer" className="font-medium text-blue-600 hover:underline">{data.company_website}</a>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-            
-            {(!data || (role !== 'student' && role !== 'industry')) && (
-               <p className="text-xs text-slate-500 italic">Basic profile details shown.</p>
-            )}
           </div>
-        )}
+          
+          {role === 'student' && data && (
+            <>
+              {(data.college || data.department) && (
+                <div className="flex items-start gap-2">
+                  <Building2 className="w-4 h-4 text-slate-400 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-slate-500 mb-0.5">Education</p>
+                    <p className="font-medium">{data.college}</p>
+                    <p className="text-slate-600 text-xs mt-0.5">{data.course} {data.department ? `• ${data.department}` : ''}</p>
+                  </div>
+                </div>
+              )}
+              {data.mobile_no && (
+                <div className="flex items-start gap-2">
+                  <Phone className="w-4 h-4 text-slate-400 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-slate-500 mb-0.5">Phone</p>
+                    <p className="font-medium">{data.mobile_no}</p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {(!data || role !== 'student') && (
+             <p className="text-xs text-slate-500 italic">Basic profile details shown.</p>
+          )}
+        </div>
 
         <div className="pt-3 border-t border-slate-100 mt-4">
           <button

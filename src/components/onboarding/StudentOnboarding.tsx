@@ -26,7 +26,7 @@ interface StudentOnboardingProps {
   onSkip?: () => void;
 }
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2;
 
 const API_BASE_URL = "https://devstridenex.quantcloud.in";
 
@@ -35,7 +35,7 @@ export default function StudentOnboarding({
   onSkip
 }: StudentOnboardingProps) {
   const router = useRouter();
-  const { apiKey, apiSecret } = useAuth();
+  const { apiKey, apiSecret, isOnboarded, currentUser, fullName } = useAuth();
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
@@ -87,16 +87,27 @@ export default function StudentOnboarding({
   });
 
   useEffect(() => {
-    const savedEmail = localStorage.getItem("userEmail") || "";
-    const savedFirstName = localStorage.getItem("userFirstName") || "";
-    const savedLastName = localStorage.getItem("userLastName") || "";
+    const savedEmail = currentUser || localStorage.getItem("userEmail") || "";
+    const savedMobile = localStorage.getItem("userMobileNo") || "";
+    const savedFirstName = fullName ? fullName.split(' ')[0] : localStorage.getItem("userFirstName") || "";
+    const savedLastName = fullName && fullName.includes(' ') ? fullName.split(' ').slice(1).join(' ') : localStorage.getItem("userLastName") || "";
     setFormData(prev => ({
       ...prev,
       email: savedEmail,
+      mobileNo: prev.mobileNo || savedMobile,
       firstName: savedFirstName,
       lastName: savedLastName,
     }));
-  }, []);
+  }, [currentUser, fullName]);
+
+  useEffect(() => {
+    if (isOnboarded === "1") {
+      setCurrentStep(2);
+      setFormData(prev => ({ ...prev, emailVerified: true, mobileVerified: true }));
+    } else {
+      setCurrentStep(1);
+    }
+  }, [isOnboarded]);
 
   console.log('form data', formData)
 
@@ -537,7 +548,7 @@ export default function StudentOnboarding({
     setError("");
 
     try {
-      const response = await sendMobileOTP(formData.mobileNo);
+      const response = await sendMobileOTP(formData.mobileNo, formData.email);
       console.log("Send mobile OTP response:", response);
 
       if (response?.message === "OTP sent successfully") {
@@ -564,12 +575,13 @@ export default function StudentOnboarding({
     setSuccess("");
 
     try {
-      const response = await verifyMobileOTP(formData.mobileNo, mobileVerificationCode);
+      const response = await verifyMobileOTP(formData.mobileNo, mobileVerificationCode, formData.email);
       console.log("Verify mobile response:", response);
 
       if (response?.message === "Mobile number verified successfully") {
         setFormData(prev => ({ ...prev, mobileVerified: true }));
         setSuccess(response.message);
+        localStorage.setItem("userMobileNo", formData.mobileNo);
         setError("");
       } else {
         setError(response?.message || "Invalid verification code");
@@ -589,6 +601,10 @@ export default function StudentOnboarding({
     if (!formData.emailVerified) {
       errors.email = "Please verify your email first";
     }
+    if (!formData.mobileVerified) {
+      errors.mobileNo = "Please verify your mobile number first";
+    }
+
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -597,8 +613,6 @@ export default function StudentOnboarding({
     if (validateStep1()) {
       setCurrentStep(2);
       setSuccess("");
-      setEmailVerificationCode("");
-      setEmailOtpSent(false);
       setFieldErrors({});
     }
   };
@@ -614,15 +628,15 @@ export default function StudentOnboarding({
     return Object.keys(errors).length === 0;
   };
 
-  const handleContinueToStep3 = () => {
-    if (validateStep2()) {
-      setCurrentStep(3);
-      setSuccess("");
-      setMobileVerificationCode("");
-      setMobileOtpSent(false);
-      setFieldErrors({});
-    }
-  };
+  // const handleContinueToStep3 = () => {
+  //   if (validateStep2()) {
+  //     setCurrentStep(3);
+  //     setSuccess("");
+  //     setMobileVerificationCode("");
+  //     setMobileOtpSent(false);
+  //     setFieldErrors({});
+  //   }
+  // };
 
   const validateStep3 = (): Record<string, string> => {
     const errors: Record<string, string> = {};
@@ -710,7 +724,8 @@ export default function StudentOnboarding({
 
     try {
       // Format mobile number with country code
-      const formattedMobile = `+91-${formData.mobileNo}`;
+      const mobileVal = formData.mobileNo || localStorage.getItem("userMobileNo") || "";
+      const formattedMobile = mobileVal ? `+91-${mobileVal}` : "";
 
       // Format courses type as array of objects
       const coursesTypeArray = (formData.courses || []).map((course: string) => ({
@@ -845,78 +860,76 @@ export default function StudentOnboarding({
 
   const getStepTitle = () => {
     switch (currentStep) {
-      case 1: return "Verify your email";
-      case 2: return "Verify your mobile number";
-      case 3: return "Complete your profile";
+      case 1: return "Contact Verification";
+      case 2: return "Complete your profile";
       default: return "Build your student profile";
     }
   };
 
   const getStepDescription = () => {
     switch (currentStep) {
-      case 1: return "Please verify your email address to get started.";
-      case 2: return "We need to verify your mobile number for security.";
-      case 3: return "Tell us about your academic background.";
+      case 1: return "Please verify your email address and mobile number to get started.";
+      case 2: return "Tell us about your academic background.";
       default: return "";
     }
   };
 
   // ============ RENDER FUNCTIONS ============
   const renderStep1 = () => (
-    <div className="space-y-4">
-      <div className="flex gap-2 items-start">
-        <div className="flex-1">
-          <DynamicForm
-            fields={step1Fields}
-            onSubmit={() => { }}
-            buttonLabel=""
-            loading={loading}
-            initialValues={{ email: formData.email }} // Add this line
-            onChange={(data) => {
-              setSuccess('');
-              setError('');
-              if (data.email !== formData.email) {
-                setEmailOtpSent(false);
-                setEmailVerificationCode('');
-                setFormData(prev => ({
-                  ...prev,
-                  email: data.email,
-                  emailVerified: false
-                }));
-              }
-            }}
-          />
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <div className="flex gap-2 items-start">
+          <div className="flex-1">
+            <DynamicForm
+              fields={step1Fields}
+              onSubmit={() => { }}
+              buttonLabel=""
+              loading={loading}
+              initialValues={{ email: formData.email }}
+              onChange={(data) => {
+                setSuccess('');
+                setError('');
+                if (data.email !== formData.email) {
+                  setEmailOtpSent(false);
+                  setEmailVerificationCode('');
+                  setFormData(prev => ({
+                    ...prev,
+                    email: data.email,
+                    emailVerified: false,
+                    mobileNo: "",
+                    mobileVerified: false
+                  }));
+                }
+              }}
+            />
+          </div>
+
+          {!formData.emailVerified && !emailOtpSent && (
+            <Button
+              type="button"
+              onClick={handleSendEmailOTP}
+              disabled={!formData.email || emailTimer > 0}
+              variant="accent"
+              className="mt-7 whitespace-nowrap"
+            >
+              {emailTimer > 0 ? `Resend in ${emailTimer}s` : "Send OTP"}
+            </Button>
+          )}
+
+          {emailOtpSent && !formData.emailVerified && (
+            <Button
+              type="button"
+              onClick={handleSendEmailOTP}
+              disabled={emailTimer > 0}
+              variant="accent"
+              className="mt-7 whitespace-nowrap"
+            >
+              {emailTimer > 0 ? `Resend in ${emailTimer}s` : "Resend OTP"}
+            </Button>
+          )}
         </div>
 
-        {/* Show Send OTP button or Resend button based on timer */}
-        {!formData.emailVerified && !emailOtpSent && (
-          <Button
-            type="button"
-            onClick={handleSendEmailOTP}
-            disabled={!formData.email || emailTimer > 0} // Remove loading from disabled condition
-            variant="accent"
-            className="mt-7 whitespace-nowrap"
-          >
-            {emailTimer > 0 ? `Resend in ${emailTimer}s` : "Send OTP"}
-          </Button>
-        )}
-
         {emailOtpSent && !formData.emailVerified && (
-          <Button
-            type="button"
-            onClick={handleSendEmailOTP}
-            disabled={emailTimer > 0} // Remove loading from disabled condition
-            variant="accent"
-            className="mt-7 whitespace-nowrap"
-          >
-            {emailTimer > 0 ? `Resend in ${emailTimer}s` : "Resend OTP"}
-          </Button>
-        )}
-      </div>
-
-      {/* Show OTP verification field only if OTP has been sent and email is not verified */}
-      {emailOtpSent && !formData.emailVerified && (
-        <>
           <div>
             <Label htmlFor="emailOtp" className="text-sm font-medium text-slate-700">
               Verification Code <span className="text-red-500">*</span>
@@ -942,165 +955,114 @@ export default function StudentOnboarding({
               </Button>
             </div>
           </div>
-
-          {/* Resend OTP link */}
-          {/* <div className="text-center">
-            <button
-              type="button"
-              onClick={handleSendEmailOTP}
-              className="text-xs text-accent hover:underline"
-              disabled={loading || emailTimer > 0}
-            >
-              {emailTimer > 0 ? `Resend in ${emailTimer}s` : "Didn't receive OTP? Resend"}
-            </button>
-          </div> */}
-        </>
-      )}
-
-      {formData.emailVerified && (
-        <Button
-          type="button"
-          onClick={handleContinueToStep2}
-          variant="accent"
-          className="w-full"
-        >
-          Continue to Mobile Verification
-        </Button>
-      )}
-    </div>
-  );
-
-  const renderStep2 = () => (
-    <div className="space-y-4">
-      <div className="flex gap-2 items-start">
-        <div className="flex-1">
-          <DynamicForm
-            fields={step2Fields}
-            onSubmit={() => { }}
-            buttonLabel=""
-            loading={loading}
-            onChange={(data) => {
-              setSuccess("");
-              setError("");
-
-              // Get the mobile number, remove non-digits, and enforce max 10 digits
-              let mobileNo = data.mobileNo || "";
-              mobileNo = mobileNo.replace(/\D/g, '').slice(0, 10);
-
-              // Clear field error when user starts typing
-              setFieldErrors(prev => {
-                const newErrors = { ...prev };
-                delete newErrors.mobileNo;
-                return newErrors;
-              });
-
-              // Only update if the value has changed
-              if (mobileNo !== formData.mobileNo) {
-                setMobileOtpSent(false);
-                setMobileVerificationCode('');
-                setFormData(prev => ({
-                  ...prev,
-                  mobileNo,
-                  mobileVerified: false
-                }));
-              }
-            }}
-          />
-        </div>
-
-        {/* Show Send OTP button or Resend button based on timer */}
-        {!formData.mobileVerified && !mobileOtpSent && (
-          <Button
-            type="button"
-            onClick={handleSendMobileOTP}
-            disabled={!formData.mobileNo || formData.mobileNo.length !== 10 || loading || mobileTimer > 0}
-            variant="accent"
-            className="mt-7 whitespace-nowrap"
-          >
-            {mobileTimer > 0 ? `Resend in ${mobileTimer}s` : "Send OTP"}
-          </Button>
-        )}
-
-        {mobileOtpSent && !formData.mobileVerified && (
-          <Button
-            type="button"
-            onClick={handleSendMobileOTP}
-            disabled={loading || mobileTimer > 0}
-            variant="accent"
-            className="mt-7 whitespace-nowrap"
-          >
-            {mobileTimer > 0 ? `Resend in ${mobileTimer}s` : "Resend OTP"}
-          </Button>
         )}
       </div>
 
-      {/* Show OTP verification field only if OTP has been sent and mobile is not verified */}
-      {mobileOtpSent && !formData.mobileVerified && (
-        <>
-          <div>
-            <Label htmlFor="mobileOtp" className="text-sm font-medium text-slate-700">
-              Verification Code <span className="text-red-500">*</span>
-            </Label>
-            <div className="flex gap-2 mt-1">
-              <Input
-                id="mobileOtp"
-                value={mobileVerificationCode}
-                onChange={(e) => setMobileVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="Enter 6-digit code"
-                maxLength={6}
-                className="flex-1"
-                disabled={loading}
+      {formData.emailVerified && (
+        <div className="space-y-4 pt-4 border-t">
+          <div className="flex gap-2 items-start">
+            <div className="flex-1">
+              <DynamicForm
+                fields={step2Fields}
+                onSubmit={() => { }}
+                buttonLabel=""
+                loading={loading}
+                errors={fieldErrors}
+                onChange={(data) => {
+                  setSuccess("");
+                  setError("");
+
+                  let mobileNo = data.mobileNo || "";
+                  mobileNo = mobileNo.replace(/\D/g, '').slice(0, 10);
+
+                  setFieldErrors(prev => {
+                    const newErrors = { ...prev };
+                    delete newErrors.mobileNo;
+                    return newErrors;
+                  });
+
+                  if (mobileNo !== formData.mobileNo) {
+                    setMobileOtpSent(false);
+                    setMobileVerificationCode('');
+                    setFormData(prev => ({
+                      ...prev,
+                      mobileNo,
+                      mobileVerified: false
+                    }));
+                  }
+                }}
               />
+            </div>
+
+            {!formData.mobileVerified && !mobileOtpSent && (
               <Button
                 type="button"
-                onClick={handleVerifyMobile}
-                disabled={mobileVerificationCode.length !== 6 || loading}
+                onClick={handleSendMobileOTP}
+                disabled={!formData.mobileNo || formData.mobileNo.length !== 10 || loading || mobileTimer > 0}
                 variant="accent"
-                className="whitespace-nowrap"
+                className="mt-7 whitespace-nowrap"
               >
-                Verify
+                {mobileTimer > 0 ? `Resend in ${mobileTimer}s` : "Send OTP"}
               </Button>
-            </div>
+            )}
+
+            {mobileOtpSent && !formData.mobileVerified && (
+              <Button
+                type="button"
+                onClick={handleSendMobileOTP}
+                disabled={loading || mobileTimer > 0}
+                variant="accent"
+                className="mt-7 whitespace-nowrap"
+              >
+                {mobileTimer > 0 ? `Resend in ${mobileTimer}s` : "Resend OTP"}
+              </Button>
+            )}
           </div>
 
-          {/* Resend OTP link */}
-          {/* <div className="text-center">
-            <button
-              type="button"
-              onClick={handleSendMobileOTP}
-              className="text-xs text-accent hover:underline"
-              disabled={loading || mobileTimer > 0}
-            >
-              {mobileTimer > 0 ? `Resend in ${mobileTimer}s` : "Didn't receive OTP? Resend"}
-            </button>
-          </div> */}
-        </>
-      )}
+          {mobileOtpSent && !formData.mobileVerified && (
+            <div>
+              <Label htmlFor="mobileOtp" className="text-sm font-medium text-slate-700">
+                Verification Code <span className="text-red-500">*</span>
+              </Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  id="mobileOtp"
+                  value={mobileVerificationCode}
+                  onChange={(e) => setMobileVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="Enter 6-digit code"
+                  maxLength={6}
+                  className="flex-1"
+                  disabled={loading}
+                />
+                <Button
+                  type="button"
+                  onClick={handleVerifyMobile}
+                  disabled={mobileVerificationCode.length !== 6 || loading}
+                  variant="accent"
+                  className="whitespace-nowrap"
+                >
+                  Verify
+                </Button>
+              </div>
+            </div>
+          )}
 
-      {/* Show continue button when mobile is verified */}
-      {formData.mobileVerified && (
-        <div className="flex gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={goToStep1}
-          >
-            Back
-          </Button>
-          <Button
-            type="button"
-            onClick={handleContinueToStep3}
-            variant="accent"
-            className="flex-1"
-          >
-            Continue to Profile
-          </Button>
+          {formData.mobileVerified && (
+            <Button
+              type="button"
+              onClick={handleContinueToStep2}
+              variant="accent"
+              className="w-full mt-6"
+            >
+              Continue to Profile
+            </Button>
+          )}
         </div>
       )}
     </div>
   );
 
-  const renderStep3 = () => {
+  const renderStep2 = () => {
     // Helper function to update form data
     const updateFormData = (newData: any, resetFields: string[] = []) => {
       setFormData(prev => {
@@ -1255,7 +1217,7 @@ export default function StudentOnboarding({
           <Button
             type="button"
             variant="outline"
-            onClick={() => setCurrentStep(2)}
+            onClick={() => setCurrentStep(1)}
           >
             Back
           </Button>
@@ -1277,11 +1239,11 @@ export default function StudentOnboarding({
   return (
     <OnboardingLayout
       currentStep={currentStep}
-      totalSteps={3}
+      totalSteps={2}
       title={getStepTitle()}
       description={getStepDescription()}
       onSkip={handleSkip}
-      showSkip={currentStep === 1}
+      showSkip={true}
     >
       {/* Success Message */}
       {success && (
@@ -1300,7 +1262,6 @@ export default function StudentOnboarding({
       <form onSubmit={handleSubmit}>
         {currentStep === 1 && renderStep1()}
         {currentStep === 2 && renderStep2()}
-        {currentStep === 3 && renderStep3()}
       </form>
     </OnboardingLayout>
   );

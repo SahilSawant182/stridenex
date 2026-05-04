@@ -157,6 +157,9 @@ export default function IndustryOnboarding({
         if (userEmail && currentStep >= 2) {
             fetchIndustryData(userEmail);
         }
+        if (userEmail && currentStep === 4) {
+            fetchUserDetails(userEmail);
+        }
     }, [currentStep, currentUser]);
 
     useEffect(() => {
@@ -229,6 +232,31 @@ export default function IndustryOnboarding({
             setError("Failed to load existing profile data.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchUserDetails = async (email: string) => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.student.masters.get_user_by_mail?email=${encodeURIComponent(email)}`);
+            if (response.data?.status === 200 && response.data?.data?.length > 0) {
+                const user = response.data.data[0];
+                setContactPersons(prev => {
+                    const newPersons = [...prev];
+                    const names = (user.full_name || "").split(" ");
+                    
+                    // Populate if fields are currently empty
+                    newPersons[0] = {
+                        ...newPersons[0],
+                        email: newPersons[0].email || user.email || "",
+                        first_name: newPersons[0].first_name || names[0] || "",
+                        last_name: newPersons[0].last_name || (names.length > 1 ? names.slice(1).join(" ") : ""),
+                        contact_no: newPersons[0].contact_no || (user.mobile_no ? user.mobile_no.replace(/^\+91-/, '') : "")
+                    };
+                    return newPersons;
+                });
+            }
+        } catch (err) {
+            console.error("Error fetching user details:", err);
         }
     };
 
