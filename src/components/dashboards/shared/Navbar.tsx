@@ -29,6 +29,10 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
   }, [role, currentUser]);
 
   const getAddress = (d: any) => {
+    if (d.location && d.location.address_line_1) {
+      const { address_line_1, address_line_2, pincode } = d.location;
+      return [address_line_1, address_line_2, pincode].filter(Boolean).join(", ");
+    }
     const parts = [];
     if (d.city) parts.push(d.city);
     if (d.tahsil && d.tahsil !== d.city) parts.push(d.tahsil);
@@ -101,7 +105,21 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
               </div>
             )}
             
-            {data.job_function && data.job_function.length > 0 ? (
+            {data.specializations && data.specializations.length > 0 ? (
+              <div className="flex items-start gap-3">
+                <Target className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <span className="text-sm font-semibold text-slate-900 mb-2 block">Specialisations</span>
+                  <div className="flex flex-wrap gap-2">
+                    {data.specializations.map((s: any, idx: number) => (
+                      <span key={idx} className="bg-slate-100 border border-slate-200 text-slate-600 text-xs px-2.5 py-1 rounded-md font-medium">
+                        {s.specialization || s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : data.job_function && data.job_function.length > 0 ? (
               <div className="flex items-start gap-3">
                 <Target className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
@@ -170,7 +188,18 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
             <div className="flex items-start gap-3 text-sm">
               <Clock className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
               <div className="flex-1 space-y-2">
-                {data.business_hours && data.business_hours.length > 0 ? (
+                {data.operating_hours && data.operating_hours.length > 0 ? (
+                  data.operating_hours.map((oh: any, i: number) => (
+                    <div key={i} className="flex justify-between items-center text-sm">
+                      <span className="text-slate-600 font-medium flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span> {oh.day}
+                      </span>
+                      <span className={`font-semibold ${oh.is_closed ? 'text-red-500' : 'text-slate-800'}`}>
+                        {oh.is_closed ? 'Closed' : `${oh.opening_time} - ${oh.closing_time}`}
+                      </span>
+                    </div>
+                  ))
+                ) : data.business_hours && data.business_hours.length > 0 ? (
                   data.business_hours.map((bh: any, i: number) => (
                     <div key={i} className="flex justify-between items-center text-sm">
                       <span className="text-slate-600 font-medium flex items-center gap-1.5">

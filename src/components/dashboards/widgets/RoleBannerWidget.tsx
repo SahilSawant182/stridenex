@@ -31,6 +31,8 @@ import { getStudentByEmail, updateStudent } from "@/services/student.services";
 import { updateIndustry } from "@/services/industry.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { useToast } from "@/context/ToastContext";
+import { OperatingHoursTable, OperatingHour } from "@/components/dashboards/shared/OperatingHoursTable";
+
 
 interface BannerMetric {
   key: string;
@@ -199,10 +201,38 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
 
     fields.push(
       { name: "company_website", label: "Website", type: "url", icon: Globe, required: true, colSpan: 2 },
-      { name: "headquarters", label: "Headquarters", type: "text", icon: MapPin, required: true, colSpan: 2 },
       { name: "employee_head_count", label: "Employee Count", type: "number", icon: Users, required: true },
       { name: "cin", label: "CIN", type: "text", icon: Mail, required: true },
       { name: "about", label: "About Company", type: "textarea", icon: FileText, required: true, colSpan: 2 },
+      { 
+        name: "specializations", 
+        label: "Specializations", 
+        type: "select", 
+        multiple: true, 
+        icon: Target, 
+        colSpan: 2,
+        apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+        apiParams: { doctype: "Job Function" },
+        allowCustom: true
+      },
+      {
+        name: "operating_hours",
+        label: "Operating Hours",
+        type: "custom",
+        colSpan: 2,
+        customRender: (formData, onChange) => (
+          <OperatingHoursTable 
+            value={formData.operating_hours || []} 
+            onChange={onChange} 
+          />
+        )
+      },
+      { name: "address_line_1", label: "Address Line 1", type: "text", icon: MapPin, required: true, colSpan: 2 },
+      { name: "address_line_2", label: "Address Line 2", type: "text", icon: MapPin, required: false, colSpan: 2 },
+      { name: "pincode", label: "Pincode", type: "text", icon: MapPin, required: true },
+      { name: "map_link", label: "Map Link", type: "url", icon: Globe, required: false },
+      { name: "latitude", label: "Latitude", type: "number", icon: MapPin, required: false },
+      { name: "longitude", label: "Longitude", type: "number", icon: MapPin, required: false },
     );
 
     return fields;
@@ -218,7 +248,15 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
         await updateStudent(currentUser, payload);
         await fetchStudentData();
       } else if (role === "industry") {
-        await updateIndustry(formData.company_name, formData);
+        // Transform the payload to match the requested nested structure
+        const transformedPayload = {
+          ...formData,
+          specializations: (formData.specializations || []).map((s: string) => ({ specialization: s })),
+          location: formData.location
+        };
+
+
+        await updateIndustry(formData.company_name, transformedPayload);
         if (customData?.onUpdateSuccess) {
           await customData.onUpdateSuccess();
         }
@@ -236,7 +274,20 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
   // Compute initial values for the modal
   const computedInitialValues = useMemo(() => {
     if (role === "industry") {
-      return customData?.rawIndustryData || {};
+      const raw = customData?.rawIndustryData || {};
+      return {
+        ...raw,
+        specializations: (raw.specializations || []).map((s: any) => s.specialization || s),
+        location: raw.location || {
+          address_line_1: "",
+          address_line_2: "",
+          pincode: "",
+          map_link: "",
+          latitude: null,
+          longitude: null
+        },
+        operating_hours: raw.operating_hours || []
+      };
     }
 
     if (!studentData && !fullName) return {};

@@ -12,7 +12,7 @@ import { parseBackendError } from "@/utils/error.utils";
 export interface DynamicField {
   name: string;
   label: string;
-  type: "text" | "number" | "select" | "textarea" | "email" | "url" | "date";
+  type: "text" | "number" | "select" | "textarea" | "email" | "url" | "date" | "custom";
   placeholder?: string;
   icon?: LucideIcon;
   colSpan?: 1 | 2;
@@ -29,6 +29,7 @@ export interface DynamicField {
   customPlaceholder?: string;
   onCreateCustomValue?: (value: string) => Promise<any>;
   min?: string | number;
+  customRender?: (formData: any, handleChange: (value: any) => void) => React.ReactNode;
 }
 
 interface DashboardDynamicModalProps {
@@ -255,6 +256,8 @@ export default function DashboardDynamicModal({
                         toggleSelectValue={toggleSelectValue}
                         removeMultiSelectValue={removeMultiSelectValue}
                         errors={errors}
+                        setFormData={setFormData}
+                        onValuesChange={onValuesChange}
                       />
                     ))}
                   </form>
@@ -312,7 +315,9 @@ function DynamicFieldItem({
   setSearchTerm,
   toggleSelectValue,
   removeMultiSelectValue,
-  errors
+  errors,
+  setFormData,
+  onValuesChange
 }: {
   field: DynamicField;
   formData: any;
@@ -325,6 +330,8 @@ function DynamicFieldItem({
   toggleSelectValue: any;
   removeMultiSelectValue: any;
   errors: any;
+  setFormData: any;
+  onValuesChange?: (data: any, fieldName: string) => any;
 }) {
   const [apiOptions, setApiOptions] = useState<{ value: string; label: string }[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
@@ -427,7 +434,7 @@ function DynamicFieldItem({
                   if (onFieldFocus) onFieldFocus(field.name);
                 }
               }}
-              className={`w-full min-h-[3rem] ${field.icon ? 'pl-12' : 'px-4'} pr-10 py-2.5 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm bg-white cursor-pointer flex flex-wrap gap-2 ${field.disabled ? 'bg-slate-50 opacity-60 cursor-not-allowed grayscale' : ''}`}
+              className={`w-full min-h-[3rem] ${field.icon ? 'pl-12' : 'px-4'} pr-10 py-2.5 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-sm text-slate-900 bg-white cursor-pointer flex flex-wrap gap-2 ${field.disabled ? 'bg-slate-50 opacity-60 cursor-not-allowed grayscale' : ''}`}
             >
               {field.multiple ? (
                 <>
@@ -479,7 +486,7 @@ function DynamicFieldItem({
                           placeholder="Search..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full h-10 pl-9 pr-4 bg-slate-50 rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/10 transition-all font-sans"
+                          className="w-full h-10 pl-9 pr-4 bg-slate-50 rounded-xl text-xs font-bold text-slate-900 outline-none focus:ring-2 focus:ring-blue-500/10 transition-all font-sans"
                         />
                       </div>
                     </div>
@@ -646,6 +653,18 @@ function DynamicFieldItem({
               )}
             </AnimatePresence>
           </div>
+        ) : field.type === "custom" && field.customRender ? (
+          field.customRender(formData, (value) => {
+            const updated = { ...formData, [field.name]: value };
+            let finalData = updated;
+            if (onValuesChange) {
+              const sideEffects = onValuesChange(updated, field.name);
+              if (sideEffects) {
+                finalData = { ...updated, ...sideEffects };
+              }
+            }
+            setFormData(finalData);
+          })
         ) : (
           <Input
             name={field.name}

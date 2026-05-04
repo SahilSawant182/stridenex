@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useIndustry } from "@/context/IndustryContext";
 import RoleBannerWidget from "./RoleBannerWidget";
 import { Briefcase, Users, Target, Star, Building2, Globe, FileText, Layout, Layers, MapPin, Factory } from "lucide-react";
+import { OperatingHoursTable } from "@/components/dashboards/shared/OperatingHoursTable";
+
 
 export default function IndustryBannerWrapper() {
   const { industryData, roleList, loading, refreshIndustryData } = useIndustry();
@@ -118,11 +120,55 @@ export default function IndustryBannerWrapper() {
   }
 
   industryFields.push(
-    { name: "employee_head_count", label: "Employee Count", type: "number", icon: Users, required: true, placeholder: "e.g. 500" },
-    { name: "headquarters", label: "Headquarters", type: "text", icon: MapPin, required: true, placeholder: "e.g. Mumbai, Maharashtra" },
     { name: "company_website", label: "Website (URL)", type: "url", icon: Globe, required: true, placeholder: "https://www.company.com" },
+    { name: "employee_head_count", label: "Employee Count", type: "number", icon: Users, required: true, placeholder: "e.g. 500" },
     { name: "cin", label: "CIN Number", type: "text", icon: FileText, required: true, placeholder: "Enter Corporate Identification Number" },
     { name: "about", label: "About Company", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Briefly describe your company's mission and goals..." },
+    {
+      name: "specializations",
+      label: "Specializations",
+      type: "select",
+      multiple: true,
+      icon: Target,
+      colSpan: 2,
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: { doctype: "Specialization" },
+      allowCustom: true
+    },
+    {
+      name: "operating_hours",
+      label: "Operating Hours",
+      type: "custom",
+      colSpan: 2,
+      customRender: (formData: any, onChange: any) => (
+        <OperatingHoursTable
+          value={formData.operating_hours || []}
+          onChange={onChange}
+        />
+      )
+    },
+    {
+      name: "location",
+      label: "Business Location",
+      type: "custom",
+      colSpan: 2,
+      customRender: (formData: any, onChange: any) => {
+        const { LocationPicker } = require("@/components/dashboards/shared/LocationPicker");
+        return (
+          <LocationPicker
+            value={formData.location || {
+              address_line_1: formData.address_line_1 || "",
+              address_line_2: formData.address_line_2 || "",
+              pincode: formData.pincode || "",
+              latitude: formData.latitude,
+              longitude: formData.longitude,
+              map_link: formData.map_link
+            }}
+            onChange={onChange}
+          />
+        );
+      }
+    },
   );
 
   return (
