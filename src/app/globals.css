@@ -6,6 +6,9 @@
 @tailwind utilities;
 
 @layer base {
+  html, body {
+    scrollbar-gutter: stable;
+  }
   body {
     font-family: 'Inter', sans-serif;
     @apply text-base;
