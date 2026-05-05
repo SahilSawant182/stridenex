@@ -268,21 +268,35 @@ export default function ProjectsTabContent() {
                   {project.description || "Contribute to real-world industrial projects and build your portfolio with top industry mentors."}
                 </p>
 
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="flex items-center gap-2.5 bg-slate-100/30 p-2.5 rounded-xl border border-slate-100/50">
-                    <Clock className="w-4 h-4 text-slate-500" />
-                    <div className="flex flex-col">
-                      <span className="text-[9px] text-slate-500 font-bold uppercase leading-none">Duration</span>
-                      <span className="text-xs font-bold text-slate-900">{project.duration} Days</span>
-
+                <div className="space-y-3 mb-6">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100/50 group-hover:bg-white transition-colors">
+                      <Clock className="w-4 h-4 text-orange-500" />
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-slate-400 font-bold uppercase leading-none mb-1">Duration</span>
+                        <span className="text-xs font-bold text-slate-900">{project.duration} Days</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100/50 group-hover:bg-white transition-colors">
+                      <Calendar className="w-4 h-4 text-blue-500" />
+                      <div className="flex flex-col">
+                        <span className="text-[9px] text-slate-400 font-bold uppercase leading-none mb-1">App Deadline</span>
+                        <span className="text-xs font-bold text-slate-900">
+                          {project.application_deadline 
+                            ? project.application_deadline.split("-").reverse().join("/") 
+                            : "Open"}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2.5 bg-slate-100/30 p-2.5 rounded-xl border border-slate-100/50">
-                    <Calendar className="w-4 h-4 text-slate-500" />
+                  
+                  <div className="flex items-center gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100/50 group-hover:bg-white transition-colors">
+                    <Calendar className="w-4 h-4 text-emerald-500" />
                     <div className="flex flex-col">
-                      <span className="text-[9px] text-slate-500 font-bold uppercase leading-none">Deadline</span>
-                      <span className="text-xs font-bold text-slate-900">{project.end_date?.split("-").reverse().join("/") || "TBA"}</span>
-
+                      <span className="text-[9px] text-slate-400 font-bold uppercase leading-none mb-1">Project Period</span>
+                      <span className="text-xs font-bold text-slate-900">
+                        {project.start_date?.split("-").reverse().join("/") || "TBA"} — {project.end_date?.split("-").reverse().join("/") || "TBA"}
+                      </span>
                     </div>
                   </div>
                 </div>

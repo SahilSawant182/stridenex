@@ -95,12 +95,12 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
           <div>
             <h3 className="text-[11px] font-bold text-slate-900 mb-3 tracking-widest uppercase">About</h3>
             
-            {data.about_company && (
+            {(data.about || data.about_company) && (
               <div className="flex items-start gap-3 mb-4">
                 <FileText className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
                 <div className="text-sm text-slate-600 leading-relaxed">
                   <span className="font-semibold text-slate-900">Description: </span>
-                  {data.about_company}
+                  {data.about || data.about_company}
                 </div>
               </div>
             )}
@@ -133,19 +133,25 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
                   </div>
                 </div>
               </div>
-            ) : (
-               <p className="text-xs text-slate-500 italic">No specialisations listed.</p>
-            )}
+            ) : null}
+          </div>
+
+          {/* METRICS */}
+          <div className="border-t border-slate-100 pt-3">
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Company Size</p>
+              <p className="text-sm font-bold text-slate-700">{data.employee_head_count || "Not set"} Employees</p>
+            </div>
           </div>
 
           {/* CONTACT */}
           <div>
             <h3 className="text-[11px] font-bold text-slate-900 mb-3 tracking-widest uppercase border-t border-slate-100 pt-3">Contact</h3>
             <div className="space-y-3">
-              {contactPhone && (
+              {(contactPhone || data.mobile_no) && (
                 <div className="flex items-center gap-3 text-sm">
                   <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                  <span className="text-slate-700 font-medium">{contactPhone}</span>
+                  <span className="text-slate-700 font-medium">{contactPhone || data.mobile_no}</span>
                 </div>
               )}
               <div className="flex items-center gap-3 text-sm">
@@ -192,21 +198,10 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
                   data.operating_hours.map((oh: any, i: number) => (
                     <div key={i} className="flex justify-between items-center text-sm">
                       <span className="text-slate-600 font-medium flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span> {oh.day}
+                        <span className={`w-1.5 h-1.5 rounded-full ${oh.is_closed ? 'bg-red-400' : 'bg-emerald-400'}`}></span> {oh.day}
                       </span>
                       <span className={`font-semibold ${oh.is_closed ? 'text-red-500' : 'text-slate-800'}`}>
                         {oh.is_closed ? 'Closed' : `${oh.opening_time} - ${oh.closing_time}`}
-                      </span>
-                    </div>
-                  ))
-                ) : data.business_hours && data.business_hours.length > 0 ? (
-                  data.business_hours.map((bh: any, i: number) => (
-                    <div key={i} className="flex justify-between items-center text-sm">
-                      <span className="text-slate-600 font-medium flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span> {bh.days}
-                      </span>
-                      <span className={`font-semibold ${bh.is_closed ? 'text-red-500' : 'text-slate-800'}`}>
-                        {bh.is_closed ? 'Closed' : `${bh.open_time} - ${bh.close_time}`}
                       </span>
                     </div>
                   ))

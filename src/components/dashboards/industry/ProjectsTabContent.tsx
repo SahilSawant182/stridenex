@@ -17,7 +17,7 @@ import {
   Loader2,
   Trash2
 } from "lucide-react";
-import { getProjectList, createProject, updateProject, deleteProject, getMasterData, getProjectApplicationCount } from "@/services/industry.services";
+import { getProjectList, createProject, updateProject, deleteProject, getMasterData, getProjectApplicationCount, createSkill } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import ApplicationsPipelineModal from "./ApplicationsPipelineModal";
@@ -106,7 +106,18 @@ export default function ProjectsTabContent() {
       required: true,
       colSpan: 2,
       placeholder: "Select Required Skills",
-      multiple: true
+      multiple: true,
+      allowCustom: true,
+      customPlaceholder: "Enter custom skill...",
+      onCreateCustomValue: async (val: string) => {
+        try {
+          await createSkill(val);
+          fetchOptions("Skill", setSkillOptions);
+        } catch (err) {
+          console.error("Failed to create skill record:", err);
+          throw err;
+        }
+      }
     },
     { name: "description", label: "Description", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Describe the project objective and tasks..." },
   ], [skillOptions, courseOptions, departmentOptions, projectToEdit]);

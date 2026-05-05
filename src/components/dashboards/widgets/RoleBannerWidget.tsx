@@ -252,7 +252,8 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
         const transformedPayload = {
           ...formData,
           specializations: (formData.specializations || []).map((s: string) => ({ specialization: s })),
-          location: formData.location
+          location: formData.location,
+          operating_hours: (formData.operating_hours || []).map(({ name, ...rest }: any) => rest)
         };
 
 
@@ -286,7 +287,11 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
           latitude: null,
           longitude: null
         },
-        operating_hours: raw.operating_hours || []
+        operating_hours: (raw.operating_hours || []).map((oh: any) => ({
+          ...oh,
+          opening_time: oh.opening_time ? oh.opening_time.substring(0, 5) : "",
+          closing_time: oh.closing_time ? oh.closing_time.substring(0, 5) : ""
+        }))
       };
     }
 

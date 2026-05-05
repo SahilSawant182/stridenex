@@ -643,7 +643,7 @@ export default function IndustryOnboarding({
         }
         setLoading(true);
         try {
-            const response = await sendMobileOTP(formData.mobileNo);
+            const response = await sendMobileOTP(formData.mobileNo, formData.email);
             if (response?.message === "OTP sent successfully") {
                 setSuccess(response.message);
                 setMobileOtpSent(true);
@@ -663,7 +663,7 @@ export default function IndustryOnboarding({
         setSuccess("");
         setLoading(true);
         try {
-            const response = await verifyMobileOTP(formData.mobileNo, mobileVerificationCode);
+            const response = await verifyMobileOTP(formData.mobileNo, mobileVerificationCode, formData.email);
             if (response?.message === "Mobile number verified successfully") {
                 setFormData(prev => ({ ...prev, mobileVerified: true }));
                 setSuccess(response.message);

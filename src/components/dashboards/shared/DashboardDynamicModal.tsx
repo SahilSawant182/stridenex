@@ -355,11 +355,12 @@ function DynamicFieldItem({
   }, [activeSelect, field.name, setActiveSelect, setSearchTerm]);
 
   useEffect(() => {
-    if (field.apiEndpoint && apiOptions.length === 0) {
+    // Only fetch if not disabled and we have an endpoint
+    if (field.apiEndpoint && !field.disabled) {
       fetchApiOptions();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [field.apiEndpoint]);
+  }, [field.apiEndpoint, field.disabled, JSON.stringify(field.apiParams)]);
 
   useEffect(() => {
     if (showCustomInput && customInputRef.current) {

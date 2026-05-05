@@ -21,7 +21,7 @@ import {
   Pen,
   Trash2
 } from "lucide-react";
-import { getInternshipList, createInternship, updateInternship, deleteInternship, getMasterData } from "@/services/industry.services";
+import { getInternshipList, createInternship, updateInternship, deleteInternship, getMasterData, createSkill } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { calculateEndDate } from "@/utils/date.utils";
@@ -129,7 +129,18 @@ export default function InternshipsTabContent() {
       required: true,
       colSpan: 2,
       placeholder: "Select Required Skills",
-      multiple: true
+      multiple: true,
+      allowCustom: true,
+      customPlaceholder: "Enter custom skill...",
+      onCreateCustomValue: async (val: string) => {
+        try {
+          await createSkill(val);
+          fetchOptions("Skill", setSkillOptions);
+        } catch (err) {
+          console.error("Failed to create skill record:", err);
+          throw err;
+        }
+      }
     },
     { name: "description", label: "Description", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Describe the roles and responsibilities..." },
   ], [skillOptions, categoryOptions, courseOptions, departmentOptions, modalValues.payment_mode]);

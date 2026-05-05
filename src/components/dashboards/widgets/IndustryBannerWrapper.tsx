@@ -105,6 +105,7 @@ export default function IndustryBannerWrapper() {
   const industryFields: any[] = [
     { name: "company_name", label: "Company Name", type: "text", icon: Building2, required: true, colSpan: 2, placeholder: "e.g. Acme Corporation", disabled: true },
     { name: "business_type", label: "Company Type", type: "select", icon: Layout, options: businessTypeOptions.length > 0 ? businessTypeOptions : ["Enterprises", "Consultant and Agency", "Other"], required: false, placeholder: "Select Company Type" },
+    { name: "gst_number", label: "GST Number", type: "text", icon: FileText, required: false, placeholder: "Enter GSTIN" },
   ];
 
   if (industryData?.other_business_type) {
@@ -112,7 +113,8 @@ export default function IndustryBannerWrapper() {
   }
 
   industryFields.push(
-    { name: "industry_sector", label: "Industry Sector", type: "select", icon: Layers, options: industrySectorOptions.length > 0 ? industrySectorOptions : ["Information Services", "Manufacturing", "Finance", "Healthcare", "Education", "Other"], required: false, placeholder: "Select Industry Sector" }
+    { name: "industry_sector", label: "Industry Sector", type: "select", icon: Layers, options: industrySectorOptions.length > 0 ? industrySectorOptions : ["Information Services", "Manufacturing", "Finance", "Healthcare", "Education", "Other"], required: false, placeholder: "Select Industry Sector" },
+    { name: "headquarters", label: "Headquarters", type: "text", icon: MapPin, required: false, placeholder: "e.g. Jaipur" }
   );
 
   if (industryData?.other_industry_sector) {
