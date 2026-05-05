@@ -416,11 +416,11 @@ export default function ProjectsTabContent() {
                   <div className="pt-6 border-t border-slate-50 flex flex-col md:flex-row items-center justify-between gap-6">
                     <div className="flex flex-wrap items-center gap-8">
                       <div className="flex flex-col">
-                        <span className="text-lg font-bold text-orange-500 leading-none">0</span>
+                        <span className="text-lg font-bold text-orange-500 leading-none">{project.applied_count || 0}</span>
                         <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest mt-1">Applied</p>
                       </div>
                       <div className="flex flex-col">
-                        <span className="text-lg font-bold text-blue-500 leading-none">0</span>
+                        <span className="text-lg font-bold text-blue-500 leading-none">{project.shortlisted_count || 0}</span>
                         <p className="text-[9px] text-slate-300 font-bold uppercase tracking-widest mt-1">Shortlisted</p>
                       </div>
                       <div className="flex flex-col">
@@ -495,7 +495,10 @@ export default function ProjectsTabContent() {
 
       <ApplicationsPipelineModal
         isOpen={applicationsModalOpen}
-        onClose={() => setApplicationsModalOpen(false)}
+        onClose={() => {
+          setApplicationsModalOpen(false);
+          fetchProjects(companyName);
+        }}
         applicationsData={applicationsData}
         applicationsLoading={applicationsLoading}
         companyName={companyName}
