@@ -42,7 +42,7 @@ interface Option {
 
 type Step = 1 | 2 | 3;
 
-const API_BASE_URL = "https://devstridenex.quantcloud.in";
+// Using BASE_URL from api.services
 
 export default function CollegeOnboarding({
   onSubmit,
@@ -139,7 +139,7 @@ export default function CollegeOnboarding({
     setError("");
     try {
       const response = await fetch(
-        `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -390,7 +390,7 @@ export default function CollegeOnboarding({
       };
 
       const response = await axios.post(
-        `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.college.create_college`,
+        `${BASE_URL}method/stridenex_app.api_stridenex_app.college.college.create_college`,
         payload,
         { headers: { 'Content-Type': 'application/json' } }
       );
@@ -576,7 +576,7 @@ export default function CollegeOnboarding({
         required: true,
         placeholder: "Select Country",
         layout: "half",
-        apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: { doctype: "Country" },
         mapOptions: (data) => data.map((country: any) => ({
           value: country.name,
@@ -590,7 +590,7 @@ export default function CollegeOnboarding({
         required: true,
         placeholder: "Select State",
         layout: "half",
-        apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: { doctype: "State" },
         mapOptions: (data) => data.map((state: any) => ({
           value: state.name,
@@ -604,7 +604,7 @@ export default function CollegeOnboarding({
         required: true,
         placeholder: "Select District",
         layout: "half",
-        apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: formData.state ? {
           doctype: "District",
           fields: ["name", "district_name"],
@@ -625,7 +625,7 @@ export default function CollegeOnboarding({
         required: true,
         placeholder: "Select Taluka",
         layout: "half",
-        apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: formData.state ? {
           doctype: "Tahsil",
           fields: ["name", "tahsil_name"],
@@ -645,7 +645,7 @@ export default function CollegeOnboarding({
         required: true,
         placeholder: "Select City",
         layout: "half",
-        apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: formData.state ? {
           doctype: "City",
           fields: ["name", "city_name"],
@@ -665,7 +665,7 @@ export default function CollegeOnboarding({
         required: true,
         placeholder: "Select University",
         layout: "half",
-        apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: { doctype: "University" },
         mapOptions: (data) => data.map((university: any) => ({
           value: university.name,
@@ -679,7 +679,7 @@ export default function CollegeOnboarding({
         required: true,
         placeholder: "Select College Type",
         layout: "half",
-        apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: { doctype: "College Type" },
         mapOptions: (data) => data.map((collegeType: any) => ({
           value: collegeType.name,
@@ -747,7 +747,7 @@ export default function CollegeOnboarding({
         placeholder: "Select streams",
         layout: "full",
         multiSelect: true,
-        apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: { doctype: "Stream" },
         mapOptions: (data) => {
           const items = data.data || data || [];

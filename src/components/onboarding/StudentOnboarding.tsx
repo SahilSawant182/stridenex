@@ -28,7 +28,7 @@ interface StudentOnboardingProps {
 
 type Step = 1 | 2;
 
-const API_BASE_URL = "https://devstridenex.quantcloud.in";
+// Using BASE_URL from api.services
 
 export default function StudentOnboarding({
   onSubmit,
@@ -165,7 +165,7 @@ export default function StudentOnboarding({
       required: true,
       placeholder: "Select State",
       layout: "half",
-      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
       apiParams: {
         doctype: "State"
       },
@@ -186,7 +186,7 @@ export default function StudentOnboarding({
       required: true,
       placeholder: "Select District",
       layout: "half",
-      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
       apiParams: formData.state ? {
         doctype: "District",
         fields: ["name", "district_name"],
@@ -211,7 +211,7 @@ export default function StudentOnboarding({
       required: true,
       placeholder: "Select Stream",
       layout: "half",
-      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
       apiParams: {
         doctype: "Stream"
       },
@@ -233,7 +233,7 @@ export default function StudentOnboarding({
       layout: "half",
       // Only enable when stream, state, and district are selected
       apiEndpoint: (formData.stream && formData.state && formData.district)
-        ? `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.student.masters.get_colleges_by_stream`
+        ? `${BASE_URL}method/stridenex_app.api_stridenex_app.student.masters.get_colleges_by_stream`
         : undefined,
       apiParams: (formData.stream && formData.state && formData.district) ? {
         stream: formData.stream,
@@ -261,7 +261,7 @@ export default function StudentOnboarding({
       placeholder: "Select courses",
       layout: "full",
       multiSelect: true,
-      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
       apiParams: {
         doctype: "Course Type"  // Note the space in "Course Type"
       },
@@ -286,7 +286,7 @@ export default function StudentOnboarding({
       layout: "half",
       // Only enable when college is selected
       apiEndpoint: formData.college
-        ? `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`
+        ? `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`
         : undefined,
       apiParams: formData.college ? {
         doctype: "Courses",
@@ -314,7 +314,7 @@ export default function StudentOnboarding({
       required: true,
       placeholder: "Select department",
       layout: "half",
-      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
       apiParams: {
         doctype: "College Department",
         fields: ["name", "academic_years", "semester"]
@@ -359,7 +359,7 @@ export default function StudentOnboarding({
       placeholder: "Select Semester",
       layout: "half",
       apiEndpoint: formData.department
-        ? `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.student.masters.get_semester`
+        ? `${BASE_URL}method/stridenex_app.api_stridenex_app.student.masters.get_semester`
         : undefined,
       apiParams: formData.department ? {
         semester: departmentOptions.find(d => d.value === formData.department)?.semester || ""
@@ -405,7 +405,7 @@ export default function StudentOnboarding({
       placeholder: "Select skills",
       layout: "full",
       multiSelect: true, // This makes it multi-select
-      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
       apiParams: {
         doctype: "Skill",
         fields: ["skill_name"],
@@ -427,7 +427,7 @@ export default function StudentOnboarding({
       placeholder: "Select career interests",
       layout: "full",
       multiSelect: true, // This makes it multi-select
-      apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+      apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
       apiParams: {
         doctype: "Student Career Interest" // Updated doctype
       },

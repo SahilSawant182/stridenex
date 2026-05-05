@@ -2,15 +2,11 @@ import { apiService } from "./api.services";
 
 export const getMasterData = async (doctype: string, additionalPayload: any = {}) => {
   try {
-    const response = await fetch(
-      `https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ doctype, ...additionalPayload })
-      }
+    const response = await apiService.post(
+      "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      { doctype, ...additionalPayload }
     );
-    return await response.json();
+    return response;
   } catch (error) {
     console.error(`Error fetching master data for ${doctype}:`, error);
     throw error;

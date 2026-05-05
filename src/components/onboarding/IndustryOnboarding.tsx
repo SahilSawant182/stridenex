@@ -45,7 +45,7 @@ interface Option {
 
 type Step = 1 | 2 | 3 | 4;
 
-const API_BASE_URL = "https://devstridenex.quantcloud.in";
+// Using BASE_URL from api.services
 
 export default function IndustryOnboarding({
     onSubmit,
@@ -185,7 +185,7 @@ export default function IndustryOnboarding({
     const fetchIndustryData = async (email: string) => {
         setLoading(true);
         try {
-            const response = await axios.get(`${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.industry.industry.get_industry_by_name?email=${email}`);
+            const response = await axios.get(`${BASE_URL}method/stridenex_app.api_stridenex_app.industry.industry.get_industry_by_name?email=${email}`);
             console.log("Industry API Response:", response.data);
             if (response.data?.message) {
                 const messageObj = response.data.message;
@@ -237,7 +237,7 @@ export default function IndustryOnboarding({
 
     const fetchUserDetails = async (email: string) => {
         try {
-            const response = await axios.get(`${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.student.masters.get_user_by_mail?email=${encodeURIComponent(email)}`);
+            const response = await axios.get(`${BASE_URL}method/stridenex_app.api_stridenex_app.student.masters.get_user_by_mail?email=${encodeURIComponent(email)}`);
             if (response.data?.status === 200 && response.data?.data?.length > 0) {
                 const user = response.data.data[0];
                 setContactPersons(prev => {
@@ -289,7 +289,7 @@ export default function IndustryOnboarding({
         setError("");
         try {
             const response = await fetch(
-                `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -462,7 +462,7 @@ export default function IndustryOnboarding({
                 average_fresher_recruited_per_year: 0
             };
 
-            let endpoint = `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.industry.industry.create_industry`;
+            let endpoint = `${BASE_URL}method/stridenex_app.api_stridenex_app.industry.industry.create_industry`;
             let method: 'post' | 'put' = 'post';
 
             const recordExists = parseInt(isOnboarded || "0") > 1 || hasCreatedRecord;
@@ -480,7 +480,7 @@ export default function IndustryOnboarding({
                     parseInt(formData.average_fresher_recruited_per_year) : 0;
             } else {
                 // Step 3, Step 4, OR Step 2 update: Use PUT to update_industry
-                endpoint = `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.industry.industry.update_industry?company_name=${encodeURIComponent(formData.company_name)}`;
+                endpoint = `${BASE_URL}method/stridenex_app.api_stridenex_app.industry.industry.update_industry?company_name=${encodeURIComponent(formData.company_name)}`;
                 method = 'put';
 
                 // Always include Step 2 data for cumulative/update payload
@@ -872,7 +872,7 @@ export default function IndustryOnboarding({
             { fieldname: "company_name", label: "Company Name", fieldtype: "Data", required: true, placeholder: "Enter company name", layout: "half" },
             {
                 fieldname: "business_type", label: "Business Type", fieldtype: "Data", required: true, placeholder: "Select Business Type", layout: "half",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`, apiParams: { doctype: "Business Type" },
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`, apiParams: { doctype: "Business Type" },
                 allowCustom: true,
                 customPlaceholder: "Enter custom business type",
                 mapOptions: (data) => data.map((item: any) => ({ value: item.name, label: item.name }))
@@ -880,7 +880,7 @@ export default function IndustryOnboarding({
             { fieldname: "gst_number", label: "GST Number", fieldtype: "Data", required: false, placeholder: "Enter GST number", layout: "half" },
             {
                 fieldname: "industry_sector", label: "Industry Sector", fieldtype: "Data", required: true, placeholder: "Select Industry Sector", layout: "half",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`, apiParams: { doctype: "Industry Sector" },
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`, apiParams: { doctype: "Industry Sector" },
                 allowCustom: true,
                 customPlaceholder: "Enter custom industry sector",
                 mapOptions: (data) => data.map((item: any) => ({ value: item.name, label: item.name }))
@@ -927,7 +927,7 @@ export default function IndustryOnboarding({
                 placeholder: "Select Job Function",
                 multiSelect: true,
                 layout: "half",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: {
                     doctype: "Job Function"
                 },
@@ -936,7 +936,7 @@ export default function IndustryOnboarding({
                 onCreateCustomValue: async (val: string) => {
                     const apiKey = typeof window !== 'undefined' ? localStorage.getItem("apiKey") : "";
                     const apiSecret = typeof window !== 'undefined' ? localStorage.getItem("apiSecret") : "";
-                    await axios.post(`${API_BASE_URL}/api/method/stridenex_app.stridenex_app.doctype.job_function.job_function.create_job_function`, {
+                    await axios.post(`${BASE_URL}method/stridenex_app.stridenex_app.doctype.job_function.job_function.create_job_function`, {
                         job_function: val
                     }, {
                         headers: {
@@ -960,7 +960,7 @@ export default function IndustryOnboarding({
                 required: true,
                 placeholder: "Select Country",
                 layout: "half",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: {
                     doctype: "Country"
                 },
@@ -976,7 +976,7 @@ export default function IndustryOnboarding({
                 required: true,
                 placeholder: "Select State",
                 layout: "half",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: {
                     doctype: "State"
                 },
@@ -992,7 +992,7 @@ export default function IndustryOnboarding({
                 required: true,
                 placeholder: "Select District",
                 layout: "half",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: formData.state ? {
                     doctype: "District",
                     fields: ["name", "district_name"],
@@ -1013,7 +1013,7 @@ export default function IndustryOnboarding({
                 required: true,
                 placeholder: "Select Taluka",
                 layout: "half",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: formData.state ? {
                     doctype: "Tahsil",
                     fields: ["name", "tahsil_name"],
@@ -1033,7 +1033,7 @@ export default function IndustryOnboarding({
                 required: true,
                 placeholder: "Select City",
                 layout: "half",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: formData.state ? {
                     doctype: "City",
                     fields: ["name", "city_name"],
@@ -1124,7 +1124,7 @@ export default function IndustryOnboarding({
                         onCreateCustomDesignation={async (val: string) => {
                             const apiKey = typeof window !== 'undefined' ? localStorage.getItem("apiKey") : "";
                             const apiSecret = typeof window !== 'undefined' ? localStorage.getItem("apiSecret") : "";
-                            await axios.post(`${API_BASE_URL}/api/method/stridenex_app.stridenex_app.doctype.job_function.job_function.create_designation`, {
+                            await axios.post(`${BASE_URL}method/stridenex_app.stridenex_app.doctype.job_function.job_function.create_designation`, {
                                 designation_name: val
                             }, {
                                 headers: {

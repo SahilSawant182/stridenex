@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Users, Loader2, Target, Zap, FileText } from "lucide-react";
 import { updateProjectApplicationStatus } from "@/services/industry.services";
 import { useToast } from "@/context/ToastContext";
+import { BASE_URL, BASE_DOMAIN } from "@/services/api.services";
 
 interface ApplicationsPipelineModalProps {
   isOpen: boolean;
@@ -233,7 +234,7 @@ export default function ApplicationsPipelineModal({
                     <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Resume</span>
                     {selectedApplication.resume ? (
                       <a 
-                        href={selectedApplication.resume.startsWith('http') ? selectedApplication.resume : `https://devstridenex.quantcloud.in${selectedApplication.resume}`} 
+                        href={selectedApplication.resume.startsWith('http') ? selectedApplication.resume : `${BASE_DOMAIN}${selectedApplication.resume}`} 
                         target="_blank" 
                         rel="noreferrer"
                         className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-md transition-colors"

@@ -27,7 +27,7 @@ interface PlatformUrl {
 
 type Step = 1 | 2 | 3;
 
-const API_BASE_URL = "https://devstridenex.quantcloud.in";
+// Using BASE_URL from api.services
 
 export default function MentorOnboarding({
     onSubmit,
@@ -117,7 +117,7 @@ export default function MentorOnboarding({
         setPlatformError("");
         try {
             const response = await fetch(
-                `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 {
                     method: 'POST',
                     headers: {
@@ -373,7 +373,7 @@ export default function MentorOnboarding({
 
             // Make API call to create mentor
             const response = await axios.post(
-                `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.mentor.mentor.create_mentor`,
+                `${BASE_URL}method/stridenex_app.api_stridenex_app.mentor.mentor.create_mentor`,
                 payload,
                 {
                     headers: {
@@ -504,7 +504,7 @@ export default function MentorOnboarding({
                 required: true,
                 placeholder: "Select Type",
                 layout: "half",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: {
                     doctype: "Type"
                 },
@@ -565,7 +565,7 @@ export default function MentorOnboarding({
                 required: true,
                 placeholder: "Select Country",
                 layout: "half",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: {
                     doctype: "Country"
                 },
@@ -585,7 +585,7 @@ export default function MentorOnboarding({
                 required: true,
                 placeholder: "Select State",
                 layout: "half",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: {
                     doctype: "State"
                 },
@@ -605,7 +605,7 @@ export default function MentorOnboarding({
                 required: true,
                 placeholder: "Select District",
                 layout: "half",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: formData.state ? {
                     doctype: "District",
                     fields: ["name", "district_name"],
@@ -630,7 +630,7 @@ export default function MentorOnboarding({
                 required: true,
                 placeholder: "Select Taluka",
                 layout: "half",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: formData.district ? {
                     doctype: "Tahsil",
                     fields: ["name", "tahsil_name"],
@@ -655,7 +655,7 @@ export default function MentorOnboarding({
                 required: true,
                 placeholder: "Select City",
                 layout: "half",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: formData.tahsil ? {
                     doctype: "City",
                     fields: ["name", "city_name"],
@@ -742,7 +742,7 @@ export default function MentorOnboarding({
                 multiSelect: true,
                 allowCustom: true,
                 customPlaceholder: "Enter custom domain name",
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: {
                     doctype: "Domain"
                 },
@@ -763,7 +763,7 @@ export default function MentorOnboarding({
                 placeholder: "Select skills (optional)",
                 layout: "full",
                 multiSelect: true,
-                apiEndpoint: `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
                 apiParams: {
                     doctype: "Student Skill"
                 },
