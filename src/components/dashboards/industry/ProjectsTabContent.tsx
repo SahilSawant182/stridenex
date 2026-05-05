@@ -66,6 +66,7 @@ export default function ProjectsTabContent() {
   const [applicationsModalOpen, setApplicationsModalOpen] = useState(false);
   const [applicationsLoading, setApplicationsLoading] = useState(false);
   const [applicationsData, setApplicationsData] = useState<any[]>([]);
+  const [selectedProjectName, setSelectedProjectName] = useState<string | null>(null);
 
   useEffect(() => {
     const action = searchParams.get("action");
@@ -168,6 +169,7 @@ export default function ProjectsTabContent() {
   };
 
   const handleTotalApplicationsClick = async () => {
+    setSelectedProjectName(null);
     setApplicationsModalOpen(true);
     setApplicationsLoading(true);
     try {
@@ -187,6 +189,32 @@ export default function ProjectsTabContent() {
     } catch (err) {
       console.error("Error fetching applications:", err);
       showToast("Failed to fetch applications", "error");
+    } finally {
+      setApplicationsLoading(false);
+    }
+  };
+
+  const handleProjectClick = async (project: any) => {
+    setSelectedProjectName(project.project_name || project.name);
+    setApplicationsModalOpen(true);
+    setApplicationsLoading(true);
+    try {
+      const response = await getMasterData("Student Project Enrollment", {
+        filters: { industry: companyName, project: project.name },
+        fields: ["name", "student", "project", "industry", "status", "applied_on", "resume"]
+      });
+      let data = [];
+      if (Array.isArray(response?.message?.data)) {
+        data = response.message.data;
+      } else if (Array.isArray(response?.data)) {
+        data = response.data;
+      } else if (Array.isArray(response?.message)) {
+        data = response.message;
+      }
+      setApplicationsData(data);
+    } catch (err) {
+      console.error("Error fetching project applications:", err);
+      showToast("Failed to fetch applications for project", "error");
     } finally {
       setApplicationsLoading(false);
     }
@@ -388,7 +416,8 @@ export default function ProjectsTabContent() {
                 animate="show"
                 exit="hidden"
                 layout
-                className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:border-slate-300 hover:shadow-md transition-all group"
+                onClick={() => handleProjectClick(project)}
+                className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:border-slate-300 hover:shadow-md transition-all group cursor-pointer"
               >
                 <div className="flex flex-col gap-5">
                   {/* Header Row */}
@@ -449,7 +478,10 @@ export default function ProjectsTabContent() {
                     </div>
                     <div className="flex items-center gap-3 w-full md:w-auto">
                       <button
-                        onClick={() => handleDeleteProject(project?.name)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteProject(project?.name);
+                        }}
                         disabled={isDeleting === project?.name || project?.status === "Disable"}
                         className={`p-2.5 rounded-xl border border-slate-200 text-slate-400 transition-all flex items-center justify-center active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed ${project?.status === 'Disable' ? '' : 'hover:text-red-500 hover:border-red-100 hover:bg-red-50'}`}
                         title={project.status === "Disable" ? "Project is disabled" : "Delete Project"}
@@ -461,7 +493,10 @@ export default function ProjectsTabContent() {
                         )}
                       </button>
                       <button
-                        onClick={() => handleManageProject(project)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleManageProject(project);
+                        }}
                         disabled={project.status === "Disable"}
                         className={`flex-1 md:flex-none px-6 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed ${project.status === 'Disable' ? 'bg-slate-200 text-slate-400 shadow-none' : 'bg-orange-500 hover:bg-orange-600 text-white shadow-orange-500/10'}`}
                       >
@@ -513,6 +548,7 @@ export default function ProjectsTabContent() {
         applicationsData={applicationsData}
         applicationsLoading={applicationsLoading}
         companyName={companyName}
+        projectName={selectedProjectName || undefined}
         onStatusUpdated={(updatedData) => setApplicationsData(updatedData)}
       />
     </motion.div>

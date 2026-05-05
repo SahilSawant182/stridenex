@@ -129,10 +129,7 @@ export default function IndustryOnboarding({
             } else if (flag === 2) {
                 setCurrentStep(3);
                 setCompletedSteps(new Set([1, 2]));
-            } else if (flag === 3) {
-                setCurrentStep(4);
-                setCompletedSteps(new Set([1, 2, 3]));
-            } else if (flag >= 4) {
+            } else if (flag >= 3) {
                 router.push("/industry/dashboard");
                 return;
             }
@@ -537,9 +534,11 @@ export default function IndustryOnboarding({
                     setSuccess("Step 2 saved successfully!");
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else if (step === 3) {
-                    setCurrentStep(4);
-                    setSuccess("Step 3 saved successfully!");
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    setSuccess("Industry onboarding completed successfully!");
+                    localStorage.clear();
+                    setTimeout(() => {
+                        window.location.href = "/login";
+                    }, 1500);
                 } else {
                     setSuccess("Industry onboarding completed successfully!");
                     localStorage.clear();
@@ -1098,7 +1097,7 @@ export default function IndustryOnboarding({
                         className="flex-1"
                         disabled={loading}
                     >
-                        Continue to Contact Details
+                        Complete Registration
                     </Button>
                 </div>
             </div>
@@ -1151,7 +1150,7 @@ export default function IndustryOnboarding({
     return (
         <OnboardingLayout
             currentStep={currentStep}
-            totalSteps={4}
+            totalSteps={3}
             title={getStepTitle()}
             description={getStepDescription()}
             onSkip={handleSkip}

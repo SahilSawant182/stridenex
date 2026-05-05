@@ -11,6 +11,7 @@ interface ApplicationsPipelineModalProps {
   applicationsData: any[];
   applicationsLoading: boolean;
   companyName: string;
+  projectName?: string;
   onStatusUpdated: (updatedData: any[]) => void;
 }
 
@@ -20,6 +21,7 @@ export default function ApplicationsPipelineModal({
   applicationsData,
   applicationsLoading,
   companyName,
+  projectName,
   onStatusUpdated
 }: ApplicationsPipelineModalProps) {
   const { showToast } = useToast();
@@ -115,7 +117,9 @@ export default function ApplicationsPipelineModal({
                     <Users className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-slate-800">Applications Pipeline</h3>
+                    <h3 className="text-lg font-bold text-slate-800">
+                      {projectName ? `Pipeline: ${projectName}` : "Applications Pipeline"}
+                    </h3>
                     <p className="text-xs font-medium text-slate-500">Track and manage student project applications</p>
                   </div>
                 </div>

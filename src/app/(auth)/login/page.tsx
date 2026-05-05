@@ -31,7 +31,7 @@ export default function LoginPage() {
     // Other modules require 1 step (is_onboarded === "1")
     const isIndustry = role === "industry";
     const isStudent = role === "student";
-    const isFullyOnboarded = isIndustry ? isOnboarded === "4" : isStudent ? isOnboarded === "2" : isOnboarded === "1";
+    const isFullyOnboarded = isIndustry ? (isOnboarded === "4" || isOnboarded === "3") : isStudent ? isOnboarded === "2" : isOnboarded === "1";
 
     if (isFullyOnboarded) {
       router.push(`/${role}/dashboard`);
