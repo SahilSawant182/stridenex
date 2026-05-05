@@ -84,7 +84,7 @@ export default function IndustryOnboarding({
     const designationDropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     const [contactPersons, setContactPersons] = useState<ContactPerson[]>([
-        { title: "", first_name: "", last_name: "", designation: "", contact_no: "", is_admin: false, email: "" }
+        { title: "", first_name: "", last_name: "", designation: "", contact_no: "", is_admin: true, email: "" }
     ]);
 
     const [emailVerificationCode, setEmailVerificationCode] = useState("");
@@ -215,13 +215,13 @@ export default function IndustryOnboarding({
 
                     // Map contact persons
                     if (data.contact_details && data.contact_details.length > 0) {
-                        setContactPersons(data.contact_details.map((cp: any) => ({
+                        setContactPersons(data.contact_details.map((cp: any, index: number) => ({
                             title: cp.title || "",
                             first_name: cp.first_name || "",
                             last_name: cp.last_name || "",
                             designation: cp.designation || "",
                             contact_no: cp.contact_no?.replace(/^\+91-/, '') || "",
-                            is_admin: cp.is_admin === 1,
+                            is_admin: index === 0 ? true : cp.is_admin === 1,
                             email: cp.email || ""
                         })));
                     }
@@ -250,7 +250,8 @@ export default function IndustryOnboarding({
                         email: newPersons[0].email || user.email || "",
                         first_name: newPersons[0].first_name || names[0] || "",
                         last_name: newPersons[0].last_name || (names.length > 1 ? names.slice(1).join(" ") : ""),
-                        contact_no: newPersons[0].contact_no || (user.mobile_no ? user.mobile_no.replace(/^\+91-/, '') : "")
+                        contact_no: newPersons[0].contact_no || (user.mobile_no ? user.mobile_no.replace(/^\+91-/, '') : ""),
+                        is_admin: true
                     };
                     return newPersons;
                 });

@@ -81,7 +81,10 @@ export default function InternshipsTabContent() {
       const data = await getMasterData(doctype, extraPayload);
       const apiData = data.data || data.message || [];
       const mapField = extraPayload?.fields || "name";
-      const options = Array.isArray(apiData) ? apiData.map((item: any) => item[mapField] || item.name) : [];
+      let options = Array.isArray(apiData) ? apiData.map((item: any) => item[mapField] || item.name) : [];
+      if (doctype === "Courses") {
+        options = ["All", ...options];
+      }
       setter(options);
     } catch (err) {
       console.error(`Error fetching ${doctype} options:`, err);
@@ -115,11 +118,12 @@ export default function InternshipsTabContent() {
     { name: "duration", label: "Duration (Days)", type: "number", icon: Clock, required: true, placeholder: "e.g. 90" },
     { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase", min: new Date().toISOString().split('T')[0] },
     { name: "end_date", label: "End Date", type: "date", icon: Calendar, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
+    { name: "application_deadline", label: "Application Deadline", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase", max: modalValues.start_date },
     { name: "openings", label: "Openings", type: "number", icon: Users, required: true, placeholder: "e.g. 10" },
     { name: "status", label: "Status", type: "select", icon: Zap, options: ["Active", "Draft", "Closed"], required: true, placeholder: "Select Status" },
     { name: "course", label: "Course", type: "select", icon: Briefcase, options: courseOptions, required: true, placeholder: "Select Course" },
-    { name: "department", label: "Department", type: "select", icon: Briefcase, options: departmentOptions, required: true, placeholder: "Select Department" },
-    { name: "academic_year", label: "Academic Year", type: "select", icon: Calendar, options: ["2", "3", "4"], required: true, placeholder: "Select Year" },
+    { name: "department", label: "Department", type: "select", icon: Briefcase, options: departmentOptions, required: modalValues.course !== "All", placeholder: "Select Department", disabled: modalValues.course === "All" },
+    { name: "academic_year", label: "Academic Year", type: "select", icon: Calendar, options: ["2", "3", "4"], required: modalValues.course !== "All", placeholder: "Select Year", disabled: modalValues.course === "All" },
     {
       name: "required_skills",
       label: "Required Skills",
@@ -143,7 +147,7 @@ export default function InternshipsTabContent() {
       }
     },
     { name: "description", label: "Description", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Describe the roles and responsibilities..." },
-  ], [skillOptions, categoryOptions, courseOptions, departmentOptions, modalValues.payment_mode]);
+  ], [skillOptions, categoryOptions, courseOptions, departmentOptions, modalValues.payment_mode, modalValues.start_date, modalValues.course]);
 
   const fetchInternships = async (industry: string) => {
     try {
@@ -185,9 +189,12 @@ export default function InternshipsTabContent() {
         internship_name: formData.title,
         title: formData.title,
         name: editingInternship?.name, // Add name for updates
+        application_deadline: formData.application_deadline,
         required_skills: Array.isArray(formData.required_skills)
           ? formData.required_skills.map((s: string) => ({ skill: s }))
-          : []
+          : [],
+        department: formData.course === "All" ? null : formData.department,
+        academic_year: formData.course === "All" ? null : formData.academic_year
       };
 
       if (editingInternship) {
@@ -245,6 +252,9 @@ export default function InternshipsTabContent() {
   const handleValuesChange = (values: Record<string, any>, changedFieldName: string) => {
     setModalValues(values);
     if (changedFieldName === "course") {
+      if (values.course === "All") {
+        return { department: "All", academic_year: "All" };
+      }
       setDepartmentOptions([]);
       return { department: "" };
     }
@@ -283,7 +293,8 @@ export default function InternshipsTabContent() {
       location: "Remote",
       payment_mode: "Paid",
       type: "",
-      required_skills: []
+      required_skills: [],
+      application_deadline: ""
     };
   }, [editingInternship, companyName]);
 

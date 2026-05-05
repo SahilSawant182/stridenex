@@ -29,6 +29,7 @@ export interface DynamicField {
   customPlaceholder?: string;
   onCreateCustomValue?: (value: string) => Promise<any>;
   min?: string | number;
+  max?: string | number;
   customRender?: (formData: any, handleChange: (value: any) => void) => React.ReactNode;
 }
 
@@ -680,6 +681,7 @@ function DynamicFieldItem({
             required={field.required}
             disabled={field.disabled}
             min={field.min}
+            max={field.max}
             style={field.textTransform ? { textTransform: field.textTransform } : {}}
             className={`${field.icon ? 'pl-12' : 'px-4'} h-12 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-slate-900 ${field.textTransform === 'uppercase' ? 'placeholder:uppercase' : ''} disabled:bg-slate-50 disabled:text-slate-500`}
           />
