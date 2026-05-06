@@ -71,7 +71,7 @@ const tabConfig = {
     { name: "Overview", icon: LayoutDashboard, path: "/industry/dashboard" },
     { name: "Company Profile", icon: Building2, path: "/industry/dashboard/company-profile" },
     { name: "Find Talent", icon: Briefcase, path: "/industry/dashboard/find-talent" },
-    { name: "Industry Pipeline", icon: Mail, path: "/industry/dashboard/pipeline" },
+    { name: "Internships Pipeline", icon: Mail, path: "/industry/dashboard/pipeline" },
     { name: "Projects", icon: FolderGit2, path: "/industry/dashboard/projects" },
     { name: "Internships", icon: UserCheck, path: "/industry/dashboard/internships" },
     // { name: "Feedback", icon: Star, path: "/industry/dashboard/feedback" },
