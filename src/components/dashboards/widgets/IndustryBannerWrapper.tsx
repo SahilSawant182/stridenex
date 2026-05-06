@@ -135,7 +135,17 @@ export default function IndustryBannerWrapper() {
       colSpan: 2,
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "Specialization" },
-      allowCustom: true
+      allowCustom: true,
+      customPlaceholder: "Enter custom specialization...",
+      onCreateCustomValue: async (val: string) => {
+        try {
+          const { createSpecialization } = await import("@/services/industry.services");
+          await createSpecialization(val);
+        } catch (err) {
+          console.error("Failed to create specialization:", err);
+          throw err;
+        }
+      }
     },
     {
       name: "operating_hours",

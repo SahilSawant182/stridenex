@@ -86,7 +86,11 @@ export default function DashboardDynamicModal({
       if (lastInitialValuesRef.current !== currentInitialStr) {
         const initial: Record<string, any> = {};
         fields.forEach(field => {
-          initial[field.name] = initialValues?.[field.name] ?? (field.multiple ? [] : (field.type === "number" ? "" : ""));
+          let val = initialValues?.[field.name];
+          if (field.multiple && val !== undefined && val !== null && !Array.isArray(val)) {
+            val = typeof val === 'string' && val.includes(',') ? val.split(',').map(s => s.trim()) : [val];
+          }
+          initial[field.name] = val ?? (field.multiple ? [] : (field.type === "number" ? "" : ""));
         });
         setFormData(initial);
         lastInitialValuesRef.current = currentInitialStr;
@@ -398,6 +402,14 @@ function DynamicFieldItem({
 
   const currentOptions = field.apiEndpoint ? apiOptions : (field.options || []);
 
+  const currentValueArray = Array.isArray(formData[field.name]) 
+    ? formData[field.name] 
+    : (formData[field.name] 
+        ? (typeof formData[field.name] === 'string' && formData[field.name].includes(',') 
+            ? formData[field.name].split(',').map((s: string) => s.trim()) 
+            : [formData[field.name]]) 
+        : []);
+
   return (
     <div className={`space-y-2 ${field.colSpan === 2 ? 'col-span-2' : 'col-span-2 md:col-span-1'}`}>
       <Label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">
@@ -440,12 +452,12 @@ function DynamicFieldItem({
             >
               {field.multiple ? (
                 <>
-                  {(formData[field.name] || []).length === 0 && (
+                  {currentValueArray.length === 0 && (
                     <span className="text-slate-400">{
                       apiLoading ? "Loading..." : (field.placeholder || `Select ${field.label}`)
                     }</span>
                   )}
-                  {(formData[field.name] || []).map((val: string) => (
+                  {currentValueArray.map((val: string) => (
                     <span
                       key={val}
                       className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-900 text-white text-[11px] font-bold rounded-lg shadow-sm"
@@ -536,6 +548,7 @@ function DynamicFieldItem({
                                     toggleSelectValue(field.name, customValue.trim(), !!field.multiple);
                                     setShowCustomInput(false);
                                     setCustomValue("");
+                                    if (field.apiEndpoint) fetchApiOptions();
                                   }
                                 }
                               }}
@@ -565,6 +578,7 @@ function DynamicFieldItem({
                                 toggleSelectValue(field.name, customValue.trim(), !!field.multiple);
                                 setShowCustomInput(false);
                                 setCustomValue("");
+                                if (field.apiEndpoint) fetchApiOptions();
                               }
                             }}
                             disabled={!customValue.trim() || customLoading}
@@ -609,7 +623,7 @@ function DynamicFieldItem({
                             const value = typeof opt === 'string' ? opt : opt?.value;
                             const label = typeof opt === 'string' ? opt : opt?.label;
                             const isSelected = field.multiple
-                              ? (formData[field.name] || []).includes(value)
+                              ? currentValueArray.includes(value)
                               : formData[field.name] === value;
 
                             return (

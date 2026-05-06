@@ -467,3 +467,16 @@ export const createSkill = async (skill_name: string) => {
     throw error;
   }
 };
+
+export const createSpecialization = async (specialization_name: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.specialization.specialization.create_specialization`,
+      { specialization_name }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating specialization:", error);
+    throw error;
+  }
+};
