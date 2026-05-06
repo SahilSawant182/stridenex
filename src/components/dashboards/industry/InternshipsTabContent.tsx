@@ -21,7 +21,7 @@ import {
   Pen,
   Trash2
 } from "lucide-react";
-import { getInternshipList, createInternship, updateInternship, deleteInternship, getMasterData, createSkill } from "@/services/industry.services";
+import { getInternshipList, createInternship, updateInternship, deleteInternship, getMasterData, createSkill, getDepartmentsByCourse } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { calculateEndDate } from "@/utils/date.utils";
@@ -78,10 +78,15 @@ export default function InternshipsTabContent() {
 
   const fetchOptions = async (doctype: string, setter: (val: string[]) => void, extraPayload?: any) => {
     try {
-      const data = await getMasterData(doctype, extraPayload);
-      const apiData = data.data || data.message || [];
+      let data;
+      if (extraPayload?.customUrl) {
+        data = await getDepartmentsByCourse(extraPayload.customUrl.split('?courses=')[1]);
+      } else {
+        data = await getMasterData(doctype, extraPayload);
+      }
+      const apiData = data.message?.data || data.data || data.message || [];
       const mapField = extraPayload?.fields || "name";
-      let options = Array.isArray(apiData) ? apiData.map((item: any) => item[mapField] || item.name) : [];
+      let options = Array.isArray(apiData) ? apiData.map((item: any) => item[mapField] || item.name || item.department_name || item.department || item) : [];
       if (doctype === "Courses") {
         options = ["All", ...options];
       }
@@ -121,9 +126,9 @@ export default function InternshipsTabContent() {
     { name: "application_deadline", label: "Application Deadline", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase", max: modalValues.start_date },
     { name: "openings", label: "Openings", type: "number", icon: Users, required: true, placeholder: "e.g. 10" },
     { name: "status", label: "Status", type: "select", icon: Zap, options: ["Active", "Draft", "Closed"], required: true, placeholder: "Select Status" },
-    { name: "course", label: "Course", type: "select", icon: Briefcase, options: courseOptions, required: true, placeholder: "Select Course" },
-    { name: "department", label: "Department", type: "select", icon: Briefcase, options: departmentOptions, required: modalValues.course !== "All", placeholder: "Select Department", disabled: modalValues.course === "All" },
-    { name: "academic_year", label: "Academic Year", type: "select", icon: Calendar, options: ["2", "3", "4"], required: modalValues.course !== "All", placeholder: "Select Year", disabled: modalValues.course === "All" },
+    { name: "course", label: "Course", type: "select", icon: Briefcase, options: courseOptions, required: true, placeholder: "Select Courses", multiple: true },
+    { name: "department", label: "Department", type: "select", icon: Briefcase, options: departmentOptions, required: true, placeholder: "Select Departments", multiple: true },
+    { name: "academic_year", label: "Academic Year", type: "select", icon: Calendar, options: ["2", "3", "4"], required: true, placeholder: "Select Years", multiple: true },
     {
       name: "required_skills",
       label: "Required Skills",
@@ -188,13 +193,14 @@ export default function InternshipsTabContent() {
         industry: companyName,
         internship_name: formData.title,
         title: formData.title,
-        name: editingInternship?.name, // Add name for updates
+        name: editingInternship?.name,
         application_deadline: formData.application_deadline,
         required_skills: Array.isArray(formData.required_skills)
           ? formData.required_skills.map((s: string) => ({ skill: s }))
           : [],
-        department: formData.course === "All" ? null : formData.department,
-        academic_year: formData.course === "All" ? null : formData.academic_year
+        course: Array.isArray(formData.course) ? formData.course : (formData.course ? [formData.course] : []),
+        department: Array.isArray(formData.department) ? formData.department : (formData.department ? [formData.department] : []),
+        academic_year: Array.isArray(formData.academic_year) ? formData.academic_year : (formData.academic_year ? [formData.academic_year] : [])
       };
 
       if (editingInternship) {
@@ -244,19 +250,19 @@ export default function InternshipsTabContent() {
     } else if (fieldName === "course" && courseOptions.length === 0) {
       fetchOptions("Courses", setCourseOptions);
     } else if (fieldName === "department" && departmentOptions.length === 0) {
-      const filters = modalValues.course ? { courses: modalValues.course } : {};
-      fetchOptions("College Department", setDepartmentOptions, { filters });
+      const courses = Array.isArray(modalValues.course) ? modalValues.course.join(',') : modalValues.course;
+      if (courses) {
+        fetchOptions("College Department", setDepartmentOptions, { 
+          customUrl: `method/stridenex_app.stridenex_app.doctype.college_department.college_department.get_departments_by_course?courses=${courses}`
+        });
+      }
     }
   };
 
   const handleValuesChange = (values: Record<string, any>, changedFieldName: string) => {
     setModalValues(values);
     if (changedFieldName === "course") {
-      if (values.course === "All") {
-        return { department: "All", academic_year: "All" };
-      }
       setDepartmentOptions([]);
-      return { department: "" };
     }
     if (changedFieldName === "payment_mode" && values.payment_mode === "Unpaid") {
       return { stipend: 0 };

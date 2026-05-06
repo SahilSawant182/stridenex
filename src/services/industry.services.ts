@@ -13,6 +13,18 @@ export const getMasterData = async (doctype: string, additionalPayload: any = {}
   }
 };
 
+export const getDepartmentsByCourse = async (courses: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.college_department.college_department.get_departments_by_course?courses=${encodeURIComponent(courses)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching departments by course:", error);
+    throw error;
+  }
+};
+
 export const getIndustryByEmail = async (email: string) => {
   try {
     const response = await apiService.get(
