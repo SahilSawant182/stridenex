@@ -287,11 +287,19 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
           latitude: null,
           longitude: null
         },
-        operating_hours: (raw.operating_hours || []).map((oh: any) => ({
-          ...oh,
-          opening_time: oh.opening_time ? oh.opening_time.substring(0, 5) : "",
-          closing_time: oh.closing_time ? oh.closing_time.substring(0, 5) : ""
-        }))
+        operating_hours: (raw.operating_hours || []).map((oh: any) => {
+          const formatTime = (t: string) => {
+            if (!t) return "";
+            const parts = t.split(":");
+            if (parts.length >= 2) return `${parts[0].padStart(2, "0")}:${parts[1].padStart(2, "0")}`;
+            return t;
+          };
+          return {
+            ...oh,
+            opening_time: formatTime(oh.opening_time),
+            closing_time: formatTime(oh.closing_time)
+          };
+        })
       };
     }
 
