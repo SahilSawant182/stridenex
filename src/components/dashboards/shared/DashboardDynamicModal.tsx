@@ -515,7 +515,7 @@ function DynamicFieldItem({
                                 if (customError) setCustomError(null);
                               }}
                               placeholder={field.customPlaceholder || "Enter custom value..."}
-                              className={`w-full h-11 px-4 bg-slate-50 border ${customError ? 'border-red-500 ring-4 ring-red-500/10' : 'border-slate-200'} rounded-xl text-sm font-semibold outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all`}
+                              className={`w-full h-11 px-4 bg-slate-50 border ${customError ? 'border-red-500 ring-4 ring-red-500/10' : 'border-slate-200'} rounded-xl text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all`}
                               onKeyDown={async (e) => {
                                 if (e.key === 'Enter') {
                                   e.preventDefault();

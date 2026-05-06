@@ -144,10 +144,11 @@ export const LocationPicker: React.FC<Props> = ({ value, onChange }) => {
     const updated = { ...value, [field]: val };
     onChange(updated);
 
-    if (field === "address_line_1") {
+    if (field === "address_line_1" || field === "address_line_2") {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(() => {
-        fetchSuggestions(val);
+        const query = [updated.address_line_1, updated.address_line_2].filter(Boolean).join(", ");
+        fetchSuggestions(query);
       }, 500);
     }
   };
@@ -394,7 +395,7 @@ export const LocationPicker: React.FC<Props> = ({ value, onChange }) => {
                         <MapPin className="w-4 h-4 text-blue-600" />
                       </div>
                       <p className="text-xs font-bold text-slate-800 line-clamp-2 leading-relaxed">
-                        {value.address_line_1 || "No address selected"}
+                        {[value.address_line_1, value.address_line_2].filter(Boolean).join(", ") || "No address selected"}
                       </p>
                     </div>
                   </div>
