@@ -226,13 +226,12 @@ export default function ProjectsTabContent() {
   };
 
   useEffect(() => {
-    // if (companyName) {
-    //   fetchProjects(companyName);
-    // } else if (!industryLoading) {
-    //   setLoading(false);
-    // }
-    fetchProjects(companyName);
-    fetchApplicationCount(companyName);
+    if (companyName) {
+      fetchProjects(companyName);
+      fetchApplicationCount(companyName);
+    } else if (!industryLoading) {
+      setLoading(false);
+    }
   }, [companyName, industryLoading]);
 
   const handleModalSubmit = async (formData: any) => {

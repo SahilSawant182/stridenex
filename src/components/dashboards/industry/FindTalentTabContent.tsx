@@ -64,7 +64,8 @@ export default function FindTalentTabContent() {
   useEffect(() => {
 
     const fetchStudents = async () => {
-      const industryName = industryData?.company_name || "ashok Enterprises";
+      const industryName = industryData?.company_name;
+      if (!industryName) return;
 
       try {
         setLoading(true);

@@ -169,9 +169,9 @@ export default function PipelineTabContent() {
   }, []);
 
   useEffect(() => {
-    // if (industryData?.company_name) {
-    fetchApplications(companyName);
-    // }
+    if (companyName) {
+      fetchApplications(companyName);
+    }
   }, [companyName, fetchApplications]);
 
   if (industryLoading || (loading && Object.values(candidates).every(arr => arr.length === 0))) {

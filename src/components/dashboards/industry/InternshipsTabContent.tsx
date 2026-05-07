@@ -176,12 +176,11 @@ export default function InternshipsTabContent() {
   };
 
   useEffect(() => {
-    // if (companyName) {
-    //   fetchInternships(companyName);
-    // } else if (!industryLoading) {
-    //   setLoading(false);
-    // }
-    fetchInternships(companyName)
+    if (companyName) {
+      fetchInternships(companyName);
+    } else if (!industryLoading) {
+      setLoading(false);
+    }
   }, [companyName, industryLoading]);
 
   const handleModalSubmit = async (formData: any) => {
