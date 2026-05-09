@@ -64,7 +64,7 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
   };
 
   const getActiveIconStyles = () => {
-    switch(role) {
+    switch (role) {
       case 'college':
         return "text-green-600";
       case 'mentor':
@@ -164,9 +164,9 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
       </div>
 
       {/* Bottom Links & User Profile */}
-      <div className="p-4 border-t border-slate-100 space-y-3 bg-slate-50/50">
-        {/* Bottom Navigation Links */}
-        <div className="space-y-1.5">
+      <div className="p-4 space-y-3 bg-slate-50/50">
+        {/* Bottom Navigation Links - Hidden for now */}
+        {/* <div className="space-y-1.5">
           {config.bottomLinks.map((link) => {
             const isActive = pathname === link.href;
             const Icon = link.icon;
@@ -193,7 +193,6 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
                   <span className={`flex-1 text-[14px] tracking-wide ${isActive ? "font-bold" : "font-medium"}`}>{link.name}</span>
                 )}
 
-                {/* Tooltip for collapsed state */}
                 {collapsed && hoveredItem === link.name && (
                   <motion.div
                     initial={{ opacity: 0, x: 10 }}
@@ -206,7 +205,7 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
               </Link>
             );
           })}
-        </div>
+        </div> */}
 
         {/* User Profile */}
         {!collapsed ? (

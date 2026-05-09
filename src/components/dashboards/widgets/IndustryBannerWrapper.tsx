@@ -124,7 +124,7 @@ export default function IndustryBannerWrapper() {
   industryFields.push(
     { name: "company_website", label: "Website (URL)", type: "url", icon: Globe, required: true, placeholder: "https://www.company.com" },
     { name: "employee_head_count", label: "Employee Count", type: "number", icon: Users, required: true, placeholder: "e.g. 500" },
-    { name: "cin", label: "CIN Number", type: "text", icon: FileText, required: true, placeholder: "Enter Corporate Identification Number" },
+    { name: "cin", label: "CIN Number", type: "text", icon: FileText, required: false, placeholder: "Enter Corporate Identification Number" },
     { name: "about", label: "About Company", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Briefly describe your company's mission and goals..." },
     {
       name: "specializations",
