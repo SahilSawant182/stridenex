@@ -479,3 +479,39 @@ export const completeHabitPlanStatus = async (planName: string, habitName: strin
   }
 };
 
+/**
+ * Delete habit plan.
+ */
+export const deleteHabitPlan = async (planName: string, habitName: string, student: string) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.habits_builder.api.delete_habit_plan",
+      { 
+        plan_name: planName,
+        habit_name: habitName,
+        student: student
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error deleting habit plan:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get booked sessions for a student.
+ */
+export const getBookedSessions = async (studentEmail: string) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.api_stridenex_app.student.mentor.get_booked_sessions",
+      { student_email: studentEmail }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching booked sessions:", error);
+    throw error;
+  }
+};
+
