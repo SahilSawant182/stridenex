@@ -16,14 +16,16 @@ import {
     X,
     Clock,
     Link,
-    Zap
+    Zap,
+    Trash2
 } from "lucide-react";
 import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useToast } from "@/context/ToastContext";
 import { 
     getStudentDashboardHabits, 
     getHabitStreaks, 
@@ -34,8 +36,10 @@ import {
     createHabitPlan, 
     getHabitHistory, 
     getPlanSummary,
-    completeHabitPlanStatus
+    completeHabitPlanStatus,
+    deleteHabitPlan
 } from "@/services/student.services";
+import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 
 // Types
 interface HabitPlan {
@@ -152,6 +156,7 @@ const convertISOToDDMMYYYY = (iso: string): string => {
 };
 
 export default function HabitsTabContent() {
+    const { showToast } = useToast();
     const [statsData, setStatsData] = useState<StatsData>({
         streak: { current: 0, longest: 0 },
         last30Days: { done: 0, partial: 0, missed: 0, completionRate: 0 },
@@ -162,17 +167,171 @@ export default function HabitsTabContent() {
     const [habitHistory, setHabitHistory] = useState<HabitHistoryItem[]>([]);
     const [suggestedHabit, setSuggestedHabit] = useState<SuggestedHabit | null>(null);
     const [loading, setLoading] = useState(true);
-    const [showNewHabitModal, setShowNewHabitModal] = useState(false);
-    const [formData, setFormData] = useState<HabitFormData>({
-        plan_name: '',
-        start_date: new Date().toLocaleDateString('en-GB').replace(/\//g, '/'), // DD/MM/YYYY format
-        end_date: '',
-        linked_path: '',
-        habits: [''],
-        ai_generated: 0
-    });
-    const [submitting, setSubmitting] = useState(false);
+    
+    // Modal states
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalLoading, setModalLoading] = useState(false);
+    const [modalError, setModalError] = useState<string | null>(null);
+    const [habitToEdit, setHabitToEdit] = useState<any | null>(null);
+
+    // Habit fields for dynamic modal
+    const habitFields: DynamicField[] = [
+        { name: "plan_name", label: "Plan Name", type: "text", icon: Target, required: true, colSpan: 2, placeholder: "e.g., Daily Coding Challenge", disabled: !!habitToEdit },
+        { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "MM/DD/YYYY", textTransform: "uppercase" },
+        { name: "end_date", label: "End Date", type: "date", icon: Calendar, placeholder: "MM/DD/YYYY", textTransform: "uppercase" },
+        { name: "linked_path", label: "Linked Path", type: "text", icon: Link, placeholder: "e.g., /career/software-engineering" },
+        { 
+            name: "habits",
+            label: "Habits",
+            type: "custom",
+            required: true,
+            colSpan: 2,
+            customRender: (formData: any, handleChange: (value: any) => void) => {
+                return (
+                    <div className="space-y-2">
+                        {formData.habits?.map((habit: string, index: number) => (
+                            <div key={index} className="flex items-center gap-2">
+                                <Target className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                                <input
+                                    type="text"
+                                    value={habit}
+                                    onChange={(e) => {
+                                        const newHabits = [...(formData.habits || [])];
+                                        newHabits[index] = e.target.value;
+                                        handleChange(newHabits);
+                                    }}
+                                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    placeholder="Enter habit name"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const newHabits = [...(formData.habits || [])];
+                                        newHabits.splice(index, 1);
+                                        handleChange(newHabits);
+                                    }}
+                                    className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ))}
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const newHabits = [...(formData.habits || []), ''];
+                                handleChange(newHabits);
+                            }}
+                            className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                            <Plus className="w-4 h-4" />
+                            <span>Add Habit</span>
+                        </button>
+                    </div>
+                );
+            }
+        },
+        { 
+            name: "ai_generated", 
+            label: "AI Generated", 
+            type: "custom",
+            customRender: (formData: any, handleChange: (value: any) => void) => {
+                return (
+                    <div className="flex items-center gap-3 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={formData.ai_generated === 1}
+                            onChange={(e) => handleChange(e.target.checked ? 1 : 0)}
+                            className="w-4 h-4 text-orange-600 border-slate-300 rounded focus:ring-orange-500"
+                        />
+                        <div className="flex items-center gap-2">
+                            <Zap className="w-4 h-4 text-orange-500" />
+                            <span className="text-sm font-medium text-slate-700">AI Generated</span>
+                        </div>
+                    </div>
+                );
+            }
+        }
+    ];
     const [completingHabit, setCompletingHabit] = useState<string | null>(null);
+
+    // Modal handlers
+    const handlePostNewHabit = () => {
+        setHabitToEdit(null);
+        setIsModalOpen(true);
+    };
+
+    const handleManageHabit = (habit: any) => {
+        setHabitToEdit(habit);
+        setIsModalOpen(true);
+    };
+
+    const handleDeleteHabit = async (habit: any) => {
+        try {
+            const studentEmail = localStorage.getItem("currentUser") || "";
+            await deleteHabitPlan(habit.planName, habit.title, studentEmail);
+            showToast("Habit deleted successfully!", "success");
+            fetchData(); // Refresh the data
+        } catch (error) {
+            console.error("Error deleting habit:", error);
+            showToast("Failed to delete habit. Please try again.", "error");
+        }
+    };
+
+    const modalInitialValues = useMemo(() => {
+        if (habitToEdit) {
+            return {
+                ...habitToEdit,
+                habits: Array.isArray(habitToEdit.habits)
+                    ? habitToEdit.habits.map((h: any) => h.habit_name || h.habit || h)
+                    : Array.isArray(habitToEdit.required_skills)
+                        ? habitToEdit.required_skills.map((s: any) => s.skill || s.skills)
+                        : []
+            };
+        }
+        return {
+            plan_name: '',
+            start_date: new Date().toLocaleDateString('en-GB').replace(/\//g, '/'),
+            end_date: '',
+            linked_path: '',
+            habits: [''],
+            ai_generated: 0
+        };
+    }, [habitToEdit]);
+
+    const handleModalSubmit = async (data: any) => {
+        try {
+            setModalLoading(true);
+            setModalError(null);
+            
+            const studentEmail = localStorage.getItem("currentUser") || "";
+            const payload = {
+                student: studentEmail,
+                plan_name: data.plan_name,
+                start_date: data.start_date,
+                end_date: data.end_date || null,
+                linked_path: data.linked_path || null,
+                habits: data.habits
+                    .filter((h: any) => h.trim() !== '')
+                    .map((habit: any) => ({
+                        habit_name: habit,
+                        doctype: "Habit Plan Item"
+                    })),
+                ai_generated: parseInt(data.ai_generated) || 0
+            };
+            
+            await createHabitPlan(payload);
+            setIsModalOpen(false);
+            setHabitToEdit(null);
+            fetchData();
+            showToast("Habit plan created successfully!", "success");
+        } catch (error) {
+            console.error("Error creating habit plan:", error);
+            setModalError("Failed to create habit plan. Please try again.");
+        } finally {
+            setModalLoading(false);
+        }
+    };
 
     useEffect(() => {
         fetchData();
@@ -356,7 +515,7 @@ export default function HabitsTabContent() {
     const getColorForCategory = (category: string) => {
         const colorMap: { [key: string]: string } = {
             'Problem Solving': 'text-blue-600',
-            'ML': 'text-purple-600',
+            'ML': 'text-purple-600', 
             'Communication': 'text-orange-600',
             'Various': 'text-emerald-600',
             'General': 'text-slate-600'
@@ -465,73 +624,7 @@ export default function HabitsTabContent() {
         }
     };
 
-    const handleNewHabitSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        
-        if (!formData.plan_name.trim() || !formData.start_date) {
-            alert('Please fill in at least the plan name and start date');
-            return;
-        }
-
-        try {
-            setSubmitting(true);
-            const studentEmail = localStorage.getItem("currentUser") || "";
-            
-            const payload = {
-                student: studentEmail,
-                plan_name: formData.plan_name,
-                start_date: formData.start_date,
-                end_date: formData.end_date || null,
-                linked_path: formData.linked_path || null,
-                habits: formData.habits
-                    .filter(h => h.trim() !== '')
-                    .map(habit => ({
-                        habit_name: habit,
-                        doctype: "Habit Plan Item"
-                    })),
-                ai_generated: formData.ai_generated
-            };
-
-            await createHabitPlan(payload);
-            
-            // Reset form and close modal
-            setFormData({
-                plan_name: '',
-                start_date: new Date().toISOString().split('T')[0],
-                end_date: '',
-                linked_path: '',
-                habits: [''],
-                ai_generated: 0
-            });
-            setShowNewHabitModal(false);
-            
-            // Refresh data
-            fetchData();
-        } catch (error) {
-            console.error("Error creating habit plan:", error);
-            alert('Error creating habit plan. Please try again.');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const handleHabitChange = (index: number, value: string) => {
-        const newHabits = [...formData.habits];
-        newHabits[index] = value;
-        setFormData({ ...formData, habits: newHabits });
-    };
-
-    const addHabitField = () => {
-        setFormData({ ...formData, habits: [...formData.habits, ''] });
-    };
-
-    const removeHabitField = (index: number) => {
-        if (formData.habits.length > 1) {
-            const newHabits = formData.habits.filter((_, i) => i !== index);
-            setFormData({ ...formData, habits: newHabits });
-        }
-    };
-
+    
     const handleGetHabitHistory = async (habitName: string) => {
         try {
             const studentEmail = localStorage.getItem("currentUser") || "";
@@ -647,14 +740,12 @@ export default function HabitsTabContent() {
             >
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                     <h3 className="text-sm font-bold text-slate-800">My Habit Plans</h3>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs border-slate-200 text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 transition-all"
-                        onClick={() => setShowNewHabitModal(true)}
+                    <button
+                        onClick={handlePostNewHabit}
+                        className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-orange-500/10"
                     >
-                        <Plus className="w-3 h-3 mr-1" /> New Habit
-                    </Button>
+                        <Plus className="w-4 h-4" /> New Habit
+                    </button>
                 </div>
 
                 <div className="overflow-x-auto">
@@ -718,14 +809,17 @@ export default function HabitsTabContent() {
                                             </div>
                                         </td>
                                         <td className="py-4 px-6">
-                                            <Button 
-                                                variant="ghost" 
-                                                size="sm" 
-                                                className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-slate-600"
-                                                onClick={() => handleLogHabit(habit.id.toString(), 1)}
+                                            <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleDeleteHabit(habit);
+                                                }}
+                                                disabled={false}
+                                                className={`p-2.5 rounded-xl border border-slate-200 text-slate-400 transition-all flex items-center justify-center active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed hover:text-red-500 hover:border-red-100 hover:bg-red-50`}
+                                                title="Delete Habit"
                                             >
-                                                <Target className="w-4 h-4" />
-                                            </Button>
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
                                         </td>
                                     </tr>
                                 );
@@ -761,10 +855,7 @@ export default function HabitsTabContent() {
                                         <p className="text-xs text-slate-500">{habit.habit_type}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-sm text-slate-600">
-                                        {habit.current_value}/{habit.target_value}
-                                    </span>
+                                <div className="flex items-center gap-2">   
                                     <Button
                                         size="sm"
                                         className="text-xs bg-emerald-500 hover:bg-emerald-600 text-white"
@@ -820,195 +911,19 @@ export default function HabitsTabContent() {
                 </motion.div>
             )}
 
-            {/* New Habit Modal */}
-            {showNewHabitModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="bg-white rounded-xl border border-slate-200/60 shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-                    >
-                        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-orange-50 flex items-center justify-center">
-                                    <Plus className="w-5 h-5 text-orange-600" />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-semibold text-slate-800">Create New Habit Plan</h3>
-                                    <p className="text-sm text-slate-500">Set up a new habit to track your progress</p>
-                                </div>
-                            </div>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-slate-400 hover:text-slate-600"
-                                onClick={() => setShowNewHabitModal(false)}
-                            >
-                                <X className="w-4 h-4" />
-                            </Button>
-                        </div>
-
-                        <form onSubmit={handleNewHabitSubmit} className="p-6 space-y-6">
-                            {/* Plan Name */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
-                                    Plan Name <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.plan_name}
-                                    onChange={(e) => setFormData({ ...formData, plan_name: e.target.value })}
-                                    className="w-full px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                                    placeholder="e.g., Daily Coding Challenge"
-                                    required
-                                />
-                            </div>
-
-                            {/* Dates */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                                        Start Date <span className="text-red-500">*</span>
-                                    </label>
-                                    <div className="relative">
-                                        <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-                                        <Input
-                                            type="date"
-                                            value={formData.start_date ? convertDDMMYYYYToISO(formData.start_date) : ''}
-                                            onChange={(e) => setFormData({ ...formData, start_date: convertISOToDDMMYYYY(e.target.value) })}
-                                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent placeholder:uppercase"
-                                            placeholder="DD/MM/YYYY"
-                                            required
-                                            style={{ textTransform: 'uppercase' }}
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                                        End Date <span className="text-slate-400">(Optional)</span>
-                                    </label>
-                                    <div className="relative">
-                                        <Calendar className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-                                        <Input
-                                            type="date"
-                                            value={formData.end_date ? convertDDMMYYYYToISO(formData.end_date) : ''}
-                                            onChange={(e) => setFormData({ ...formData, end_date: convertISOToDDMMYYYY(e.target.value) })}
-                                            className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent placeholder:uppercase"
-                                            placeholder="DD/MM/YYYY"
-                                            style={{ textTransform: 'uppercase' }}
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Habits List */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
-                                    Habits <span className="text-red-500">*</span>
-                                </label>
-                                <div className="space-y-2">
-                                    {formData.habits.map((habit, index) => (
-                                        <div key={index} className="flex items-center gap-2">
-                                            <Target className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                                            <input
-                                                type="text"
-                                                value={habit}
-                                                onChange={(e) => handleHabitChange(index, e.target.value)}
-                                                className="flex-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                                                placeholder="e.g., Solve 2 LeetCode problems"
-                                            />
-                                            {formData.habits.length > 1 && (
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="text-slate-400 hover:text-red-500"
-                                                    onClick={() => removeHabitField(index)}
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </Button>
-                                            )}
-                                        </div>
-                                    ))}
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        className="text-xs border-slate-200 text-slate-600 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200"
-                                        onClick={addHabitField}
-                                    >
-                                        <Plus className="w-3 h-3 mr-1" /> Add Another Habit
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {/* Linked Path */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-2">
-                                    Linked Path <span className="text-slate-400">(Optional)</span>
-                                </label>
-                                <div className="relative">
-                                    <Link className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" />
-                                    <input
-                                        type="text"
-                                        value={formData.linked_path}
-                                        onChange={(e) => setFormData({ ...formData, linked_path: e.target.value })}
-                                        className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                                        placeholder="e.g., /career/software-engineering"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* AI Generated */}
-                            <div>
-                                <label className="flex items-center gap-3 cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.ai_generated === 1}
-                                        onChange={(e) => setFormData({ ...formData, ai_generated: e.target.checked ? 1 : 0 })}
-                                        className="w-4 h-4 text-orange-600 border-slate-300 rounded focus:ring-orange-500"
-                                    />
-                                    <div className="flex items-center gap-2">
-                                        <Zap className="w-4 h-4 text-orange-500" />
-                                        <span className="text-sm font-medium text-slate-700">AI Generated</span>
-                                    </div>
-                                </label>
-                                <p className="text-xs text-slate-500 mt-1 ml-7">Mark if this habit was suggested by AI</p>
-                            </div>
-
-                            {/* Form Actions */}
-                            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="border-slate-200 text-slate-600 hover:bg-slate-50"
-                                    onClick={() => setShowNewHabitModal(false)}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={submitting}
-                                    className="bg-orange-500 hover:bg-orange-600 text-white"
-                                >
-                                    {submitting ? (
-                                        <>
-                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                            Creating...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Plus className="w-4 h-4 mr-2" />
-                                            Create Habit Plan
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
-                        </form>
-                    </motion.div>
-                </div>
-            )}
+            <DashboardDynamicModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title={habitToEdit ? "Manage Habit Plan" : "Create New Habit Plan"}
+                subtitle={habitToEdit ? `Updating: ${habitToEdit.plan_name}` : "Set up a new habit to track your progress"}
+                headerIcon={Target}
+                iconBgColor="bg-orange-500"
+                fields={habitFields}
+                initialValues={modalInitialValues}
+                onSubmit={handleModalSubmit}
+                loading={modalLoading}
+                error={modalError}
+            />
         </div>
     );
 }
