@@ -459,3 +459,23 @@ export const getPlanSummary = async (planName: string) => {
   }
 };
 
+/**
+ * Complete habit plan status.
+ */
+export const completeHabitPlanStatus = async (planName: string, habitName: string, student: string) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.habits_builder.api.complete_habit_plan_status",
+      { 
+        plan_name: planName,
+        habit_name: habitName,
+        student: student
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error completing habit plan status:", error);
+    throw error;
+  }
+};
+
