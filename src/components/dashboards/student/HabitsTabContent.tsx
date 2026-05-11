@@ -190,7 +190,7 @@ export default function HabitsTabContent() {
                 return (
                     <div className="space-y-2">
                         {formData.habits?.map((habit: string, index: number) => (
-                            <div key={index} className="flex items-center gap-2">
+                            <div key={`${habit}-${index}`} className="flex items-center gap-2">
                                 <Target className="w-4 h-4 text-slate-400 flex-shrink-0" />
                                 <input
                                     type="text"
@@ -841,8 +841,8 @@ export default function HabitsTabContent() {
                         <h3 className="text-sm font-bold text-slate-800">Today's Pending Habits</h3>
                     </div>
                     <div className="p-6 space-y-3">
-                        {pendingHabits.map((habit) => (
-                            <div key={habit.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                        {pendingHabits.map((habit, index) => (
+                            <div key={`${habit.id}-${habit.habit_name}-${index}`} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
                                 <div className="flex items-center gap-3">
                                     <div className={`w-8 h-8 rounded-lg ${getBgColorForCategory(habit.habit_type)} flex items-center justify-center`}>
                                         {(() => {
