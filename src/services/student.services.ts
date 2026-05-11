@@ -504,9 +504,8 @@ export const deleteHabitPlan = async (planName: string, habitName: string, stude
  */
 export const getBookedSessions = async (studentEmail: string) => {
   try {
-    const response = await apiService.post(
-      "method/stridenex_app.api_stridenex_app.student.mentor.get_booked_sessions",
-      { student_email: studentEmail }
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.get_booked_sessions?student_email=${encodeURIComponent(studentEmail)}`
     );
     return response;
   } catch (error) {
