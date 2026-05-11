@@ -20,7 +20,9 @@ import {
   Filter,
   ChevronRight,
   X,
-  Users
+  Users,
+  AlertCircle,
+  CheckCircle
 } from "lucide-react";
 import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
@@ -28,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { getMentorListings, getMentorSlotCalendar, bookMentorSlot, getMentorNextAvailableSlot, createGroupSessionBooking } from "@/services/student.services";
+import { getMentorListings, getMentorSlotCalendar, bookMentorSlot, getMentorNextAvailableSlot, createGroupSessionBooking, getBookedSessions } from "@/services/student.services";
 
 // Types
 interface Mentor {
@@ -50,6 +52,20 @@ interface Mentor {
   nextAvailableSlot?: string;
   offering_type?: string;
   batch_name?: string;
+}
+
+interface BookedSession {
+  name: string;
+  mentor: string;
+  offering_type: string;
+  session_date: string;
+  session_type: string;
+  status: string;
+  priority: string;
+  topic: string;
+  from_time: string;
+  to_time: string;
+  duration: string;
 }
 
 const COLORS = [
@@ -76,6 +92,8 @@ export default function MentorsTabContent() {
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [bookedSessions, setBookedSessions] = useState<BookedSession[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
 
   // Booking Modal States
   const [selectedMentorForBooking, setSelectedMentorForBooking] = useState<Mentor | null>(null);
@@ -151,6 +169,7 @@ export default function MentorsTabContent() {
         setSelectedMentorForBooking(null);
         alert(`Group Session booked successfully! ID: ${response?.message?.session_name || ""}`);
         fetchMentors();
+        fetchBookedSessions();
         return;
       }
 
@@ -194,6 +213,7 @@ export default function MentorsTabContent() {
       // Show success and refresh
       alert(`Session booked successfully! ID: ${response?.message?.session_name || ""}`);
       fetchMentors();
+      fetchBookedSessions();
     } catch (err) {
       console.error("Error booking session:", err);
       alert("Failed to book session. Please try again.");
@@ -206,7 +226,36 @@ export default function MentorsTabContent() {
 
   useEffect(() => {
     fetchMentors();
+    fetchBookedSessions();
   }, []);
+
+  const fetchBookedSessions = async () => {
+    try {
+      setLoadingSessions(true);
+      const studentEmail = localStorage.getItem("currentUser") || "";
+      const response = await getBookedSessions(studentEmail);
+      
+      if (response && response.message && Array.isArray(response.message)) {
+        setBookedSessions(response.message);
+      } else {
+        setBookedSessions([]);
+      }
+    } catch (err) {
+      console.error("Error loading booked sessions:", err);
+      setBookedSessions([]);
+    } finally {
+      setLoadingSessions(false);
+    }
+  };
+
+  // Helper function to check if a session is already booked
+  const isSessionAlreadyBooked = (mentor: Mentor) => {
+    return bookedSessions.some(session => 
+      session.mentor === mentor.email && 
+      session.offering_type === mentor.offering_type &&
+      (session.status === 'Scheduled' || session.status === 'Accepted')
+    );
+  };
 
   const fetchMentors = async () => {
     try {
@@ -363,8 +412,15 @@ export default function MentorsTabContent() {
                         </p>
                       </div>
                     </div>
-                    <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200 text-[10px] px-1.5 py-0 shrink-0 h-fit mt-0.5">
-                      Available
+                    <Badge 
+                      variant="outline" 
+                      className={`${
+                        isSessionAlreadyBooked(mentor)
+                          ? 'bg-slate-50 text-slate-600 border-slate-200'
+                          : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                      } text-[10px] px-1.5 py-0 shrink-0 h-fit mt-0.5`}
+                    >
+                      {isSessionAlreadyBooked(mentor) ? 'Booked' : 'Available'}
                     </Badge>
                   </div>
 
@@ -404,12 +460,21 @@ export default function MentorsTabContent() {
 
                 {/* Action Buttons */}
                 <div className="flex items-center gap-2 mt-auto">
-                  <Button 
-                    className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm"
-                    onClick={() => handleBookSession(mentor)}
-                  >
-                    Book Session
-                  </Button>
+                  {isSessionAlreadyBooked(mentor) ? (
+                    <Button 
+                      className="flex-1 bg-slate-400 text-white text-sm cursor-not-allowed"
+                      disabled
+                    >
+                      Booked
+                    </Button>
+                  ) : (
+                    <Button 
+                      className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm"
+                      onClick={() => handleBookSession(mentor)}
+                    >
+                      Book Session
+                    </Button>
+                  )}
                   <Button variant="outline" size="icon" className="border-slate-200 shrink-0">
                     <ChevronRight className="w-4 h-4 text-slate-600" />
                   </Button>
@@ -419,6 +484,103 @@ export default function MentorsTabContent() {
           ))}
         </motion.div>
       )}
+
+      {/* Booked Sessions Section */}
+      <motion.div variants={item}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-slate-800">Your Booked Sessions</h2>
+          <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
+            {bookedSessions.length} Sessions
+          </Badge>
+        </div>
+        
+        {loadingSessions ? (
+          <div className="flex justify-center items-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200">
+            <div className="animate-pulse flex items-center gap-2">
+              <Clock className="animate-spin w-5 h-5" />
+              <span>Loading your sessions...</span>
+            </div>
+          </div>
+        ) : bookedSessions.length === 0 ? (
+          <div className="text-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
+            <Calendar className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+            <p>No booked sessions found.</p>
+            <p className="text-sm mt-1">Book a session with a mentor to get started!</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {bookedSessions.map((session, index) => (
+              <BaseCard key={index} className="overflow-hidden">
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      {/* Session Header */}
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-semibold text-slate-800 truncate">{session.name}</h3>
+                          <Badge 
+                            variant="outline" 
+                            className={`${
+                              session.priority === 'High' 
+                                ? 'bg-red-50 text-red-600 border-red-200 font-medium' 
+                                : session.priority === 'Medium'
+                                ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
+                                : 'bg-green-50 text-green-600 border-green-200'
+                            }`}
+                          >
+                            {session.priority} Priority
+                          </Badge>
+                        </div>
+                        <Badge 
+                          variant="outline" 
+                          className={`${
+                            session.status === 'Scheduled' 
+                              ? 'bg-blue-50 text-blue-600 border-blue-200'
+                              : session.status === 'Completed'
+                              ? 'bg-green-50 text-green-600 border-green-200'
+                              : session.status === 'Cancelled'
+                              ? 'bg-red-50 text-red-600 border-red-200'
+                              : 'bg-gray-50 text-gray-600 border-gray-200'
+                          }`}
+                        >
+                          {session.status}
+                        </Badge>
+                      </div>
+                      
+                      {/* Session Details */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <Users className="w-4 h-4 text-slate-400" />
+                          <span className="truncate">Mentor: {session.mentor}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <Calendar className="w-4 h-4 text-slate-400" />
+                          <span>{new Date(session.session_date).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <Clock className="w-4 h-4 text-slate-400" />
+                          <span>{session.from_time} - {session.to_time}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <Target className="w-4 h-4 text-slate-400" />
+                          <span className="truncate">{session.topic}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Additional Info */}
+                      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500">
+                        <span>Type: {session.session_type}</span>
+                        <span>Duration: {session.duration}</span>
+                        <span>Offering: {session.offering_type}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </BaseCard>
+            ))}
+          </div>
+        )}
+      </motion.div>
 
       {/* Booking Modal */}
       {selectedMentorForBooking && (
