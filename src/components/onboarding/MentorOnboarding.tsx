@@ -90,7 +90,7 @@ export default function MentorOnboarding({
   onSkip
 }: MentorOnboardingProps) {
   const router = useRouter();
-  const { isOnboarded, isInitialized, currentUser, updateOnboardedFlag } = useAuth();
+  const { isOnboarded, isInitialized, currentUser, updateOnboardedFlag, logout } = useAuth();
 
   // ── UI state ────────────────────────────────────────────────────────────────
   const [currentStep, setCurrentStep] = useState<Step>(1);
@@ -429,7 +429,7 @@ export default function MentorOnboarding({
     } catch (err: any) {
       setError(
         err?.response?.data?.message?.message ||
-          "Failed to send verification code"
+        "Failed to send verification code"
       );
     }
   };
@@ -491,7 +491,7 @@ export default function MentorOnboarding({
     } catch (err: any) {
       setError(
         err?.response?.data?.message ||
-          "Failed to send verification code"
+        "Failed to send verification code"
       );
     }
   };
@@ -929,15 +929,16 @@ export default function MentorOnboarding({
   // SKIP
   // ─────────────────────────────────────────────────────────────────────────────
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
     if (onSkip) {
       onSkip();
     } else {
       /**
-       * "Skip" does NOT clear localStorage — the user may want to return and
-       * complete onboarding.  We just send them to the login page.
+       * "Skip" now performs a full logout to ensure the user can 
+       * re-authenticate with different credentials and to break 
+       * the redirection loop between onboarding and login.
        */
-      router.push("/login");
+      await logout("/login");
     }
   };
 
@@ -1002,7 +1003,7 @@ export default function MentorOnboarding({
             <div className="flex-1">
               <DynamicForm
                 fields={emailFields}
-                onSubmit={() => {}}
+                onSubmit={() => { }}
                 buttonLabel=""
                 loading={loading}
                 initialValues={{ email: formData.email }}
@@ -1038,8 +1039,8 @@ export default function MentorOnboarding({
                 {emailTimer > 0
                   ? `Resend in ${emailTimer}s`
                   : emailOtpSent
-                  ? "Resend OTP"
-                  : "Send OTP"}
+                    ? "Resend OTP"
+                    : "Send OTP"}
               </Button>
             )}
           </div>
@@ -1104,7 +1105,7 @@ export default function MentorOnboarding({
               <div className="flex-1">
                 <DynamicForm
                   fields={mobileFields}
-                  onSubmit={() => {}}
+                  onSubmit={() => { }}
                   buttonLabel=""
                   loading={loading}
                   errors={fieldErrors}
@@ -1148,8 +1149,8 @@ export default function MentorOnboarding({
                   {mobileTimer > 0
                     ? `Resend in ${mobileTimer}s`
                     : mobileOtpSent
-                    ? "Resend OTP"
-                    : "Send OTP"}
+                      ? "Resend OTP"
+                      : "Send OTP"}
                 </Button>
               )}
             </div>
@@ -1257,12 +1258,12 @@ export default function MentorOnboarding({
         apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: formData.state
           ? {
-              doctype: "District",
-              fields: ["name", "district_name"],
-              filters: [["state", "=", formData.state]],
-              order_by: "district_name asc",
-              limit_page_length: 1000
-            }
+            doctype: "District",
+            fields: ["name", "district_name"],
+            filters: [["state", "=", formData.state]],
+            order_by: "district_name asc",
+            limit_page_length: 1000
+          }
           : undefined,
         mapOptions: data => {
           const items = data.data || data || [];
@@ -1283,14 +1284,14 @@ export default function MentorOnboarding({
         apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: formData.district
           ? {
-              doctype: "Tahsil",
-              fields: ["name", "tahsil_name"],
-              filters: [
-                ["district", "=", formData.district]
-              ],
-              order_by: "tahsil_name asc",
-              limit_page_length: 1000
-            }
+            doctype: "Tahsil",
+            fields: ["name", "tahsil_name"],
+            filters: [
+              ["district", "=", formData.district]
+            ],
+            order_by: "tahsil_name asc",
+            limit_page_length: 1000
+          }
           : undefined,
         mapOptions: data => {
           const items = data.data || data || [];
@@ -1311,12 +1312,12 @@ export default function MentorOnboarding({
         apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: formData.tahsil
           ? {
-              doctype: "City",
-              fields: ["name", "city_name"],
-              filters: [["tahsil", "=", formData.tahsil]],
-              order_by: "city_name asc",
-              limit_page_length: 1000
-            }
+            doctype: "City",
+            fields: ["name", "city_name"],
+            filters: [["tahsil", "=", formData.tahsil]],
+            order_by: "city_name asc",
+            limit_page_length: 1000
+          }
           : undefined,
         mapOptions: data => {
           const items = data.data || data || [];
@@ -1342,7 +1343,7 @@ export default function MentorOnboarding({
       <div className="space-y-4">
         <DynamicForm
           fields={step2Fields}
-          onSubmit={() => {}}
+          onSubmit={() => { }}
           buttonLabel=""
           loading={loading}
           initialValues={formData}
@@ -1461,7 +1462,7 @@ export default function MentorOnboarding({
       <div className="space-y-6">
         <DynamicForm
           fields={step3Fields}
-          onSubmit={() => {}}
+          onSubmit={() => { }}
           buttonLabel=""
           loading={loading}
           initialValues={formData}
@@ -1499,34 +1500,30 @@ export default function MentorOnboarding({
                       !loadingPlatforms &&
                       togglePlatformDropdown(index)
                     }
-                    className={`w-full h-9 px-3 rounded-md border ${
-                      platformError
-                        ? "border-red-500"
-                        : "border-slate-200"
-                    } bg-white text-sm text-slate-900 flex items-center justify-between cursor-pointer hover:border-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4] ${
-                      loadingPlatforms
+                    className={`w-full h-9 px-3 rounded-md border ${platformError
+                      ? "border-red-500"
+                      : "border-slate-200"
+                      } bg-white text-sm text-slate-900 flex items-center justify-between cursor-pointer hover:border-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4] ${loadingPlatforms
                         ? "opacity-60 cursor-not-allowed"
                         : ""
-                    }`}
+                      }`}
                     tabIndex={0}
                   >
                     <span
-                      className={`truncate ${
-                        !item.platform
-                          ? "text-slate-400"
-                          : "text-slate-900"
-                      }`}
+                      className={`truncate ${!item.platform
+                        ? "text-slate-400"
+                        : "text-slate-900"
+                        }`}
                     >
                       {loadingPlatforms
                         ? "Loading platforms..."
                         : item.platform || "Select Platform"}
                     </span>
                     <ChevronDown
-                      className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${
-                        openPlatformDropdown === index
-                          ? "rotate-180"
-                          : ""
-                      }`}
+                      className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${openPlatformDropdown === index
+                        ? "rotate-180"
+                        : ""
+                        }`}
                     />
                   </div>
 
@@ -1542,30 +1539,27 @@ export default function MentorOnboarding({
                                 option.value
                               )
                             }
-                            className={`px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors ${
-                              item.platform === option.value
-                                ? "bg-[#1152d4]/5"
-                                : ""
-                            }`}
+                            className={`px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors ${item.platform === option.value
+                              ? "bg-[#1152d4]/5"
+                              : ""
+                              }`}
                           >
                             <div
-                              className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                                item.platform === option.value
-                                  ? "border-[#1152d4]"
-                                  : "border-slate-300"
-                              }`}
+                              className={`w-4 h-4 rounded-full border flex items-center justify-center ${item.platform === option.value
+                                ? "border-[#1152d4]"
+                                : "border-slate-300"
+                                }`}
                             >
                               {item.platform ===
                                 option.value && (
-                                <div className="w-2 h-2 rounded-full bg-[#1152d4]" />
-                              )}
+                                  <div className="w-2 h-2 rounded-full bg-[#1152d4]" />
+                                )}
                             </div>
                             <span
-                              className={`flex-1 ${
-                                item.platform === option.value
-                                  ? "text-[#1152d4] font-medium"
-                                  : "text-slate-700"
-                              }`}
+                              className={`flex-1 ${item.platform === option.value
+                                ? "text-[#1152d4] font-medium"
+                                : "text-slate-700"
+                                }`}
                             >
                               {option.label}
                             </span>
@@ -1657,9 +1651,6 @@ export default function MentorOnboarding({
     );
   };
 
-  // ─────────────────────────────────────────────────────────────────────────────
-  // ROOT RENDER
-  // ─────────────────────────────────────────────────────────────────────────────
 
   return (
     <OnboardingLayout

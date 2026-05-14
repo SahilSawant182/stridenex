@@ -21,7 +21,7 @@ interface AuthContextType {
       isOnboarded?: string;
     }
   ) => Promise<void>;
-  logout: () => void;
+  logout: (redirectPath?: string) => void;
   isInitialized: boolean;
   getCurrentUser: () => Promise<string | null>;
   isOnboarded: string | null;
@@ -185,7 +185,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  const logout = async () => {
+  const logout = async (redirectPath: string = "/") => {
     try {
       if (apiKey && apiSecret) {
         await fetch(
@@ -218,8 +218,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Use setTimeout to ensure state updates complete before redirect
     setTimeout(() => {
-      // Force a hard navigation to home page
-      window.location.href = "/";
+      // Force a hard navigation to the specified path
+      window.location.href = redirectPath;
     }, 100);
   };
 

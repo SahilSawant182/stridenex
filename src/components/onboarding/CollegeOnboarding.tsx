@@ -415,7 +415,7 @@ export default function CollegeOnboarding({
       } else {
         // Handle internal errors or non-200 cases
         let errorMsg = "Failed to create college. Please try again.";
-        
+
         if (response.data?._server_messages) {
           try {
             const messages = JSON.parse(response.data._server_messages);
@@ -427,14 +427,14 @@ export default function CollegeOnboarding({
         } else {
           errorMsg = response.data?.message?.message || response.data?.message || errorMsg;
         }
-        
+
         setError(errorMsg);
       }
     } catch (err: any) {
       console.error("Error submitting college data:", err);
-      
+
       let errorMessage = "Error submitting college data";
-      
+
       if (err?.response?.data?._server_messages) {
         try {
           const messages = JSON.parse(err.response.data._server_messages);
@@ -456,7 +456,7 @@ export default function CollegeOnboarding({
           errorMessage = err?.message || errorMessage;
         }
       }
-      
+
       setError(errorMessage);
     } finally {
       setLoading(false);

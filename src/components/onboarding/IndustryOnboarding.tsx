@@ -240,7 +240,7 @@ export default function IndustryOnboarding({
                 setContactPersons(prev => {
                     const newPersons = [...prev];
                     const names = (user.full_name || "").split(" ");
-                    
+
                     // Populate if fields are currently empty
                     newPersons[0] = {
                         ...newPersons[0],
