@@ -46,13 +46,15 @@ export const updateMentor = async (email: string, payload: any) => {
 
 
 
+
+
 // Offerings tab  
 export const getMentorOfferings = async (mentor: string) => {
   try {
     const response = await apiService.get(
       `method/stridenex_app.stridenex_app.doctype.mentor_offering.mentor_offering.get_mentor_offerings?mentor=${encodeURIComponent(mentor)}`
     );
-    return response;
+    return response;  
   } catch (error) {
     console.error("Error fetching mentor offerings:", error);
     throw error;
