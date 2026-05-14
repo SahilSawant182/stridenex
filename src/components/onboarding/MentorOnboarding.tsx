@@ -1,65 +1,851 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import OnboardingLayout from "./OnboardingLayout";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { validateEmail, validateRequired } from "@/lib/validators";
+import {
+  sendMobileOTP,
+  verifyMobileOTP,
+  sendEmailOTP,
+  verifyEmailOTP
+} from "@/services/onboarding.services";
 import DynamicForm from "@/components/forms/DynamicForm";
 import { FormField } from "@/types/doctypes.types";
 import { BASE_URL } from "@/services/api.services";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown, Plus, X } from "lucide-react";
 import axios from "axios";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 interface MentorOnboardingProps {
-    onSubmit?: (data: any) => Promise<void>;
-    onSkip?: () => void;
+  onSubmit?: (data: any) => Promise<void>;
+  onSkip?: () => void;
 }
 
 interface PlatformUrl {
-    platform: string;
-    url: string;
+  platform: string;
+  url: string;
 }
 
 type Step = 1 | 2 | 3;
 
-// Using BASE_URL from api.services
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+/**
+ * Mentor onboarding is complete when isOnboarded >= MENTOR_COMPLETE_FLAG.
+ * Steps:
+ *   Step 1 → Contact Verification  → sets flag to 1
+ *   Step 2 → Location Details      → sets flag to 2
+ *   Step 3 → Professional Details  → sets flag to 3  (fully onboarded)
+ */
+const MENTOR_COMPLETE_FLAG = 3;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const parseServerError = (responseData: any): string => {
+  let errorMsg = "Action failed. Please try again.";
+  if (responseData?._server_messages) {
+    try {
+      const messages = JSON.parse(responseData._server_messages);
+      const parsedMessage = JSON.parse(messages[0]);
+      errorMsg = parsedMessage.message || errorMsg;
+    } catch {
+      errorMsg =
+        responseData?.message?.message || responseData?.message || errorMsg;
+    }
+  } else {
+    errorMsg =
+      responseData?.message?.message || responseData?.message || errorMsg;
+  }
+  return typeof errorMsg === "string" ? errorMsg : JSON.stringify(errorMsg);
+};
+
+const parseAxiosError = (err: any, fallback: string): string => {
+  if (err?.response?.data?._server_messages) {
+    try {
+      const messages = JSON.parse(err.response.data._server_messages);
+      const parsedMessage = JSON.parse(messages[0]);
+      return parsedMessage.message || fallback;
+    } catch {
+      return err?.response?.data?.message || err?.message || fallback;
+    }
+  }
+  const nested = err?.response?.data?.message;
+  if (typeof nested === "object" && nested !== null)
+    return nested.message || fallback;
+  if (typeof nested === "string") return nested;
+  return err?.message || fallback;
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function MentorOnboarding({
-    onSubmit,
-    onSkip
+  onSubmit,
+  onSkip
 }: MentorOnboardingProps) {
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const isMobileSource = searchParams.get("source") === "mobile";
-    const { apiKey, apiSecret } = useAuth();
-    const [currentStep, setCurrentStep] = useState<Step>(1);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
-    const [success, setSuccess] = useState("");
+  const router = useRouter();
+  const { isOnboarded, isInitialized, currentUser, updateOnboardedFlag } = useAuth();
 
-    // Platform options state
-    const [platformOptions, setPlatformOptions] = useState<Array<{ value: string; label: string }>>([]);
-    const [loadingPlatforms, setLoadingPlatforms] = useState(false);
-    const [platformError, setPlatformError] = useState("");
+  // ── UI state ────────────────────────────────────────────────────────────────
+  const [currentStep, setCurrentStep] = useState<Step>(1);
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(false);
+  const [hasCreatedRecord, setHasCreatedRecord] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-    // Platform URLs array
-    const [platformUrls, setPlatformUrls] = useState<PlatformUrl[]>([]);
+  // ── Platform options ────────────────────────────────────────────────────────
+  const [platformOptions, setPlatformOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
+  const [loadingPlatforms, setLoadingPlatforms] = useState(false);
+  const [platformError, setPlatformError] = useState("");
 
-    // Dropdown open states
-    const [openPlatformDropdown, setOpenPlatformDropdown] = useState<number | null>(null);
-    const platformDropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // ── Platform URLs list ──────────────────────────────────────────────────────
+  const [platformUrls, setPlatformUrls] = useState<PlatformUrl[]>([]);
+  const [openPlatformDropdown, setOpenPlatformDropdown] = useState<
+    number | null
+  >(null);
+  const platformDropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-    // Form data state
-    const [formData, setFormData] = useState({
-        first_name: "",
-        last_name: "",
-        mobile_no: "",
-        email_id: "",
+  // ── Form data ───────────────────────────────────────────────────────────────
+  const [formData, setFormData] = useState({
+    email: "",
+    emailVerified: false,
+    mobileNo: "",
+    mobileVerified: false,
+    first_name: "",
+    last_name: "",
+    type: "",
+    country: "India",
+    state: "",
+    district: "",
+    tahsil: "",
+    city: "",
+    travelling_possible: "Yes",
+    approved_status: "Pending",
+    isActive: true,
+    domain: [] as string[],
+    skills: [] as string[],
+    profile_description: "",
+    bank_name: "",
+    account_number: "",
+    ifsc_code: "",
+    terms_and_conditions: false
+  });
+
+  // ── OTP state ───────────────────────────────────────────────────────────────
+  const [emailVerificationCode, setEmailVerificationCode] = useState("");
+  const [mobileVerificationCode, setMobileVerificationCode] = useState("");
+  const [emailOtpSent, setEmailOtpSent] = useState(false);
+  const [mobileOtpSent, setMobileOtpSent] = useState(false);
+  const [emailTimer, setEmailTimer] = useState(0);
+  const [mobileTimer, setMobileTimer] = useState(0);
+
+  // ── Validation errors ───────────────────────────────────────────────────────
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // INITIALIZATION — runs once auth context is ready
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const userEmail =
+      localStorage.getItem("userEmail") || currentUser || "";
+    if (!userEmail) return;
+
+    const flag = parseInt(isOnboarded || "0", 10);
+
+    /**
+     * ROUTING LOGIC (mirrors LoginPage useEffect exactly):
+     *
+     *  flag >= 3  →  fully onboarded  →  go to dashboard
+     *  flag == 2  →  steps 1+2 done   →  resume at step 3
+     *  flag == 1  →  step 1 done      →  resume at step 2
+     *  flag == 0  →  brand new        →  stay at step 1
+     *
+     * When resuming at step 2 or 3 we mark email+mobile as already verified
+     * so step-level guards don't block forward navigation.
+     */
+    if (flag >= MENTOR_COMPLETE_FLAG) {
+      // Fully onboarded — should never land here; push to dashboard.
+      router.push("/mentor/dashboard");
+      return;
+    }
+
+    if (flag === 2) {
+      setCurrentStep(3);
+      setCompletedSteps(new Set([1, 2]));
+      setFormData(prev => ({
+        ...prev,
+        email: userEmail,
+        emailVerified: true,
+        mobileVerified: true
+      }));
+      setHasCreatedRecord(true);
+    } else if (flag === 1) {
+      setCurrentStep(2);
+      setCompletedSteps(new Set([1]));
+      setFormData(prev => ({
+        ...prev,
+        email: userEmail,
+        emailVerified: true,
+        mobileVerified: true
+      }));
+      setHasCreatedRecord(true);
+    } else {
+      // flag === 0 — brand new user
+      setFormData(prev => ({ ...prev, email: userEmail }));
+    }
+  }, [isOnboarded, isInitialized, currentUser, router]);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // FETCH MENTOR DATA when user lands on step 2 or 3
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const userEmail =
+      localStorage.getItem("userEmail") || currentUser || "";
+    if (userEmail && currentStep >= 2) {
+      fetchMentorData(userEmail);
+    }
+  }, [currentStep, currentUser]);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // FETCH PLATFORMS on mount
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    fetchPlatforms();
+  }, []);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // OTP COUNTDOWN TIMERS
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (emailTimer <= 0) return;
+    const id = setInterval(
+      () => setEmailTimer(prev => prev - 1),
+      1000
+    );
+    return () => clearInterval(id);
+  }, [emailTimer]);
+
+  useEffect(() => {
+    if (mobileTimer <= 0) return;
+    const id = setInterval(
+      () => setMobileTimer(prev => prev - 1),
+      1000
+    );
+    return () => clearInterval(id);
+  }, [mobileTimer]);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // CLOSE PLATFORM DROPDOWN on outside click
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      platformDropdownRefs.current.forEach((ref, index) => {
+        if (
+          ref &&
+          !ref.contains(event.target as Node) &&
+          openPlatformDropdown === index
+        ) {
+          setOpenPlatformDropdown(null);
+        }
+      });
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () =>
+      document.removeEventListener("mousedown", handleClickOutside);
+  }, [openPlatformDropdown]);
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // DATA FETCHING
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const fetchPlatforms = async () => {
+    setLoadingPlatforms(true);
+    setPlatformError("");
+    try {
+      const response = await fetch(
+        `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ doctype: "Platform List" })
+        }
+      );
+      const data = await response.json();
+      let options: Array<{ value: string; label: string }> = [];
+      if (Array.isArray(data)) {
+        options = data.map((item: any) => ({
+          value: item.name,
+          label: item.name
+        }));
+      } else if (data.data && Array.isArray(data.data)) {
+        options = data.data.map((item: any) => ({
+          value: item.name,
+          label: item.name
+        }));
+      }
+      setPlatformOptions(options);
+    } catch (err: any) {
+      console.error("Error fetching platforms:", err);
+      setPlatformError("Failed to load platforms");
+    } finally {
+      setLoadingPlatforms(false);
+    }
+  };
+
+  const fetchMentorData = async (email: string) => {
+    setLoading(true);
+    try {
+      const response = await axios.post(
+        `${BASE_URL}method/stridenex_app.api_stridenex_app.mentor.mentor.get_mentor_by_email`,
+        { email_id: email }
+      );
+      if (response.data?.message) {
+        const messageObj = response.data.message;
+        const data = messageObj.data || messageObj;
+        if (data) {
+          setFormData(prev => ({
+            ...prev,
+            first_name: data.first_name || "",
+            last_name: data.last_name || "",
+            type: data.type || "",
+            country: data.country || "India",
+            state: data.state || "",
+            district: data.district || "",
+            tahsil: data.tahsil || "",
+            city: data.city || "",
+            travelling_possible: data.travelling_possible || "Yes",
+            domain: (data.domains || []).map((d: any) => d.domain),
+            skills: (data.skills || data.mentor_skills || []).map(
+              (s: any) => s.skill
+            ),
+            profile_description: data.profile_description || "",
+            bank_name: data.bank_name || "",
+            account_number: data.account_number || "",
+            ifsc_code: data.ifsc_code || ""
+            // NOTE: terms_and_conditions deliberately NOT read from server
+            // because 'Mentor' object may not expose terms_accepted reliably.
+          }));
+
+          if (
+            data.mentor_platform_urls &&
+            data.mentor_platform_urls.length > 0
+          ) {
+            setPlatformUrls(
+              data.mentor_platform_urls.map((url: any) => ({
+                platform: url.platform,
+                url: url.url
+              }))
+            );
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching mentor data:", err);
+      // Non-fatal — don't block the UI, just log it.
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // PLATFORM URL HELPERS
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const addPlatformUrl = () =>
+    setPlatformUrls([...platformUrls, { platform: "", url: "" }]);
+
+  const removePlatformUrl = (index: number) =>
+    setPlatformUrls(platformUrls.filter((_, i) => i !== index));
+
+  const updatePlatformUrl = (
+    index: number,
+    field: keyof PlatformUrl,
+    value: string
+  ) => {
+    const updated = [...platformUrls];
+    updated[index] = { ...updated[index], [field]: value };
+    setPlatformUrls(updated);
+  };
+
+  const togglePlatformDropdown = (index: number) =>
+    setOpenPlatformDropdown(
+      openPlatformDropdown === index ? null : index
+    );
+
+  const selectPlatform = (index: number, value: string) => {
+    updatePlatformUrl(index, "platform", value);
+    setOpenPlatformDropdown(null);
+  };
+
+  const setPlatformRef =
+    (index: number) => (el: HTMLDivElement | null) => {
+      platformDropdownRefs.current[index] = el;
+    };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // OTP HANDLERS
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const handleSendEmailOTP = async () => {
+    const emailValidation = validateEmail(formData.email);
+    if (!emailValidation.isValid) {
+      setFieldErrors(prev => ({
+        ...prev,
+        email: emailValidation.error || "Invalid email"
+      }));
+      return;
+    }
+    setError("");
+    setSuccess("");
+    try {
+      const response = await sendEmailOTP(formData.email);
+      if (response?.message?.status === "success") {
+        setSuccess(
+          response.message.message || "OTP sent successfully"
+        );
+        setEmailOtpSent(true);
+        setEmailTimer(120);
+      } else {
+        setError(
+          response?.message?.message || "Failed to send OTP"
+        );
+      }
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message?.message ||
+          "Failed to send verification code"
+      );
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    setError("");
+    setSuccess("");
+    try {
+      const response = await verifyEmailOTP(
+        formData.email,
+        emailVerificationCode
+      );
+      if (response?.message === "Email verified successfully") {
+        setFormData(prev => ({ ...prev, emailVerified: true }));
+        setSuccess(response.message);
+        // Clear any stale email field error
+        setFieldErrors(prev => {
+          const e = { ...prev };
+          delete e.email;
+          return e;
+        });
+      } else {
+        setError(
+          response?.message || "Invalid verification code"
+        );
+      }
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message || "Verification failed"
+      );
+    }
+  };
+
+  const handleSendMobileOTP = async () => {
+    setError("");
+    setSuccess("");
+    if (!formData.mobileNo || formData.mobileNo.length !== 10) {
+      setFieldErrors(prev => ({
+        ...prev,
+        mobileNo:
+          "Please enter a valid 10-digit mobile number"
+      }));
+      return;
+    }
+    try {
+      const response = await sendMobileOTP(
+        formData.mobileNo,
+        formData.email
+      );
+      if (response?.message === "OTP sent successfully") {
+        setSuccess(response.message);
+        setMobileOtpSent(true);
+        setMobileTimer(120);
+      } else {
+        setError(
+          response?.message || "Failed to send OTP"
+        );
+      }
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message ||
+          "Failed to send verification code"
+      );
+    }
+  };
+
+  const handleVerifyMobile = async () => {
+    setError("");
+    setSuccess("");
+    try {
+      const response = await verifyMobileOTP(
+        formData.mobileNo,
+        mobileVerificationCode,
+        formData.email
+      );
+      if (
+        response?.message === "Mobile number verified successfully"
+      ) {
+        setFormData(prev => ({ ...prev, mobileVerified: true }));
+        setSuccess(response.message);
+        localStorage.setItem("userMobileNo", formData.mobileNo);
+        // Clear any stale mobile field error
+        setFieldErrors(prev => {
+          const e = { ...prev };
+          delete e.mobileNo;
+          return e;
+        });
+      } else {
+        setError(
+          response?.message || "Invalid verification code"
+        );
+      }
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message || "Verification failed"
+      );
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // VALIDATION
+  //
+  // Step 1 validation is ONLY shown when the user is a brand-new user (flag = 0).
+  // If flag >= 1, step 1 is already complete and we never block on OTP again.
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const validateStep1 = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    /**
+     * If the user has already completed step 1 (isOnboarded >= 1) we bypass
+     * OTP validation entirely — they were verified during their first visit.
+     */
+    const flag = parseInt(isOnboarded || "0", 10);
+    if (flag >= 1) return true;
+
+    if (!formData.emailVerified)
+      errors.email = "Please verify your email first";
+    if (!formData.mobileVerified)
+      errors.mobileNo =
+        "Please verify your mobile number first";
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateStep2 = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!formData.state) errors.state = "State is required";
+    if (!formData.district)
+      errors.district = "District is required";
+    if (!formData.tahsil)
+      errors.tahsil = "Taluka is required";
+    if (!formData.city) errors.city = "City is required";
+    if (!formData.travelling_possible)
+      errors.travelling_possible =
+        "Travelling possible is required";
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const validateStep3 = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!formData.type) errors.type = "Type is required";
+    if (!formData.domain || formData.domain.length === 0)
+      errors.domain =
+        "Please select at least one domain";
+    const invalidPlatform = platformUrls.some(
+      p => !p.platform || !p.url
+    );
+    if (invalidPlatform)
+      errors.platformUrls =
+        "All platform URL fields are required";
+    if (!formData.profile_description?.trim()) {
+      errors.profile_description =
+        "Profile description is required";
+    } else {
+      const charCount =
+        formData.profile_description.trim().length;
+      if (charCount < 50)
+        errors.profile_description = `Please enter at least 50 characters (current: ${charCount} characters)`;
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // API SUBMISSION
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Build the shared update payload used for step 2 and step 3.
+   * IMPORTANT: `terms_accepted` is intentionally OMITTED from all payloads
+   * because the server's Mentor doctype does not expose that attribute and
+   * sending it triggers a 500 "has no attribute 'terms_accepted'" error.
+   */
+  const buildUpdatePayload = (userEmail: string) => {
+    const domainArray = (formData.domain || []).map(
+      (domain: string) => ({ domain })
+    );
+    const skillsArray = (formData.skills || []).map(
+      (skill: string) => ({ skill })
+    );
+    const validPlatformUrls = platformUrls.filter(
+      p => p.platform && p.url
+    );
+    const platformUrlsArray = validPlatformUrls.map(p => ({
+      platform: p.platform,
+      url: p.url
+    }));
+    const cleanMobile = formData.mobileNo.replace(/\D/g, "");
+    const formattedMobile =
+      cleanMobile && cleanMobile.length === 10
+        ? `+91-${cleanMobile}`
+        : "";
+
+    return {
+      name: userEmail,
+      email_id: userEmail,
+      first_name:
+        localStorage.getItem("userFirstName") ||
+        formData.first_name ||
+        "Test",
+      last_name:
+        localStorage.getItem("userLastName") ||
+        formData.last_name ||
+        "User",
+      mobile_no: formattedMobile || null,
+      type: formData.type || null,
+      travelling_possible: formData.travelling_possible || "Yes",
+      country: formData.country || "India",
+      state: formData.state || null,
+      district: formData.district || null,
+      tahsil: formData.tahsil || null,
+      city: formData.city || null,
+      total_sessions: 0,
+      total_hours: 0.0,
+      total_earnings: 0.0,
+      avg_rating: 0.0,
+      bank_name: formData.bank_name?.trim() || null,
+      account_number: formData.account_number?.trim() || null,
+      ifsc_code: formData.ifsc_code?.trim() || null,
+      profile_description:
+        formData.profile_description?.trim() || null,
+      doctype: "Mentor",
+      mentor_platform_urls: platformUrlsArray,
+      domain: domainArray,
+      mentor_skills: skillsArray
+      // ⚠️  terms_accepted deliberately excluded — server throws 500
+    };
+  };
+
+  /**
+   * submitStepData is IDEMPOTENT — calling it multiple times for the same
+   * step is safe.  The `loading` guard prevents concurrent submissions.
+   */
+  const submitStepData = async (step: Step) => {
+    // Prevent double-submission
+    if (loading) return;
+
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const userEmail =
+        formData.email ||
+        currentUser ||
+        localStorage.getItem("userEmail") ||
+        "";
+
+      // Determine whether the mentor record already exists on the server.
+      const flag = parseInt(isOnboarded || "0", 10);
+      const recordExists = flag >= 1 || hasCreatedRecord;
+
+      let endpoint: string;
+      let method: "post" | "put" = "post";
+      let payload: any;
+
+      if (step === 2 && !recordExists) {
+        // ── First time at step 2: CREATE the mentor record ──────────────────
+        const cleanMobile = formData.mobileNo.replace(/\D/g, "");
+        const formattedMobile = `+91-${cleanMobile}`;
+
+        endpoint = `${BASE_URL}method/stridenex_app.api_stridenex_app.mentor.mentor.create_mentor`;
+        method = "post";
+        payload = {
+          email_id: userEmail,
+          first_name:
+            localStorage.getItem("userFirstName") ||
+            formData.first_name ||
+            "Test",
+          last_name:
+            localStorage.getItem("userLastName") ||
+            formData.last_name ||
+            "User",
+          mobile_no: formattedMobile,
+          type: "",
+          country: "India",
+          state: "",
+          district: "",
+          tahsil: "",
+          city: "",
+          travelling_possible: "Yes",
+          approved_status: "Pending",
+          is_active: 1,
+          domains: [],
+          skills: [],
+          mentor_platform_urls: [],
+          bank_name: "",
+          account_number: "",
+          ifsc_code: "",
+          profile_description: ""
+          // ⚠️  terms_accepted deliberately excluded
+        };
+      } else {
+        // ── Update the existing mentor record ────────────────────────────────
+        endpoint = `${BASE_URL}method/stridenex_app.api_stridenex_app.mentor.mentor.update_mentor?email_id=${encodeURIComponent(userEmail)}`;
+        method = "put";
+        payload = buildUpdatePayload(userEmail);
+      }
+
+      const response = await axios({
+        method,
+        url: endpoint,
+        data: payload,
+        headers: { "Content-Type": "application/json" }
+      });
+
+      const internalStatus = response.data?.message?.status;
+      const isSuccess =
+        response.status === 200 &&
+        (internalStatus === 200 ||
+          internalStatus === undefined ||
+          internalStatus === "success");
+
+      if (isSuccess) {
+        setCompletedSteps(prev => new Set([...prev, step]));
+        if (method === "post") setHasCreatedRecord(true);
+
+        if (step === 2) {
+          // Update the in-memory onboarded flag so step validation is correct
+          // if the user navigates back and forward.
+          if (typeof updateOnboardedFlag === "function") {
+            updateOnboardedFlag("2");
+          }
+          setCurrentStep(3);
+          setSuccess("Step 2 saved successfully!");
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        } else if (step === 3) {
+          /**
+           * ONBOARDING COMPLETE
+           *
+           * Update context flag to 3 so that LoginPage's useEffect correctly
+           * routes the user to /mentor/dashboard on next login instead of
+           * back to the onboarding flow.
+           */
+          if (typeof updateOnboardedFlag === "function") {
+            updateOnboardedFlag(String(MENTOR_COMPLETE_FLAG));
+          }
+          localStorage.setItem(
+            "isOnboarded",
+            String(MENTOR_COMPLETE_FLAG)
+          );
+          setSuccess(
+            "Mentor onboarding completed successfully!"
+          );
+
+          // Short delay so the user sees the success banner.
+          setTimeout(() => {
+            // Push to dashboard directly — no need to re-login.
+            router.push("/mentor/dashboard");
+          }, 1500);
+        }
+      } else {
+        setError(parseServerError(response.data));
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    } catch (err: any) {
+      setError(
+        parseAxiosError(
+          err,
+          `Error submitting step ${step} data`
+        )
+      );
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // STEP 1 → STEP 2 TRANSITION
+  //
+  // After both OTPs are verified we create the mentor record immediately
+  // (same as before), but we now guard against double-submission with the
+  // `loading` flag.
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const handleContinueToStep2 = async () => {
+    if (!validateStep1()) return;
+    if (loading) return;
+
+    // If the record was already created (e.g. flag=1 on re-visit) just
+    // advance the UI step without another API call.
+    const flag = parseInt(isOnboarded || "0", 10);
+    if (flag >= 1 || hasCreatedRecord) {
+      setCurrentStep(2);
+      setSuccess("");
+      setError("");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const userEmail =
+        formData.email ||
+        currentUser ||
+        localStorage.getItem("userEmail") ||
+        "";
+      const cleanMobile = formData.mobileNo.replace(/\D/g, "");
+      const formattedMobile = `+91-${cleanMobile}`;
+
+      const payload = {
+        email_id: userEmail,
+        first_name:
+          localStorage.getItem("userFirstName") ||
+          formData.first_name ||
+          "Test",
+        last_name:
+          localStorage.getItem("userLastName") ||
+          formData.last_name ||
+          "User",
+        mobile_no: formattedMobile,
         type: "",
         country: "India",
         state: "",
@@ -68,900 +854,838 @@ export default function MentorOnboarding({
         city: "",
         travelling_possible: "Yes",
         approved_status: "Pending",
-        isActive: true,
-        domain: [], // Multi-select domain
-        skills: [], // Multi-select skills
-        profile_description: "",
+        is_active: 1,
+        domains: [],
+        skills: [],
+        mentor_platform_urls: [],
         bank_name: "",
         account_number: "",
         ifsc_code: "",
-        terms_and_conditions: false
-    });
+        profile_description: ""
+        // ⚠️  terms_accepted deliberately excluded
+      };
 
-    // Validation errors
-    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+      const response = await axios.post(
+        `${BASE_URL}method/stridenex_app.api_stridenex_app.mentor.mentor.create_mentor`,
+        payload,
+        { headers: { "Content-Type": "application/json" } }
+      );
 
-    useEffect(() => {
-        const savedEmail = localStorage.getItem("userEmail") || "";
-        const savedFirstName = localStorage.getItem("userFirstName") || "";
-        const savedLastName = localStorage.getItem("userLastName") || "";
-        setFormData(prev => ({
-            ...prev,
-            email_id: savedEmail,
-            first_name: savedFirstName,
-            last_name: savedLastName,
-        }));
-    }, []);
+      const internalStatus = response.data?.message?.status;
+      const isSuccess =
+        response.status === 200 &&
+        (internalStatus === 200 ||
+          internalStatus === undefined ||
+          internalStatus === "success");
 
-    // Close dropdown when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            platformDropdownRefs.current.forEach((ref, index) => {
-                if (ref && !ref.contains(event.target as Node) && openPlatformDropdown === index) {
-                    setOpenPlatformDropdown(null);
-                }
-            });
-        };
-
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [openPlatformDropdown]);
-
-    // Fetch platforms on mount
-    useEffect(() => {
-        fetchPlatforms();
-    }, []);
-
-    const fetchPlatforms = async () => {
-        setLoadingPlatforms(true);
-        setPlatformError("");
-        try {
-            const response = await fetch(
-                `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        doctype: "Platform List"
-                    })
-                }
-            );
-            const data = await response.json();
-
-            let options: Array<{ value: string; label: string }> = [];
-            if (Array.isArray(data)) {
-                options = data.map((item: any) => ({
-                    value: item.name,
-                    label: item.name
-                }));
-            } else if (data.data && Array.isArray(data.data)) {
-                options = data.data.map((item: any) => ({
-                    value: item.name,
-                    label: item.name
-                }));
-            }
-
-            setPlatformOptions(options);
-        } catch (err: any) {
-            console.error("Error fetching platforms:", err);
-            setPlatformError("Failed to load platforms");
-        } finally {
-            setLoadingPlatforms(false);
+      if (isSuccess) {
+        setHasCreatedRecord(true);
+        if (typeof updateOnboardedFlag === "function") {
+          updateOnboardedFlag("1");
         }
-    };
-
-    const addPlatformUrl = () => {
-        setPlatformUrls([...platformUrls, { platform: "", url: "" }]);
-    };
-
-    const removePlatformUrl = (index: number) => {
-        setPlatformUrls(platformUrls.filter((_, i) => i !== index));
-    };
-
-    const updatePlatformUrl = (index: number, field: keyof PlatformUrl, value: string) => {
-        const updated = [...platformUrls];
-        updated[index] = { ...updated[index], [field]: value };
-        setPlatformUrls(updated);
-    };
-
-    const togglePlatformDropdown = (index: number) => {
-        setOpenPlatformDropdown(openPlatformDropdown === index ? null : index);
-    };
-
-    const selectPlatform = (index: number, value: string) => {
-        updatePlatformUrl(index, 'platform', value);
-        setOpenPlatformDropdown(null);
-    };
-
-    const setPlatformRef = (index: number) => (el: HTMLDivElement | null) => {
-        platformDropdownRefs.current[index] = el;
-    };
-
-    // ============ STEP FUNCTIONS ============
-    const validateStep1 = (): boolean => {
-        const errors: Record<string, string> = {};
-
-        if (!formData.first_name?.trim()) {
-            errors.first_name = "First name is required";
-        }
-        if (!formData.last_name?.trim()) {
-            errors.last_name = "Last name is required";
-        }
-        if (!formData.mobile_no?.trim()) {
-            errors.mobile_no = "Mobile number is required";
-        } else if (formData.mobile_no.length !== 10) {
-            errors.mobile_no = "Mobile number must be 10 digits";
-        } else if (!/^\d+$/.test(formData.mobile_no)) {
-            errors.mobile_no = "Mobile number must contain only digits";
-        }
-        if (!formData.email_id?.trim()) {
-            errors.email_id = "Email ID is required";
-        } else if (!/\S+@\S+\.\S+/.test(formData.email_id)) {
-            errors.email_id = "Please enter a valid email address";
-        }
-        if (!formData.type) {
-            errors.type = "Type is required";
-        }
-
-        setFieldErrors(errors);
-        return Object.keys(errors).length === 0;
-    };
-
-    const validateStep2 = (): boolean => {
-        const errors: Record<string, string> = {};
-
-        if (!formData.state) {
-            errors.state = "State is required";
-        }
-        if (!formData.district) {
-            errors.district = "District is required";
-        }
-        if (!formData.tahsil) {
-            errors.tahsil = "Taluka is required";
-        }
-        if (!formData.city) {
-            errors.city = "City is required";
-        }
-        if (!formData.travelling_possible || formData.travelling_possible === "") {
-            errors.travelling_possible = "Travelling possible is required";
-        }
-
-        setFieldErrors(errors);
-        return Object.keys(errors).length === 0;
-    };
-
-    const validateStep3 = (): boolean => {
-        const errors: Record<string, string> = {};
-
-        // Validate domain (multi-select)
-        if (!formData.domain || formData.domain.length === 0) {
-            errors.domain = "Please select at least one domain";
-        }
-
-        // Validate platform URLs
-        const invalidPlatform = platformUrls.some(
-            p => !p.platform || !p.url
+        localStorage.setItem("isOnboarded", "1");
+        setSuccess(
+          "Contact verified. Proceeding to location details."
         );
-        if (invalidPlatform) {
-            errors.platformUrls = "All platform URL fields are required";
-        }
-
-        // Validate profile description - minimum 50 characters
-        if (!formData.profile_description?.trim()) {
-            errors.profile_description = "Profile description is required";
-        } else {
-            const charCount = formData.profile_description.trim().length;
-            if (charCount < 50) {
-                errors.profile_description = `Please enter at least 50 characters (current: ${charCount} characters)`;
-            }
-        }
-
-        setFieldErrors(errors);
-        return Object.keys(errors).length === 0;
-    };
-
-    const handleContinueToStep2 = () => {
-        if (validateStep1()) {
-            setCurrentStep(2);
-            setSuccess("");
-        }
-    };
-
-    const handleContinueToStep3 = () => {
-        if (validateStep2()) {
-            setCurrentStep(3);
-            setSuccess("");
-        }
-    };
-
-    const goToStep1 = () => {
-        setCurrentStep(1);
-        setSuccess("");
-        setError("");
-    };
-
-    const goToStep2 = () => {
         setCurrentStep(2);
-        setSuccess("");
-        setError("");
-    };
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } else {
+        setError(parseServerError(response.data));
+      }
+    } catch (err: any) {
+      setError(
+        parseAxiosError(
+          err,
+          "Error creating mentor. Please check your connection and try again."
+        )
+      );
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const getStepTitle = () => {
-        switch (currentStep) {
-            case 1: return "Personal Information";
-            case 2: return "Location & Status";
-            case 3: return "Professional Details";
-            default: return "Mentor Onboarding";
-        }
-    };
+  const handleContinueToStep3 = () => {
+    if (validateStep2()) submitStepData(2);
+  };
 
-    const getStepDescription = () => {
-        switch (currentStep) {
-            case 1: return "Please provide your basic personal information.";
-            case 2: return "Tell us about your location and availability.";
-            case 3: return "Add your domain expertise, skills, platform URLs, and description.";
-            default: return "";
-        }
-    };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateStep3()) submitStepData(3);
+  };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+  // ─────────────────────────────────────────────────────────────────────────────
+  // BACK NAVIGATION
+  // ─────────────────────────────────────────────────────────────────────────────
 
-        if (!validateStep3()) {
-            const firstError = Object.values(fieldErrors)[0];
-            setError(firstError);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            return;
-        }
+  const goToStep = (step: Step) => {
+    setCurrentStep(step);
+    setSuccess("");
+    setError("");
+    setFieldErrors({});
+  };
 
-        setLoading(true);
-        setError("");
-        setSuccess("");
+  // ─────────────────────────────────────────────────────────────────────────────
+  // SKIP
+  // ─────────────────────────────────────────────────────────────────────────────
 
-        try {
-            // Format domain as array of objects
-            const domainArray = (formData.domain || []).map((domain: string) => ({
-                domain: domain
-            }));
+  const handleSkip = () => {
+    if (onSkip) {
+      onSkip();
+    } else {
+      /**
+       * "Skip" does NOT clear localStorage — the user may want to return and
+       * complete onboarding.  We just send them to the login page.
+       */
+      router.push("/login");
+    }
+  };
 
-            // Format skills as array of objects (if any)
-            const skillsArray = (formData.skills || []).map((skill: string) => ({
-                skill: skill
-            }));
+  // ─────────────────────────────────────────────────────────────────────────────
+  // STEP METADATA
+  // ─────────────────────────────────────────────────────────────────────────────
 
-            // Format platform URLs
-            const validPlatformUrls = platformUrls.filter(p => p.platform && p.url);
-            const platformUrlsArray = validPlatformUrls.map(p => ({
-                platform: p.platform,
-                url: p.url
-            }));
+  const getStepTitle = () => {
+    switch (currentStep) {
+      case 1:
+        return "Contact Verification";
+      case 2:
+        return "Location Details";
+      case 3:
+        return "Professional Details";
+    }
+  };
 
-            // Format mobile number with +91- prefix
-            const cleanMobile = formData.mobile_no.replace(/\D/g, '');
-            const formattedMobile = `+91-${cleanMobile}`;
+  const getStepDescription = () => {
+    switch (currentStep) {
+      case 1:
+        return "Please verify your email address and mobile number to get started.";
+      case 2:
+        return "Tell us about your location and travelling preferences.";
+      case 3:
+        return "Tell us about your professional background, expertise, and platform presence.";
+    }
+  };
 
-            const userEmail = localStorage.getItem("userEmail") || formData.email_id;
+  // ─────────────────────────────────────────────────────────────────────────────
+  // RENDER: STEP 1 — Contact Verification
+  // ─────────────────────────────────────────────────────────────────────────────
 
-            // Format the payload according to your API requirements
-            const payload = {
-                first_name: formData.first_name.trim(),
-                last_name: formData.last_name.trim(),
-                mobile_no: formattedMobile,
-                email_id: userEmail.trim().toLowerCase(),
-                type: formData.type,
-                country: formData.country,
-                state: formData.state,
-                district: formData.district,
-                tahsil: formData.tahsil,
-                city: formData.city,
-                travelling_possible: formData.travelling_possible,
-                approved_status: formData.approved_status,
-                is_active: formData.isActive ? 1 : 0,
-                domains: domainArray,
-                skills: skillsArray,
-                mentor_platform_urls: platformUrlsArray, // Add platform URLs to payload
-                bank_name: formData.bank_name?.trim() || "",
-                account_number: formData.account_number?.trim() || "",
-                ifsc_code: formData.ifsc_code?.trim() || "",
-                profile_description: formData.profile_description?.trim() || "",
-                terms_accepted: formData.terms_and_conditions ? 1 : 0
-            };
-
-            console.log("Submitting mentor data:", payload);
-
-            // Make API call to create mentor
-            const response = await axios.post(
-                `${BASE_URL}method/stridenex_app.api_stridenex_app.mentor.mentor.create_mentor`,
-                payload,
-                {
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                }
-            );
-
-            console.log("API Response:", response.data);
-
-            // Strict check: HTTP 200 and internal message status must be 200 (if present)
-            const internalStatus = response.data?.message?.status;
-            const isSuccess = response.status === 200 && (internalStatus === 200 || internalStatus === undefined || internalStatus === "success");
-
-            if (isSuccess) {
-                setSuccess("Mentor onboarding completed successfully!");
-
-                // Clear onboarding-specific localStorage items
-                localStorage.clear();
-
-                setTimeout(() => {
-                    if (isMobileSource) {
-                        window.location.href = "/login";
-                    } else {
-                        window.location.href = "/login";
-                    }
-                }, 1500);
-            } else {
-                // Handle internal errors or non-200 cases
-                let errorMsg = response.data?.message?.message || response.data?.message || "Failed to create mentor. Please try again.";
-                
-                if (response.data?._server_messages) {
-                    try {
-                        const messages = JSON.parse(response.data._server_messages);
-                        const parsedMessage = JSON.parse(messages[0]);
-                        errorMsg = parsedMessage.message || errorMsg;
-                    } catch (e) {
-                        // Keep previous errorMsg
-                    }
-                }
-                
-                setError(errorMsg);
-            }
-        } catch (err: any) {
-            console.error("Error submitting mentor data:", err);
-
-            let errorMessage = "Error submitting mentor data. Please check your connection and try again.";
-
-            if (err?.response?.status === 401) {
-                errorMessage = "Authentication required. Please contact support.";
-            } else if (err?.response?.data?._server_messages) {
-                try {
-                    const messages = JSON.parse(err.response.data._server_messages);
-                    const parsedMessage = JSON.parse(messages[0]);
-                    errorMessage = parsedMessage.message || "Validation error. Please check your input.";
-                } catch {
-                    errorMessage = err?.response?.data?.message || "Error submitting data";
-                }
-            } else {
-                // Extract precise message if available
-                const nestedMessage = err?.response?.data?.message;
-                if (typeof nestedMessage === 'object' && nestedMessage !== null) {
-                    errorMessage = nestedMessage.message || errorMessage;
-                } else if (typeof nestedMessage === 'string') {
-                    errorMessage = nestedMessage;
-                } else if (err?.response?.data?.error) {
-                    errorMessage = err.response.data.error;
-                } else {
-                    errorMessage = err?.message || errorMessage;
-                }
-            }
-            
-            setError(errorMessage);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSkip = () => {
-        if (onSkip) {
-            onSkip();
-        } else {
-            localStorage.clear();
-            router.push("/login");
-        }
-    };
-
-    // ============ RENDER FUNCTIONS ============
-    const renderStep1 = () => {
-        const step1Fields: FormField[] = [
-            {
-                fieldname: "first_name",
-                label: "First Name",
-                fieldtype: "Data",
-                required: true,
-                placeholder: "Enter first name",
-                layout: "half"
-            },
-            {
-                fieldname: "last_name",
-                label: "Last Name",
-                fieldtype: "Data",
-                required: true,
-                placeholder: "Enter last name",
-                layout: "half"
-            },
-            {
-                fieldname: "mobile_no",
-                label: "Mobile No.",
-                fieldtype: "Data",
-                required: true,
-                placeholder: "Enter 10-digit mobile number",
-                layout: "half",
-                maxLength: 10
-            },
-            {
-                fieldname: "email_id",
-                label: "Email ID",
-                fieldtype: "Data",
-                required: true,
-                placeholder: "Enter email address",
-                layout: "half"
-            },
-            {
-                fieldname: "type",
-                label: "Type",
-                fieldtype: "Data",
-                required: true,
-                placeholder: "Select Type",
-                layout: "half",
-                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-                apiParams: {
-                    doctype: "Type"
-                },
-                mapOptions: (data) => {
-                    console.log("Type data received:", data);
-                    const items = data.data || data || [];
-                    return items.map((item: any) => ({
-                        value: item.name,
-                        label: item.name
-                    }));
-                }
-            }
-        ];
-
-        return (
-            <div className="space-y-4">
-                <DynamicForm
-                    fields={step1Fields}
-                    onSubmit={() => { }}
-                    buttonLabel=""
-                    loading={loading}
-                    initialValues={formData}
-                    errors={fieldErrors}
-                    onChange={(data) => {
-                        setFormData(prev => ({
-                            ...prev,
-                            ...data
-                        }));
-                        // Only clear errors for fields that were changed
-                        const updatedErrors = { ...fieldErrors };
-                        Object.keys(data).forEach(key => {
-                            delete updatedErrors[key];
-                        });
-                        setFieldErrors(updatedErrors);
-                        setError("");
-                    }}
-                />
-
-                <Button
-                    type="button"
-                    onClick={handleContinueToStep2}
-                    variant="accent"
-                    className="w-full"
-                    disabled={loading}
-                >
-                    Continue to Location & Status
-                </Button>
-            </div>
-        );
-    };
-
-    const renderStep2 = () => {
-        const step2Fields: FormField[] = [
-            {
-                fieldname: "country",
-                label: "Country",
-                fieldtype: "Data",
-                required: true,
-                placeholder: "Select Country",
-                layout: "half",
-                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-                apiParams: {
-                    doctype: "Country"
-                },
-                mapOptions: (data) => {
-                    console.log("Country data received:", data);
-                    const items = data.data || data || [];
-                    return items.map((item: any) => ({
-                        value: item.name,
-                        label: item.name
-                    }));
-                }
-            },
-            {
-                fieldname: "state",
-                label: "State",
-                fieldtype: "Data",
-                required: true,
-                placeholder: "Select State",
-                layout: "half",
-                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-                apiParams: {
-                    doctype: "State"
-                },
-                mapOptions: (data) => {
-                    console.log("State data received:", data);
-                    const items = data.data || data || [];
-                    return items.map((item: any) => ({
-                        value: item.name,
-                        label: item.name
-                    }));
-                }
-            },
-            {
-                fieldname: "district",
-                label: "District",
-                fieldtype: "Data",
-                required: true,
-                placeholder: "Select District",
-                layout: "half",
-                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-                apiParams: formData.state ? {
-                    doctype: "District",
-                    fields: ["name", "district_name"],
-                    filters: [["state", "=", formData.state]],
-                    order_by: "district_name asc",
-                    limit_page_length: 1000
-                } : undefined,
-                mapOptions: (data) => {
-                    console.log("District data received:", data);
-                    const items = data.data || data || [];
-                    return items.map((item: any) => ({
-                        value: item.name,
-                        label: item.district_name || item.name
-                    }));
-                },
-                disabled: !formData.state
-            },
-            {
-                fieldname: "tahsil",
-                label: "Taluka",
-                fieldtype: "Data",
-                required: true,
-                placeholder: "Select Taluka",
-                layout: "half",
-                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-                apiParams: formData.district ? {
-                    doctype: "Tahsil",
-                    fields: ["name", "tahsil_name"],
-                    filters: [["district", "=", formData.district]],
-                    order_by: "tahsil_name asc",
-                    limit_page_length: 1000
-                } : undefined,
-                mapOptions: (data) => {
-                    console.log("Taluka data received:", data);
-                    const items = data.data || data || [];
-                    return items.map((item: any) => ({
-                        value: item.name,
-                        label: item.tahsil_name || item.name
-                    }));
-                },
-                disabled: !formData.district
-            },
-            {
-                fieldname: "city",
-                label: "City",
-                fieldtype: "Data",
-                required: true,
-                placeholder: "Select City",
-                layout: "half",
-                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-                apiParams: formData.tahsil ? {
-                    doctype: "City",
-                    fields: ["name", "city_name"],
-                    filters: [["tahsil", "=", formData.tahsil]],
-                    order_by: "city_name asc",
-                    limit_page_length: 1000
-                } : undefined,
-                mapOptions: (data) => {
-                    console.log("City data received:", data);
-                    const items = data.data || data || [];
-                    return items.map((item: any) => ({
-                        value: item.name,
-                        label: item.city_name || item.name
-                    }));
-                },
-                disabled: !formData.tahsil
-            },
-            {
-                fieldname: "travelling_possible",
-                label: "Travelling Possible",
-                fieldtype: "Select",
-                required: true,
-                placeholder: "Select travelling possibility",
-                layout: "half",
-                options: ["Yes", "No", "Maybe"]
-            }
-        ];
-
-        return (
-            <div className="space-y-4">
-                <DynamicForm
-                    fields={step2Fields}
-                    onSubmit={() => { }}
-                    buttonLabel=""
-                    loading={loading}
-                    initialValues={formData}
-                    errors={fieldErrors}
-                    onChange={(data) => {
-                        setFormData(prev => ({
-                            ...prev,
-                            ...data
-                        }));
-                        // Only clear errors for fields that were changed
-                        const updatedErrors = { ...fieldErrors };
-                        Object.keys(data).forEach(key => {
-                            delete updatedErrors[key];
-                        });
-                        setFieldErrors(updatedErrors);
-                        setError("");
-                    }}
-                />
-
-                <div className="flex gap-3">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={goToStep1}
-                    >
-                        Back
-                    </Button>
-                    <Button
-                        type="button"
-                        onClick={handleContinueToStep3}
-                        variant="accent"
-                        className="flex-1"
-                        disabled={loading}
-                    >
-                        Continue to Professional Details
-                    </Button>
-                </div>
-            </div>
-        );
-    };
-
-    const renderStep3 = () => {
-        const step3Fields: FormField[] = [
-            {
-                fieldname: "domain",
-                label: "Domain",
-                fieldtype: "Data",
-                required: true,
-                placeholder: "Select Domain",
-                layout: "full",
-                multiSelect: true,
-                allowCustom: true,
-                customPlaceholder: "Enter custom domain name",
-                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-                apiParams: {
-                    doctype: "Domain"
-                },
-                mapOptions: (data) => {
-                    console.log("Domain data received:", data);
-                    const items = data.data || data || [];
-                    return items.map((item: any) => ({
-                        value: item.name,
-                        label: item.name || item.domain_name
-                    }));
-                }
-            },
-            {
-                fieldname: "skills",
-                label: "Skills",
-                fieldtype: "Data",
-                required: false,
-                placeholder: "Select skills (optional)",
-                layout: "full",
-                multiSelect: true,
-                apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-                apiParams: {
-                    doctype: "Student Skill"
-                },
-                mapOptions: (data) => {
-                    console.log("Skills data received:", data);
-                    const items = data.data || data || [];
-                    return items.map((item: any) => ({
-                        value: item.name,
-                        label: item.name || item.skill_name
-                    }));
-                }
-            },
-            {
-                fieldname: "profile_description",
-                label: "Profile Description",
-                fieldtype: "Text",
-                required: true,
-                placeholder: "Tell us about your expertise, experience, and what you can offer as a mentor... (minimum 50 characters)",
-                layout: "full",
-                inputClassName: "min-h-[150px]",
-                minLetters: 50
-            }
-        ];
-
-        return (
-            <div className="space-y-6">
-                <DynamicForm
-                    fields={step3Fields}
-                    onSubmit={() => { }}
-                    buttonLabel=""
-                    loading={loading}
-                    initialValues={formData}
-                    errors={fieldErrors}
-                    onChange={(data) => {
-                        setFormData(prev => ({
-                            ...prev,
-                            ...data
-                        }));
-                        const updatedErrors = { ...fieldErrors };
-                        Object.keys(data).forEach(key => {
-                            delete updatedErrors[key];
-                        });
-                        setFieldErrors(updatedErrors);
-                        setError("");
-                    }}
-                />
-
-                {/* Platform URLs Section */}
-                <div className="mt-6">
-                    <Label className="text-sm font-medium text-slate-700 mb-3 block">
-                        Profile URLs
-                    </Label>
-
-                    {platformUrls.map((item, index) => (
-                        <div key={index} className="flex items-start gap-3 mb-3">
-                            <div className="flex-1 grid grid-cols-2 gap-3">
-                                {/* Platform Dropdown */}
-                                <div className="relative" ref={setPlatformRef(index)}>
-                                    <div
-                                        onClick={() => !loadingPlatforms && togglePlatformDropdown(index)}
-                                        className={`w-full h-9 px-3 rounded-md border ${platformError ? "border-red-500" : "border-slate-200"} bg-white text-sm text-slate-900 flex items-center justify-between cursor-pointer hover:border-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4] ${loadingPlatforms ? 'opacity-60 cursor-not-allowed' : ''}`}
-                                        tabIndex={0}
-                                    >
-                                        <span className={`truncate ${!item.platform ? "text-slate-400" : "text-slate-900"}`}>
-                                            {loadingPlatforms ? "Loading platforms..." : item.platform || "Select Platform"}
-                                        </span>
-                                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${openPlatformDropdown === index ? "rotate-180" : ""}`} />
-                                    </div>
-
-                                    {openPlatformDropdown === index && (
-                                        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-lg">
-                                            <div className="py-1">
-                                                {platformOptions.map((option) => (
-                                                    <div
-                                                        key={option.value}
-                                                        onClick={() => selectPlatform(index, option.value)}
-                                                        className={`px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors ${item.platform === option.value ? "bg-[#1152d4]/5" : ""}`}
-                                                    >
-                                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${item.platform === option.value ? "border-[#1152d4]" : "border-slate-300"}`}>
-                                                            {item.platform === option.value && (
-                                                                <div className="w-2 h-2 rounded-full bg-[#1152d4]" />
-                                                            )}
-                                                        </div>
-                                                        <span className={`flex-1 ${item.platform === option.value ? "text-[#1152d4] font-medium" : "text-slate-700"}`}>
-                                                            {option.label}
-                                                        </span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {platformError && (
-                                        <div className="mt-1">
-                                            <p className="text-xs text-red-500 inline">{platformError}. </p>
-                                            <button
-                                                type="button"
-                                                onClick={fetchPlatforms}
-                                                className="text-xs text-[#1152d4] underline font-medium hover:no-underline"
-                                            >
-                                                Retry
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* URL Input */}
-                                <Input
-                                    value={item.url}
-                                    onChange={(e) => updatePlatformUrl(index, 'url', e.target.value)}
-                                    placeholder="https://example.com/profile"
-                                    className="h-9 text-sm focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4] font-mono text-sm"
-                                />
-                            </div>
-
-                            {/* Remove button */}
-                            {platformUrls.length > 1 && (
-                                <button
-                                    type="button"
-                                    onClick={() => removePlatformUrl(index)}
-                                    className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors mt-0.5"
-                                    title="Remove URL"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            )}
-                        </div>
-                    ))}
-
-                    {/* Add Platform URL button */}
-                    <div className="flex justify-start mt-2">
-                        <Button
-                            type="button"
-                            onClick={addPlatformUrl}
-                            variant="outline"
-                            className="h-8 px-4 text-xs border-accent/20 text-accent hover:bg-accent hover:text-white transition-colors"
-                        >
-                            <Plus className="w-3 h-3 mr-1" /> Add Platform URL
-                        </Button>
-                    </div>
-
-                    {fieldErrors.platformUrls && (
-                        <p className="text-xs text-red-500 mt-2">{fieldErrors.platformUrls}</p>
-                    )}
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-6">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={goToStep2}
-                    >
-                        Back
-                    </Button>
-                    <Button
-                        type="submit"
-                        variant="accent"
-                        className="flex-1"
-                        loading={loading}
-                        disabled={loading}
-                        onClick={handleSubmit}
-                    >
-                        Complete Registration
-                    </Button>
-                </div>
-            </div>
-        );
-    };
+  const renderStep1 = () => {
+    const emailFields: FormField[] = [
+      {
+        fieldname: "email",
+        label: "Email Address",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Enter your email address",
+        layout: "full"
+      }
+    ];
+    const mobileFields: FormField[] = [
+      {
+        fieldname: "mobileNo",
+        label: "Mobile Number",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Enter 10-digit mobile number",
+        layout: "full",
+        maxLength: 10
+      }
+    ];
 
     return (
-        <OnboardingLayout
-            currentStep={currentStep}
-            totalSteps={3}
-            title={getStepTitle()}
-            description={getStepDescription()}
-            onSkip={handleSkip}
-            showSkip={true}
-        >
-            {/* Success Message */}
-            {success && (
-                <Alert variant="success" className="mb-4">
-                    <AlertDescription>{success}</AlertDescription>
-                </Alert>
+      <div className="space-y-6">
+        {/* ── Email Section ──────────────────────────────────────────────── */}
+        <div className="space-y-4">
+          <div className="flex gap-2 items-start">
+            <div className="flex-1">
+              <DynamicForm
+                fields={emailFields}
+                onSubmit={() => {}}
+                buttonLabel=""
+                loading={loading}
+                initialValues={{ email: formData.email }}
+                onChange={data => {
+                  setSuccess("");
+                  setError("");
+                  if (data.email !== formData.email) {
+                    setEmailOtpSent(false);
+                    setEmailVerificationCode("");
+                    setFormData(prev => ({
+                      ...prev,
+                      email: data.email,
+                      emailVerified: false,
+                      mobileNo: "",
+                      mobileVerified: false
+                    }));
+                  }
+                }}
+              />
+            </div>
+            {!formData.emailVerified && (
+              <Button
+                type="button"
+                onClick={handleSendEmailOTP}
+                disabled={
+                  !formData.email ||
+                  emailTimer > 0 ||
+                  loading
+                }
+                variant="accent"
+                className="mt-7 whitespace-nowrap"
+              >
+                {emailTimer > 0
+                  ? `Resend in ${emailTimer}s`
+                  : emailOtpSent
+                  ? "Resend OTP"
+                  : "Send OTP"}
+              </Button>
+            )}
+          </div>
+
+          {emailOtpSent && !formData.emailVerified && (
+            <div>
+              <Label
+                htmlFor="emailOtp"
+                className="text-sm font-medium text-slate-700"
+              >
+                Verification Code{" "}
+                <span className="text-red-500">*</span>
+              </Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  id="emailOtp"
+                  value={emailVerificationCode}
+                  onChange={e =>
+                    setEmailVerificationCode(
+                      e.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 6)
+                    )
+                  }
+                  placeholder="Enter 6-digit code"
+                  maxLength={6}
+                  className="flex-1"
+                  disabled={loading}
+                />
+                <Button
+                  type="button"
+                  onClick={handleVerifyEmail}
+                  disabled={
+                    emailVerificationCode.length !== 6 ||
+                    loading
+                  }
+                  variant="accent"
+                  className="whitespace-nowrap"
+                >
+                  Verify
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {formData.emailVerified && (
+            <p className="text-sm text-green-600 font-medium">
+              ✓ Email verified
+            </p>
+          )}
+          {fieldErrors.email && (
+            <p className="text-xs text-red-500">
+              {fieldErrors.email}
+            </p>
+          )}
+        </div>
+
+        {/* ── Mobile Section (shown only after email is verified) ─────────── */}
+        {formData.emailVerified && (
+          <div className="space-y-4 pt-4 border-t">
+            <div className="flex gap-2 items-start">
+              <div className="flex-1">
+                <DynamicForm
+                  fields={mobileFields}
+                  onSubmit={() => {}}
+                  buttonLabel=""
+                  loading={loading}
+                  errors={fieldErrors}
+                  initialValues={{ mobileNo: formData.mobileNo }}
+                  onChange={data => {
+                    setSuccess("");
+                    setError("");
+                    const mobileNo = (data.mobileNo || "")
+                      .replace(/\D/g, "")
+                      .slice(0, 10);
+                    setFieldErrors(prev => {
+                      const e = { ...prev };
+                      delete e.mobileNo;
+                      return e;
+                    });
+                    if (mobileNo !== formData.mobileNo) {
+                      setMobileOtpSent(false);
+                      setMobileVerificationCode("");
+                      setFormData(prev => ({
+                        ...prev,
+                        mobileNo,
+                        mobileVerified: false
+                      }));
+                    }
+                  }}
+                />
+              </div>
+              {!formData.mobileVerified && (
+                <Button
+                  type="button"
+                  onClick={handleSendMobileOTP}
+                  disabled={
+                    !formData.mobileNo ||
+                    formData.mobileNo.length !== 10 ||
+                    loading ||
+                    mobileTimer > 0
+                  }
+                  variant="accent"
+                  className="mt-7 whitespace-nowrap"
+                >
+                  {mobileTimer > 0
+                    ? `Resend in ${mobileTimer}s`
+                    : mobileOtpSent
+                    ? "Resend OTP"
+                    : "Send OTP"}
+                </Button>
+              )}
+            </div>
+
+            {mobileOtpSent && !formData.mobileVerified && (
+              <div>
+                <Label
+                  htmlFor="mobileOtp"
+                  className="text-sm font-medium text-slate-700"
+                >
+                  Verification Code{" "}
+                  <span className="text-red-500">*</span>
+                </Label>
+                <div className="flex gap-2 mt-1">
+                  <Input
+                    id="mobileOtp"
+                    value={mobileVerificationCode}
+                    onChange={e =>
+                      setMobileVerificationCode(
+                        e.target.value
+                          .replace(/\D/g, "")
+                          .slice(0, 6)
+                      )
+                    }
+                    placeholder="Enter 6-digit code"
+                    maxLength={6}
+                    className="flex-1"
+                    disabled={loading}
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleVerifyMobile}
+                    disabled={
+                      mobileVerificationCode.length !== 6 ||
+                      loading
+                    }
+                    variant="accent"
+                    className="whitespace-nowrap"
+                  >
+                    Verify
+                  </Button>
+                </div>
+              </div>
             )}
 
-            {/* Error Message */}
-            {error && (
-                <Alert variant="destructive" className="mb-4">
-                    <AlertDescription>{error}</AlertDescription>
-                </Alert>
+            {formData.mobileVerified && (
+              <p className="text-sm text-green-600 font-medium">
+                ✓ Mobile verified
+              </p>
+            )}
+            {fieldErrors.mobileNo && (
+              <p className="text-xs text-red-500">
+                {fieldErrors.mobileNo}
+              </p>
             )}
 
-            <form onSubmit={handleSubmit}>
-                {currentStep === 1 && renderStep1()}
-                {currentStep === 2 && renderStep2()}
-                {currentStep === 3 && renderStep3()}
-            </form>
-        </OnboardingLayout>
+            {formData.mobileVerified && (
+              <Button
+                type="button"
+                onClick={handleContinueToStep2}
+                variant="accent"
+                className="w-full mt-6"
+                loading={loading}
+                disabled={loading}
+              >
+                Continue to Location Details
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
     );
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // RENDER: STEP 2 — Location Details
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const renderStep2 = () => {
+    const step2Fields: FormField[] = [
+      {
+        fieldname: "state",
+        label: "State",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Select State",
+        layout: "half",
+        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiParams: { doctype: "State" },
+        mapOptions: data => {
+          const items = data.data || data || [];
+          return items.map((item: any) => ({
+            value: item.name,
+            label: item.name
+          }));
+        }
+      },
+      {
+        fieldname: "district",
+        label: "District",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Select District",
+        layout: "half",
+        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiParams: formData.state
+          ? {
+              doctype: "District",
+              fields: ["name", "district_name"],
+              filters: [["state", "=", formData.state]],
+              order_by: "district_name asc",
+              limit_page_length: 1000
+            }
+          : undefined,
+        mapOptions: data => {
+          const items = data.data || data || [];
+          return items.map((item: any) => ({
+            value: item.name,
+            label: item.district_name || item.name
+          }));
+        },
+        disabled: !formData.state
+      },
+      {
+        fieldname: "tahsil",
+        label: "Taluka",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Select Taluka",
+        layout: "half",
+        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiParams: formData.district
+          ? {
+              doctype: "Tahsil",
+              fields: ["name", "tahsil_name"],
+              filters: [
+                ["district", "=", formData.district]
+              ],
+              order_by: "tahsil_name asc",
+              limit_page_length: 1000
+            }
+          : undefined,
+        mapOptions: data => {
+          const items = data.data || data || [];
+          return items.map((item: any) => ({
+            value: item.name,
+            label: item.tahsil_name || item.name
+          }));
+        },
+        disabled: !formData.district
+      },
+      {
+        fieldname: "city",
+        label: "City",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Select City",
+        layout: "half",
+        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiParams: formData.tahsil
+          ? {
+              doctype: "City",
+              fields: ["name", "city_name"],
+              filters: [["tahsil", "=", formData.tahsil]],
+              order_by: "city_name asc",
+              limit_page_length: 1000
+            }
+          : undefined,
+        mapOptions: data => {
+          const items = data.data || data || [];
+          return items.map((item: any) => ({
+            value: item.name,
+            label: item.city_name || item.name
+          }));
+        },
+        disabled: !formData.tahsil
+      },
+      {
+        fieldname: "travelling_possible",
+        label: "Travelling Possible",
+        fieldtype: "Select",
+        required: true,
+        placeholder: "Select travelling possibility",
+        layout: "half",
+        options: ["Yes", "No", "Maybe"]
+      }
+    ];
+
+    return (
+      <div className="space-y-4">
+        <DynamicForm
+          fields={step2Fields}
+          onSubmit={() => {}}
+          buttonLabel=""
+          loading={loading}
+          initialValues={formData}
+          errors={fieldErrors}
+          onChange={data => {
+            setFormData(prev => ({ ...prev, ...data }));
+            const updatedErrors = { ...fieldErrors };
+            Object.keys(data).forEach(
+              key => delete updatedErrors[key]
+            );
+            setFieldErrors(updatedErrors);
+            setError("");
+          }}
+        />
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => goToStep(1)}
+          >
+            Back
+          </Button>
+          <Button
+            type="button"
+            onClick={handleContinueToStep3}
+            variant="accent"
+            className="flex-1"
+            loading={loading}
+            disabled={loading}
+          >
+            Continue to Professional Details
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // RENDER: STEP 3 — Professional Details
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  const renderStep3 = () => {
+    const step3Fields: FormField[] = [
+      {
+        fieldname: "type",
+        label: "Type",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Select Type",
+        layout: "half",
+        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiParams: { doctype: "Type" },
+        mapOptions: data => {
+          const items = data.data || data || [];
+          return items.map((item: any) => ({
+            value: item.name,
+            label: item.name
+          }));
+        }
+      },
+      {
+        fieldname: "domain",
+        label: "Domain",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Select Domain",
+        layout: "full",
+        multiSelect: true,
+        allowCustom: true,
+        customPlaceholder: "Enter custom domain name",
+        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiParams: { doctype: "Domain" },
+        mapOptions: data => {
+          const items = data.data || data || [];
+          return items.map((item: any) => ({
+            value: item.name,
+            label: item.name || item.domain_name
+          }));
+        }
+      },
+      {
+        fieldname: "skills",
+        label: "Skills",
+        fieldtype: "Data",
+        required: false,
+        placeholder: "Select skills (optional)",
+        layout: "full",
+        multiSelect: true,
+        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
+        apiParams: {
+          doctype: "Student Skill",
+          fields: ["skill"]
+        },
+        mapOptions: data => {
+          const items = data.data || data || [];
+          return items.map((item: any) => ({
+            value: item.skill,
+            label: item.skill
+          }));
+        }
+      },
+      {
+        fieldname: "profile_description",
+        label: "Profile Description",
+        fieldtype: "Text",
+        required: true,
+        placeholder:
+          "Tell us about your expertise, experience, and what you can offer as a mentor… (minimum 50 characters)",
+        layout: "full",
+        inputClassName: "min-h-[150px]",
+        minLetters: 50
+      }
+    ];
+
+    return (
+      <div className="space-y-6">
+        <DynamicForm
+          fields={step3Fields}
+          onSubmit={() => {}}
+          buttonLabel=""
+          loading={loading}
+          initialValues={formData}
+          errors={fieldErrors}
+          onChange={data => {
+            setFormData(prev => ({ ...prev, ...data }));
+            const updatedErrors = { ...fieldErrors };
+            Object.keys(data).forEach(
+              key => delete updatedErrors[key]
+            );
+            setFieldErrors(updatedErrors);
+            setError("");
+          }}
+        />
+
+        {/* ── Platform URLs ──────────────────────────────────────────────── */}
+        <div className="mt-6">
+          <Label className="text-sm font-medium text-slate-700 mb-3 block">
+            Profile URLs
+          </Label>
+
+          {platformUrls.map((item, index) => (
+            <div
+              key={index}
+              className="flex items-start gap-3 mb-3"
+            >
+              <div className="flex-1 grid grid-cols-2 gap-3">
+                {/* Platform Dropdown */}
+                <div
+                  className="relative"
+                  ref={setPlatformRef(index)}
+                >
+                  <div
+                    onClick={() =>
+                      !loadingPlatforms &&
+                      togglePlatformDropdown(index)
+                    }
+                    className={`w-full h-9 px-3 rounded-md border ${
+                      platformError
+                        ? "border-red-500"
+                        : "border-slate-200"
+                    } bg-white text-sm text-slate-900 flex items-center justify-between cursor-pointer hover:border-slate-300 transition-colors focus:outline-none focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4] ${
+                      loadingPlatforms
+                        ? "opacity-60 cursor-not-allowed"
+                        : ""
+                    }`}
+                    tabIndex={0}
+                  >
+                    <span
+                      className={`truncate ${
+                        !item.platform
+                          ? "text-slate-400"
+                          : "text-slate-900"
+                      }`}
+                    >
+                      {loadingPlatforms
+                        ? "Loading platforms..."
+                        : item.platform || "Select Platform"}
+                    </span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${
+                        openPlatformDropdown === index
+                          ? "rotate-180"
+                          : ""
+                      }`}
+                    />
+                  </div>
+
+                  {openPlatformDropdown === index && (
+                    <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-lg">
+                      <div className="py-1">
+                        {platformOptions.map(option => (
+                          <div
+                            key={option.value}
+                            onClick={() =>
+                              selectPlatform(
+                                index,
+                                option.value
+                              )
+                            }
+                            className={`px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors ${
+                              item.platform === option.value
+                                ? "bg-[#1152d4]/5"
+                                : ""
+                            }`}
+                          >
+                            <div
+                              className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                                item.platform === option.value
+                                  ? "border-[#1152d4]"
+                                  : "border-slate-300"
+                              }`}
+                            >
+                              {item.platform ===
+                                option.value && (
+                                <div className="w-2 h-2 rounded-full bg-[#1152d4]" />
+                              )}
+                            </div>
+                            <span
+                              className={`flex-1 ${
+                                item.platform === option.value
+                                  ? "text-[#1152d4] font-medium"
+                                  : "text-slate-700"
+                              }`}
+                            >
+                              {option.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {platformError && (
+                    <div className="mt-1">
+                      <p className="text-xs text-red-500 inline">
+                        {platformError}.{" "}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={fetchPlatforms}
+                        className="text-xs text-[#1152d4] underline font-medium hover:no-underline"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* URL Input */}
+                <Input
+                  value={item.url}
+                  onChange={e =>
+                    updatePlatformUrl(index, "url", e.target.value)
+                  }
+                  placeholder="https://example.com/profile"
+                  className="h-9 text-sm focus:ring-2 focus:ring-[#1152d4] focus:border-[#1152d4] font-mono"
+                />
+              </div>
+
+              {platformUrls.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => removePlatformUrl(index)}
+                  className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors mt-0.5"
+                  title="Remove URL"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ))}
+
+          <div className="flex justify-start mt-2">
+            <Button
+              type="button"
+              onClick={addPlatformUrl}
+              variant="outline"
+              className="h-8 px-4 text-xs border-accent/20 text-accent hover:bg-accent hover:text-white transition-colors"
+            >
+              <Plus className="w-3 h-3 mr-1" /> Add Platform URL
+            </Button>
+          </div>
+
+          {fieldErrors.platformUrls && (
+            <p className="text-xs text-red-500 mt-2">
+              {fieldErrors.platformUrls}
+            </p>
+          )}
+        </div>
+
+        {/* ── Action Buttons ─────────────────────────────────────────────── */}
+        <div className="flex gap-3 pt-6">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => goToStep(2)}
+          >
+            Back
+          </Button>
+          <Button
+            type="submit"
+            variant="accent"
+            className="flex-1"
+            loading={loading}
+            disabled={loading}
+            onClick={handleSubmit}
+          >
+            Complete Registration
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // ROOT RENDER
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  return (
+    <OnboardingLayout
+      currentStep={currentStep}
+      totalSteps={3}
+      title={getStepTitle()}
+      description={getStepDescription()}
+      onSkip={handleSkip}
+      showSkip={true}
+    >
+      {success && (
+        <Alert variant="success" className="mb-4">
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      )}
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      <form onSubmit={handleSubmit}>
+        {currentStep === 1 && renderStep1()}
+        {currentStep === 2 && renderStep2()}
+        {currentStep === 3 && renderStep3()}
+      </form>
+    </OnboardingLayout>
+  );
 }

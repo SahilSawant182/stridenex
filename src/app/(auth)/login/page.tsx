@@ -11,63 +11,92 @@ import { Label } from "@/components/ui/label";
 import AuthLayout from "../AuthLayout";
 import { validateLoginForm } from "@/lib/validators";
 
+/**
+ * Onboarding completion thresholds per role.
+ *
+ *   student  →  flag >= 2  (2 steps)
+ *   mentor   →  flag >= 3  (3 steps)
+ *   industry →  flag >= 3  (3 meaningful steps)
+ *   college  →  flag >= 1  (1 step)
+ *
+ * This single source-of-truth is used both here (post-login routing) and
+ * in each onboarding component so the thresholds are never out of sync.
+ */
+const ONBOARDING_COMPLETE: Record<string, number> = {
+  student: 2,
+  mentor: 3,
+  industry: 3,
+  college: 1
+};
+
+function isFullyOnboarded(role: string, flag: number): boolean {
+  const threshold = ONBOARDING_COMPLETE[role] ?? 1;
+  return flag >= threshold;
+}
+
 export default function LoginPage() {
-  const [bgImage, setBgImage] = useState<string | null>(null);
-  const [appName, setAppName] = useState<string>("StrideNex");
+  const [appName] = useState<string>("StrideNex");
+  const [bgImage] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [formValues, setFormValues] = useState<any>({});
-  const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
+  const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
   const { isAuthenticated, login, role, isOnboarded } = useAuth();
   const router = useRouter();
 
+  // ─── Post-login / page-load routing ──────────────────────────────────────────
   useEffect(() => {
-    if (!isAuthenticated || !role || isOnboarded === null) return;
+    // Wait until all auth state is populated
+    if (
+      !isAuthenticated ||
+      !role ||
+      isOnboarded === null ||
+      isOnboarded === undefined
+    )
+      return;
 
-    // Industry requires 3 steps (is_onboarded === "4")
-    // Student requires 2 steps (is_onboarded === "2")
-    // Other modules require 1 step (is_onboarded === "1")
-    const isIndustry = role === "industry";
-    const isStudent = role === "student";
-    const isFullyOnboarded = isIndustry ? (isOnboarded === "4" || isOnboarded === "3") : isStudent ? isOnboarded === "2" : isOnboarded === "1";
+    const flag = parseInt(isOnboarded, 10);
 
-    if (isFullyOnboarded) {
+    if (isFullyOnboarded(role, flag)) {
+      // Fully onboarded → go straight to dashboard
       router.push(`/${role}/dashboard`);
     } else {
+      // Not yet fully onboarded → resume the onboarding flow.
+      // Each onboarding component reads `isOnboarded` from context and
+      // resumes at the correct step automatically.
       router.push(`/onboarding/${role}`);
     }
   }, [isAuthenticated, role, isOnboarded, router]);
 
-
+  // ─── Form fields ──────────────────────────────────────────────────────────────
   const loginFields: FormField[] = [
     {
       fieldname: "username",
       label: "Email or Username",
       fieldtype: "Data",
       required: true,
-      placeholder: "student@college.edu",
+      placeholder: "student@college.edu"
     },
     {
       fieldname: "password",
       label: "Password",
       fieldtype: "Password",
       required: true,
-      placeholder: "••••••••",
-    },
+      placeholder: "••••••••"
+    }
   ];
 
   const handleFormChange = (data: any) => {
     setFormValues(data);
   };
 
+  // ─── Login handler ────────────────────────────────────────────────────────────
   const handleLogin = async () => {
-    const formData = formValues;
-
     const errors = validateLoginForm({
-      username: formData.username,
-      password: formData.password
+      username: formValues.username,
+      password: formValues.password
     });
 
     if (Object.keys(errors).length > 0) {
@@ -83,13 +112,11 @@ export default function LoginPage() {
         `${BASE_URL}method/stridenex_app.api_stridenex_app.app.login`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            usr: formData.username,
-            pwd: formData.password
-          }),
+            usr: formValues.username,
+            pwd: formValues.password
+          })
         }
       );
 
@@ -98,26 +125,41 @@ export default function LoginPage() {
 
       if (data.message === "Logged In") {
         const { api_key, api_secret } = data.key_details;
-        const fullName = data.full_name || formData.username.split('@')[0];
-        const email = data.user || formData.username;
+        const fullName =
+          data.full_name ||
+          formValues.username.split("@")[0];
+        const email = data.user || formValues.username;
 
+        // ── Role resolution ────────────────────────────────────────────────
         let userRole = "student";
 
         if (data.roles && Array.isArray(data.roles)) {
-          const lowerRoles = data.roles.map((r: string) => r.toLowerCase());
-
-          if (lowerRoles.some((r: string) => r.includes("college"))) {
+          const lowerRoles = data.roles.map((r: string) =>
+            r.toLowerCase()
+          );
+          if (
+            lowerRoles.some((r: string) => r.includes("college"))
+          ) {
             userRole = "college";
-          } else if (lowerRoles.some((r: string) => r.includes("industry"))) {
+          } else if (
+            lowerRoles.some((r: string) =>
+              r.includes("industry")
+            )
+          ) {
             userRole = "industry";
-          } else if (lowerRoles.some((r: string) => r.includes("mentor"))) {
+          } else if (
+            lowerRoles.some((r: string) => r.includes("mentor"))
+          ) {
             userRole = "mentor";
-          } else if (lowerRoles.some((r: string) => r.includes("student"))) {
+          } else if (
+            lowerRoles.some((r: string) =>
+              r.includes("student")
+            )
+          ) {
             userRole = "student";
           }
         } else if (data.role) {
           const r = data.role.toLowerCase();
-
           if (r.includes("college") || r.includes("admin")) {
             userRole = "college";
           } else if (r.includes("industry")) {
@@ -129,7 +171,16 @@ export default function LoginPage() {
           }
         }
 
-        // ✅ ONLY SAVE DATA (NO ROUTING HERE)
+        /**
+         * Persist auth — navigation is intentionally NOT triggered here.
+         * The useEffect above watches [isAuthenticated, role, isOnboarded]
+         * and handles ALL routing after `login()` updates context.
+         *
+         * This means:
+         *  • A fully-onboarded mentor (flag=3) → /mentor/dashboard
+         *  • A mid-onboarding mentor (flag=1) → /onboarding/mentor  (step 2)
+         *  • A brand-new mentor (flag=0) → /onboarding/mentor        (step 1)
+         */
         await login(api_key, api_secret, {
           email,
           fullName,
@@ -137,22 +188,22 @@ export default function LoginPage() {
           isOnboarded: data.is_onboarded
         });
 
-        // ❌ DO NOT ADD router.push HERE
-        // Navigation will be handled by useEffect
-
+        // Do NOT call router.push here — useEffect owns all routing.
       } else {
         const msg = data.message || "Login failed";
-        setError(typeof msg === "string" ? msg : JSON.stringify(msg));
+        setError(
+          typeof msg === "string" ? msg : JSON.stringify(msg)
+        );
         setLoading(false);
       }
-
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||
         err?.message ||
         "An error occurred during login";
-
-      setError(typeof msg === "string" ? msg : JSON.stringify(msg));
+      setError(
+        typeof msg === "string" ? msg : JSON.stringify(msg)
+      );
       console.error(err);
       setLoading(false);
     }
@@ -171,15 +222,17 @@ export default function LoginPage() {
       <div className="space-y-5">
         <DynamicForm
           fields={loginFields}
-          onSubmit={() => { }} // Empty onSubmit
-          buttonLabel="" // No button from DynamicForm
+          onSubmit={() => {}}
+          buttonLabel=""
           loading={loading}
           onChange={handleFormChange}
         />
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-            <p className="text-red-600 text-sm text-center">{error}</p>
+            <p className="text-red-600 text-sm text-center">
+              {error}
+            </p>
           </div>
         )}
 
@@ -188,10 +241,15 @@ export default function LoginPage() {
             <Checkbox
               id="remember"
               checked={rememberMe}
-              onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+              onCheckedChange={checked =>
+                setRememberMe(checked as boolean)
+              }
               disabled={loading}
             />
-            <Label htmlFor="remember" className="text-sm text-slate-600">
+            <Label
+              htmlFor="remember"
+              className="text-sm text-slate-600"
+            >
               Remember me
             </Label>
           </div>
