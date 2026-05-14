@@ -60,3 +60,29 @@ export const getMentorOfferings = async (mentor: string) => {
     throw error;
   }
 };
+
+export const createMentorOffering = async (payload: any) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_offering.mentor_offering.create_mentor_offering",
+      payload
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating mentor offering:", error);
+    throw error;
+  }
+};
+
+export const updateMentorOffering = async (name: string, payload: any) => {
+  try {
+    const response = await apiService.put(
+      `method/stridenex_app.stridenex_app.doctype.mentor_offering.mentor_offering.update_mentor_offering?name=${encodeURIComponent(name)}`,
+      payload
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating mentor offering:", error);
+    throw error;
+  }
+};
