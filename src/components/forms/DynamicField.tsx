@@ -97,7 +97,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
   useEffect(() => {
     if (options.length > 0) {
       const filtered = options.filter(option =>
-        option.label.toLowerCase().includes(searchTerm.toLowerCase())
+        option.label && option.label.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredOptions(filtered);
     } else {
@@ -409,9 +409,9 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
                       </div>
                     ) : (
                       <div className="py-1">
-                        {filteredOptions.map((option) => (
+                        {filteredOptions.map((option, index) => (
                           <div
-                            key={option.value}
+                            key={option.value || option.label || index}
                             onClick={(e) => field.multiSelect ? handleMultiSelect(option.value, e) : handleSingleSelect(option.value)}
                             className={`px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors ${isSelected(option.value)
                               ? "bg-accent/5 text-accent font-medium"
