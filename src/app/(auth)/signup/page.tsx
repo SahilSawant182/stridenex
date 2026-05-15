@@ -29,14 +29,14 @@ export default function SignupPage() {
   const [selectedRole, setSelectedRole] = useState<UserRole>("student");
   const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitialized } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isInitialized && isAuthenticated) {
       router.push("/student/dashboard"); // Fallback, real roles will be set next
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isInitialized, router]);
 
   // Password validation function
   const validatePasswordStrength = (password: string): { isValid: boolean; message: string } => {

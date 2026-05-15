@@ -47,28 +47,7 @@ export default function LoginPage() {
   const router = useRouter();
 
   // ─── Post-login / page-load routing ──────────────────────────────────────────
-  useEffect(() => {
-    // Wait until all auth state is populated
-    if (
-      !isAuthenticated ||
-      !role ||
-      isOnboarded === null ||
-      isOnboarded === undefined
-    )
-      return;
 
-    const flag = parseInt(isOnboarded, 10);
-
-    if (isFullyOnboarded(role, flag)) {
-      // Fully onboarded → go straight to dashboard
-      router.push(`/${role}/dashboard`);
-    } else {
-      // Not yet fully onboarded → resume the onboarding flow.
-      // Each onboarding component reads `isOnboarded` from context and
-      // resumes at the correct step automatically.
-      router.push(`/onboarding/${role}`);
-    }
-  }, [isAuthenticated, role, isOnboarded, router]);
 
   // ─── Form fields ──────────────────────────────────────────────────────────────
   const loginFields: FormField[] = [
@@ -188,7 +167,13 @@ export default function LoginPage() {
           isOnboarded: data.is_onboarded
         });
 
-        // Do NOT call router.push here — useEffect owns all routing.
+        // Redirect based on onboarding status
+        const flag = parseInt(data.is_onboarded || "0", 10);
+        if (isFullyOnboarded(userRole, flag)) {
+          router.push(`/${userRole}/dashboard`);
+        } else {
+          router.push(`/onboarding/${userRole}`);
+        }
       } else {
         const msg = data.message || "Login failed";
         setError(

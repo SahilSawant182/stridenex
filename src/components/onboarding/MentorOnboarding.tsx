@@ -750,8 +750,6 @@ export default function MentorOnboarding({
         if (method === "post") setHasCreatedRecord(true);
 
         if (step === 2) {
-          // Update the in-memory onboarded flag so step validation is correct
-          // if the user navigates back and forward.
           if (typeof updateOnboardedFlag === "function") {
             updateOnboardedFlag("2");
           }
@@ -762,24 +760,17 @@ export default function MentorOnboarding({
           /**
            * ONBOARDING COMPLETE
            *
-           * Update context flag to 3 so that LoginPage's useEffect correctly
-           * routes the user to /mentor/dashboard on next login instead of
-           * back to the onboarding flow.
+           * Update local flag to 3 and redirect to dashboard.
            */
           if (typeof updateOnboardedFlag === "function") {
-            updateOnboardedFlag(String(MENTOR_COMPLETE_FLAG));
+            updateOnboardedFlag("3");
           }
-          localStorage.setItem(
-            "isOnboarded",
-            String(MENTOR_COMPLETE_FLAG)
-          );
           setSuccess(
             "Mentor onboarding completed successfully!"
           );
 
           // Short delay so the user sees the success banner.
           setTimeout(() => {
-            // Push to dashboard directly — no need to re-login.
             router.push("/mentor/dashboard");
           }, 1500);
         }
@@ -1393,7 +1384,7 @@ export default function MentorOnboarding({
         fieldtype: "Data",
         required: true,
         placeholder: "Select Type",
-        layout: "half",
+        layout: "full",
         apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: { doctype: "Type" },
         mapOptions: data => {
