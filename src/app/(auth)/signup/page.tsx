@@ -222,7 +222,7 @@ export default function SignupPage() {
           const errorMsg = responseData?.message ||
             responseData?.message?.error ||
             "Signup failed";
-            
+
           if (errorMsg.toLowerCase().includes("user already exists") || errorMsg.toLowerCase().includes("email already registered")) {
             setFieldErrors(prev => ({ ...prev, email: "User already exists with this email" }));
             setError("");

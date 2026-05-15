@@ -12,7 +12,7 @@ import { parseBackendError } from "@/utils/error.utils";
 export interface DynamicField {
   name: string;
   label: string;
-  type: "text" | "number" | "select" | "textarea" | "email" | "url" | "date" | "custom";
+  type: "text" | "number" | "select" | "textarea" | "email" | "url" | "date" | "time" | "custom";
   placeholder?: string;
   icon?: LucideIcon;
   colSpan?: 1 | 2;

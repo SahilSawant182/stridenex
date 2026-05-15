@@ -222,7 +222,7 @@ export default function LoginPage() {
       <div className="space-y-5">
         <DynamicForm
           fields={loginFields}
-          onSubmit={() => {}}
+          onSubmit={() => { }}
           buttonLabel=""
           loading={loading}
           onChange={handleFormChange}
