@@ -25,7 +25,6 @@ interface AuthContextType {
   isInitialized: boolean;
   getCurrentUser: () => Promise<string | null>;
   isOnboarded: string | null;
-  updateOnboardedFlag: (flag: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,7 +44,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   // Load from localStorage on mount
   useEffect(() => {
     const storedKey = localStorage.getItem("apiKey");
-    const storedSecret = localStorage.getItem("apiSecret"); 
+    const storedSecret = localStorage.getItem("apiSecret");
     const storedUser = localStorage.getItem("currentUser");
     const storedFullName = localStorage.getItem("fullName");
     const storedRole = localStorage.getItem("role");
@@ -224,11 +223,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, 100);
   };
 
-  const updateOnboardedFlag = (flag: string) => {
-    setIsOnboarded(flag);
-    localStorage.setItem("isOnboarded", flag);
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -242,8 +236,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         logout,
         getCurrentUser,
         isInitialized,
-        isOnboarded,
-        updateOnboardedFlag
+        isOnboarded
       }}
     >
       {children}

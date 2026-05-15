@@ -29,14 +29,14 @@ export default function SignupPage() {
   const [selectedRole, setSelectedRole] = useState<UserRole>("student");
   const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  const { isAuthenticated, isInitialized } = useAuth();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (isInitialized && isAuthenticated) {
+    if (isAuthenticated) {
       router.push("/student/dashboard"); // Fallback, real roles will be set next
     }
-  }, [isAuthenticated, isInitialized, router]);
+  }, [isAuthenticated, router]);
 
   // Password validation function
   const validatePasswordStrength = (password: string): { isValid: boolean; message: string } => {
@@ -222,7 +222,7 @@ export default function SignupPage() {
           const errorMsg = responseData?.message ||
             responseData?.message?.error ||
             "Signup failed";
-            
+
           if (errorMsg.toLowerCase().includes("user already exists") || errorMsg.toLowerCase().includes("email already registered")) {
             setFieldErrors(prev => ({ ...prev, email: "User already exists with this email" }));
             setError("");

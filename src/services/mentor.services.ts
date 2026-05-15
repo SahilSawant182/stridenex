@@ -54,7 +54,7 @@ export const getMentorOfferings = async (mentor: string) => {
     const response = await apiService.get(
       `method/stridenex_app.stridenex_app.doctype.mentor_offering.mentor_offering.get_mentor_offerings?mentor=${encodeURIComponent(mentor)}`
     );
-    return response;  
+    return response;
   } catch (error) {
     console.error("Error fetching mentor offerings:", error);
     throw error;
@@ -86,3 +86,39 @@ export const updateMentorOffering = async (name: string, payload: any) => {
     throw error;
   }
 };
+
+
+
+
+
+
+//Schedule tab
+//Not implmented in ui yet (Weekly Availability Grid) 
+export const getWeekSlots = async (mentor: string, weekStart: string, emailId: string) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_availability.mentor_availability.get_week_slots",
+      { mentor, week_start: weekStart, email_id: emailId }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching week slots:", error);
+    throw error;
+  }
+};
+
+
+
+//Schedule tab: All Upcoming Bookings not implemented yet 
+export const getUpcomingSessions = async (mentor: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.get_upcoming_sessions?mentor=${encodeURIComponent(mentor)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching upcoming sessions:", error);
+    throw error;
+  }
+};
+

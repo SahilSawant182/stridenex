@@ -504,26 +504,50 @@ export default function MyProfileTabContent() {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 md:p-8">
-            <div className="flex flex-col items-center justify-center mb-8">
-              <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-3">
-                <Shield className="w-8 h-8 text-blue-500 fill-blue-50" />
+            <div className="flex flex-col items-center justify-center mb-8 text-center">
+              <div className={`w-16 h-16 rounded-full ${mentorData?.approved_status === "Approved" ? "bg-emerald-50" : "bg-blue-50"} flex items-center justify-center mb-3`}>
+                <Shield className={`w-8 h-8 ${mentorData?.approved_status === "Approved" ? "text-emerald-500 fill-emerald-50" : "text-blue-500 fill-blue-50"}`} />
               </div>
-              <h3 className="text-xl font-bold text-blue-600">Verified Mentor</h3>
-              <p className="text-xs text-slate-400">Profile active & visible to students</p>
+              <h3 className={`text-xl font-bold ${mentorData?.approved_status === "Approved" ? "text-emerald-600" : "text-blue-600"}`}>
+                {mentorData?.approved_status || "Pending Verification"}
+              </h3>
+              <p className="text-xs text-slate-400 max-w-[200px]">
+                {mentorData?.is_active
+                  ? "Profile active & visible to students"
+                  : "Profile is currently hidden from students"}
+              </p>
             </div>
 
             <div className="space-y-4">
-              {["Identity Verified", "LinkedIn Matched", "Employment Verified", "Background Check"].map((item, i) => (
-                <div key={i} className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-emerald-500 bg-emerald-50 rounded-full" />
-                    <span className="text-sm font-semibold text-slate-700">{item}</span>
+              {(mentorData?.mentor_verification || []).length > 0 ? (
+                (mentorData.mentor_verification).map((item: any, i: number) => (
+                  <div key={i} className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle
+                        className={`w-5 h-5 ${item.status === "Verified"
+                          ? "text-emerald-500 bg-emerald-50"
+                          : "text-amber-500 bg-amber-50"
+                          } rounded-full`}
+                      />
+                      <span className="text-sm font-semibold text-slate-700">{item.verification}</span>
+                    </div>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${item.status === "Verified"
+                        ? "text-emerald-600 bg-emerald-50 border-emerald-100"
+                        : "text-amber-600 bg-amber-50 border-amber-100"
+                        }`}
+                    >
+                      {item.status}
+                    </span>
                   </div>
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 uppercase">
-                    Verified
-                  </span>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center py-4 text-center">
+                  <Shield className="w-8 h-8 text-slate-200 mb-2" />
+                  <p className="text-sm text-slate-500 font-medium">No verification records found</p>
+                  <p className="text-[10px] text-slate-400 mt-1">Contact support for verification status</p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </motion.div>
@@ -554,8 +578,13 @@ export default function MyProfileTabContent() {
                 <div>
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <h4 className="font-bold text-slate-800 text-lg">{fullName || "Your Name"}</h4>
-                    <span className="flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
-                      <Shield className="w-2.5 h-2.5 text-blue-600" /> Verified
+                    <span className={`flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider ${mentorData?.approved_status === "Approved"
+                      ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                      : "text-blue-700 bg-blue-50 border-blue-200"
+                      } px-1.5 py-0.5 rounded border`}>
+                      <Shield className={`w-2.5 h-2.5 ${mentorData?.approved_status === "Approved" ? "text-emerald-600" : "text-blue-600"
+                        }`} />
+                      {mentorData?.approved_status === "Approved" ? "Verified" : "Pending"}
                     </span>
                   </div>
                   {mentorData?.role && (

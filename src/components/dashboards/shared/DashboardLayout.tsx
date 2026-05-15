@@ -13,18 +13,18 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children, role }: DashboardLayoutProps) {
-  const { isAuthenticated, isInitialized } = useAuth();
+  const { isAuthenticated } = useAuth();
   const router = useRouter();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   useEffect(() => {
-    if (isInitialized && !isAuthenticated) {
+    if (!isAuthenticated) {
       router.push("/login");
     }
-  }, [isInitialized, isAuthenticated, router]);
+  }, [isAuthenticated, router]);
 
-  if (!isInitialized || !isAuthenticated) {
-    return null; // Return null while initializing or redirecting
+  if (!isAuthenticated) {
+    return null; // Return null while redirecting
   }
 
   return (
