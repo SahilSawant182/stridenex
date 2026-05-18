@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { getUpcomingSessions, getPendingRequests } from "@/services/mentor.services";
+
 import { motion } from "framer-motion";
 import { 
   GraduationCap, 
@@ -59,6 +63,105 @@ const thisMonthStats = [
 ];
 
 export default function OverviewTabContent() {
+  const { currentUser } = useAuth();
+  const [upcoming, setUpcoming] = useState<any[]>([]);
+  const [pending, setPending] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const email = currentUser || localStorage.getItem("userEmail") || "";
+      if (!email) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const [upcomingRes, pendingRes] = await Promise.all([
+          getUpcomingSessions(email),
+          getPendingRequests(email)
+        ]);
+        if (upcomingRes?.message) {
+          setUpcoming(upcomingRes.message);
+        }
+        if (pendingRes?.message) {
+          setPending(pendingRes.message);
+        }
+      } catch (err) {
+        console.error("Failed to fetch dashboard data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [currentUser]);
+
+  const formatTime = (timeStr: string) => {
+    if (!timeStr) return "";
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutes} ${ampm}`;
+  };
+
+  const dynamicUpcomingSessions = upcoming.slice(0, 4).map((s, index) => {
+    const studentName = s.student?.split('@')[0] || "Unknown";
+    const initials = studentName.substring(0, 2).toUpperCase();
+    const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
+    const color = colors[index % colors.length];
+    
+    const dateObj = new Date(s.session_date);
+    const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const timeStr = formatTime(s.from_time);
+    
+    return {
+      id: s.name,
+      initials,
+      name: studentName,
+      topic: s.topic || "Session",
+      date: `${dateStr} ${timeStr}`,
+      duration: `${s.duration} min`,
+      type: "Mentorship", 
+      color,
+      meeting_link: s.meeting_link
+    };
+  });
+
+  const getInitials = (name: string) => {
+    if (!name) return "??";
+    const parts = name.split(" ");
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  };
+
+  const getRandomColorClass = (name: string) => {
+    const colors = [
+      "bg-pink-100 text-pink-700",
+      "bg-blue-100 text-blue-700",
+      "bg-emerald-100 text-emerald-700",
+      "bg-indigo-100 text-indigo-700",
+      "bg-amber-100 text-amber-700"
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  const dynamicPendingRequests = pending.slice(0, 4).map((req) => {
+    const name = req.student_name || "Student";
+    const priority = req.priority || 'Normal';
+    return {
+      initials: getInitials(name),
+      name,
+      topic: req.topic || "Mentorship Session",
+      priority: priority.toLowerCase(),
+      color: getRandomColorClass(name)
+    };
+  });
+
   return (
     <div className="space-y-6">
       {/* 4 Stats Cards */}
@@ -106,7 +209,11 @@ export default function OverviewTabContent() {
               </button>
             </div>
             <div className="divide-y divide-slate-100">
-              {upcomingSessions.map((session, i) => (
+              {loading ? (
+                <div className="p-8 text-center text-slate-500">Loading upcoming sessions...</div>
+              ) : dynamicUpcomingSessions.length === 0 ? (
+                <div className="p-8 text-center text-slate-500">No upcoming sessions.</div>
+              ) : dynamicUpcomingSessions.map((session, i) => (
                 <div key={i} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 px-6 hover:bg-slate-50 transition-colors">
                   <div className="flex items-start gap-4 mb-4 sm:mb-0">
                     <div className={`w-10 h-10 rounded-full ${session.color} flex items-center justify-center text-white font-bold text-sm shrink-0 mt-1`}>
@@ -129,9 +236,16 @@ export default function OverviewTabContent() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 self-start sm:self-center ml-14 sm:ml-0">
-                    <button className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors">
-                      Join
-                    </button>
+                    {session.meeting_link && (
+                      <a href={session.meeting_link} target="_blank" rel="noreferrer" className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors inline-block">
+                        Join
+                      </a>
+                    )}
+                    {!session.meeting_link && (
+                      <button className="px-4 py-1.5 bg-orange-500/50 cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors">
+                        Join
+                      </button>
+                    )}
                     <button className="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-lg transition-colors">
                       Reschedule
                     </button>
@@ -158,7 +272,11 @@ export default function OverviewTabContent() {
                 </button>
               </div>
               <div className="p-5 flex-1 space-y-4">
-                {pendingRequests.map((req, i) => (
+                {loading ? (
+                  <div className="py-4 text-center text-sm text-slate-500">Loading requests...</div>
+                ) : dynamicPendingRequests.length === 0 ? (
+                  <div className="py-4 text-center text-sm text-slate-500">No pending requests.</div>
+                ) : dynamicPendingRequests.map((req, i) => (
                   <div key={i} className="flex items-center justify-between pb-4 border-b border-slate-50 last:border-0 last:pb-0">
                     <div className="flex items-center gap-3">
                       <div className={`w-9 h-9 rounded-full ${req.color} flex items-center justify-center font-bold text-xs`}>
@@ -166,7 +284,7 @@ export default function OverviewTabContent() {
                       </div>
                       <div>
                         <h4 className="font-semibold text-sm text-slate-800">{req.name}</h4>
-                        <p className="text-xs text-slate-500">{req.topic}</p>
+                        <p className="text-xs text-slate-500 truncate max-w-[150px]" title={req.topic}>{req.topic}</p>
                       </div>
                     </div>
                     <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-md ${req.priority === 'high' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'}`}>
@@ -177,7 +295,7 @@ export default function OverviewTabContent() {
               </div>
               <div className="p-5 pt-0">
                 <button className="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg text-sm transition-colors">
-                  4 Pending — Review Now
+                  {pending.length} Pending — Review Now
                 </button>
               </div>
             </motion.div>

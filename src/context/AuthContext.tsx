@@ -25,6 +25,7 @@ interface AuthContextType {
   isInitialized: boolean;
   getCurrentUser: () => Promise<string | null>;
   isOnboarded: string | null;
+  updateOnboardedFlag: (flag: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -185,6 +186,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const updateOnboardedFlag = (flag: string) => {
+    setIsOnboarded(flag);
+    localStorage.setItem("isOnboarded", flag);
+  };
+
   const logout = async (redirectPath: string = "/") => {
     try {
       if (apiKey && apiSecret) {
@@ -236,7 +242,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         logout,
         getCurrentUser,
         isInitialized,
-        isOnboarded
+        isOnboarded,
+        updateOnboardedFlag
       }}
     >
       {children}

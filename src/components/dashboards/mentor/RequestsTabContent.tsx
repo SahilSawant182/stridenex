@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
-import { 
-  UserPlus, 
-  ShieldCheck, 
+import {
+  UserPlus,
+  ShieldCheck,
   CheckCircle,
   Clock,
   MessageSquare,
@@ -14,7 +14,7 @@ import {
   Loader2
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { getPendingRequests } from "@/services/mentor.services";
+import { getPendingRequests, suggestAltTime } from "@/services/mentor.services";
 
 
 export default function RequestsTabContent() {
@@ -22,6 +22,35 @@ export default function RequestsTabContent() {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [altTimeModal, setAltTimeModal] = useState<{ isOpen: boolean; req: any | null }>({ isOpen: false, req: null });
+  const [altDate, setAltDate] = useState("");
+  const [altTime, setAltTime] = useState("");
+  const [submittingAlt, setSubmittingAlt] = useState(false);
+
+  const openAltTimeModal = (req: any) => {
+    setAltTimeModal({ isOpen: true, req });
+    setAltDate("");
+    setAltTime("");
+  };
+
+  const handleSuggestAltTime = async () => {
+    if (!altDate || !altTime || !altTimeModal.req) return;
+    try {
+      setSubmittingAlt(true);
+      await suggestAltTime({
+        booking_name: altTimeModal.req.name,
+        alt_date: altDate,
+        alt_time: altTime
+      });
+      setAltTimeModal({ isOpen: false, req: null });
+      fetchRequests();
+    } catch (err) {
+      console.error("Failed to suggest alternate time", err);
+    } finally {
+      setSubmittingAlt(false);
+    }
+  };
 
   const fetchRequests = async () => {
     if (!currentUser) return;
@@ -70,17 +99,17 @@ export default function RequestsTabContent() {
   ], [requests.length]);
 
   const skillVerifyQueue = [
-    { 
-      id: "SVR-0091", name: "Priya Sharma", skill: "Machine Learning", submitted: "Feb 22", 
-      priority: "normal", evidence: "3 projects + Kaggle rank 840" 
+    {
+      id: "SVR-0091", name: "Priya Sharma", skill: "Machine Learning", submitted: "Feb 22",
+      priority: "normal", evidence: "3 projects + Kaggle rank 840"
     },
-    { 
-      id: "SVR-0089", name: "Arjun Nair", skill: "System Design", submitted: "Feb 20", 
-      priority: "high", evidence: "HLD document + peer review" 
+    {
+      id: "SVR-0089", name: "Arjun Nair", skill: "System Design", submitted: "Feb 20",
+      priority: "high", evidence: "HLD document + peer review"
     },
-    { 
-      id: "SVR-0084", name: "Sneha Patel", skill: "Product Strategy", submitted: "Feb 15", 
-      priority: "normal", evidence: "Startup pitch deck + user research" 
+    {
+      id: "SVR-0084", name: "Sneha Patel", skill: "Product Strategy", submitted: "Feb 15",
+      priority: "normal", evidence: "Startup pitch deck + user research"
     }
   ];
   return (
@@ -112,7 +141,7 @@ export default function RequestsTabContent() {
           <h3 className="text-[14px] font-bold text-slate-800 flex items-center gap-2 mb-2 px-1">
             <UserPlus className="w-4 h-4 text-orange-500" /> Session Booking Requests — Action Required
           </h3>
-          
+
           <div className="space-y-4">
             {loading ? (
               <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-200">
@@ -164,7 +193,10 @@ export default function RequestsTabContent() {
                       <button className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-lg flex items-center justify-center gap-1.5 transition-colors">
                         <Check className="w-4 h-4" /> Accept & Schedule
                       </button>
-                      <button className="flex-none px-4 py-2 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors">
+                      <button
+                        onClick={() => openAltTimeModal(req)}
+                        className="flex-none px-4 py-2 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors"
+                      >
                         <Clock className="w-4 h-4" /> Suggest Alt Time
                       </button>
                       <button className="flex-none px-4 py-2 hover:bg-red-50 border border-slate-200 text-slate-500 hover:text-red-600 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors">
@@ -189,11 +221,11 @@ export default function RequestsTabContent() {
           <h3 className="text-[14px] font-bold text-slate-800 flex items-center gap-2 mb-2 px-1">
             <ShieldCheck className="w-4 h-4 text-red-500" /> Skill Verification Queue
           </h3>
-          
+
           <div className="bg-blue-50/50 rounded-xl p-4 border border-blue-100 text-sm text-slate-700 leading-relaxed mb-4">
             You have been trusted by students and the platform to verify these skills. Your endorsement adds a <span className="font-bold text-blue-600">verified badge</span> visible on the student's public profile and ledger.
           </div>
-          
+
           <div className="space-y-4">
             {skillVerifyQueue.map((item, i) => (
               <motion.div
@@ -244,6 +276,57 @@ export default function RequestsTabContent() {
           </div>
         </div>
       </div>
+
+      {/* Suggest Alt Time Modal */}
+      {altTimeModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm overflow-hidden flex flex-col">
+            <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+              <h3 className="font-bold text-slate-800">Suggest Alternate Time</h3>
+              <button onClick={() => setAltTimeModal({ isOpen: false, req: null })} className="text-slate-400 hover:text-slate-600 transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">Date</label>
+                <input
+                  type="date"
+                  value={altDate}
+                  style={{ textTransform: "uppercase" }}
+                  onChange={(e) => setAltDate(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5">Time</label>
+                <input
+                  type="time"
+                  value={altTime}
+                  onChange={(e) => setAltTime(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                />
+              </div>
+            </div>
+            <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex gap-3">
+              <button
+                onClick={() => setAltTimeModal({ isOpen: false, req: null })}
+                className="flex-1 px-4 py-2 text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-sm font-bold transition-colors"
+                disabled={submittingAlt}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSuggestAltTime}
+                disabled={!altDate || !altTime || submittingAlt}
+                className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-bold transition-colors flex justify-center items-center gap-2"
+              >
+                {submittingAlt ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

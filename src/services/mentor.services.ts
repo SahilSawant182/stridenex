@@ -12,6 +12,31 @@ export const getPendingRequests = async (mentor: string) => {
   }
 };
 
+export const suggestAltTime = async (payload: { booking_name: string; alt_date: string; alt_time: string }) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.suggest_alt_time",
+      payload
+    );
+    return response;
+  } catch (error) {
+    console.error("Error suggesting alternate time:", error);
+    throw error;
+  }
+};
+
+export const getSlotCalendar = async (mentor: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.get_slot_calendar?mentor=${encodeURIComponent(mentor)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching slot calendar:", error);
+    throw error;
+  }
+};
+
 
 
 // mentor profile
@@ -122,3 +147,16 @@ export const getUpcomingSessions = async (mentor: string) => {
   }
 };
 
+
+
+export const getSessionHistory = async (mentor: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.get_session_history?mentor=${encodeURIComponent(mentor)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching session history:", error);
+    throw error;
+  }
+};

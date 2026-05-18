@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { getSessionHistory } from "@/services/mentor.services";
+
 import { motion } from "framer-motion";
 import { 
   Calendar, 
@@ -27,11 +31,82 @@ const sessionHistoryList = [
 ];
 
 export default function SessionHistoryTabContent() {
+  const { currentUser } = useAuth();
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      const email = currentUser || localStorage.getItem("userEmail") || "";
+      if (!email) {
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        const res = await getSessionHistory(email);
+        if (res?.message) {
+          setSessions(res.message);
+        }
+      } catch (err) {
+        console.error("Failed to fetch session history", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchHistory();
+  }, [currentUser]);
+
+  // format time 13:00:00 -> 1:00 PM
+  const formatTime = (timeStr: string) => {
+    if (!timeStr) return "";
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutes} ${ampm}`;
+  };
+
+  const mappedSessions = sessions.map((s, index) => {
+    const studentName = s.student?.split('@')[0] || "Unknown";
+    const initials = studentName.substring(0, 2).toUpperCase();
+    const colors = ["bg-red-500", "bg-yellow-500", "bg-green-500", "bg-emerald-400", "bg-indigo-600", "bg-fuchsia-500"];
+    const color = colors[index % colors.length];
+    
+    const dateObj = new Date(s.session_date);
+    const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    const timeStr = `${formatTime(s.from_time)} - ${formatTime(s.to_time)}`;
+    
+    return {
+      id: s.name || index,
+      initials,
+      name: studentName,
+      title: s.topic || "Session",
+      date: `${dateStr} • ${timeStr}`,
+      duration: `${s.duration} min`,
+      tag: s.status || "Completed",
+      tagColor: "text-blue-600 bg-blue-50",
+      price: "—",
+      rating: 5,
+      color
+    };
+  });
+
+  const totalHours = sessions.reduce((acc, curr) => acc + (curr.duration || 0), 0) / 60;
+  
+  const dynamicSummaryStats = [
+    { label: "TOTAL SESSIONS", value: sessions.length.toString(), icon: LayoutList, color: "text-slate-400", bg: "bg-slate-50", border: "border-t-blue-500" },
+    { label: "TOTAL HOURS", value: `${totalHours.toFixed(1)}h`, icon: Clock, color: "text-slate-400", bg: "bg-slate-50", border: "border-t-blue-500" },
+    { label: "NOTES SHARED", value: "—", icon: FileText, color: "text-amber-500", bg: "bg-amber-50", border: "border-t-orange-400" },
+    { label: "LIFETIME RATING", value: "—", icon: Star, color: "text-amber-500", bg: "bg-amber-50", border: "border-t-yellow-400" }
+  ];
+
   return (
     <div className="space-y-6">
       {/* Top Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {summaryStats.map((stat, i) => (
+        {dynamicSummaryStats.map((stat, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, y: 10 }}
@@ -67,7 +142,11 @@ export default function SessionHistoryTabContent() {
         </div>
         
         <div className="divide-y divide-slate-100">
-          {sessionHistoryList.map((session, i) => (
+          {loading ? (
+            <div className="p-8 text-center text-slate-500">Loading history...</div>
+          ) : mappedSessions.length === 0 ? (
+            <div className="p-8 text-center text-slate-500">No session history found.</div>
+          ) : mappedSessions.map((session, i) => (
             <div key={session.id} className="p-5 px-6 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-start gap-4">
                 <div className={`w-10 h-10 rounded-full ${session.color} flex items-center justify-center text-white font-bold text-sm shrink-0 mt-1`}>

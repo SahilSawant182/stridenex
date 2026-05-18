@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { getUpcomingSessions, getSlotCalendar } from "@/services/mentor.services";
+
 import { motion } from "framer-motion";
 import { 
   Calendar, 
@@ -33,6 +37,98 @@ const upcomingBookings = [
 ];
 
 export default function ScheduleTabContent() {
+  const { currentUser } = useAuth();
+  const [upcoming, setUpcoming] = useState<any[]>([]);
+  const [slotCalendar, setSlotCalendar] = useState<Record<string, any[]>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const email = currentUser || localStorage.getItem("userEmail") || "";
+      if (!email) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const [upcomingRes, calendarRes] = await Promise.all([
+          getUpcomingSessions(email),
+          getSlotCalendar(email)
+        ]);
+        if (upcomingRes?.message) {
+          setUpcoming(upcomingRes.message);
+        }
+        if (calendarRes?.message) {
+          setSlotCalendar(calendarRes.message);
+        }
+      } catch (err) {
+        console.error("Failed to fetch schedule data", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [currentUser]);
+
+  const formatTime = (timeStr: string) => {
+    if (!timeStr) return "";
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutes} ${ampm}`;
+  };
+
+  const formatTimeSlot = (timeStr: string) => {
+    if (!timeStr) return "";
+    const [hours, minutes] = timeStr.split(':');
+    const h = parseInt(hours);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    if (minutes === '00') return `${h12} ${ampm}`;
+    return `${h12}:${minutes} ${ampm}`;
+  };
+
+  const getDayName = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+  };
+
+  const dynamicAvailabilityGrid = Object.keys(slotCalendar).map(dateStr => {
+    return {
+      day: getDayName(dateStr),
+      slots: slotCalendar[dateStr].map(slot => ({
+        time: formatTimeSlot(slot.from_time),
+        status: slot.status
+      }))
+    };
+  });
+
+  const dynamicUpcomingBookings = upcoming.map((s, index) => {
+    const studentName = s.student?.split('@')[0] || "Unknown";
+    const initials = studentName.substring(0, 2).toUpperCase();
+    const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
+    const color = colors[index % colors.length];
+    
+    const dateObj = new Date(s.session_date);
+    const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const timeStr = formatTime(s.from_time);
+    
+    return {
+      id: s.name,
+      initials,
+      name: studentName,
+      color,
+      topic: s.topic || "Session",
+      date: `${dateStr} • ${timeStr}`,
+      duration: `${s.duration} min`,
+      type: "Mentorship",
+      typeColor: "text-blue-600 bg-blue-50",
+      fee: "—",
+      meeting_link: s.meeting_link
+    };
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-end mb-6">
@@ -107,11 +203,17 @@ export default function ScheduleTabContent() {
           </div>
           <div className="p-5">
             <div className="space-y-5">
-              {availabilityGrid.map((dayLine, i) => (
-                <div key={i} className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <span className="w-28 text-xs font-bold text-slate-500 tracking-wider shrink-0">{dayLine.day}</span>
+              {loading ? (
+                <div className="text-center text-slate-500 py-4">Loading availability...</div>
+              ) : dynamicAvailabilityGrid.length === 0 ? (
+                <div className="text-center text-slate-500 py-4">No availability data for this week.</div>
+              ) : dynamicAvailabilityGrid.map((dayLine, i) => (
+                <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-2 border-b border-slate-50 pb-2 last:border-0 last:pb-0">
+                  <span className="w-28 text-xs font-bold text-slate-500 tracking-wider shrink-0 mt-1.5">{dayLine.day}</span>
                   <div className="flex flex-wrap items-center gap-2">
-                    {dayLine.slots.map((slot, j) => {
+                    {dayLine.slots.length === 0 ? (
+                      <span className="text-xs text-slate-400 italic mt-1.5">No slots available</span>
+                    ) : dayLine.slots.map((slot, j) => {
                       const isBooked = slot.status.includes('booked');
                       return (
                         <div key={j} className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 ${isBooked ? 'bg-orange-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
@@ -164,7 +266,15 @@ export default function ScheduleTabContent() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {upcomingBookings.map((session, i) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-slate-500">Loading bookings...</td>
+                </tr>
+              ) : dynamicUpcomingBookings.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-slate-500">No upcoming bookings.</td>
+                </tr>
+              ) : dynamicUpcomingBookings.map((session, i) => (
                 <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                   <td className="py-4 px-6 text-slate-500 font-medium whitespace-nowrap">{session.id}</td>
                   <td className="py-4 px-6">
@@ -186,7 +296,11 @@ export default function ScheduleTabContent() {
                   <td className="py-4 px-6 font-bold text-emerald-600">{session.fee}</td>
                   <td className="py-4 px-6 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 focus:ring focus:ring-orange-500/20 text-white text-xs font-bold rounded-lg transition-colors">Join</button>
+                      {session.meeting_link ? (
+                        <a href={session.meeting_link} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 focus:ring focus:ring-orange-500/20 text-white text-xs font-bold rounded-lg transition-colors inline-block">Join</a>
+                      ) : (
+                        <button className="px-3 py-1.5 bg-orange-500/50 cursor-not-allowed text-white text-xs font-bold rounded-lg transition-colors">Join</button>
+                      )}
                       <button className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors">Notes</button>
                       <button className="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-colors">Reschedule</button>
                     </div>
