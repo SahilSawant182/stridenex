@@ -37,7 +37,7 @@ export default function OnboardingLayout({
   return (
     <div className="flex flex-col lg:flex-row w-screen h-screen overflow-hidden">
       {/* LEFT SIDE - Branding */}
-      <div className="w-full lg:w-[30%] h-full relative bg-gradient-to-br from-navy to-royal overflow-hidden">
+      <div className="hidden lg:flex lg:w-[30%] h-full relative bg-gradient-to-br from-navy to-royal overflow-hidden">
         {/* Decorative Elements */}
         <div className="absolute inset-0">
           <div className="absolute -top-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
@@ -150,7 +150,7 @@ export default function OnboardingLayout({
           <div className="w-full max-w-[850px]">
             {/* Mobile Branding */}
             <div className="lg:hidden flex items-center gap-3 mb-10">
-              <div className="w-6 h-6 bg-white rounded-xl shadow-lg flex items-center justify-center p-3">
+              <div className="w-12 h-12 bg-white rounded-xl shadow-md flex items-center justify-center p-2 border border-slate-100">
                 <img
                   src="/images/circularLogo.jpg"
                   alt="Skill Bridge Logo"

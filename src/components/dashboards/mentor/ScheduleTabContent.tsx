@@ -189,7 +189,9 @@ export default function ScheduleTabContent() {
 
   const getDayName = (dateStr: string) => {
     const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+    const dateFormatted = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase();
+    return `${dayName} (${dateFormatted})`;
   };
 
   const dynamicAvailabilityGrid = Object.keys(slotCalendar).map(dateStr => {
@@ -197,7 +199,8 @@ export default function ScheduleTabContent() {
       day: getDayName(dateStr),
       slots: slotCalendar[dateStr].map(slot => ({
         time: formatTimeSlot(slot.from_time),
-        status: slot.status
+        status: slot.status,
+        reason: slot.reason
       }))
     };
   });
@@ -394,16 +397,32 @@ export default function ScheduleTabContent() {
                 <div className="text-center text-slate-500 py-4">No availability data for this week.</div>
               ) : dynamicAvailabilityGrid.map((dayLine, i) => (
                 <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-2 border-b border-slate-50 pb-2 last:border-0 last:pb-0">
-                  <span className="w-28 text-xs font-bold text-slate-500 tracking-wider shrink-0 mt-1.5">{dayLine.day}</span>
+                  <span className="w-44 text-xs font-bold text-slate-500 tracking-wider shrink-0 mt-1.5">{dayLine.day}</span>
                   <div className="flex flex-wrap items-center gap-2">
                     {dayLine.slots.length === 0 ? (
                       <span className="text-xs text-slate-400 italic mt-1.5">No slots available</span>
                     ) : dayLine.slots.map((slot, j) => {
                       const isBooked = slot.status.includes('booked');
+                      const isBlocked = slot.status === 'blocked';
+
+                      let slotClass = "";
+                      if (isBooked) {
+                        slotClass = "bg-orange-500 text-white shadow-sm border-transparent";
+                      } else if (isBlocked) {
+                        slotClass = "bg-rose-50 text-rose-600 border border-rose-200 shadow-sm";
+                      } else {
+                        slotClass = "bg-slate-100 text-slate-600 border border-slate-200";
+                      }
+
                       return (
-                        <div key={j} className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 ${isBooked ? 'bg-orange-500 text-white shadow-sm' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
+                        <div 
+                          key={j} 
+                          title={isBlocked ? (slot.reason ? `Reason: ${slot.reason}` : "Blocked") : undefined}
+                          className={`px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1.5 ${slotClass}`}
+                        >
                           {slot.time}
                           {slot.status === 'booked_locked' && <span className="opacity-70">🔒</span>}
+                          {isBlocked && <span className="opacity-80">🚫</span>}
                         </div>
                       );
                     })}
@@ -412,12 +431,15 @@ export default function ScheduleTabContent() {
               ))}
             </div>
             
-            <div className="mt-8 flex items-center gap-6 border-t border-slate-100 pt-5">
+            <div className="mt-8 flex items-center gap-6 border-t border-slate-100 pt-5 flex-wrap">
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
                 <div className="w-3 h-3 rounded-full bg-orange-500"></div> Booked
               </div>
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
                 <div className="w-3 h-3 rounded-full border border-slate-300 bg-white"></div> Available
+              </div>
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                <div className="w-3 h-3 rounded-full border border-rose-200 bg-rose-50"></div> Blocked
               </div>
             </div>
           </div>
