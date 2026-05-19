@@ -5,10 +5,10 @@ import { useAuth } from "@/context/AuthContext";
 import { getUpcomingSessions, getPendingRequests } from "@/services/mentor.services";
 
 import { motion } from "framer-motion";
-import { 
-  GraduationCap, 
-  Calendar, 
-  Star, 
+import {
+  GraduationCap,
+  Calendar,
+  Star,
   IndianRupee,
   Clock,
   Video,
@@ -25,7 +25,7 @@ const overviewStats = [
   { label: "TOTAL STUDENTS MENTORED", value: "247", trend: "+18 this month", trendUp: true, icon: GraduationCap, iconBg: "bg-orange-50", iconColor: "text-orange-600", borderStyle: "border-t-4 border-t-slate-800" },
   { label: "SESSIONS THIS MONTH", value: "18", trend: "4 upcoming", trendUp: true, icon: Calendar, iconBg: "bg-blue-50", iconColor: "text-blue-600", borderStyle: "border-t-4 border-t-blue-500" },
   { label: "AVERAGE RATING", value: "4.9/5", trend: "from 120 reviews", trendUp: true, icon: Star, iconBg: "bg-yellow-50", iconColor: "text-yellow-600", borderStyle: "border-t-4 border-t-amber-400" },
-  { label: "PENDING PAYOUT (FEB)", value: "₹18,360", trend: "released Mar 1", trendUp: true, icon: IndianRupee, iconBg: "bg-emerald-50", iconColor: "text-emerald-600", borderStyle: "border-t-4 border-t-emerald-500" }
+  { label: "PENDING PAYOUT (FEB)", value: "₹0.00", trend: "released Mar 1", trendUp: true, icon: IndianRupee, iconBg: "bg-emerald-50", iconColor: "text-emerald-600", borderStyle: "border-t-4 border-t-emerald-500" }
 ];
 
 const upcomingSessions = [
@@ -36,9 +36,9 @@ const upcomingSessions = [
 ];
 
 const earningDetails = [
-  { label: "Gross Earned", value: "₹21,600" },
-  { label: "Platform Commission (15%)", value: "-₹3,240", valueColor: "text-red-500" },
-  { label: "Net to Bank", value: "₹18,360", valueColor: "text-emerald-600", bold: true }
+  { label: "Gross Earned", value: "₹0.00" },
+  { label: "Platform Commission (15%)", value: "-₹0.00", valueColor: "text-red-500" },
+  { label: "Net to Bank", value: "₹0.00", valueColor: "text-emerald-600", bold: true }
 ];
 
 const pendingRequests = [
@@ -92,7 +92,7 @@ export default function OverviewTabContent() {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, [currentUser]);
 
@@ -110,11 +110,11 @@ export default function OverviewTabContent() {
     const initials = studentName.substring(0, 2).toUpperCase();
     const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
     const color = colors[index % colors.length];
-    
+
     const dateObj = new Date(s.session_date);
     const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     const timeStr = formatTime(s.from_time);
-    
+
     return {
       id: s.name,
       initials,
@@ -122,7 +122,7 @@ export default function OverviewTabContent() {
       topic: s.topic || "Session",
       date: `${dateStr} ${timeStr}`,
       duration: `${s.duration} min`,
-      type: "Mentorship", 
+      type: "Mentorship",
       color,
       meeting_link: s.meeting_link
     };
@@ -351,9 +351,9 @@ export default function OverviewTabContent() {
               </h3>
             </div>
             <div className="p-6 text-center">
-              <h2 className="text-4xl font-extrabold text-emerald-500 mb-1">₹18,360</h2>
+              <h2 className="text-4xl font-extrabold text-emerald-500 mb-1">₹0.00</h2>
               <p className="text-xs text-slate-500 mb-6">Net payout • Processing Mar 1</p>
-              
+
               <div className="space-y-3 mb-6">
                 {earningDetails.map((detail, i) => (
                   <div key={i} className={`flex justify-between items-center text-sm ${detail.bold ? 'font-bold pt-3 border-t border-slate-100' : 'text-slate-600'}`}>

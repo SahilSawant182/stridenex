@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getUpcomingSessions, getSlotCalendar } from "@/services/mentor.services";
+import { getUpcomingSessions, getSlotCalendar, getWeeklyBookedSessions, getMonthlyBookedSessions, blockTime } from "@/services/mentor.services";
 
 import { motion } from "framer-motion";
 import { 
@@ -11,15 +11,12 @@ import {
   ChevronRight,
   Plus,
   Edit3,
-  List
+  List,
+  X,
+  Loader2
 } from "lucide-react";
 
-const bookedSessions = [
-  { id: "PS", initials: "PS", name: "Priya Sharma", topic: "ML Project Milestone Review", date: "Feb 26 - 4:00 PM", duration: "60 min", color: "bg-orange-500", borderColor: "border-l-blue-500" },
-  { id: "AN", initials: "AN", name: "Arjun Nair", topic: "FAANG Prep Check-In", date: "Feb 27 - 3:00 PM", duration: "45 min", color: "bg-blue-500", borderColor: "border-l-orange-500" },
-  { id: "TG", initials: "TG", name: "Tanya Gupta", topic: "Data Science Roadmap", date: "Mar 1 - 2:00 PM", duration: "60 min", color: "bg-emerald-500", borderColor: "border-l-teal-500" },
-  { id: "RV", initials: "RV", name: "Rohan Verma", topic: "DSA: Trees & Graphs", date: "Mar 2 - 5:00 PM", duration: "90 min", color: "bg-purple-500", borderColor: "border-l-purple-500" }
-];
+
 
 const availabilityGrid = [
   { day: "MONDAY", slots: [{ time: "10 AM", status: "booked" }, { time: "11 AM", status: "booked" }, { time: "4 PM", status: "available" }, { time: "5 PM", status: "available" }] },
@@ -40,7 +37,20 @@ export default function ScheduleTabContent() {
   const { currentUser } = useAuth();
   const [upcoming, setUpcoming] = useState<any[]>([]);
   const [slotCalendar, setSlotCalendar] = useState<Record<string, any[]>>({});
+  const [weeklyBooked, setWeeklyBooked] = useState<any[]>([]);
+  const [monthlyBooked, setMonthlyBooked] = useState<any[]>([]);
+  const [viewType, setViewType] = useState<'week' | 'month'>('week');
   const [loading, setLoading] = useState(true);
+  const [loadingMonthly, setLoadingMonthly] = useState(false);
+  const [loadingWeekly, setLoadingWeekly] = useState(false);
+
+  // Block time states
+  const [blockModalOpen, setBlockModalOpen] = useState(false);
+  const [blockDate, setBlockDate] = useState("");
+  const [blockFromTime, setBlockFromTime] = useState("");
+  const [blockToTime, setBlockToTime] = useState("");
+  const [blockReason, setBlockReason] = useState("");
+  const [submittingBlock, setSubmittingBlock] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,15 +60,19 @@ export default function ScheduleTabContent() {
         return;
       }
       try {
-        const [upcomingRes, calendarRes] = await Promise.all([
+        const [upcomingRes, calendarRes, weeklyRes] = await Promise.all([
           getUpcomingSessions(email),
-          getSlotCalendar(email)
+          getSlotCalendar(email),
+          getWeeklyBookedSessions(email)
         ]);
         if (upcomingRes?.message) {
           setUpcoming(upcomingRes.message);
         }
         if (calendarRes?.message) {
           setSlotCalendar(calendarRes.message);
+        }
+        if (weeklyRes?.message) {
+          setWeeklyBooked(weeklyRes.message);
         }
       } catch (err) {
         console.error("Failed to fetch schedule data", err);
@@ -69,6 +83,90 @@ export default function ScheduleTabContent() {
     
     fetchData();
   }, [currentUser]);
+
+  const fetchMonthlyData = async () => {
+    const email = currentUser || localStorage.getItem("userEmail") || "";
+    if (!email) return;
+    try {
+      setLoadingMonthly(true);
+      const monthlyRes = await getMonthlyBookedSessions(email);
+      if (monthlyRes?.message) {
+        setMonthlyBooked(monthlyRes.message);
+      }
+    } catch (err) {
+      console.error("Failed to fetch monthly booked sessions", err);
+    } finally {
+      setLoadingMonthly(false);
+    }
+  };
+
+  const fetchWeeklyData = async () => {
+    const email = currentUser || localStorage.getItem("userEmail") || "";
+    if (!email) return;
+    try {
+      setLoadingWeekly(true);
+      const weeklyRes = await getWeeklyBookedSessions(email);
+      if (weeklyRes?.message) {
+        setWeeklyBooked(weeklyRes.message);
+      }
+    } catch (err) {
+      console.error("Failed to fetch weekly booked sessions", err);
+    } finally {
+      setLoadingWeekly(false);
+    }
+  };
+
+  const handleSwitchView = (type: 'week' | 'month') => {
+    if (type === viewType) return;
+    setViewType(type);
+    if (type === 'month') {
+      fetchMonthlyData();
+    } else {
+      fetchWeeklyData();
+    }
+  };
+
+  const handleBlockTime = async () => {
+    const email = currentUser || localStorage.getItem("userEmail") || "";
+    if (!email || !blockDate || !blockFromTime || !blockToTime) return;
+    try {
+      setSubmittingBlock(true);
+
+      const formatTimeToSeconds = (t: string) => {
+        if (t.split(':').length === 2) return `${t}:00`;
+        return t;
+      };
+
+      await blockTime({
+        mentor: email,
+        date: blockDate,
+        from_time: formatTimeToSeconds(blockFromTime),
+        to_time: formatTimeToSeconds(blockToTime),
+        reason: blockReason
+      });
+
+      setBlockDate("");
+      setBlockFromTime("");
+      setBlockToTime("");
+      setBlockReason("");
+      setBlockModalOpen(false);
+
+      if (viewType === 'week') {
+        fetchWeeklyData();
+      } else {
+        fetchMonthlyData();
+      }
+
+      const calendarRes = await getSlotCalendar(email);
+      if (calendarRes?.message) {
+        setSlotCalendar(calendarRes.message);
+      }
+    } catch (err) {
+      console.error("Failed to block time", err);
+    } finally {
+      setSubmittingBlock(false);
+    }
+  };
 
   const formatTime = (timeStr: string) => {
     if (!timeStr) return "";
@@ -101,6 +199,62 @@ export default function ScheduleTabContent() {
         time: formatTimeSlot(slot.from_time),
         status: slot.status
       }))
+    };
+  });
+
+  const dynamicWeeklyBooked = weeklyBooked.map((s, index) => {
+    const studentName = s.student_name || s.student?.split('@')[0] || "Unknown";
+    const initials = studentName.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2) || "??";
+    const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
+    const color = colors[index % colors.length];
+    const borderColors = ["border-l-orange-500", "border-l-blue-500", "border-l-emerald-500", "border-l-purple-500"];
+    const borderColor = borderColors[index % borderColors.length];
+
+    let dateStr = "";
+    if (s.session_date) {
+      const dateObj = new Date(s.session_date);
+      dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    }
+    const timeStr = formatTime(s.from_time);
+
+    return {
+      id: s.name,
+      initials,
+      name: studentName,
+      topic: s.topic || "Session",
+      date: `${dateStr} - ${timeStr}`,
+      duration: `${s.duration || 60} min`,
+      color,
+      borderColor,
+      meeting_link: s.meeting_link
+    };
+  });
+
+  const dynamicMonthlyBooked = monthlyBooked.map((s, index) => {
+    const studentName = s.student_name || s.student?.split('@')[0] || "Unknown";
+    const initials = studentName.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2) || "??";
+    const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
+    const color = colors[index % colors.length];
+    const borderColors = ["border-l-orange-500", "border-l-blue-500", "border-l-emerald-500", "border-l-purple-500"];
+    const borderColor = borderColors[index % borderColors.length];
+
+    let dateStr = "";
+    if (s.session_date) {
+      const dateObj = new Date(s.session_date);
+      dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    }
+    const timeStr = formatTime(s.from_time);
+
+    return {
+      id: s.name,
+      initials,
+      name: studentName,
+      topic: s.topic || "Session",
+      date: `${dateStr} - ${timeStr}`,
+      duration: `${s.duration || 60} min`,
+      color,
+      borderColor,
+      meeting_link: s.meeting_link
     };
   });
 
@@ -138,10 +292,27 @@ export default function ScheduleTabContent() {
         </div>
         <div className="flex items-center gap-4">
           <div className="bg-slate-100 rounded-full p-1 flex">
-            <button className="px-4 py-1.5 bg-slate-800 text-white rounded-full text-sm font-semibold shadow">Week</button>
-            <button className="px-4 py-1.5 text-slate-600 hover:text-slate-900 rounded-full text-sm font-semibold transition-colors">Month</button>
+            <button
+              onClick={() => handleSwitchView('week')}
+              className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
+                viewType === 'week' ? 'bg-slate-800 text-white shadow' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Week
+            </button>
+            <button
+              onClick={() => handleSwitchView('month')}
+              className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${
+                viewType === 'month' ? 'bg-slate-800 text-white shadow' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Month
+            </button>
           </div>
-          <button className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors">
+          <button 
+            onClick={() => setBlockModalOpen(true)}
+            className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold shadow-sm transition-colors"
+          >
             <Plus className="w-4 h-4" /> Block Time
           </button>
         </div>
@@ -156,36 +327,50 @@ export default function ScheduleTabContent() {
         >
           <div className="px-6 py-4 flex justify-between items-center">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-slate-500" /> This Week — Booked Sessions
+              <Calendar className="w-4 h-4 text-slate-500" /> {viewType === 'week' ? 'This Week — Booked Sessions' : 'This Month — Booked Sessions'}
             </h3>
           </div>
           <div className="p-6 pt-0 space-y-4">
-            {bookedSessions.map((session, i) => (
-              <div key={i} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-xl border-slate-200 ${session.borderColor} border-l-[4px] shadow-sm`}>
-                <div className="flex items-start gap-4 mb-4 sm:mb-0">
-                  <div className={`w-10 h-10 rounded-full ${session.color} flex items-center justify-center text-white font-bold text-sm shrink-0 mt-1`}>
-                    {session.initials}
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-slate-800">{session.name}</h4>
-                    <p className="text-sm text-slate-600 mb-2">{session.topic}</p>
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center gap-1 text-xs font-medium text-slate-500">
-                        <Calendar className="w-3.5 h-3.5" /> {session.date} • {session.duration}
-                      </span>
+            {(viewType === 'week' ? (loading || loadingWeekly) : loadingMonthly) ? (
+              <div className="text-center text-slate-500 py-8">Loading booked sessions...</div>
+            ) : (viewType === 'week' ? dynamicWeeklyBooked : dynamicMonthlyBooked).length === 0 ? (
+              <div className="text-center text-slate-500 py-8">
+                {viewType === 'week' ? 'No booked sessions for this week.' : 'No booked sessions for this month.'}
+              </div>
+            ) : (
+              (viewType === 'week' ? dynamicWeeklyBooked : dynamicMonthlyBooked).map((session, i) => (
+                <div key={i} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-xl border-slate-200 ${session.borderColor} border-l-[4px] shadow-sm`}>
+                  <div className="flex items-start gap-4 mb-4 sm:mb-0">
+                    <div className={`w-10 h-10 rounded-full ${session.color} flex items-center justify-center text-white font-bold text-sm shrink-0 mt-1`}>
+                      {session.initials}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-800">{session.name}</h4>
+                      <p className="text-sm text-slate-600 mb-2">{session.topic}</p>
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center gap-1 text-xs font-medium text-slate-500">
+                          <Calendar className="w-3.5 h-3.5" /> {session.date} • {session.duration}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  <div className="flex flex-col gap-2">
+                    {session.meeting_link ? (
+                      <a href={session.meeting_link} target="_blank" rel="noreferrer" className="px-5 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors flex justify-center items-center gap-1.5 text-center">
+                        Join
+                      </a>
+                    ) : (
+                      <button className="px-5 py-1.5 bg-orange-500/50 cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors flex justify-center items-center gap-1.5" disabled>
+                        Join
+                      </button>
+                    )}
+                    <button className="px-3 py-1.5 text-orange-600 hover:bg-orange-50 bg-orange-50/50 border border-orange-100 text-sm font-semibold rounded-lg transition-colors flex items-center gap-1">
+                      <Edit3 className="w-3.5 h-3.5" /> Prep Notes
+                    </button>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <button className="px-5 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors flex justify-center items-center gap-1.5">
-                    Join
-                  </button>
-                  <button className="px-3 py-1.5 text-orange-600 hover:bg-orange-50 bg-orange-50/50 border border-orange-100 text-sm font-semibold rounded-lg transition-colors flex items-center gap-1">
-                    <Edit3 className="w-3.5 h-3.5" /> Prep Notes
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </motion.div>
 
@@ -311,6 +496,88 @@ export default function ScheduleTabContent() {
           </table>
         </div>
       </motion.div>
+
+      {/* Block Time Modal */}
+      {blockModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden flex flex-col mx-4">
+            <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="font-bold text-slate-800 text-lg">Block Time</h3>
+              <button 
+                onClick={() => setBlockModalOpen(false)} 
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-4 bg-white">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Date</label>
+                <input
+                  type="date"
+                  value={blockDate}
+                  style={{ textTransform: "uppercase" }}
+                  onChange={(e) => setBlockDate(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-700"
+                  required
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">From Time</label>
+                  <input
+                    type="time"
+                    value={blockFromTime}
+                    onChange={(e) => setBlockFromTime(e.target.value)}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-700"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">To Time</label>
+                  <input
+                    type="time"
+                    value={blockToTime}
+                    onChange={(e) => setBlockToTime(e.target.value)}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-700"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Reason (Optional)</label>
+                <textarea
+                  value={blockReason}
+                  onChange={(e) => setBlockReason(e.target.value)}
+                  placeholder="e.g. Personal holiday, out of town..."
+                  rows={3}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium resize-none text-slate-700"
+                />
+              </div>
+            </div>
+            
+            <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex gap-3 justify-end">
+              <button
+                onClick={() => setBlockModalOpen(false)}
+                className="flex-1 px-4 py-2 text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-sm font-bold transition-colors"
+                disabled={submittingBlock}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBlockTime}
+                disabled={!blockDate || !blockFromTime || !blockToTime || submittingBlock}
+                className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-bold transition-colors flex justify-center items-center gap-2"
+              >
+                {submittingBlock ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

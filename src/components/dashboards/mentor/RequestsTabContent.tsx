@@ -14,7 +14,7 @@ import {
   Loader2
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { getPendingRequests, suggestAltTime } from "@/services/mentor.services";
+import { getPendingRequests, suggestAltTime, acceptRequest, declineRequest } from "@/services/mentor.services";
 
 
 export default function RequestsTabContent() {
@@ -27,6 +27,9 @@ export default function RequestsTabContent() {
   const [altDate, setAltDate] = useState("");
   const [altTime, setAltTime] = useState("");
   const [submittingAlt, setSubmittingAlt] = useState(false);
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [decliningId, setDecliningId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
 
   const openAltTimeModal = (req: any) => {
     setAltTimeModal({ isOpen: true, req });
@@ -49,6 +52,52 @@ export default function RequestsTabContent() {
       console.error("Failed to suggest alternate time", err);
     } finally {
       setSubmittingAlt(false);
+    }
+  };
+
+  const handleAcceptRequest = async (req: any) => {
+    try {
+      setAcceptingId(req.name);
+      const res = await acceptRequest({
+        booking_name: req.name,
+        from_time: req.from_time,
+        to_time: req.to_time
+      });
+      setFeedback({
+        type: 'success',
+        message: typeof res.message === 'object' ? JSON.stringify(res.message) : res.message || "Request accepted successfully."
+      });
+      fetchRequests();
+    } catch (err: any) {
+      console.error("Failed to accept request", err);
+      setFeedback({
+        type: 'error',
+        message: err?.message || "Failed to accept request."
+      });
+    } finally {
+      setAcceptingId(null);
+    }
+  };
+
+  const handleDeclineRequest = async (req: any) => {
+    try {
+      setDecliningId(req.name);
+      const res = await declineRequest({
+        booking_name: req.name
+      });
+      setFeedback({
+        type: 'success',
+        message: typeof res.message === 'object' ? JSON.stringify(res.message) : res.message || "Request declined successfully."
+      });
+      fetchRequests();
+    } catch (err: any) {
+      console.error("Failed to decline request", err);
+      setFeedback({
+        type: 'error',
+        message: err?.message || "Failed to decline request."
+      });
+    } finally {
+      setDecliningId(null);
     }
   };
 
@@ -75,6 +124,30 @@ export default function RequestsTabContent() {
     const parts = name.split(" ");
     if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     return name.slice(0, 2).toUpperCase();
+  };
+
+  const formatDateTime = (dateString?: string, timeString?: string) => {
+    if (!dateString) return 'Flexible / TBD';
+    
+    const dateObj = new Date(dateString);
+    const formattedDate = dateObj.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    
+    let formattedTime = '';
+    if (timeString) {
+      const [hours, minutes] = timeString.split(':');
+      if (hours && minutes) {
+        const hour = parseInt(hours, 10);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const hour12 = hour % 12 || 12;
+        formattedTime = ` · ${hour12}:${minutes} ${ampm}`;
+      }
+    }
+    
+    return `📅 ${formattedDate}${formattedTime}`;
   };
 
   const getRandomColorClass = (name: string) => {
@@ -114,6 +187,20 @@ export default function RequestsTabContent() {
   ];
   return (
     <div className="space-y-6">
+      {feedback && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`p-4 rounded-xl border ${
+            feedback.type === 'success' 
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+              : 'bg-red-50 border-red-200 text-red-800'
+          } text-sm font-medium flex items-center justify-between shadow-sm`}
+        >
+          <span>{feedback.message}</span>
+          <button onClick={() => setFeedback(null)} className="ml-4 opacity-50 hover:opacity-100 font-bold">×</button>
+        </motion.div>
+      )}
       {/* 3 Stats Widgets */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {summaryStats.map((stat, i) => (
@@ -174,10 +261,10 @@ export default function RequestsTabContent() {
                     </div>
 
                     <div className="flex items-center gap-2 mb-4">
-                      <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500 bg-slate-100 rounded-md px-2 py-1">
-                        <Clock className="w-3.5 h-3.5" /> {req.requested_date ? `${req.requested_date} • ${req.requested_time || 'No Time'}` : 'Flexible / TBD'}
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-blue-100 rounded-md px-2 py-1">
+                        {formatDateTime(req.session_date, req.from_time)}
                       </span>
-                      <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
+                      <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-md">
                         {req.session_type}
                       </span>
                     </div>
@@ -190,8 +277,17 @@ export default function RequestsTabContent() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
-                      <button className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 text-white font-bold text-sm rounded-lg flex items-center justify-center gap-1.5 transition-colors">
-                        <Check className="w-4 h-4" /> Accept & Schedule
+                      <button
+                        onClick={() => handleAcceptRequest(req)}
+                        disabled={acceptingId === req.name}
+                        className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold text-sm rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        {acceptingId === req.name ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Check className="w-4 h-4" />
+                        )}{" "}
+                        Accept & Schedule
                       </button>
                       <button
                         onClick={() => openAltTimeModal(req)}
@@ -199,8 +295,17 @@ export default function RequestsTabContent() {
                       >
                         <Clock className="w-4 h-4" /> Suggest Alt Time
                       </button>
-                      <button className="flex-none px-4 py-2 hover:bg-red-50 border border-slate-200 text-slate-500 hover:text-red-600 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors">
-                        <X className="w-4 h-4" /> Decline
+                      <button
+                        onClick={() => handleDeclineRequest(req)}
+                        disabled={decliningId === req.name}
+                        className="flex-none px-4 py-2 hover:bg-red-50 disabled:opacity-50 border border-slate-200 text-slate-500 hover:text-red-600 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors"
+                      >
+                        {decliningId === req.name ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <X className="w-4 h-4" />
+                        )}{" "}
+                        Decline
                       </button>
                     </div>
                   </div>

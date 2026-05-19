@@ -25,6 +25,32 @@ export const suggestAltTime = async (payload: { booking_name: string; alt_date: 
   }
 };
 
+export const acceptRequest = async (payload: { booking_name: string; from_time: string; to_time: string }) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.accept_request",
+      payload
+    );
+    return response;
+  } catch (error) {
+    console.error("Error accepting request:", error);
+    throw error;
+  }
+};
+
+export const declineRequest = async (payload: { booking_name: string }) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.decline_request",
+      payload
+    );
+    return response;
+  } catch (error) {
+    console.error("Error declining request:", error);
+    throw error;
+  }
+};
+
 export const getSlotCalendar = async (mentor: string) => {
   try {
     const response = await apiService.get(
@@ -143,6 +169,51 @@ export const getUpcomingSessions = async (mentor: string) => {
     return response;
   } catch (error) {
     console.error("Error fetching upcoming sessions:", error);
+    throw error;
+  }
+};
+
+export const getWeeklyBookedSessions = async (mentor: string) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.get_weekly_booked_sessions",
+      { mentor }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching weekly booked sessions:", error);
+    throw error;
+  }
+};
+
+export const getMonthlyBookedSessions = async (mentor: string) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.get_monthly_booked_sessions",
+      { mentor }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching monthly booked sessions:", error);
+    throw error;
+  }
+};
+
+export const blockTime = async (payload: {
+  mentor: string;
+  date: string;
+  from_time: string;
+  to_time: string;
+  reason: string;
+}) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_blocked_time.mentor_blocked_time.block_time",
+      payload
+    );
+    return response;
+  } catch (error) {
+    console.error("Error blocking time:", error);
     throw error;
   }
 };
