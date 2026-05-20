@@ -338,8 +338,6 @@ export default function MentorOnboarding({
             bank_name: data.bank_name || "",
             account_number: data.account_number || "",
             ifsc_code: data.ifsc_code || ""
-            // NOTE: terms_and_conditions deliberately NOT read from server
-            // because 'Mentor' object may not expose terms_accepted reliably.
           }));
 
           if (
@@ -758,21 +756,28 @@ export default function MentorOnboarding({
           window.scrollTo({ top: 0, behavior: "smooth" });
         } else if (step === 3) {
           /**
-           * ONBOARDING COMPLETE
-           *
-           * Update local flag to 3 and redirect to dashboard.
+           * ONBOARDING COMPLETE - NEW FLOW
+           * 
+           * After completing all onboarding steps:
+           * 1. Update the flag to 3 in context and localStorage
+           * 2. Show success message
+           * 3. Logout and redirect to login page (instead of going directly to dashboard)
+           * 4. User must log in again
+           * 5. Login response will have isOnboarded = 3
+           * 6. Login page will redirect to /mentor/dashboard
            */
           if (typeof updateOnboardedFlag === "function") {
             updateOnboardedFlag("3");
           }
+          
           setSuccess(
-            "Mentor onboarding completed successfully!"
+            "Mentor onboarding completed successfully! You will be redirected to login page."
           );
 
-          // Short delay so the user sees the success banner.
+          // Wait 2 seconds for user to see success message, then logout and go to login
           setTimeout(() => {
-            router.push("/mentor/dashboard");
-          }, 1500);
+            logout("/login");
+          }, 2000);
         }
       } else {
         setError(parseServerError(response.data));
@@ -917,7 +922,13 @@ export default function MentorOnboarding({
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // SKIP
+  // SKIP FUNCTIONALITY
+  // 
+  // When user clicks "Skip for now":
+  // 1. Calls logout which clears all auth state and localStorage
+  // 2. Redirects to login page
+  // 3. After re-login, the login page's useEffect will check isOnboarded 
+  //    and redirect to the correct step based on the saved flag
   // ─────────────────────────────────────────────────────────────────────────────
 
   const handleSkip = async () => {
@@ -925,9 +936,17 @@ export default function MentorOnboarding({
       onSkip();
     } else {
       /**
-       * "Skip" now performs a full logout to ensure the user can 
-       * re-authenticate with different credentials and to break 
-       * the redirection loop between onboarding and login.
+       * "Skip for now" functionality:
+       * 
+       * 1. Call logout to clear all authentication state and localStorage
+       * 2. Redirect to login page
+       * 3. When user logs in again, the login page will:
+       *    - Receive isOnboarded from login response
+       *    - Store it in AuthContext and localStorage
+       *    - Redirect to /onboarding/mentor (since flag < 3)
+       *    - This component will read isOnboarded and resume at correct step
+       * 
+       * This ensures the skip flow works every time the user skips and logs in again.
        */
       await logout("/login");
     }
@@ -1633,7 +1652,7 @@ export default function MentorOnboarding({
             className="flex-1"
             loading={loading}
             disabled={loading}
-            onClick={handleSubmit}
+            // onClick={handleSubmit}
           >
             Complete Registration
           </Button>
