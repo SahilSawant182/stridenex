@@ -257,3 +257,15 @@ export const updateMentorStats = async (mentor: string) => {
     throw error;
   }
 };
+
+export const getMentorDashboardStats = async (mentor: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.get_mentor_dashboard_stats?mentor=${encodeURIComponent(mentor)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching mentor dashboard stats:", error);
+    throw error;
+  }
+};

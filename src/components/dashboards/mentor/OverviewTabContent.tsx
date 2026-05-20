@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getUpcomingSessions, getPendingRequests, rescheduleSession } from "@/services/mentor.services";
+import { getUpcomingSessions, getPendingRequests, rescheduleSession, getMentorDashboardStats } from "@/services/mentor.services";
 
 import { motion } from "framer-motion";
 import {
@@ -22,11 +22,11 @@ import {
   Loader2
 } from "lucide-react";
 
-// Dummy Data
-const overviewStats = [
-  { label: "TOTAL STUDENTS MENTORED", value: "247", trend: "+18 this month", trendUp: true, icon: GraduationCap, iconBg: "bg-orange-50", iconColor: "text-orange-600", borderStyle: "border-t-4 border-t-slate-800" },
-  { label: "SESSIONS THIS MONTH", value: "18", trend: "4 upcoming", trendUp: true, icon: Calendar, iconBg: "bg-blue-50", iconColor: "text-blue-600", borderStyle: "border-t-4 border-t-blue-500" },
-  { label: "AVERAGE RATING", value: "4.9/5", trend: "from 120 reviews", trendUp: true, icon: Star, iconBg: "bg-yellow-50", iconColor: "text-yellow-600", borderStyle: "border-t-4 border-t-amber-400" },
+// Dummy Data for fallback
+const defaultOverviewStats = [
+  { label: "TOTAL STUDENTS MENTORED", value: "0", trend: "+0 this month", trendUp: true, icon: GraduationCap, iconBg: "bg-orange-50", iconColor: "text-orange-600", borderStyle: "border-t-4 border-t-slate-800" },
+  { label: "SESSIONS THIS MONTH", value: "0", trend: "0 upcoming", trendUp: true, icon: Calendar, iconBg: "bg-blue-50", iconColor: "text-blue-600", borderStyle: "border-t-4 border-t-blue-500" },
+  { label: "AVERAGE RATING", value: "0/5", trend: "from 0 reviews", trendUp: true, icon: Star, iconBg: "bg-yellow-50", iconColor: "text-yellow-600", borderStyle: "border-t-4 border-t-amber-400" },
   { label: "PENDING PAYOUT (FEB)", value: "₹0.00", trend: "released Mar 1", trendUp: true, icon: IndianRupee, iconBg: "bg-emerald-50", iconColor: "text-emerald-600", borderStyle: "border-t-4 border-t-emerald-500" }
 ];
 
@@ -68,6 +68,7 @@ export default function OverviewTabContent() {
   const { currentUser } = useAuth();
   const [upcoming, setUpcoming] = useState<any[]>([]);
   const [pending, setPending] = useState<any[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState("");
@@ -147,15 +148,19 @@ export default function OverviewTabContent() {
         return;
       }
       try {
-        const [upcomingRes, pendingRes] = await Promise.all([
+        const [upcomingRes, pendingRes, statsRes] = await Promise.all([
           getUpcomingSessions(email),
-          getPendingRequests(email)
+          getPendingRequests(email),
+          getMentorDashboardStats(email)
         ]);
         if (upcomingRes?.message) {
           setUpcoming(upcomingRes.message);
         }
         if (pendingRes?.message) {
           setPending(pendingRes.message);
+        }
+        if (statsRes?.message) {
+          setDashboardStats(statsRes.message);
         }
       } catch (err) {
         console.error("Failed to fetch dashboard data", err);
@@ -233,11 +238,36 @@ export default function OverviewTabContent() {
     };
   });
 
+  const dynamicOverviewStats = [
+    { 
+      label: "TOTAL STUDENTS MENTORED", 
+      value: dashboardStats?.total_students_mentored?.toString() || defaultOverviewStats[0].value, 
+      trend: `+${dashboardStats?.this_month_mentored_students || 0} this month`, 
+      trendUp: true, 
+      icon: GraduationCap, 
+      iconBg: "bg-orange-50", 
+      iconColor: "text-orange-600", 
+      borderStyle: "border-t-4 border-t-slate-800" 
+    },
+    { 
+      label: "SESSIONS THIS MONTH", 
+      value: dashboardStats?.sessions_this_month?.toString() || defaultOverviewStats[1].value, 
+      trend: `${dashboardStats?.upcoming_sessions || 0} upcoming`, 
+      trendUp: true, 
+      icon: Calendar, 
+      iconBg: "bg-blue-50", 
+      iconColor: "text-blue-600", 
+      borderStyle: "border-t-4 border-t-blue-500" 
+    },
+    defaultOverviewStats[2],
+    defaultOverviewStats[3]
+  ];
+
   return (
     <div className="space-y-6">
       {/* 4 Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {overviewStats.map((stat, i) => (
+        {dynamicOverviewStats.map((stat, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, y: 10 }}
