@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getSessionHistory } from "@/services/mentor.services";
+import { getSessionHistory, updateMentorStats } from "@/services/mentor.services";
 
 import { motion } from "framer-motion";
 import { 
@@ -33,6 +33,7 @@ const sessionHistoryList = [
 export default function SessionHistoryTabContent() {
   const { currentUser } = useAuth();
   const [sessions, setSessions] = useState<any[]>([]);
+  const [stats, setStats] = useState({ total_sessions: 0, total_hours: 0, total_earnings: 0, avg_rating: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -44,12 +45,23 @@ export default function SessionHistoryTabContent() {
       }
       
       try {
-        const res = await getSessionHistory(email);
+        const [res, statsRes] = await Promise.all([
+          getSessionHistory(email),
+          updateMentorStats(email)
+        ]);
         if (res?.message) {
           setSessions(res.message);
         }
+        if (statsRes?.message) {
+          setStats({
+            total_sessions: statsRes.message.total_sessions || 0,
+            total_hours: statsRes.message.total_hours || 0,
+            total_earnings: statsRes.message.total_earnings || 0,
+            avg_rating: statsRes.message.avg_rating || 0
+          });
+        }
       } catch (err) {
-        console.error("Failed to fetch session history", err);
+        console.error("Failed to fetch session history or stats", err);
       } finally {
         setLoading(false);
       }
@@ -93,13 +105,11 @@ export default function SessionHistoryTabContent() {
     };
   });
 
-  const totalHours = sessions.reduce((acc, curr) => acc + (curr.duration || 0), 0) / 60;
-  
   const dynamicSummaryStats = [
-    { label: "TOTAL SESSIONS", value: sessions.length.toString(), icon: LayoutList, color: "text-slate-400", bg: "bg-slate-50", border: "border-t-blue-500" },
-    { label: "TOTAL HOURS", value: `${totalHours.toFixed(1)}h`, icon: Clock, color: "text-slate-400", bg: "bg-slate-50", border: "border-t-blue-500" },
+    { label: "TOTAL SESSIONS", value: stats.total_sessions.toString(), icon: LayoutList, color: "text-slate-400", bg: "bg-slate-50", border: "border-t-blue-500" },
+    { label: "TOTAL HOURS", value: `${stats.total_hours.toFixed(1)}h`, icon: Clock, color: "text-slate-400", bg: "bg-slate-50", border: "border-t-blue-500" },
     { label: "NOTES SHARED", value: "—", icon: FileText, color: "text-amber-500", bg: "bg-amber-50", border: "border-t-orange-400" },
-    { label: "LIFETIME RATING", value: "—", icon: Star, color: "text-amber-500", bg: "bg-amber-50", border: "border-t-yellow-400" }
+    { label: "LIFETIME RATING", value: stats.avg_rating > 0 ? stats.avg_rating.toFixed(1) : "—", icon: Star, color: "text-amber-500", bg: "bg-amber-50", border: "border-t-yellow-400" }
   ];
 
   return (

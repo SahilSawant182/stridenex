@@ -231,3 +231,29 @@ export const getSessionHistory = async (mentor: string) => {
     throw error;
   }
 };
+
+export const rescheduleSession = async (payload: { session_name: string; new_date: string; new_from_time: string; new_to_time: string }) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.reschedule_session",
+      payload
+    );
+    return response;
+  } catch (error) {
+    console.error("Error rescheduling session:", error);
+    throw error;
+  }
+};
+
+export const updateMentorStats = async (mentor: string) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking._update_mentor_stats",
+      { mentor }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating mentor stats:", error);
+    throw error;
+  }
+};

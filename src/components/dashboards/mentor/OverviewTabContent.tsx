@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getUpcomingSessions, getPendingRequests } from "@/services/mentor.services";
+import { getUpcomingSessions, getPendingRequests, rescheduleSession } from "@/services/mentor.services";
 
 import { motion } from "framer-motion";
 import {
@@ -17,7 +17,9 @@ import {
   FileText,
   CheckCircle,
   Activity,
-  AlertCircle
+  AlertCircle,
+  X,
+  Loader2
 } from "lucide-react";
 
 // Dummy Data
@@ -67,6 +69,75 @@ export default function OverviewTabContent() {
   const [upcoming, setUpcoming] = useState<any[]>([]);
   const [pending, setPending] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
+  const [selectedSessionId, setSelectedSessionId] = useState("");
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleFromTime, setRescheduleFromTime] = useState("");
+  const [rescheduleToTime, setRescheduleToTime] = useState("");
+  const [submittingReschedule, setSubmittingReschedule] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState("");
+
+  const handleRescheduleClick = (sessionId: string) => {
+    setSelectedSessionId(sessionId);
+    setRescheduleDate("");
+    setRescheduleFromTime("");
+    setRescheduleToTime("");
+    setRescheduleError("");
+    setRescheduleModalOpen(true);
+  };
+
+  const submitReschedule = async () => {
+    if (!selectedSessionId || !rescheduleDate || !rescheduleFromTime || !rescheduleToTime) return;
+    try {
+      setRescheduleError("");
+      setSubmittingReschedule(true);
+      const formatTimeToSeconds = (t: string) => {
+        if (t.split(':').length === 2) return `${t}:00`;
+        return t;
+      };
+      await rescheduleSession({
+        session_name: selectedSessionId,
+        new_date: rescheduleDate,
+        new_from_time: formatTimeToSeconds(rescheduleFromTime),
+        new_to_time: formatTimeToSeconds(rescheduleToTime)
+      });
+      setRescheduleModalOpen(false);
+      const email = currentUser || localStorage.getItem("userEmail") || "";
+      if (email) {
+        const upcomingRes = await getUpcomingSessions(email);
+        if (upcomingRes?.message) {
+          setUpcoming(upcomingRes.message);
+        }
+      }
+    } catch (error: any) {
+      console.error("Failed to reschedule", error);
+      let errorMessage = "Failed to reschedule session. Please try again.";
+      
+      const errorData = error.data || error.response?.data;
+      
+      if (errorData) {
+        if (errorData._server_messages) {
+          try {
+            const messages = JSON.parse(errorData._server_messages);
+            if (messages.length > 0) {
+              const msgObj = JSON.parse(messages[0]);
+              errorMessage = msgObj.message || errorMessage;
+            }
+          } catch (e) {}
+        } else if (errorData.exception) {
+          errorMessage = errorData.exception.split(":").slice(1).join(":").trim() || errorData.exception;
+        } else if (error.message && !error.message.includes("Traceback")) {
+          errorMessage = error.message;
+        }
+      } else if (error.message && !error.message.includes("Traceback")) {
+        errorMessage = error.message;
+      }
+      
+      setRescheduleError(errorMessage);
+    } finally {
+      setSubmittingReschedule(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -236,17 +307,9 @@ export default function OverviewTabContent() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 self-start sm:self-center ml-14 sm:ml-0">
-                    {session.meeting_link && (
-                      <a href={session.meeting_link} target="_blank" rel="noreferrer" className="px-4 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors inline-block">
-                        Join
-                      </a>
-                    )}
-                    {!session.meeting_link && (
-                      <button className="px-4 py-1.5 bg-orange-500/50 cursor-not-allowed text-white text-sm font-semibold rounded-lg transition-colors">
-                        Join
-                      </button>
-                    )}
-                    <button className="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-lg transition-colors">
+                    <button
+                      onClick={() => handleRescheduleClick(session.id)}
+                      className="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-lg transition-colors">
                       Reschedule
                     </button>
                   </div>
@@ -397,6 +460,84 @@ export default function OverviewTabContent() {
           </motion.div>
         </div>
       </div>
+
+      {/* Reschedule Modal */}
+      {rescheduleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden flex flex-col mx-4">
+            <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="font-bold text-slate-800 text-lg">Reschedule Session</h3>
+              <button
+                onClick={() => setRescheduleModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {rescheduleError && (
+              <div className="px-5 py-3 bg-red-50 border-b border-red-100 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-600 font-medium">{rescheduleError}</p>
+              </div>
+            )}
+
+            <div className="p-5 space-y-4 bg-white">
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">New Date</label>
+                <input
+                  type="date"
+                  value={rescheduleDate}
+                  style={{ textTransform: 'uppercase' }}
+                  onChange={(e) => setRescheduleDate(e.target.value)}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-700"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">From Time</label>
+                  <input
+                    type="time"
+                    value={rescheduleFromTime}
+                    onChange={(e) => setRescheduleFromTime(e.target.value)}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-700"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">To Time</label>
+                  <input
+                    type="time"
+                    value={rescheduleToTime}
+                    onChange={(e) => setRescheduleToTime(e.target.value)}
+                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-700"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex gap-3 justify-end">
+              <button
+                onClick={() => setRescheduleModalOpen(false)}
+                className="flex-1 px-4 py-2 text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-sm font-bold transition-colors"
+                disabled={submittingReschedule}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitReschedule}
+                disabled={!rescheduleDate || !rescheduleFromTime || !rescheduleToTime || submittingReschedule}
+                className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-bold transition-colors flex justify-center items-center gap-2"
+              >
+                {submittingReschedule ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
