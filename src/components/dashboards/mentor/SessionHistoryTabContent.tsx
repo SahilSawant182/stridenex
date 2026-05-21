@@ -269,9 +269,9 @@ export default function SessionHistoryTabContent() {
           <h3 className="font-bold text-slate-800 flex items-center gap-2">
             <LayoutList className="w-4 h-4 text-emerald-600" /> Session History
           </h3>
-          <button className="text-sm font-semibold text-blue-600 hover:text-blue-700">
+          {/* <button className="text-sm font-semibold text-blue-600 hover:text-blue-700">
             Export All →
-          </button>
+          </button> */}
         </div>
         
         <div className="divide-y divide-slate-100">
@@ -420,9 +420,9 @@ export default function SessionHistoryTabContent() {
                         >
                           <Edit2 className="w-3.5 h-3.5" /> Edit Notes
                         </button>
-                        <button className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-md transition-colors">
+                        {/* <button className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-md transition-colors">
                           <FileDown className="w-3.5 h-3.5" /> Download PDF
-                        </button>
+                        </button> */}
                         <button 
                           onClick={() => handleEmailStudent(session.id, session.studentEmail)}
                           disabled={emailingNotes[session.id]}
