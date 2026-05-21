@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getSessionHistory, updateMentorStats } from "@/services/mentor.services";
+import { getSessionHistory, updateMentorStats, getSessionNote, saveSessionNotes, emailSessionNoteToStudent } from "@/services/mentor.services";
 
 import { motion } from "framer-motion";
 import { 
@@ -11,7 +11,14 @@ import {
   Star,
   FileText,
   Copy,
-  LayoutList
+  LayoutList,
+  ChevronDown,
+  ChevronUp,
+  User,
+  Lock,
+  Edit2,
+  FileDown,
+  Mail
 } from "lucide-react";
 
 const summaryStats = [
@@ -35,6 +42,119 @@ export default function SessionHistoryTabContent() {
   const [sessions, setSessions] = useState<any[]>([]);
   const [stats, setStats] = useState({ total_sessions: 0, total_hours: 0, total_earnings: 0, avg_rating: 0 });
   const [loading, setLoading] = useState(true);
+  const [expandedNotes, setExpandedNotes] = useState<Record<string | number, boolean>>({});
+  const [sessionNotes, setSessionNotes] = useState<Record<string, { notes: string, shared_with_student: string }>>({});
+  const [editingNotes, setEditingNotes] = useState<Record<string, boolean>>({});
+  const [draftNotes, setDraftNotes] = useState<Record<string, { notes: string, shared_with_student: string }>>({});
+  const [savingNotes, setSavingNotes] = useState<Record<string, boolean>>({});
+  const [loadingNotes, setLoadingNotes] = useState<Record<string, boolean>>({});
+  const [emailingNotes, setEmailingNotes] = useState<Record<string, boolean>>({});
+
+  const handleEmailStudent = async (id: string, studentEmail: string) => {
+    const currentNotes = sessionNotes[id] || { shared_with_student: "" };
+    if (!currentNotes.shared_with_student) {
+      alert("No notes available to share. Please add and save notes for the student first.");
+      return;
+    }
+
+    setEmailingNotes(prev => ({ ...prev, [id]: true }));
+    try {
+      const res = await emailSessionNoteToStudent({
+        session_name: id,
+        student: studentEmail,
+        subject: "Session note updated successfully",
+        message: currentNotes.shared_with_student
+      });
+      if (res?.message?.status === "success" || res?.message?.message) {
+        alert(res.message.message || "Email sent successfully.");
+      } else {
+        alert("Email sent successfully!");
+      }
+    } catch (err: any) {
+      console.error("Failed to email notes", err);
+      let errorMessage = "Failed to email notes. Please try again.";
+      
+      const errorData = err.data || err.response?.data;
+      if (errorData) {
+        if (errorData._server_messages) {
+          try {
+            const messages = JSON.parse(errorData._server_messages);
+            if (messages.length > 0) {
+              const msgObj = JSON.parse(messages[0]);
+              errorMessage = msgObj.message || errorMessage;
+            }
+          } catch (e) {}
+        } else if (errorData.message && typeof errorData.message === 'string') {
+          errorMessage = errorData.message;
+        } else if (errorData.exception) {
+          errorMessage = errorData.exception.split(":").slice(1).join(":").trim() || errorData.exception;
+        }
+      } else if (err.message && !err.message.includes("Traceback")) {
+        errorMessage = err.message;
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setEmailingNotes(prev => ({ ...prev, [id]: false }));
+    }
+  };
+
+  const toggleNotes = async (id: string, studentEmail: string) => {
+    const isExpanding = !expandedNotes[id];
+    setExpandedNotes(prev => ({ ...prev, [id]: isExpanding }));
+
+    if (isExpanding && !sessionNotes[id]) {
+      setLoadingNotes(prev => ({ ...prev, [id]: true }));
+      try {
+        const res = await getSessionNote(id, studentEmail);
+        if (res?.message?.data) {
+          setSessionNotes(prev => ({ 
+            ...prev, 
+            [id]: {
+              notes: res.message.data.notes || "",
+              shared_with_student: res.message.data.shared_with_student || ""
+            } 
+          }));
+        } else {
+          setSessionNotes(prev => ({ ...prev, [id]: { notes: "", shared_with_student: "" } }));
+        }
+      } catch (err) {
+        console.error("Failed to fetch notes", err);
+        setSessionNotes(prev => ({ ...prev, [id]: { notes: "", shared_with_student: "" } }));
+      } finally {
+        setLoadingNotes(prev => ({ ...prev, [id]: false }));
+      }
+    }
+  };
+
+  const handleEditNotes = (id: string) => {
+    const currentNotes = sessionNotes[id] || { notes: "", shared_with_student: "" };
+    setDraftNotes(prev => ({ ...prev, [id]: currentNotes }));
+    setEditingNotes(prev => ({ ...prev, [id]: true }));
+  };
+
+  const handleCancelEdit = (id: string) => {
+    setEditingNotes(prev => ({ ...prev, [id]: false }));
+  };
+
+  const handleSaveNotes = async (id: string, studentEmail: string) => {
+    setSavingNotes(prev => ({ ...prev, [id]: true }));
+    try {
+      const payload = {
+        session_name: id,
+        student: studentEmail,
+        notes: draftNotes[id]?.notes || "",
+        shared_with_student: draftNotes[id]?.shared_with_student || ""
+      };
+      await saveSessionNotes(payload);
+      setSessionNotes(prev => ({ ...prev, [id]: draftNotes[id] }));
+      setEditingNotes(prev => ({ ...prev, [id]: false }));
+    } catch (err) {
+      console.error("Failed to save notes", err);
+    } finally {
+      setSavingNotes(prev => ({ ...prev, [id]: false }));
+    }
+  };
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -91,17 +211,20 @@ export default function SessionHistoryTabContent() {
     const timeStr = `${formatTime(s.from_time)} - ${formatTime(s.to_time)}`;
     
     return {
-      id: s.name || index,
+      id: s.name || index.toString(),
       initials,
       name: studentName,
+      studentEmail: s.student || "",
       title: s.topic || "Session",
       date: `${dateStr} • ${timeStr}`,
       duration: `${s.duration} min`,
       tag: s.status || "Completed",
       tagColor: "text-blue-600 bg-blue-50",
-      price: "—",
+      price: s.price ? `₹${s.price}` : "₹1,200",
       rating: 5,
-      color
+      color,
+      sharedNote: s.shared_note || "",
+      internalNote: s.internal_note || ""
     };
   });
 
@@ -157,42 +280,162 @@ export default function SessionHistoryTabContent() {
           ) : mappedSessions.length === 0 ? (
             <div className="p-8 text-center text-slate-500">No session history found.</div>
           ) : mappedSessions.map((session, i) => (
-            <div key={session.id} className="p-5 px-6 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <div className={`w-10 h-10 rounded-full ${session.color} flex items-center justify-center text-white font-bold text-sm shrink-0 mt-1`}>
-                  {session.initials}
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-800 flex items-center gap-2">
-                    {session.name}
-                  </h4>
-                  <p className="text-sm text-slate-600 mb-2">{session.title}</p>
-                  
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                      <Calendar className="w-3.5 h-3.5" /> {session.date}
-                    </span>
-                    <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
-                      <Clock className="w-3.5 h-3.5" /> {session.duration}
-                    </span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${session.tagColor}`}>
-                      {session.tag}
-                    </span>
+            <div key={session.id} className="p-5 px-6 hover:bg-slate-50 transition-colors flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <div className={`w-10 h-10 rounded-full ${session.color} flex items-center justify-center text-white font-bold text-sm shrink-0 mt-1`}>
+                    {session.initials}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                      {session.name}
+                    </h4>
+                    <p className="text-sm text-slate-600 mb-2">{session.title}</p>
+                    
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                        <Calendar className="w-3.5 h-3.5" /> {session.date}
+                      </span>
+                      <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                        <Clock className="w-3.5 h-3.5" /> {session.duration}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${session.tagColor}`}>
+                        {session.tag}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <div className="flex flex-col items-end gap-1.5">
-                <span className="text-lg font-bold text-emerald-600">{session.price}</span>
-                <div className="flex items-center gap-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className={`w-3.5 h-3.5 ${i < session.rating ? 'text-yellow-400 fill-yellow-400' : 'text-slate-200'}`} />
-                  ))}
+                
+                <div className="flex flex-col items-end gap-1.5">
+                  <span className="text-lg font-bold text-emerald-600">{session.price}</span>
+                  <div className="flex items-center gap-0.5">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className={`w-3.5 h-3.5 ${i < session.rating ? 'text-yellow-400 fill-yellow-400' : 'text-slate-200'}`} />
+                    ))}
+                  </div>
+                  <button 
+                    onClick={() => toggleNotes(session.id, session.studentEmail)}
+                    className="text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1 mt-1 transition-colors"
+                  >
+                    {expandedNotes[session.id] ? (
+                      <><ChevronUp className="w-3 h-3" /> Hide notes</>
+                    ) : (
+                      <><ChevronDown className="w-3 h-3" /> View notes</>
+                    )}
+                  </button>
                 </div>
-                <button className="text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1 mt-1 transition-colors">
-                  <FileText className="w-3 h-3" /> View notes
-                </button>
               </div>
+
+              {expandedNotes[session.id] && (
+                <div className="mt-2 pl-14">
+                  {loadingNotes[session.id] ? (
+                    <div className="p-4 text-center text-sm text-slate-500">Loading notes...</div>
+                  ) : editingNotes[session.id] ? (
+                    <div className="space-y-3">
+                      {/* Shared Note Edit */}
+                      <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1">
+                            <User className="w-3 h-3" /> Shared with Student
+                          </div>
+                          <span className="text-xs text-slate-400">Visible on student's profile</span>
+                        </div>
+                        <textarea
+                          className="w-full text-sm text-slate-700 bg-white border border-emerald-200 rounded p-2 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          rows={3}
+                          value={draftNotes[session.id]?.shared_with_student || ""}
+                          onChange={(e) => setDraftNotes(prev => ({ ...prev, [session.id]: { ...prev[session.id], shared_with_student: e.target.value } }))}
+                          placeholder="Enter notes to share with student..."
+                        />
+                      </div>
+
+                      {/* Internal Note Edit */}
+                      <div className="bg-orange-50/50 border border-orange-100 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="text-orange-600 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 bg-orange-100/50">
+                            <Lock className="w-3 h-3" /> Internal Note Only
+                          </div>
+                          <span className="text-xs text-slate-400">Not visible to student</span>
+                        </div>
+                        <textarea
+                          className="w-full text-sm text-slate-700 bg-white border border-orange-200 rounded p-2 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                          rows={3}
+                          value={draftNotes[session.id]?.notes || ""}
+                          onChange={(e) => setDraftNotes(prev => ({ ...prev, [session.id]: { ...prev[session.id], notes: e.target.value } }))}
+                          placeholder="Enter internal notes..."
+                        />
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-wrap items-center gap-3 pt-2">
+                        <button 
+                          onClick={() => handleSaveNotes(session.id, session.studentEmail)}
+                          disabled={savingNotes[session.id]}
+                          className="flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 px-4 py-1.5 rounded-md transition-colors disabled:opacity-50"
+                        >
+                          {savingNotes[session.id] ? "Saving..." : "Save Notes"}
+                        </button>
+                        <button 
+                          onClick={() => handleCancelEdit(session.id)}
+                          disabled={savingNotes[session.id]}
+                          className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-md transition-colors disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {/* Shared Note View */}
+                      <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1">
+                            <User className="w-3 h-3" /> Shared with Student
+                          </div>
+                          <span className="text-xs text-slate-400">Visible on student's profile</span>
+                        </div>
+                        <p className={`text-sm whitespace-pre-wrap ${sessionNotes[session.id]?.shared_with_student || session.sharedNote ? 'text-slate-700' : 'text-slate-400 italic'}`}>
+                          {sessionNotes[session.id]?.shared_with_student || session.sharedNote || "No notes shared with student yet. Click 'Edit Notes' to add."}
+                        </p>
+                      </div>
+
+                      {/* Internal Note View */}
+                      <div className="bg-orange-50/50 border border-orange-100 rounded-lg p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="text-orange-600 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 bg-orange-100/50">
+                            <Lock className="w-3 h-3" /> Internal Note Only
+                          </div>
+                          <span className="text-xs text-slate-400">Not visible to student</span>
+                        </div>
+                        <p className={`text-sm whitespace-pre-wrap ${sessionNotes[session.id]?.notes || session.internalNote ? 'text-slate-700' : 'text-slate-400 italic'}`}>
+                          {sessionNotes[session.id]?.notes || session.internalNote || "No internal notes added yet. Click 'Edit Notes' to add."}
+                        </p>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-wrap items-center gap-3 pt-2">
+                        <button 
+                          onClick={() => handleEditNotes(session.id)}
+                          className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-md transition-colors"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" /> Edit Notes
+                        </button>
+                        <button className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-md transition-colors">
+                          <FileDown className="w-3.5 h-3.5" /> Download PDF
+                        </button>
+                        <button 
+                          onClick={() => handleEmailStudent(session.id, session.studentEmail)}
+                          disabled={emailingNotes[session.id]}
+                          className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:bg-slate-50 px-3 py-1.5 rounded-md transition-colors disabled:opacity-50"
+                        >
+                          <Mail className="w-3.5 h-3.5" /> 
+                          {emailingNotes[session.id] ? "Emailing..." : "Email to Student"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>

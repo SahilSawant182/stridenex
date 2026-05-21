@@ -269,3 +269,41 @@ export const getMentorDashboardStats = async (mentor: string) => {
     throw error;
   }
 };
+
+export const getSessionNote = async (session_name: string, student: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.get_session_note?session_name=${encodeURIComponent(session_name)}&student=${encodeURIComponent(student)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching session note:", error);
+    throw error;
+  }
+};
+
+export const saveSessionNotes = async (payload: { session_name: string; student: string; notes: string; shared_with_student: string }) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.save_session_notes",
+      payload
+    );
+    return response;
+  } catch (error) {
+    console.error("Error saving session notes:", error);
+    throw error;
+  }
+};
+
+export const emailSessionNoteToStudent = async (payload: { session_name: string; student: string; subject: string; message: string }) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.email_to_student",
+      payload
+    );
+    return response;
+  } catch (error) {
+    console.error("Error emailing session notes:", error);
+    throw error;
+  }
+};

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getUpcomingSessions, getPendingRequests, rescheduleSession, getMentorDashboardStats } from "@/services/mentor.services";
 
@@ -65,6 +66,7 @@ const thisMonthStats = [
 ];
 
 export default function OverviewTabContent() {
+  const router = useRouter();
   const { currentUser } = useAuth();
   const [upcoming, setUpcoming] = useState<any[]>([]);
   const [pending, setPending] = useState<any[]>([]);
@@ -360,7 +362,10 @@ export default function OverviewTabContent() {
                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
                   <Video className="w-4 h-4 text-orange-500" /> Pending Requests
                 </h3>
-                <button className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                <button 
+                  onClick={() => router.push('/mentor/dashboard/requests')}
+                  className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                >
                   View All <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
