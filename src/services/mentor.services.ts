@@ -307,3 +307,29 @@ export const emailSessionNoteToStudent = async (payload: { session_name: string;
     throw error;
   }
 };
+
+export const saveMentorAvailability = async (payload: any) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_availability.mentor_availability.save_mentor_availability",
+      payload
+    );
+    return response;
+  } catch (error) {
+    console.error("Error saving mentor availability:", error);
+    throw error;
+  }
+};
+
+export const deleteMentorAvailability = async (mentor: string) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_availability.mentor_availability.delete_mentor_availability",
+      { mentor }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error deleting mentor availability:", error);
+    throw error;
+  }
+};

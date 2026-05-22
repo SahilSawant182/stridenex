@@ -29,6 +29,7 @@ import {
 import { useEffect, useState, useMemo } from "react";
 import { getStudentByEmail, updateStudent } from "@/services/student.services";
 import { updateIndustry } from "@/services/industry.services";
+import { getMentorByEmail, getMentorDashboardStats } from "@/services/mentor.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { useToast } from "@/context/ToastContext";
 import { OperatingHoursTable, OperatingHour } from "@/components/dashboards/shared/OperatingHoursTable";
@@ -102,12 +103,12 @@ const roleConfig = {
     progressBg: "bg-violet-900/50",
     progressBorder: "border-violet-800/50",
     metrics: [
-      { key: "students", default: 247, label: "Total Students", icon: Users },
-      { key: "sessions", default: 18, label: "Sessions Done", icon: Calendar },
-      { key: "rating", default: "4.9", label: "Avg Rating", icon: Award }
+      { key: "students", default: 0, label: "Total Students", icon: Users },
+      { key: "sessions", default: 0, label: "Sessions Done", icon: Calendar },
+      { key: "rating", default: "—", label: "Avg Rating", icon: Award }
     ],
-    defaultTitle: "Kavya Reddy",
-    defaultSubtitle: "Senior Data Scientist @ Amazon - ML, Python, Career Counselling",
+    defaultTitle: "Mentor Profile",
+    defaultSubtitle: "Verified Mentor",
     defaultProgress: 100
   },
   industry: {
@@ -141,10 +142,15 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
   const [modalError, setModalError] = useState<string | null>(null);
   const { showToast } = useToast();
 
+  // Mentor specific state
+  const [mentorData, setMentorData] = useState<any>(null);
+  const [mentorStats, setMentorStats] = useState<any>(null);
+
   const fetchStudentData = async () => {
-    if (role !== "student" || !currentUser) return;
+    const email = currentUser || (typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail")) : "") || "";
+    if (role !== "student" || !email) return;
     try {
-      const response = await getStudentByEmail(currentUser);
+      const response = await getStudentByEmail(email);
       // Handle the nested structure: response.message.data
       const data = response?.data || response?.message?.data || response?.message;
       if (data && typeof data === 'object') {
@@ -155,8 +161,43 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     }
   };
 
+  const fetchMentorData = async () => {
+    const email = currentUser || (typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail")) : "") || "";
+    if (role !== "mentor" || !email) return;
+    try {
+      const [profileRes, statsRes] = await Promise.all([
+        getMentorByEmail(email),
+        getMentorDashboardStats(email).catch(() => null)
+      ]);
+      const profileData = profileRes?.message?.data || profileRes?.message || null;
+      if (profileData && typeof profileData === 'object') {
+        setMentorData(profileData);
+      }
+      const statsData = statsRes?.message?.data || statsRes?.message || null;
+      if (statsData) {
+        setMentorStats(statsData);
+      }
+    } catch (error) {
+      console.error("Error fetching mentor data in banner:", error);
+    }
+  };
+
   useEffect(() => {
-    fetchStudentData();
+    if (role === "student") {
+      fetchStudentData();
+    } else if (role === "mentor") {
+      fetchMentorData();
+    }
+  }, [role, currentUser]);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      if (role === "mentor") {
+        fetchMentorData();
+      }
+    };
+    window.addEventListener("mentor-profile-updated", handleUpdate);
+    return () => window.removeEventListener("mentor-profile-updated", handleUpdate);
   }, [role, currentUser]);
 
   useEffect(() => {
@@ -341,8 +382,32 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     };
   }, [studentData, fullName, currentUser, customData?.rawIndustryData, role]);
 
-  // Get title from customData or fullName or default
-  const title = customData?.title || fullName || config.defaultTitle;
+  const userFullName = useMemo(() => {
+    if (role === "mentor") {
+      if (mentorData) {
+        return `${mentorData.first_name || ""} ${mentorData.last_name || ""}`.trim();
+      }
+      return fullName || (typeof window !== "undefined" ? localStorage.getItem("fullName") : "") || "";
+    }
+    return fullName || "";
+  }, [mentorData, role, fullName]);
+
+  // Get title from customData or userFullName or default
+  const title = customData?.title || userFullName || config.defaultTitle;
+
+  const mentorSubtitle = useMemo(() => {
+    if (role !== "mentor") return null;
+    if (mentorData) {
+      const roleStr = mentorData.role || "";
+      const expStr = mentorData.experience ? `${mentorData.experience} Years Exp` : "";
+      const domainsList = (mentorData.domains || []).map((d: any) => d.domain || d).filter(Boolean);
+      const domainsStr = domainsList.length > 0 ? domainsList.join(", ") : "";
+      
+      const parts = [roleStr, expStr, domainsStr].filter(Boolean);
+      return parts.join(" • ") || "Verified Mentor";
+    }
+    return "Verified Mentor";
+  }, [mentorData, role]);
 
   // Get subtitle from customData or default
   const subtitle = customData?.subtitle || 
@@ -356,6 +421,8 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
           {studentData.course} • {studentData.department || ""} • Stream {studentData.stream || "N/A"}
         </p>
       </div>
+    ) : role === "mentor" ? (
+      mentorSubtitle
     ) : config.defaultSubtitle);
 
   // Get progress value
@@ -363,11 +430,20 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
 
   // Get initials
   const getInitials = () => {
-    if (fullName) {
-      return fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    if (role === "mentor" && mentorData) {
+      const fn = mentorData.first_name || "";
+      const ln = mentorData.last_name || "";
+      if (fn || ln) {
+        return `${fn?.[0] || ""}${ln?.[0] || ""}`.toUpperCase();
+      }
     }
-    if (currentUser) {
-      return currentUser[0].toUpperCase();
+    const nameVal = fullName || (typeof window !== "undefined" ? localStorage.getItem("fullName") : "") || "";
+    if (nameVal) {
+      return nameVal.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+    const emailVal = currentUser || (typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail")) : "") || "";
+    if (emailVal) {
+      return emailVal[0].toUpperCase();
     }
     return role === "college" ? "VJ" : role === "student" ? "AP" : "U";
   };
@@ -412,6 +488,25 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       { key: "employability", value: 73, label: "Employability", icon: TrendingUp },
       { key: "cgpa", value: studentData.cgpa || 0, label: "Current CGPA", icon: Award },
       { key: "semester", value: studentData.semester || "N/A", label: "Semester", icon: Calendar }
+    ] : role === "mentor" && (mentorData || mentorStats) ? [
+      { 
+        key: "students", 
+        value: mentorStats?.total_students_mentored ?? mentorData?.total_students ?? 0, 
+        label: "Total Students", 
+        icon: Users 
+      },
+      { 
+        key: "sessions", 
+        value: mentorData?.total_sessions ?? mentorStats?.sessions_this_month ?? 0, 
+        label: "Sessions Done", 
+        icon: Calendar 
+      },
+      { 
+        key: "rating", 
+        value: mentorData?.avg_rating > 0 ? Number(mentorData.avg_rating).toFixed(1) : "New", 
+        label: "Avg Rating", 
+        icon: Award 
+      }
     ] : config.metrics.map(m => ({
       key: m.key,
       value: m.default,

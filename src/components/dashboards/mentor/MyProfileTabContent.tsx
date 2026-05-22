@@ -241,6 +241,7 @@ export default function MyProfileTabContent() {
       };
 
       await updateMentor(userEmail, payload);
+      window.dispatchEvent(new Event("mentor-profile-updated"));
 
       showToast("Profile updated successfully!", "success");
       setIsModalOpen(false);

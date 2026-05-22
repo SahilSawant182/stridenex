@@ -183,29 +183,6 @@ export default function OverviewTabContent() {
     return `${h12}:${minutes} ${ampm}`;
   };
 
-  const dynamicUpcomingSessions = upcoming.slice(0, 4).map((s, index) => {
-    const studentName = s.student?.split('@')[0] || "Unknown";
-    const initials = studentName.substring(0, 2).toUpperCase();
-    const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
-    const color = colors[index % colors.length];
-
-    const dateObj = new Date(s.session_date);
-    const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    const timeStr = formatTime(s.from_time);
-
-    return {
-      id: s.name,
-      initials,
-      name: studentName,
-      topic: s.topic || "Session",
-      date: `${dateStr} ${timeStr}`,
-      duration: `${s.duration} min`,
-      type: "Mentorship",
-      color,
-      meeting_link: s.meeting_link
-    };
-  });
-
   const getInitials = (name: string) => {
     if (!name) return "??";
     const parts = name.split(" ");
@@ -227,6 +204,29 @@ export default function OverviewTabContent() {
     }
     return colors[Math.abs(hash) % colors.length];
   };
+
+  const dynamicUpcomingSessions = upcoming.slice(0, 4).map((s, index) => {
+    const studentName = s.student_name || (s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : null) || s.student?.split('@')[0] || "Unknown";
+    const initials = getInitials(studentName);
+    const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
+    const color = colors[index % colors.length];
+
+    const dateObj = new Date(s.session_date);
+    const dateStr = dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const timeStr = formatTime(s.from_time);
+
+    return {
+      id: s.name,
+      initials,
+      name: studentName,
+      topic: s.topic || "Session",
+      date: `${dateStr} ${timeStr}`,
+      duration: `${s.duration} min`,
+      type: "Mentorship",
+      color,
+      meeting_link: s.meeting_link
+    };
+  });
 
   const dynamicPendingRequests = pending.slice(0, 4).map((req) => {
     const name = req.student_name || "Student";
@@ -339,6 +339,16 @@ export default function OverviewTabContent() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 self-start sm:self-center ml-14 sm:ml-0">
+                    {session.meeting_link && (
+                      <a
+                        href={session.meeting_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center gap-1"
+                      >
+                        <Video className="w-4 h-4" /> Join
+                      </a>
+                    )}
                     <button
                       onClick={() => handleRescheduleClick(session.id)}
                       className="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-lg transition-colors">

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getUpcomingSessions, getSlotCalendar, getWeeklyBookedSessions, getMonthlyBookedSessions, blockTime, rescheduleSession } from "@/services/mentor.services";
+import { getUpcomingSessions, getSlotCalendar, getWeeklyBookedSessions, getMonthlyBookedSessions, blockTime, rescheduleSession, saveMentorAvailability, deleteMentorAvailability } from "@/services/mentor.services";
 
 import { motion } from "framer-motion";
 import { 
@@ -13,7 +13,9 @@ import {
   Edit3,
   List,
   X,
-  Loader2
+  Loader2,
+  Video,
+  Trash2
 } from "lucide-react";
 
 
@@ -59,6 +61,28 @@ export default function ScheduleTabContent() {
   const [rescheduleToTime, setRescheduleToTime] = useState("");
   const [submittingReschedule, setSubmittingReschedule] = useState(false);
   const [rescheduleError, setRescheduleError] = useState("");
+
+  // Availability Modal states
+  const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
+  const [scheduleType, setScheduleType] = useState<'Each Day Same Schedule' | 'Each Day Different Schedule'>('Each Day Same Schedule');
+  
+  // For 'Each Day Same Schedule'
+  const [sameScheduleFromTime, setSameScheduleFromTime] = useState("");
+  const [sameScheduleToTime, setSameScheduleToTime] = useState("");
+  const [sameScheduleSelectedDays, setSameScheduleSelectedDays] = useState<string[]>([]);
+  
+  // For 'Each Day Different Schedule'
+  const [differentScheduleDays, setDifferentScheduleDays] = useState<Record<string, { active: boolean; fromTime: string; toTime: string }>>({
+    Monday: { active: false, fromTime: "", toTime: "" },
+    Tuesday: { active: false, fromTime: "", toTime: "" },
+    Wednesday: { active: false, fromTime: "", toTime: "" },
+    Thursday: { active: false, fromTime: "", toTime: "" },
+    Friday: { active: false, fromTime: "", toTime: "" },
+    Saturday: { active: false, fromTime: "", toTime: "" },
+    Sunday: { active: false, fromTime: "", toTime: "" }
+  });
+  const [submittingAvailability, setSubmittingAvailability] = useState(false);
+  const [availabilityError, setAvailabilityError] = useState("");
 
   const handleRescheduleClick = (sessionId: string) => {
     setSelectedSessionId(sessionId);
@@ -119,6 +143,114 @@ export default function ScheduleTabContent() {
       setRescheduleError(errorMessage);
     } finally {
       setSubmittingReschedule(false);
+    }
+  };
+
+  const reloadSlotCalendar = async () => {
+    const email = currentUser || localStorage.getItem("userEmail") || "";
+    if (!email) return;
+    try {
+      const calendarRes = await getSlotCalendar(email);
+      if (calendarRes?.message) {
+        setSlotCalendar(calendarRes.message);
+      }
+    } catch (err) {
+      console.error("Failed to reload slot calendar", err);
+    }
+  };
+
+  const handleClearAvailability = async () => {
+    const email = currentUser || localStorage.getItem("userEmail") || "";
+    if (!email) return;
+    
+    if (!confirm("Are you sure you want to clear all your availability slots? This cannot be undone.")) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      await deleteMentorAvailability(email);
+      await reloadSlotCalendar();
+    } catch (err: any) {
+      console.error("Failed to delete availability", err);
+      alert(err.message || "Failed to clear availability.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveAvailability = async () => {
+    const email = currentUser || localStorage.getItem("userEmail") || "";
+    if (!email) return;
+    
+    try {
+      setAvailabilityError("");
+      setSubmittingAvailability(true);
+      
+      const formatTimeToSeconds = (t: string) => {
+        if (!t) return "";
+        if (t.split(':').length === 2) return `${t}:00`;
+        return t;
+      };
+      
+      let payload: any = {
+        mentor: email,
+        schedule_type: scheduleType
+      };
+      
+      if (scheduleType === 'Each Day Same Schedule') {
+        if (sameScheduleSelectedDays.length === 0) {
+          throw new Error("Please select at least one day.");
+        }
+        if (!sameScheduleFromTime || !sameScheduleToTime) {
+          throw new Error("Please fill in both From and To times.");
+        }
+        payload.from_time = formatTimeToSeconds(sameScheduleFromTime);
+        payload.to_time = formatTimeToSeconds(sameScheduleToTime);
+        payload.days_multi = sameScheduleSelectedDays.map(day => ({ day }));
+      } else {
+        const dailySchedule = Object.entries(differentScheduleDays)
+          .filter(([_, data]) => data.active)
+          .map(([day, data]) => {
+            if (!data.fromTime || !data.toTime) {
+              throw new Error(`Please fill in both From and To times for ${day}.`);
+            }
+            return {
+              day,
+              from_time: formatTimeToSeconds(data.fromTime),
+              to_time: formatTimeToSeconds(data.toTime)
+            };
+          });
+        
+        if (dailySchedule.length === 0) {
+          throw new Error("Please enable and configure at least one day.");
+        }
+        payload.daily_schedule = dailySchedule;
+      }
+      
+      await saveMentorAvailability(payload);
+      
+      // Reset state and close modal
+      setSameScheduleFromTime("");
+      setSameScheduleToTime("");
+      setSameScheduleSelectedDays([]);
+      setDifferentScheduleDays({
+        Monday: { active: false, fromTime: "", toTime: "" },
+        Tuesday: { active: false, fromTime: "", toTime: "" },
+        Wednesday: { active: false, fromTime: "", toTime: "" },
+        Thursday: { active: false, fromTime: "", toTime: "" },
+        Friday: { active: false, fromTime: "", toTime: "" },
+        Saturday: { active: false, fromTime: "", toTime: "" },
+        Sunday: { active: false, fromTime: "", toTime: "" }
+      });
+      
+      setAvailabilityModalOpen(false);
+      await reloadSlotCalendar();
+    } catch (err: any) {
+      console.error("Failed to save availability", err);
+      setAvailabilityError(err.message || "Failed to save availability. Please try again.");
+    } finally {
+      setSubmittingAvailability(false);
     }
   };
 
@@ -332,8 +464,8 @@ export default function ScheduleTabContent() {
   });
 
   const dynamicUpcomingBookings = upcoming.map((s, index) => {
-    const studentName = s.student?.split('@')[0] || "Unknown";
-    const initials = studentName.substring(0, 2).toUpperCase();
+    const studentName = s.student_name || (s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : null) || s.student?.split('@')[0] || "Unknown";
+    const initials = studentName.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2) || "??";
     const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
     const color = colors[index % colors.length];
     
@@ -428,6 +560,16 @@ export default function ScheduleTabContent() {
                     </div>
                   </div>
                   <div className="flex flex-col gap-2">
+                    {session.meeting_link && (
+                      <a
+                        href={session.meeting_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-1"
+                      >
+                        <Video className="w-3.5 h-3.5" /> Join
+                      </a>
+                    )}
                     <button className="px-3 py-1.5 text-orange-600 hover:bg-orange-50 bg-orange-50/50 border border-orange-100 text-sm font-semibold rounded-lg transition-colors flex items-center gap-1">
                       <Edit3 className="w-3.5 h-3.5" /> Prep Notes
                     </button>
@@ -445,10 +587,24 @@ export default function ScheduleTabContent() {
           transition={{ delay: 0.1 }}
           className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
         >
-          <div className="px-5 py-4 border-b border-slate-100">
+          <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center flex-wrap gap-2">
             <h3 className="font-bold text-slate-800 flex items-center gap-2">
               <Clock className="w-4 h-4 text-slate-500" /> Weekly Availability Grid
             </h3>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => setAvailabilityModalOpen(true)}
+                className="flex items-center gap-1 bg-blue-50 text-blue-600 hover:bg-blue-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" /> Set Availability
+              </button>
+              <button 
+                onClick={handleClearAvailability}
+                className="flex items-center gap-1 bg-red-50 text-red-600 hover:bg-red-100 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Clear All
+              </button>
+            </div>
           </div>
           <div className="p-5">
             <div className="space-y-5">
@@ -564,6 +720,16 @@ export default function ScheduleTabContent() {
                   <td className="py-4 px-6 font-bold text-emerald-600">{session.fee}</td>
                   <td className="py-4 px-6 text-right whitespace-nowrap">
                     <div className="flex items-center justify-end gap-2">
+                      {session.meeting_link && (
+                        <a
+                          href={session.meeting_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1"
+                        >
+                          <Video className="w-3.5 h-3.5" /> Join
+                        </a>
+                      )}
                       <button className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors">Notes</button>
                       <button 
                         onClick={() => handleRescheduleClick(session.id)}
@@ -730,6 +896,196 @@ export default function ScheduleTabContent() {
                 className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-bold transition-colors flex justify-center items-center gap-2"
               >
                 {submittingReschedule ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Set Availability Modal */}
+      {availabilityModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-lg overflow-hidden flex flex-col mx-4 max-h-[90vh]">
+            <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h3 className="font-bold text-slate-800 text-lg">Configure Availability</h3>
+              <button
+                onClick={() => setAvailabilityModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {availabilityError && (
+              <div className="px-5 py-3 bg-red-50 border-b border-red-100 flex items-start gap-2">
+                <div className="w-4 h-4 text-red-500 shrink-0 mt-0.5 font-bold flex items-center justify-center">!</div>
+                <p className="text-sm text-red-600 font-medium">{availabilityError}</p>
+              </div>
+            )}
+
+            <div className="p-5 space-y-5 overflow-y-auto flex-1 text-slate-700">
+              {/* Schedule Type Selection */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">Schedule Type</label>
+                <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setScheduleType('Each Day Same Schedule')}
+                    className={`py-2 text-xs font-bold rounded-md transition-all ${
+                      scheduleType === 'Each Day Same Schedule' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    Same Time Daily
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScheduleType('Each Day Different Schedule')}
+                    className={`py-2 text-xs font-bold rounded-md transition-all ${
+                      scheduleType === 'Each Day Different Schedule' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                    }`}
+                  >
+                    Different Time Daily
+                  </button>
+                </div>
+              </div>
+
+              {scheduleType === 'Each Day Same Schedule' ? (
+                <>
+                  {/* Same schedule days selector */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider">Select Days</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(day => {
+                        const isSelected = sameScheduleSelectedDays.includes(day);
+                        return (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={() => {
+                              if (isSelected) {
+                                setSameScheduleSelectedDays(sameScheduleSelectedDays.filter(d => d !== day));
+                              } else {
+                                setSameScheduleSelectedDays([...sameScheduleSelectedDays, day]);
+                              }
+                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                              isSelected
+                                ? 'bg-slate-800 border-slate-800 text-white shadow-sm'
+                                : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:border-slate-300'
+                            }`}
+                          >
+                            {day.substring(0, 3)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Same schedule time fields */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">From Time</label>
+                      <input
+                        type="time"
+                        value={sameScheduleFromTime}
+                        onChange={(e) => setSameScheduleFromTime(e.target.value)}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800/20 focus:border-slate-800 font-medium text-slate-700 bg-white"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">To Time</label>
+                      <input
+                        type="time"
+                        value={sameScheduleToTime}
+                        onChange={(e) => setSameScheduleToTime(e.target.value)}
+                        className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-800/20 focus:border-slate-800 font-medium text-slate-700 bg-white"
+                        required
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Different schedule days fields */
+                <div className="space-y-3.5 divide-y divide-slate-100">
+                  {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((day, idx) => {
+                    const dayConfig = differentScheduleDays[day];
+                    return (
+                      <div key={day} className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${idx > 0 ? 'pt-3.5' : ''}`}>
+                        <label className="flex items-center gap-2 cursor-pointer shrink-0 min-w-[120px]">
+                          <input
+                            type="checkbox"
+                            checked={dayConfig.active}
+                            onChange={(e) => {
+                              setDifferentScheduleDays({
+                                ...differentScheduleDays,
+                                [day]: {
+                                  ...dayConfig,
+                                  active: e.target.checked
+                                }
+                              });
+                            }}
+                            className="rounded border-slate-300 text-slate-800 focus:ring-slate-800 h-4 w-4"
+                          />
+                          <span className={`text-sm font-bold ${dayConfig.active ? 'text-slate-800' : 'text-slate-400'}`}>
+                            {day}
+                          </span>
+                        </label>
+
+                        <div className="flex items-center gap-2 flex-1 sm:justify-end">
+                          <input
+                            type="time"
+                            disabled={!dayConfig.active}
+                            value={dayConfig.fromTime}
+                            onChange={(e) => {
+                              setDifferentScheduleDays({
+                                ...differentScheduleDays,
+                                [day]: {
+                                  ...dayConfig,
+                                  fromTime: e.target.value
+                                }
+                              });
+                            }}
+                            className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-slate-800/20 focus:border-slate-800 font-medium text-slate-700 bg-white disabled:bg-slate-50 disabled:text-slate-400 w-28"
+                          />
+                          <span className="text-slate-400 text-xs font-medium">to</span>
+                          <input
+                            type="time"
+                            disabled={!dayConfig.active}
+                            value={dayConfig.toTime}
+                            onChange={(e) => {
+                              setDifferentScheduleDays({
+                                ...differentScheduleDays,
+                                [day]: {
+                                  ...dayConfig,
+                                  toTime: e.target.value
+                                }
+                              });
+                            }}
+                            className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-slate-800/20 focus:border-slate-800 font-medium text-slate-700 bg-white disabled:bg-slate-50 disabled:text-slate-400 w-28"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex gap-3 justify-end shrink-0">
+              <button
+                onClick={() => setAvailabilityModalOpen(false)}
+                className="flex-1 px-4 py-2 text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-sm font-bold transition-colors"
+                disabled={submittingAvailability}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveAvailability}
+                disabled={submittingAvailability}
+                className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-bold transition-colors flex justify-center items-center gap-2"
+              >
+                {submittingAvailability ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Availability"}
               </button>
             </div>
           </div>
