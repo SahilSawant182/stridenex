@@ -169,8 +169,10 @@ export default function SessionHistoryTabContent() {
           getSessionHistory(email),
           updateMentorStats(email)
         ]);
-        if (res?.message) {
+        if (res?.message && Array.isArray(res.message)) {
           setSessions(res.message);
+        } else {
+          setSessions([]);
         }
         if (statsRes?.message) {
           setStats({
@@ -200,7 +202,7 @@ export default function SessionHistoryTabContent() {
     return `${h12}:${minutes} ${ampm}`;
   };
 
-  const mappedSessions = sessions.map((s, index) => {
+  const mappedSessions = (Array.isArray(sessions) ? sessions : []).map((s, index) => {
     const studentName = s.student?.split('@')[0] || "Unknown";
     const initials = studentName.substring(0, 2).toUpperCase();
     const colors = ["bg-red-500", "bg-yellow-500", "bg-green-500", "bg-emerald-400", "bg-indigo-600", "bg-fuchsia-500"];

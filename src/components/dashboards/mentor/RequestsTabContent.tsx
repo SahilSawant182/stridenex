@@ -106,7 +106,7 @@ export default function RequestsTabContent() {
     try {
       setLoading(true);
       const response = await getPendingRequests(currentUser);
-      setRequests(response.message || []);
+      setRequests(Array.isArray(response.message) ? response.message : []);
     } catch (err) {
       console.error("Failed to fetch requests", err);
       setError("Failed to load requests.");

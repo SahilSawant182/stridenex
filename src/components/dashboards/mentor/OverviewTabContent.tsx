@@ -108,8 +108,10 @@ export default function OverviewTabContent() {
       const email = currentUser || localStorage.getItem("userEmail") || "";
       if (email) {
         const upcomingRes = await getUpcomingSessions(email);
-        if (upcomingRes?.message) {
+        if (upcomingRes?.message && Array.isArray(upcomingRes.message)) {
           setUpcoming(upcomingRes.message);
+        } else {
+          setUpcoming([]);
         }
       }
     } catch (error: any) {
@@ -155,11 +157,15 @@ export default function OverviewTabContent() {
           getPendingRequests(email),
           getMentorDashboardStats(email)
         ]);
-        if (upcomingRes?.message) {
+        if (upcomingRes?.message && Array.isArray(upcomingRes.message)) {
           setUpcoming(upcomingRes.message);
+        } else {
+          setUpcoming([]);
         }
-        if (pendingRes?.message) {
+        if (pendingRes?.message && Array.isArray(pendingRes.message)) {
           setPending(pendingRes.message);
+        } else {
+          setPending([]);
         }
         if (statsRes?.message) {
           setDashboardStats(statsRes.message);
@@ -205,7 +211,7 @@ export default function OverviewTabContent() {
     return colors[Math.abs(hash) % colors.length];
   };
 
-  const dynamicUpcomingSessions = upcoming.slice(0, 4).map((s, index) => {
+  const dynamicUpcomingSessions = (Array.isArray(upcoming) ? upcoming : []).slice(0, 4).map((s, index) => {
     const studentName = s.student_name || (s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : null) || s.student?.split('@')[0] || "Unknown";
     const initials = getInitials(studentName);
     const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
@@ -228,7 +234,7 @@ export default function OverviewTabContent() {
     };
   });
 
-  const dynamicPendingRequests = pending.slice(0, 4).map((req) => {
+  const dynamicPendingRequests = (Array.isArray(pending) ? pending : []).slice(0, 4).map((req) => {
     const name = req.student_name || "Student";
     const priority = req.priority || 'Normal';
     return {

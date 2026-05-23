@@ -112,8 +112,10 @@ export default function ScheduleTabContent() {
       const email = currentUser || localStorage.getItem("userEmail") || "";
       if (email) {
         const upcomingRes = await getUpcomingSessions(email);
-        if (upcomingRes?.message) {
+        if (upcomingRes?.message && Array.isArray(upcomingRes.message)) {
           setUpcoming(upcomingRes.message);
+        } else {
+          setUpcoming([]);
         }
       }
     } catch (error: any) {
@@ -151,8 +153,10 @@ export default function ScheduleTabContent() {
     if (!email) return;
     try {
       const calendarRes = await getSlotCalendar(email);
-      if (calendarRes?.message) {
+      if (calendarRes?.message && typeof calendarRes.message === 'object') {
         setSlotCalendar(calendarRes.message);
+      } else {
+        setSlotCalendar({});
       }
     } catch (err) {
       console.error("Failed to reload slot calendar", err);
@@ -267,14 +271,20 @@ export default function ScheduleTabContent() {
           getSlotCalendar(email),
           getWeeklyBookedSessions(email)
         ]);
-        if (upcomingRes?.message) {
+        if (upcomingRes?.message && Array.isArray(upcomingRes.message)) {
           setUpcoming(upcomingRes.message);
+        } else {
+          setUpcoming([]);
         }
-        if (calendarRes?.message) {
+        if (calendarRes?.message && typeof calendarRes.message === 'object') {
           setSlotCalendar(calendarRes.message);
+        } else {
+          setSlotCalendar({});
         }
-        if (weeklyRes?.message) {
+        if (weeklyRes?.message && Array.isArray(weeklyRes.message)) {
           setWeeklyBooked(weeklyRes.message);
+        } else {
+          setWeeklyBooked([]);
         }
       } catch (err) {
         console.error("Failed to fetch schedule data", err);
@@ -292,8 +302,10 @@ export default function ScheduleTabContent() {
     try {
       setLoadingMonthly(true);
       const monthlyRes = await getMonthlyBookedSessions(email);
-      if (monthlyRes?.message) {
+      if (monthlyRes?.message && Array.isArray(monthlyRes.message)) {
         setMonthlyBooked(monthlyRes.message);
+      } else {
+        setMonthlyBooked([]);
       }
     } catch (err) {
       console.error("Failed to fetch monthly booked sessions", err);
@@ -308,8 +320,10 @@ export default function ScheduleTabContent() {
     try {
       setLoadingWeekly(true);
       const weeklyRes = await getWeeklyBookedSessions(email);
-      if (weeklyRes?.message) {
+      if (weeklyRes?.message && Array.isArray(weeklyRes.message)) {
         setWeeklyBooked(weeklyRes.message);
+      } else {
+        setWeeklyBooked([]);
       }
     } catch (err) {
       console.error("Failed to fetch weekly booked sessions", err);
@@ -360,8 +374,10 @@ export default function ScheduleTabContent() {
       }
 
       const calendarRes = await getSlotCalendar(email);
-      if (calendarRes?.message) {
+      if (calendarRes?.message && typeof calendarRes.message === 'object') {
         setSlotCalendar(calendarRes.message);
+      } else {
+        setSlotCalendar({});
       }
     } catch (err) {
       console.error("Failed to block time", err);
@@ -396,18 +412,19 @@ export default function ScheduleTabContent() {
     return `${dayName} (${dateFormatted})`;
   };
 
-  const dynamicAvailabilityGrid = Object.keys(slotCalendar).map(dateStr => {
+  const dynamicAvailabilityGrid = Object.keys(slotCalendar || {}).map(dateStr => {
+    const slots = slotCalendar[dateStr];
     return {
       day: getDayName(dateStr),
-      slots: slotCalendar[dateStr].map(slot => ({
+      slots: Array.isArray(slots) ? slots.map(slot => ({
         time: formatTimeSlot(slot.from_time),
         status: slot.status,
         reason: slot.reason
-      }))
+      })) : []
     };
   });
 
-  const dynamicWeeklyBooked = weeklyBooked.map((s, index) => {
+  const dynamicWeeklyBooked = (Array.isArray(weeklyBooked) ? weeklyBooked : []).map((s, index) => {
     const studentName = s.student_name || s.student?.split('@')[0] || "Unknown";
     const initials = studentName.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2) || "??";
     const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
@@ -435,7 +452,7 @@ export default function ScheduleTabContent() {
     };
   });
 
-  const dynamicMonthlyBooked = monthlyBooked.map((s, index) => {
+  const dynamicMonthlyBooked = (Array.isArray(monthlyBooked) ? monthlyBooked : []).map((s, index) => {
     const studentName = s.student_name || s.student?.split('@')[0] || "Unknown";
     const initials = studentName.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2) || "??";
     const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
@@ -463,7 +480,7 @@ export default function ScheduleTabContent() {
     };
   });
 
-  const dynamicUpcomingBookings = upcoming.map((s, index) => {
+  const dynamicUpcomingBookings = (Array.isArray(upcoming) ? upcoming : []).map((s, index) => {
     const studentName = s.student_name || (s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : null) || s.student?.split('@')[0] || "Unknown";
     const initials = studentName.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2) || "??";
     const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
