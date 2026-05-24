@@ -537,7 +537,14 @@ export default function IndustryOnboarding({
                     setSuccess("Industry onboarding completed successfully!");
                     localStorage.clear();
                     setTimeout(() => {
-                        window.location.href = "/login";
+                        // ✅ Check if coming from mobile
+                        if (isMobileSource) {
+                            console.log("Mobile source - redirecting to web login");
+                            window.location.href = "https://testwebstridenex.quantcloud.in/login";
+                        } else {
+                            console.log("Web source - redirecting to /login");
+                            window.location.href = "/login";
+                        }
                     }, 1500);
                 } else {
                     setSuccess("Industry onboarding completed successfully!");
@@ -745,12 +752,22 @@ export default function IndustryOnboarding({
 
     const handleSkip = () => {
         if (onSkip) {
-            console.log("skip1");
+            console.log("skip1 - calling onSkip");
             onSkip();
         } else {
-            console.log("skip2");
+            console.log("skip2 - isMobileSource:", isMobileSource);
             localStorage.clear();
-            window.location.href = "/login";
+
+            // ✅ Check if coming from mobile
+            if (isMobileSource) {
+                // Mobile user - redirect to web login (WebView will catch it)
+                console.log("Mobile source - redirecting to web login");
+                window.location.href = "https://testwebstridenex.quantcloud.in/login";
+            } else {
+                // Web user - redirect to regular login
+                console.log("Web source - redirecting to /login");
+                window.location.href = "/login";
+            }
         }
     };
 

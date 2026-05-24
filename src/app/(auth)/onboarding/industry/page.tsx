@@ -28,8 +28,13 @@ function IndustryOnboardingContent() {
         localStorage.setItem("onboardingCompleted", "true");
         localStorage.setItem("userType", "industry");
 
+        // if (isMobileSource) {
+        //   window.location.href = "stridenex://login";
+        // } else {
+        //   router.push("/industry/dashboard");
+        // }
         if (isMobileSource) {
-          window.location.href = "stridenex://login";
+          window.location.href = "https://testwebstridenex.quantcloud.in/login"; // ← CORRECT! Use web login URL
         } else {
           router.push("/industry/dashboard");
         }
