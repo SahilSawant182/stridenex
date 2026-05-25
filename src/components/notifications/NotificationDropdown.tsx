@@ -17,10 +17,10 @@ import {
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead, type Notification } from "@/services/notification.services";
 
 interface NotificationDropdownProps {
-  module: string;
+  ownerEmail: string;
 }
 
-export default function NotificationDropdown({ module }: NotificationDropdownProps) {
+export default function NotificationDropdown({ ownerEmail }: NotificationDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
@@ -28,12 +28,13 @@ export default function NotificationDropdown({ module }: NotificationDropdownPro
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = async () => {
+    if (!ownerEmail) return;
     setLoading(true);
     try {
-      const response = await getNotifications(module);
+      const response = await getNotifications(ownerEmail);
       const notificationsData = response.message.data || [];
       setNotifications(notificationsData);
-      setUnreadCount(notificationsData.filter(n => n.status === 'Unseen').length);
+      setUnreadCount(response.message.unread_count ?? notificationsData.filter(n => n.read === 0).length);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {
@@ -42,18 +43,21 @@ export default function NotificationDropdown({ module }: NotificationDropdownPro
   };
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && ownerEmail) {
       fetchNotifications();
     }
-  }, [isOpen, module]);
+  }, [isOpen, ownerEmail]);
 
   // Initial fetch on mount
   useEffect(() => {
-    fetchNotificationCount();
-  }, [module]);
+    if (ownerEmail) {
+      fetchNotificationCount();
+    }
+  }, [ownerEmail]);
 
   // Set up periodic polling for real-time updates
   useEffect(() => {
+    if (!ownerEmail) return;
     const interval = setInterval(() => {
       if (isOpen) {
         fetchNotifications();
@@ -64,13 +68,14 @@ export default function NotificationDropdown({ module }: NotificationDropdownPro
     }, 30000); // Poll every 30 seconds
 
     return () => clearInterval(interval);
-  }, [isOpen, module]);
+  }, [isOpen, ownerEmail]);
 
   const fetchNotificationCount = async () => {
+    if (!ownerEmail) return;
     try {
-      const response = await getNotifications(module);
+      const response = await getNotifications(ownerEmail);
       const notificationsData = response.message.data || [];
-      setUnreadCount(notificationsData.filter(n => n.status === 'Unseen').length);
+      setUnreadCount(response.message.unread_count ?? notificationsData.filter(n => n.read === 0).length);
     } catch (error) {
       console.error('Failed to fetch notification count:', error);
     }
@@ -93,10 +98,11 @@ export default function NotificationDropdown({ module }: NotificationDropdownPro
   }, [isOpen]);
 
   const handleMarkAsRead = async (notificationId: string) => {
+    if (!ownerEmail) return;
     try {
-      await markNotificationAsRead(notificationId);
+      await markNotificationAsRead(notificationId, ownerEmail);
       setNotifications(prev => 
-        prev.map(n => n.name === notificationId ? { ...n, status: 'Seen' } : n)
+        prev.map(n => n.name === notificationId ? { ...n, read: 1 } : n)
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
@@ -105,24 +111,25 @@ export default function NotificationDropdown({ module }: NotificationDropdownPro
   };
 
   const handleMarkAllAsRead = async () => {
+    if (!ownerEmail) return;
     try {
-      await markAllNotificationsAsRead(module);
-      setNotifications(prev => prev.map(n => ({ ...n, status: 'Seen' })));
+      await markAllNotificationsAsRead(ownerEmail);
+      setNotifications(prev => prev.map(n => ({ ...n, read: 1 })));
       setUnreadCount(0);
     } catch (error) {
       console.error('Failed to mark all notifications as read:', error);
     }
   };
 
-  const getNotificationIcon = (title?: string) => {
-    // You can customize icons based on notification title or other criteria
-    if (title?.toLowerCase().includes('event')) {
+  const getNotificationIcon = (subject?: string) => {
+    // You can customize icons based on notification subject or other criteria
+    if (subject?.toLowerCase().includes('event')) {
       return <CheckCircle className="w-4 h-4 text-blue-500" />;
-    } else if (title?.toLowerCase().includes('warning') || title?.toLowerCase().includes('alert')) {
+    } else if (subject?.toLowerCase().includes('warning') || subject?.toLowerCase().includes('alert')) {
       return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
-    } else if (title?.toLowerCase().includes('error') || title?.toLowerCase().includes('failed')) {
+    } else if (subject?.toLowerCase().includes('error') || subject?.toLowerCase().includes('failed')) {
       return <XCircle className="w-4 h-4 text-red-500" />;
-    } else if (title?.toLowerCase().includes('success') || title?.toLowerCase().includes('completed')) {
+    } else if (subject?.toLowerCase().includes('success') || subject?.toLowerCase().includes('completed')) {
       return <CheckCircle className="w-4 h-4 text-green-500" />;
     }
     return <Info className="w-4 h-4 text-blue-500" />;
@@ -216,25 +223,28 @@ export default function NotificationDropdown({ module }: NotificationDropdownPro
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       className={`p-4 hover:bg-slate-50 transition-colors cursor-pointer ${
-                        notification.status === 'Unseen' ? 'bg-blue-50/30' : ''
+                        notification.read === 0 ? 'bg-blue-50/30' : ''
                       }`}
-                      onClick={() => notification.status === 'Unseen' && handleMarkAsRead(notification.name)}
+                      onClick={() => notification.read === 0 && handleMarkAsRead(notification.name)}
                     >
                       <div className="flex items-start gap-3">
                         <div className="mt-0.5">
-                          {getNotificationIcon(notification.title)}
+                          {getNotificationIcon(notification.subject)}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1">
                               <h4 className="text-sm font-semibold text-slate-900 mb-1">
-                                {notification.title}
+                                {notification.subject}
                               </h4>
-                              <p className="text-sm text-slate-600 leading-relaxed">
-                                {notification.message}
-                              </p>
+                              {notification.email_content && (
+                                <div 
+                                  className="text-sm text-slate-600 leading-relaxed [&>b]:font-semibold"
+                                  dangerouslySetInnerHTML={{ __html: notification.email_content }}
+                                />
+                              )}
                             </div>
-                            {notification.status === 'Unseen' && (
+                            {notification.read === 0 && (
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -252,7 +262,7 @@ export default function NotificationDropdown({ module }: NotificationDropdownPro
                             <span className="text-xs text-slate-500">
                               {formatTime(notification.creation)}
                             </span>
-                            {notification.status === 'Unseen' && (
+                            {notification.read === 0 && (
                               <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                             )}
                           </div>
