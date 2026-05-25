@@ -769,7 +769,7 @@ export default function MentorOnboarding({
           if (typeof updateOnboardedFlag === "function") {
             updateOnboardedFlag("3");
           }
-          
+
           setSuccess(
             "Mentor onboarding completed successfully! You will be redirected to login page."
           );
@@ -1444,14 +1444,15 @@ export default function MentorOnboarding({
         multiSelect: true,
         apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: {
-          doctype: "Student Skill",
-          fields: ["skill"]
+          doctype: "Skill",
+          fields: ["skill_name"],
         },
-        mapOptions: data => {
+        mapOptions: (data) => {
+          console.log("Skills data received:", data);
           const items = data.data || data || [];
           return items.map((item: any) => ({
-            value: item.skill,
-            label: item.skill
+            value: item.name || item.skill_name,
+            label: item.skill_name || item.name
           }));
         }
       },
@@ -1652,7 +1653,7 @@ export default function MentorOnboarding({
             className="flex-1"
             loading={loading}
             disabled={loading}
-            // onClick={handleSubmit}
+          // onClick={handleSubmit}
           >
             Complete Registration
           </Button>

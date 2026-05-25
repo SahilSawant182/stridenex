@@ -200,9 +200,10 @@ export default function OverviewTabContent() {
 
   const getInitials = (name: string) => {
     if (!name) return "??";
-    const parts = name.split(" ");
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "??";
     if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    return name.slice(0, 2).toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
   };
 
   const getRandomColorClass = (name: string) => {
