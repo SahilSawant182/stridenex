@@ -95,7 +95,7 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
           {/* ABOUT */}
           <div>
             <h3 className="text-[11px] font-bold text-slate-900 mb-3 tracking-widest uppercase">About</h3>
-            
+
             {(data.about || data.about_company) && (
               <div className="flex items-start gap-3 mb-4">
                 <FileText className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
@@ -105,7 +105,7 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
                 </div>
               </div>
             )}
-            
+
             {data.specializations && data.specializations.length > 0 ? (
               <div className="flex items-start gap-3">
                 <Target className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
@@ -177,7 +177,7 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
               <MapPin className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
               <div className="flex-1 space-y-2">
                 <span className="text-slate-700 font-medium leading-relaxed block">{getAddress(data)}</span>
-                <a 
+                <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(getAddress(data))}`}
                   target="_blank"
                   rel="noreferrer"
@@ -275,7 +275,7 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
         <h3 className="font-semibold text-lg">{fullName || currentUser}</h3>
         <p className="text-blue-100 text-sm">{config.roleName}</p>
       </div>
-      
+
       <div className="p-4 space-y-3 text-slate-800">
         <div className="space-y-3 text-sm">
           <div className="flex items-start gap-2">
@@ -285,7 +285,7 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
               <p className="font-medium break-all">{currentUser}</p>
             </div>
           </div>
-          
+
           {role === 'student' && data && (
             <>
               {(data.college || data.department) && (
@@ -311,7 +311,7 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
           )}
 
           {(!data || role !== 'student') && (
-             <p className="text-xs text-slate-500 italic">Basic profile details shown.</p>
+            <p className="text-xs text-slate-500 italic">Basic profile details shown.</p>
           )}
         </div>
 
@@ -395,18 +395,17 @@ export default function Navbar({ role }: NavbarProps) {
       </div>
 
       <div className="flex items-center gap-3">
-        <NotificationDropdown module={role.charAt(0).toUpperCase() + role.slice(1)} />
+        <NotificationDropdown ownerEmail={currentUser || ''} />
 
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             className="flex items-center gap-2 p-1 pl-2 pr-3 bg-slate-50 hover:bg-slate-100 rounded-full border border-slate-200 transition-colors"
           >
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm ${
-                role === 'student' ? 'bg-gradient-to-tr from-accent to-orange-500' :
-                role === 'college' ? 'bg-green-600' :
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm ${role === 'student' ? 'bg-gradient-to-tr from-accent to-orange-500' :
+              role === 'college' ? 'bg-green-600' :
                 role === 'mentor' ? 'bg-violet-600' :
-                'bg-purple-600' // industry
+                  'bg-purple-600' // industry
               }`}>
               {displayName.charAt(0).toUpperCase()}
             </div>
@@ -429,7 +428,7 @@ export default function Navbar({ role }: NavbarProps) {
                     <p className="text-xs text-slate-500">Signed in as</p>
                     <p className="text-sm font-semibold text-slate-900 truncate">{currentUser}</p>
                   </div>
-                  <button 
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setShowProfileBox(!showProfileBox);
@@ -456,7 +455,7 @@ export default function Navbar({ role }: NavbarProps) {
                       />
                     )}
                   </AnimatePresence>
-                  <Link 
+                  <Link
                     href={getPlansPath()}
                     onClick={() => setUserMenuOpen(false)}
                     className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2"
