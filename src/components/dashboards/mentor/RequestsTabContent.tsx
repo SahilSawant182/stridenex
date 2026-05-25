@@ -14,14 +14,20 @@ import {
   Loader2
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { getPendingRequests, suggestAltTime, acceptRequest, declineRequest } from "@/services/mentor.services";
+import { getPendingRequests, suggestAltTime, acceptRequest, declineRequest, getMentorPendingVerifications, verifyAndEndorseSkill, rejectSkillEvidence } from "@/services/mentor.services";
+import { BASE_DOMAIN } from "@/services/api.services";
 
 
 export default function RequestsTabContent() {
   const { currentUser } = useAuth();
   const [requests, setRequests] = useState<any[]>([]);
+  const [verifyQueue, setVerifyQueue] = useState<any[]>([]);
+  const [totalPendingCount, setTotalPendingCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [loadingVerify, setLoadingVerify] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [processingEvidenceName, setProcessingEvidenceName] = useState<string | null>(null);
+  const [actionType, setActionType] = useState<'verify' | 'reject' | null>(null);
 
   const [altTimeModal, setAltTimeModal] = useState<{ isOpen: boolean; req: any | null }>({ isOpen: false, req: null });
   const [altDate, setAltDate] = useState("");
@@ -115,9 +121,89 @@ export default function RequestsTabContent() {
     }
   };
 
+  const fetchVerifyQueue = async () => {
+    if (!currentUser) return;
+    try {
+      setLoadingVerify(true);
+      const response = await getMentorPendingVerifications(currentUser, 0);
+      if (response?.message) {
+        setVerifyQueue(response.message.records || []);
+        setTotalPendingCount(response.message.total_pending_count || 0);
+      } else {
+        setVerifyQueue([]);
+        setTotalPendingCount(0);
+      }
+    } catch (err) {
+      console.error("Failed to fetch verification queue", err);
+    } finally {
+      setLoadingVerify(false);
+    }
+  };
+
+  const handleVerifyAndEndorse = async (evidenceName: string) => {
+    try {
+      setProcessingEvidenceName(evidenceName);
+      setActionType('verify');
+      const res = await verifyAndEndorseSkill(evidenceName);
+      setFeedback({
+        type: 'success',
+        message: typeof res.message === 'object' ? JSON.stringify(res.message) : res.message || "Skill verified and endorsed successfully."
+      });
+      fetchVerifyQueue();
+    } catch (err: any) {
+      console.error("Failed to verify skill:", err);
+      setFeedback({
+        type: 'error',
+        message: err?.message || "Failed to verify and endorse skill."
+      });
+    } finally {
+      setProcessingEvidenceName(null);
+      setActionType(null);
+    }
+  };
+
+  const handleRejectEvidence = async (evidenceName: string) => {
+    try {
+      setProcessingEvidenceName(evidenceName);
+      setActionType('reject');
+      const res = await rejectSkillEvidence(evidenceName);
+      setFeedback({
+        type: 'success',
+        message: typeof res.message === 'object' ? JSON.stringify(res.message) : res.message || "Skill evidence rejected."
+      });
+      fetchVerifyQueue();
+    } catch (err: any) {
+      console.error("Failed to reject skill evidence:", err);
+      setFeedback({
+        type: 'error',
+        message: err?.message || "Failed to reject skill evidence."
+      });
+    } finally {
+      setProcessingEvidenceName(null);
+      setActionType(null);
+    }
+  };
+
   useEffect(() => {
     fetchRequests();
+    fetchVerifyQueue();
   }, [currentUser]);
+
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "";
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    } catch (e) {
+      return dateStr;
+    }
+  };
+
+  const getBadgeColor = (type?: string) => {
+    if (type === 'Course') return 'bg-blue-50 text-blue-600';
+    if (type === 'Project') return 'bg-emerald-50 text-emerald-600';
+    return 'bg-amber-50 text-amber-600';
+  };
 
   const getInitials = (name: string) => {
     if (!name) return "??";
@@ -167,24 +253,9 @@ export default function RequestsTabContent() {
 
   const summaryStats = useMemo(() => [
     { label: "Unattended Student Requests", value: requests.length, icon: UserPlus, color: "bg-red-50", textColor: "text-red-500", borderColor: "border-red-100" },
-    { label: "Skill Verification Pending", value: 4, icon: ShieldCheck, color: "bg-amber-50", textColor: "text-amber-500", borderColor: "border-amber-100" },
+    { label: "Skill Verification Pending", value: totalPendingCount, icon: ShieldCheck, color: "bg-amber-50", textColor: "text-amber-500", borderColor: "border-amber-100" },
     { label: "Approved This Month", value: 31, icon: CheckCircle, color: "bg-emerald-50", textColor: "text-emerald-500", borderColor: "border-emerald-100" }
-  ], [requests.length]);
-
-  const skillVerifyQueue = [
-    {
-      id: "SVR-0091", name: "Priya Sharma", skill: "Machine Learning", submitted: "Feb 22",
-      priority: "normal", evidence: "3 projects + Kaggle rank 840"
-    },
-    {
-      id: "SVR-0089", name: "Arjun Nair", skill: "System Design", submitted: "Feb 20",
-      priority: "high", evidence: "HLD document + peer review"
-    },
-    {
-      id: "SVR-0084", name: "Sneha Patel", skill: "Product Strategy", submitted: "Feb 15",
-      priority: "normal", evidence: "Startup pitch deck + user research"
-    }
-  ];
+  ], [requests.length, totalPendingCount]);
   return (
     <div className="space-y-6">
       {feedback && (
@@ -332,52 +403,94 @@ export default function RequestsTabContent() {
           </div>
 
           <div className="space-y-4">
-            {skillVerifyQueue.map((item, i) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 + (i * 0.1) }}
-                className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
-              >
-                <div className="p-5">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h4 className="font-bold text-slate-800 text-lg leading-tight mb-1">{item.name}</h4>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-                          {item.skill}
-                        </span>
-                        <span className="text-xs text-slate-500">
-                          Submitted: {item.submitted}
-                        </span>
-                        <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${item.priority === 'high' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'}`}>
-                          {item.priority}
-                        </span>
+            {loadingVerify ? (
+              <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-200">
+                <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-2" />
+                <p className="text-sm text-slate-500 font-medium">Fetching verification requests...</p>
+              </div>
+            ) : verifyQueue.length > 0 ? (
+              verifyQueue.map((item, i) => (
+                <motion.div
+                  key={item.evidence_name}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 + (i * 0.1) }}
+                  className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+                >
+                  <div className="p-5">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h4 className="font-bold text-slate-800 text-lg leading-tight mb-1">{item.student_name}</h4>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                            {item.skill}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            Submitted: {formatDate(item.creation)}
+                          </span>
+                          <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${getBadgeColor(item.evidence_type)}`}>
+                            {item.evidence_type}
+                          </span>
+                        </div>
                       </div>
+                      <span className="text-xs text-slate-400 font-mono">{item.evidence_name}</span>
                     </div>
-                    <span className="text-xs text-slate-400 font-mono">{item.id}</span>
-                  </div>
 
-                  <div className="flex items-center gap-2 text-sm text-slate-600 mb-5">
-                    <LinkIcon className="w-4 h-4 text-slate-400" />
-                    <span className="font-semibold text-slate-500">Evidence:</span> {item.evidence}
-                  </div>
+                    <div className="flex items-center gap-2 text-sm text-slate-600 mb-5">
+                      <LinkIcon className="w-4 h-4 text-slate-400" />
+                      <span className="font-semibold text-slate-500">Evidence:</span> {item.description || "No description provided."}
+                    </div>
 
-                  <div className="flex items-center gap-2">
-                    <button className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm rounded-lg flex items-center justify-center gap-1.5 transition-colors">
-                      <ShieldCheck className="w-4 h-4" /> Verify & Endorse
-                    </button>
-                    <button className="flex-1 py-2 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-sm rounded-lg transition-colors">
-                      Review Evidence
-                    </button>
-                    <button className="px-4 py-2 hover:bg-red-50 border border-slate-200 text-slate-500 hover:text-red-600 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors">
-                      <X className="w-4 h-4" /> Reject
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={() => handleVerifyAndEndorse(item.evidence_name)}
+                        disabled={processingEvidenceName !== null}
+                        className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold text-sm rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        {processingEvidenceName === item.evidence_name && actionType === 'verify' ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <ShieldCheck className="w-4 h-4" />
+                        )}{" "}
+                        Verify & Endorse
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (item.document_url) {
+                            const url = item.document_url.startsWith('http') 
+                              ? item.document_url 
+                              : `${BASE_DOMAIN}${item.document_url}`;
+                            window.open(url, '_blank');
+                          }
+                        }}
+                        disabled={!item.document_url}
+                        className="flex-1 py-2 border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 font-bold text-sm rounded-lg transition-colors"
+                      >
+                        Review Evidence
+                      </button>
+                      <button 
+                        onClick={() => handleRejectEvidence(item.evidence_name)}
+                        disabled={processingEvidenceName !== null}
+                        className="px-4 py-2 hover:bg-red-50 disabled:opacity-50 border border-slate-200 text-slate-500 hover:text-red-600 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors"
+                      >
+                        {processingEvidenceName === item.evidence_name && actionType === 'reject' ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <X className="w-4 h-4" />
+                        )}{" "}
+                        Reject
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              ))
+            ) : (
+              <div className="py-20 flex flex-col items-center justify-center bg-white border border-dashed border-slate-200 rounded-2xl">
+                <ShieldCheck className="w-12 h-12 text-slate-200 mb-4" />
+                <h3 className="text-lg font-bold text-slate-800">No Pending Verifications</h3>
+                <p className="text-sm text-slate-500">All student skill verification requests have been handled.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

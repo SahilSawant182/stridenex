@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { getUpcomingSessions, getPendingRequests, rescheduleSession, getMentorDashboardStats } from "@/services/mentor.services";
+import { getUpcomingSessions, getPendingRequests, rescheduleSession, getMentorDashboardStats, getMentorPendingVerifications } from "@/services/mentor.services";
 
 import { motion } from "framer-motion";
 import {
@@ -50,11 +50,7 @@ const pendingRequests = [
   { initials: "TG", name: "Tanya Gupta", topic: "Career Switch Counselling", priority: "medium", color: "bg-emerald-100 text-emerald-700" }
 ];
 
-const verifyQueue = [
-  { name: "Priya Sharma", skill: "Machine Learning", priority: "normal", icon: AlertCircle, iconColor: "text-slate-400" },
-  { name: "Arjun Nair", skill: "System Design", priority: "high", icon: AlertCircle, iconColor: "text-red-500" },
-  { name: "Sneha Patel", skill: "Product Strategy", priority: "normal", icon: AlertCircle, iconColor: "text-slate-400" }
-];
+// verifyQueue is now fetched dynamically from API and managed as a state variable in OverviewTabContent
 
 const thisMonthStats = [
   { label: "Sessions completed", value: "18", icon: GraduationCap },
@@ -70,6 +66,8 @@ export default function OverviewTabContent() {
   const { currentUser } = useAuth();
   const [upcoming, setUpcoming] = useState<any[]>([]);
   const [pending, setPending] = useState<any[]>([]);
+  const [verifyQueue, setVerifyQueue] = useState<any[]>([]);
+  const [totalPendingCount, setTotalPendingCount] = useState<number>(0);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
@@ -152,10 +150,11 @@ export default function OverviewTabContent() {
         return;
       }
       try {
-        const [upcomingRes, pendingRes, statsRes] = await Promise.all([
+        const [upcomingRes, pendingRes, statsRes, verifyQueueRes] = await Promise.all([
           getUpcomingSessions(email),
           getPendingRequests(email),
-          getMentorDashboardStats(email)
+          getMentorDashboardStats(email),
+          getMentorPendingVerifications(email, 3)
         ]);
         if (upcomingRes?.message && Array.isArray(upcomingRes.message)) {
           setUpcoming(upcomingRes.message);
@@ -169,6 +168,13 @@ export default function OverviewTabContent() {
         }
         if (statsRes?.message) {
           setDashboardStats(statsRes.message);
+        }
+        if (verifyQueueRes?.message) {
+          setVerifyQueue(verifyQueueRes.message.records || []);
+          setTotalPendingCount(verifyQueueRes.message.total_pending_count || 0);
+        } else {
+          setVerifyQueue([]);
+          setTotalPendingCount(0);
         }
       } catch (err) {
         console.error("Failed to fetch dashboard data", err);
@@ -267,8 +273,24 @@ export default function OverviewTabContent() {
       iconColor: "text-blue-600", 
       borderStyle: "border-t-4 border-t-blue-500" 
     },
-    defaultOverviewStats[2],
+    {
+      label: "AVERAGE RATING",
+      value: dashboardStats?.this_month?.five_star_reviews ? "5/5" : "0/5",
+      trend: `from ${dashboardStats?.this_month?.five_star_reviews || 0} reviews`,
+      trendUp: true,
+      icon: Star,
+      iconBg: "bg-yellow-50",
+      iconColor: "text-yellow-600",
+      borderStyle: "border-t-4 border-t-amber-400"
+    },
     defaultOverviewStats[3]
+  ];
+
+  const dynamicThisMonthStats = [
+    { label: "Sessions completed", value: dashboardStats?.this_month?.sessions_completed?.toString() || "0", icon: GraduationCap },
+    { label: "5-star reviews", value: dashboardStats?.this_month?.five_star_reviews?.toString() || "0", icon: Star },
+    { label: "Skills verified", value: dashboardStats?.this_month?.skills_verified?.toString() || "0", icon: CheckCircle },
+    { label: "Hours mentored", value: dashboardStats?.this_month?.hours_mentored || "0.0h", icon: Clock }
   ];
 
   return (
@@ -421,30 +443,43 @@ export default function OverviewTabContent() {
               transition={{ delay: 0.2 }}
               className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col"
             >
-              <div className="px-5 py-4 border-b border-slate-100">
+              <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-slate-500" /> Skill Verify Queue
                 </h3>
+                <button 
+                  onClick={() => router.push('/mentor/dashboard/requests')}
+                  className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                >
+                  View All <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
               <div className="p-5 flex-1 space-y-4">
-                {verifyQueue.map((item, i) => (
-                  <div key={i} className="flex items-center justify-between pb-4 border-b border-slate-50 last:border-0 last:pb-0">
+                {loading ? (
+                  <div className="py-4 text-center text-sm text-slate-500">Loading queue...</div>
+                ) : verifyQueue.length === 0 ? (
+                  <div className="py-4 text-center text-sm text-slate-500">No pending verifications.</div>
+                ) : verifyQueue.map((item, i) => (
+                  <div key={item.evidence_name} className="flex items-center justify-between pb-4 border-b border-slate-50 last:border-0 last:pb-0">
                     <div className="flex items-center gap-3">
-                      <item.icon className={`w-5 h-5 ${item.iconColor}`} />
+                      <AlertCircle className="w-5 h-5 text-slate-400" />
                       <div>
-                        <h4 className="font-semibold text-sm text-slate-800">{item.name}</h4>
+                        <h4 className="font-semibold text-sm text-slate-800">{item.student_name}</h4>
                         <p className="text-xs text-slate-500">{item.skill}</p>
                       </div>
                     </div>
-                    <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-md ${item.priority === 'high' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'}`}>
-                      {item.priority}
+                    <span className="text-[10px] uppercase font-bold px-2 py-1 rounded-md bg-blue-50 text-blue-600">
+                      {item.evidence_type}
                     </span>
                   </div>
                 ))}
               </div>
               <div className="p-5 pt-0">
-                <button className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm transition-colors">
-                  4 Awaiting Review
+                <button 
+                  onClick={() => router.push('/mentor/dashboard/requests')}
+                  className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm transition-colors"
+                >
+                  {totalPendingCount} Awaiting Review
                 </button>
               </div>
             </motion.div>
@@ -498,7 +533,7 @@ export default function OverviewTabContent() {
               </h3>
             </div>
             <div className="divide-y divide-slate-100">
-              {thisMonthStats.map((stat, i) => (
+              {dynamicThisMonthStats.map((stat, i) => (
                 <div key={i} className="px-5 py-3.5 flex justify-between items-center hover:bg-slate-50 transition-colors">
                   <div className="flex items-center gap-3">
                     <stat.icon className="w-4 h-4 text-slate-400" />

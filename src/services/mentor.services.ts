@@ -333,3 +333,44 @@ export const deleteMentorAvailability = async (mentor: string) => {
     throw error;
   }
 };
+
+export const getMentorPendingVerifications = async (mentor: string, limit: number) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.skill_ledger.doctype.skill_evidence.skill_evidence.get_mentor_pending_verifications",
+      { mentor, limit }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching mentor pending verifications:", error);
+    throw error;
+  }
+};
+
+export const verifyAndEndorseSkill = async (evidenceName: string) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.skill_ledger.doctype.skill_evidence.skill_evidence.verify_and_endorse_skill",
+      { evidence_name: evidenceName }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error verifying and endorsing skill:", error);
+    throw error;
+  }
+};
+
+export const rejectSkillEvidence = async (evidenceName: string) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.skill_ledger.doctype.skill_evidence.skill_evidence.reject_skill_evidence",
+      { evidence_name: evidenceName }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error rejecting skill evidence:", error);
+    throw error;
+  }
+};
+
+
