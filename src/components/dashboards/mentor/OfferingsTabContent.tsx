@@ -6,6 +6,7 @@ import { getMentorOfferings, createMentorOffering, updateMentorOffering } from "
 import { useAuth } from "@/context/AuthContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { useToast } from "@/context/ToastContext";
+import { Pagination } from "@/components/ui/Pagination";
 
 export default function OfferingsTabContent() {
   const { currentUser } = useAuth();
@@ -15,6 +16,27 @@ export default function OfferingsTabContent() {
   const [offerings, setOfferings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [offeringsPage, setOfferingsPage] = useState<number>(1);
+  const ITEMS_PER_PAGE = 9;
+
+  const totalOfferingsPages = Math.ceil(offerings.length / ITEMS_PER_PAGE) || 1;
+
+  useEffect(() => {
+    if (offerings.length > 0) {
+      const maxPage = Math.ceil(offerings.length / ITEMS_PER_PAGE);
+      if (offeringsPage > maxPage) {
+        setOfferingsPage(maxPage);
+      }
+    } else {
+      setOfferingsPage(1);
+    }
+  }, [offerings.length, offeringsPage]);
+
+  const paginatedOfferings = useMemo(() => {
+    const startIndex = (offeringsPage - 1) * ITEMS_PER_PAGE;
+    return offerings.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [offerings, offeringsPage]);
 
   // Modal State 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -268,89 +290,97 @@ export default function OfferingsTabContent() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {offerings.map((offering, i) => {
-            const badges = [
-              { label: offering.offering_type || "1:1 Mentorship", style: "bg-blue-50 text-blue-600" },
-              { label: offering.duration_minutes ? `${offering.duration_minutes} min` : "60 min", icon: Clock, style: "text-slate-500" },
-              { label: offering.category || "General", style: "text-orange-500 font-medium" }
-            ];
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedOfferings.map((offering, i) => {
+              const badges = [
+                { label: offering.offering_type || "1:1 Mentorship", style: "bg-blue-50 text-blue-600" },
+                { label: offering.duration_minutes ? `${offering.duration_minutes} min` : "60 min", icon: Clock, style: "text-slate-500" },
+                { label: offering.category || "General", style: "text-orange-500 font-medium" }
+              ];
 
-            return (
-              <motion.div
-                key={offering.name || i}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col p-5 hover:shadow-md transition-shadow"
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="font-bold text-slate-800 text-lg leading-tight flex-1 pr-2">{offering.title}</h3>
-                  <span className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${offering.status === 'Live'
-                    ? 'bg-emerald-50 text-emerald-600'
-                    : offering.status === 'Paused'
-                      ? 'bg-amber-50 text-amber-600'
-                      : 'bg-slate-100 text-slate-500'
-                    }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${offering.status === 'Live'
-                      ? 'bg-emerald-500'
+              return (
+                <motion.div
+                  key={offering.name || i}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col p-5 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="font-bold text-slate-800 text-lg leading-tight flex-1 pr-2">{offering.title}</h3>
+                    <span className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 ${offering.status === 'Live'
+                      ? 'bg-emerald-50 text-emerald-600'
                       : offering.status === 'Paused'
-                        ? 'bg-amber-500'
-                        : 'bg-slate-400'
-                      }`}></span>
-                    {offering.status || 'Draft'}
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2 mb-6">
-                  {badges.map((badge, j) => (
-                    <span key={j} className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md ${badge.style}`}>
-                      {badge.icon && <badge.icon className="w-3.5 h-3.5" />}
-                      {badge.label}
+                        ? 'bg-amber-50 text-amber-600'
+                        : 'bg-slate-100 text-slate-500'
+                      }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${offering.status === 'Live'
+                        ? 'bg-emerald-500'
+                        : offering.status === 'Paused'
+                          ? 'bg-amber-500'
+                          : 'bg-slate-400'
+                        }`}></span>
+                      {offering.status || 'Draft'}
                     </span>
-                  ))}
-                </div>
+                  </div>
 
-                <div className="flex justify-between items-end mt-auto mb-6">
-                  <div>
-                    <h4 className="text-2xl font-extrabold text-slate-800 leading-none">₹{offering.price_per_session || 0}</h4>
-                    <p className="text-xs text-slate-500 mt-1 font-medium">Per Session</p>
+                  <div className="flex flex-wrap items-center gap-2 mb-6">
+                    {badges.map((badge, j) => (
+                      <span key={j} className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-md ${badge.style}`}>
+                        {badge.icon && <badge.icon className="w-3.5 h-3.5" />}
+                        {badge.label}
+                      </span>
+                    ))}
                   </div>
-                  <div className="text-center">
-                    <h4 className="text-xl font-bold text-slate-800 leading-none">{offering.total_bookings || 0}</h4>
-                    <p className="text-xs text-slate-500 mt-1 font-medium">Bookings</p>
-                  </div>
-                  <div className="text-right">
-                    <h4 className="text-xl font-bold flex items-center gap-1 text-slate-800 leading-none justify-end">
-                      <Star className="w-5 h-5 text-yellow-400 fill-current" /> {offering.avg_rating || 0}
-                    </h4>
-                    <p className="text-xs text-slate-500 mt-1 font-medium">Rating</p>
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                  <button
-                    onClick={() => handleEditOffering(offering)}
-                    className="flex-1 py-2 text-slate-700 hover:bg-slate-50 border border-slate-200 font-semibold text-sm rounded-lg flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <Edit3 className="w-4 h-4" /> Edit
-                  </button>
-                  <button
-                    onClick={() => handleStatusToggle(offering)}
-                    className={`flex-1 py-2 border font-semibold text-sm rounded-lg transition-colors ${offering.status === 'Live'
-                      ? 'border-slate-200 text-slate-700 hover:bg-slate-50'
-                      : offering.status === 'Paused'
-                        ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
-                        : 'border-transparent bg-slate-100 hover:bg-slate-200 text-slate-800'
-                      }`}
-                  >
-                    {offering.status === 'Live' ? 'Pause' : offering.status === 'Paused' ? 'Paused' : 'Activate'}
-                  </button>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
+                  <div className="flex justify-between items-end mt-auto mb-6">
+                    <div>
+                      <h4 className="text-2xl font-extrabold text-slate-800 leading-none">₹{offering.price_per_session || 0}</h4>
+                      <p className="text-xs text-slate-500 mt-1 font-medium">Per Session</p>
+                    </div>
+                    <div className="text-center">
+                      <h4 className="text-xl font-bold text-slate-800 leading-none">{offering.total_bookings || 0}</h4>
+                      <p className="text-xs text-slate-500 mt-1 font-medium">Bookings</p>
+                    </div>
+                    <div className="text-right">
+                      <h4 className="text-xl font-bold flex items-center gap-1 text-slate-800 leading-none justify-end">
+                        <Star className="w-5 h-5 text-yellow-400 fill-current" /> {offering.avg_rating || 0}
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-1 font-medium">Rating</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                    <button
+                      onClick={() => handleEditOffering(offering)}
+                      className="flex-1 py-2 text-slate-700 hover:bg-slate-50 border border-slate-200 font-semibold text-sm rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <Edit3 className="w-4 h-4" /> Edit
+                    </button>
+                    <button
+                      onClick={() => handleStatusToggle(offering)}
+                      className={`flex-1 py-2 border font-semibold text-sm rounded-lg transition-colors ${offering.status === 'Live'
+                        ? 'border-slate-200 text-slate-700 hover:bg-slate-50'
+                        : offering.status === 'Paused'
+                          ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100'
+                          : 'border-transparent bg-slate-100 hover:bg-slate-200 text-slate-800'
+                        }`}
+                    >
+                      {offering.status === 'Live' ? 'Pause' : offering.status === 'Paused' ? 'Paused' : 'Activate'}
+                    </button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+          <Pagination
+            currentPage={offeringsPage}
+            totalPages={totalOfferingsPages}
+            onPageChange={setOfferingsPage}
+            className="mt-6"
+          />
+        </>
       )}
 
       <DashboardDynamicModal

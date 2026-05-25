@@ -16,18 +16,56 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { getPendingRequests, suggestAltTime, acceptRequest, declineRequest, getMentorPendingVerifications, verifyAndEndorseSkill, rejectSkillEvidence } from "@/services/mentor.services";
 import { BASE_DOMAIN } from "@/services/api.services";
+import { Pagination } from "@/components/ui/Pagination";
 
 
 export default function RequestsTabContent() {
   const { currentUser } = useAuth();
   const [requests, setRequests] = useState<any[]>([]);
+  const [requestsPage, setRequestsPage] = useState<number>(1);
   const [verifyQueue, setVerifyQueue] = useState<any[]>([]);
+  const [verifyQueuePage, setVerifyQueuePage] = useState<number>(1);
+  const ITEMS_PER_PAGE = 3;
   const [totalPendingCount, setTotalPendingCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [loadingVerify, setLoadingVerify] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [processingEvidenceName, setProcessingEvidenceName] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'verify' | 'reject' | null>(null);
+
+  useEffect(() => {
+    if (requests.length > 0) {
+      const maxPage = Math.ceil(requests.length / ITEMS_PER_PAGE);
+      if (requestsPage > maxPage) {
+        setRequestsPage(maxPage);
+      }
+    } else {
+      setRequestsPage(1);
+    }
+  }, [requests.length, requestsPage]);
+
+  useEffect(() => {
+    if (verifyQueue.length > 0) {
+      const maxPage = Math.ceil(verifyQueue.length / ITEMS_PER_PAGE);
+      if (verifyQueuePage > maxPage) {
+        setVerifyQueuePage(maxPage);
+      }
+    } else {
+      setVerifyQueuePage(1);
+    }
+  }, [verifyQueue.length, verifyQueuePage]);
+
+  const totalRequestsPages = Math.ceil(requests.length / ITEMS_PER_PAGE) || 1;
+  const paginatedRequests = useMemo(() => {
+    const startIndex = (requestsPage - 1) * ITEMS_PER_PAGE;
+    return requests.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [requests, requestsPage]);
+
+  const totalVerifyPages = Math.ceil(verifyQueue.length / ITEMS_PER_PAGE) || 1;
+  const paginatedVerifyQueue = useMemo(() => {
+    const startIndex = (verifyQueuePage - 1) * ITEMS_PER_PAGE;
+    return verifyQueue.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [verifyQueue, verifyQueuePage]);
 
   const [altTimeModal, setAltTimeModal] = useState<{ isOpen: boolean; req: any | null }>({ isOpen: false, req: null });
   const [altDate, setAltDate] = useState("");
@@ -313,81 +351,89 @@ export default function RequestsTabContent() {
                 <p className="text-sm text-slate-500 font-medium">Fetching booking requests...</p>
               </div>
             ) : requests.length > 0 ? (
-              requests.map((req, i) => (
-                <motion.div
-                  key={req.name}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 + (i * 0.1) }}
-                  className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
-                >
-                  <div className="p-5">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full ${getRandomColorClass(req.student_name || "Student")} flex items-center justify-center font-bold text-sm tracking-wide`}>
-                          {getInitials(req.student_name || "Student")}
+              <>
+                {paginatedRequests.map((req, i) => (
+                  <motion.div
+                    key={req.name}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 + (i * 0.1) }}
+                    className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+                  >
+                    <div className="p-5">
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full ${getRandomColorClass(req.student_name || "Student")} flex items-center justify-center font-bold text-sm tracking-wide`}>
+                            {getInitials(req.student_name || "Student")}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-slate-800 leading-tight">{req.student_name}</h4>
+                            <p className="text-sm font-semibold text-slate-500">{req.topic}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="font-bold text-slate-800 leading-tight">{req.student_name}</h4>
-                          <p className="text-sm font-semibold text-slate-500">{req.topic}</p>
-                        </div>
+                        <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${req.priority?.toLowerCase() === 'high' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'}`}>
+                          {req.priority || 'Normal'} priority
+                        </span>
                       </div>
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${req.priority?.toLowerCase() === 'high' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'}`}>
-                        {req.priority || 'Normal'} priority
-                      </span>
-                    </div>
 
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-blue-100 rounded-md px-2 py-1">
-                        {formatDateTime(req.session_date, req.from_time)}
-                      </span>
-                      <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-md">
-                        {req.session_type}
-                      </span>
-                    </div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-slate-700 bg-blue-100 rounded-md px-2 py-1">
+                          {formatDateTime(req.session_date, req.from_time)}
+                        </span>
+                        <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-md">
+                          {req.session_type}
+                        </span>
+                      </div>
 
-                    <div className="bg-slate-50 rounded-lg p-3.5 mb-5 border border-slate-100">
-                      <p className="text-sm text-slate-600 italic leading-relaxed flex items-start gap-2">
-                        <MessageSquare className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
-                        {req.student_message || "No message provided by the student."}
-                      </p>
-                    </div>
+                      <div className="bg-slate-50 rounded-lg p-3.5 mb-5 border border-slate-100">
+                        <p className="text-sm text-slate-600 italic leading-relaxed flex items-start gap-2">
+                          <MessageSquare className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                          {req.student_message || "No message provided by the student."}
+                        </p>
+                      </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        onClick={() => handleAcceptRequest(req)}
-                        disabled={acceptingId === req.name}
-                        className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold text-sm rounded-lg flex items-center justify-center gap-1.5 transition-colors"
-                      >
-                        {acceptingId === req.name ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Check className="w-4 h-4" />
-                        )}{" "}
-                        Accept & Schedule
-                      </button>
-                      <button
-                        onClick={() => openAltTimeModal(req)}
-                        className="flex-none px-4 py-2 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors"
-                      >
-                        <Clock className="w-4 h-4" /> Suggest Alt Time
-                      </button>
-                      <button
-                        onClick={() => handleDeclineRequest(req)}
-                        disabled={decliningId === req.name}
-                        className="flex-none px-4 py-2 hover:bg-red-50 disabled:opacity-50 border border-slate-200 text-slate-500 hover:text-red-600 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors"
-                      >
-                        {decliningId === req.name ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <X className="w-4 h-4" />
-                        )}{" "}
-                        Decline
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => handleAcceptRequest(req)}
+                          disabled={acceptingId === req.name}
+                          className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold text-sm rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          {acceptingId === req.name ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Check className="w-4 h-4" />
+                          )}{" "}
+                          Accept & Schedule
+                        </button>
+                        <button
+                          onClick={() => openAltTimeModal(req)}
+                          className="flex-none px-4 py-2 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors"
+                        >
+                          <Clock className="w-4 h-4" /> Suggest Alt Time
+                        </button>
+                        <button
+                          onClick={() => handleDeclineRequest(req)}
+                          disabled={decliningId === req.name}
+                          className="flex-none px-4 py-2 hover:bg-red-50 disabled:opacity-50 border border-slate-200 text-slate-500 hover:text-red-600 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors"
+                        >
+                          {decliningId === req.name ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <X className="w-4 h-4" />
+                          )}{" "}
+                          Decline
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))
+                  </motion.div>
+                ))}
+                <Pagination
+                  currentPage={requestsPage}
+                  totalPages={totalRequestsPages}
+                  onPageChange={setRequestsPage}
+                  className="mt-4"
+                />
+              </>
             ) : (
               <div className="py-20 flex flex-col items-center justify-center bg-white border border-dashed border-slate-200 rounded-2xl">
                 <UserPlus className="w-12 h-12 text-slate-200 mb-4" />
@@ -415,81 +461,89 @@ export default function RequestsTabContent() {
                 <p className="text-sm text-slate-500 font-medium">Fetching verification requests...</p>
               </div>
             ) : verifyQueue.length > 0 ? (
-              verifyQueue.map((item, i) => (
-                <motion.div
-                  key={item.evidence_name}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 + (i * 0.1) }}
-                  className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
-                >
-                  <div className="p-5">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h4 className="font-bold text-slate-800 text-lg leading-tight mb-1">{item.student_name}</h4>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
-                            {item.skill}
-                          </span>
-                          <span className="text-xs text-slate-500">
-                            Submitted: {formatDate(item.creation)}
-                          </span>
-                          <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${getBadgeColor(item.evidence_type)}`}>
-                            {item.evidence_type}
-                          </span>
+              <>
+                {paginatedVerifyQueue.map((item, i) => (
+                  <motion.div
+                    key={item.evidence_name}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 + (i * 0.1) }}
+                    className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
+                  >
+                    <div className="p-5">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h4 className="font-bold text-slate-800 text-lg leading-tight mb-1">{item.student_name}</h4>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                              {item.skill}
+                            </span>
+                            <span className="text-xs text-slate-500">
+                              Submitted: {formatDate(item.creation)}
+                            </span>
+                            <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${getBadgeColor(item.evidence_type)}`}>
+                              {item.evidence_type}
+                            </span>
+                          </div>
                         </div>
+                        <span className="text-xs text-slate-400 font-mono">{item.evidence_name}</span>
                       </div>
-                      <span className="text-xs text-slate-400 font-mono">{item.evidence_name}</span>
-                    </div>
 
-                    <div className="flex items-center gap-2 text-sm text-slate-600 mb-5">
-                      <LinkIcon className="w-4 h-4 text-slate-400" />
-                      <span className="font-semibold text-slate-500">Evidence:</span> {item.description || "No description provided."}
-                    </div>
+                      <div className="flex items-center gap-2 text-sm text-slate-600 mb-5">
+                        <LinkIcon className="w-4 h-4 text-slate-400" />
+                        <span className="font-semibold text-slate-500">Evidence:</span> {item.description || "No description provided."}
+                      </div>
 
-                    <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => handleVerifyAndEndorse(item.evidence_name)}
-                        disabled={processingEvidenceName !== null}
-                        className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold text-sm rounded-lg flex items-center justify-center gap-1.5 transition-colors"
-                      >
-                        {processingEvidenceName === item.evidence_name && actionType === 'verify' ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <ShieldCheck className="w-4 h-4" />
-                        )}{" "}
-                        Verify & Endorse
-                      </button>
-                      <button 
-                        onClick={() => {
-                          if (item.document_url) {
-                            const url = item.document_url.startsWith('http') 
-                              ? item.document_url 
-                              : `${BASE_DOMAIN}${item.document_url}`;
-                            window.open(url, '_blank');
-                          }
-                        }}
-                        disabled={!item.document_url}
-                        className="flex-1 py-2 border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 font-bold text-sm rounded-lg transition-colors"
-                      >
-                        Review Evidence
-                      </button>
-                      <button 
-                        onClick={() => handleRejectEvidence(item.evidence_name)}
-                        disabled={processingEvidenceName !== null}
-                        className="px-4 py-2 hover:bg-red-50 disabled:opacity-50 border border-slate-200 text-slate-500 hover:text-red-600 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors"
-                      >
-                        {processingEvidenceName === item.evidence_name && actionType === 'reject' ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <X className="w-4 h-4" />
-                        )}{" "}
-                        Reject
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => handleVerifyAndEndorse(item.evidence_name)}
+                          disabled={processingEvidenceName !== null}
+                          className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white font-bold text-sm rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          {processingEvidenceName === item.evidence_name && actionType === 'verify' ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <ShieldCheck className="w-4 h-4" />
+                          )}{" "}
+                          Verify & Endorse
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if (item.document_url) {
+                              const url = item.document_url.startsWith('http') 
+                                ? item.document_url 
+                                : `${BASE_DOMAIN}${item.document_url}`;
+                              window.open(url, '_blank');
+                            }
+                          }}
+                          disabled={!item.document_url}
+                          className="flex-1 py-2 border border-slate-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-slate-700 font-bold text-sm rounded-lg transition-colors"
+                        >
+                          Review Evidence
+                        </button>
+                        <button 
+                          onClick={() => handleRejectEvidence(item.evidence_name)}
+                          disabled={processingEvidenceName !== null}
+                          className="px-4 py-2 hover:bg-red-50 disabled:opacity-50 border border-slate-200 text-slate-500 hover:text-red-600 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors"
+                        >
+                          {processingEvidenceName === item.evidence_name && actionType === 'reject' ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <X className="w-4 h-4" />
+                          )}{" "}
+                          Reject
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              ))
+                  </motion.div>
+                ))}
+                <Pagination
+                  currentPage={verifyQueuePage}
+                  totalPages={totalVerifyPages}
+                  onPageChange={setVerifyQueuePage}
+                  className="mt-4"
+                />
+              </>
             ) : (
               <div className="py-20 flex flex-col items-center justify-center bg-white border border-dashed border-slate-200 rounded-2xl">
                 <ShieldCheck className="w-12 h-12 text-slate-200 mb-4" />
