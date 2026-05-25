@@ -66,6 +66,7 @@ export default function OverviewTabContent() {
   const { currentUser } = useAuth();
   const [upcoming, setUpcoming] = useState<any[]>([]);
   const [pending, setPending] = useState<any[]>([]);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState<number>(0);
   const [verifyQueue, setVerifyQueue] = useState<any[]>([]);
   const [totalPendingCount, setTotalPendingCount] = useState<number>(0);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
@@ -115,9 +116,9 @@ export default function OverviewTabContent() {
     } catch (error: any) {
       console.error("Failed to reschedule", error);
       let errorMessage = "Failed to reschedule session. Please try again.";
-      
+
       const errorData = error.data || error.response?.data;
-      
+
       if (errorData) {
         if (errorData._server_messages) {
           try {
@@ -126,7 +127,7 @@ export default function OverviewTabContent() {
               const msgObj = JSON.parse(messages[0]);
               errorMessage = msgObj.message || errorMessage;
             }
-          } catch (e) {}
+          } catch (e) { }
         } else if (errorData.exception) {
           errorMessage = errorData.exception.split(":").slice(1).join(":").trim() || errorData.exception;
         } else if (error.message && !error.message.includes("Traceback")) {
@@ -135,7 +136,7 @@ export default function OverviewTabContent() {
       } else if (error.message && !error.message.includes("Traceback")) {
         errorMessage = error.message;
       }
-      
+
       setRescheduleError(errorMessage);
     } finally {
       setSubmittingReschedule(false);
@@ -152,7 +153,7 @@ export default function OverviewTabContent() {
       try {
         const [upcomingRes, pendingRes, statsRes, verifyQueueRes] = await Promise.all([
           getUpcomingSessions(email),
-          getPendingRequests(email),
+          getPendingRequests(email, 3),
           getMentorDashboardStats(email),
           getMentorPendingVerifications(email, 3)
         ]);
@@ -161,10 +162,12 @@ export default function OverviewTabContent() {
         } else {
           setUpcoming([]);
         }
-        if (pendingRes?.message && Array.isArray(pendingRes.message)) {
-          setPending(pendingRes.message);
+        if (pendingRes?.message) {
+          setPending(pendingRes.message.records || []);
+          setPendingRequestsCount(pendingRes.message.total_pending_count || 0);
         } else {
           setPending([]);
+          setPendingRequestsCount(0);
         }
         if (statsRes?.message) {
           setDashboardStats(statsRes.message);
@@ -240,38 +243,48 @@ export default function OverviewTabContent() {
     };
   });
 
-  const dynamicPendingRequests = (Array.isArray(pending) ? pending : []).slice(0, 4).map((req) => {
+  const dynamicPendingRequests = (Array.isArray(pending) ? pending : []).slice(0, 3).map((req) => {
     const name = req.student_name || "Student";
     const priority = req.priority || 'Normal';
+
+    const dateObj = req.session_date ? new Date(req.session_date) : null;
+    const dateStr = dateObj ? dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
+    const timeStr = req.from_time ? formatTime(req.from_time) : "";
+
     return {
       initials: getInitials(name),
       name,
       topic: req.topic || "Mentorship Session",
       priority: priority.toLowerCase(),
-      color: getRandomColorClass(name)
+      color: getRandomColorClass(name),
+      sessionDate: dateStr,
+      sessionTime: timeStr,
+      sessionType: req.session_type || "",
+      amountPaid: req.amount_paid ?? null,
+      offeringTitle: req.offering_title || ""
     };
   });
 
   const dynamicOverviewStats = [
-    { 
-      label: "TOTAL STUDENTS MENTORED", 
-      value: dashboardStats?.total_students_mentored?.toString() || defaultOverviewStats[0].value, 
-      trend: `+${dashboardStats?.this_month_mentored_students || 0} this month`, 
-      trendUp: true, 
-      icon: GraduationCap, 
-      iconBg: "bg-orange-50", 
-      iconColor: "text-orange-600", 
-      borderStyle: "border-t-4 border-t-slate-800" 
+    {
+      label: "TOTAL STUDENTS MENTORED",
+      value: dashboardStats?.total_students_mentored?.toString() || defaultOverviewStats[0].value,
+      trend: `+${dashboardStats?.this_month_mentored_students || 0} this month`,
+      trendUp: true,
+      icon: GraduationCap,
+      iconBg: "bg-orange-50",
+      iconColor: "text-orange-600",
+      borderStyle: "border-t-4 border-t-slate-800"
     },
-    { 
-      label: "SESSIONS THIS MONTH", 
-      value: dashboardStats?.sessions_this_month?.toString() || defaultOverviewStats[1].value, 
-      trend: `${dashboardStats?.upcoming_sessions || 0} upcoming`, 
-      trendUp: true, 
-      icon: Calendar, 
-      iconBg: "bg-blue-50", 
-      iconColor: "text-blue-600", 
-      borderStyle: "border-t-4 border-t-blue-500" 
+    {
+      label: "SESSIONS THIS MONTH",
+      value: dashboardStats?.sessions_this_month?.toString() || defaultOverviewStats[1].value,
+      trend: `${dashboardStats?.upcoming_sessions || 0} upcoming`,
+      trendUp: true,
+      icon: Calendar,
+      iconBg: "bg-blue-50",
+      iconColor: "text-blue-600",
+      borderStyle: "border-t-4 border-t-blue-500"
     },
     {
       label: "AVERAGE RATING",
@@ -400,7 +413,7 @@ export default function OverviewTabContent() {
                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
                   <Video className="w-4 h-4 text-orange-500" /> Pending Requests
                 </h3>
-                <button 
+                <button
                   onClick={() => router.push('/mentor/dashboard/requests')}
                   className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
                 >
@@ -413,25 +426,47 @@ export default function OverviewTabContent() {
                 ) : dynamicPendingRequests.length === 0 ? (
                   <div className="py-4 text-center text-sm text-slate-500">No pending requests.</div>
                 ) : dynamicPendingRequests.map((req, i) => (
-                  <div key={i} className="flex items-center justify-between pb-4 border-b border-slate-50 last:border-0 last:pb-0">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-full ${req.color} flex items-center justify-center font-bold text-xs`}>
-                        {req.initials}
+                  <div key={i} className="pb-4 border-b border-slate-50 last:border-0 last:pb-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-9 h-9 rounded-full ${req.color} flex items-center justify-center font-bold text-xs shrink-0`}>
+                          {req.initials}
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-sm text-slate-800">{req.name}</h4>
+                          <p className="text-xs text-slate-500 truncate max-w-[150px]" title={req.topic}>{req.topic}</p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-semibold text-sm text-slate-800">{req.name}</h4>
-                        <p className="text-xs text-slate-500 truncate max-w-[150px]" title={req.topic}>{req.topic}</p>
-                      </div>
+                      <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-md shrink-0 ${req.priority === 'high' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'}`}>
+                        {req.priority}
+                      </span>
                     </div>
-                    <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-md ${req.priority === 'high' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-600'}`}>
-                      {req.priority}
-                    </span>
+                    <div className="mt-2 ml-12 flex flex-wrap items-center gap-2">
+                      {req.sessionDate && (
+                        <span className="flex items-center gap-1 text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                          <Calendar className="w-3 h-3" />{req.sessionDate}{req.sessionTime ? ` ${req.sessionTime}` : ""}
+                        </span>
+                      )}
+                      {req.sessionType && (
+                        <span className="text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                          {req.sessionType}
+                        </span>
+                      )}
+                      {req.amountPaid !== null && (
+                        <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                          ₹{req.amountPaid}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
               <div className="p-5 pt-0">
-                <button className="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg text-sm transition-colors">
-                  {pending.length} Pending — Review Now
+                <button
+                  onClick={() => router.push('/mentor/dashboard/requests')}
+                  className="w-full py-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-lg text-sm transition-colors"
+                >
+                  {pendingRequestsCount} Pending — Review Now
                 </button>
               </div>
             </motion.div>
@@ -447,7 +482,7 @@ export default function OverviewTabContent() {
                 <h3 className="font-bold text-slate-800 flex items-center gap-2">
                   <CheckCircle className="w-4 h-4 text-slate-500" /> Skill Verify Queue
                 </h3>
-                <button 
+                <button
                   onClick={() => router.push('/mentor/dashboard/requests')}
                   className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
                 >
@@ -475,7 +510,7 @@ export default function OverviewTabContent() {
                 ))}
               </div>
               <div className="p-5 pt-0">
-                <button 
+                <button
                   onClick={() => router.push('/mentor/dashboard/requests')}
                   className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-sm transition-colors"
                 >

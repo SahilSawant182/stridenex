@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getUpcomingSessions, getSlotCalendar, getWeeklyBookedSessions, getMonthlyBookedSessions, blockTime, rescheduleSession, saveMentorAvailability, deleteMentorAvailability } from "@/services/mentor.services";
+import { getUpcomingSessions, getSlotCalendar, getWeeklyBookedSessions, getMonthlyBookedSessions, blockTime, rescheduleSession, saveMentorAvailability, deleteMentorAvailability, getSessionNote, saveSessionNotes } from "@/services/mentor.services";
 
 import { motion } from "framer-motion";
 import { 
@@ -15,7 +15,11 @@ import {
   X,
   Loader2,
   Video,
-  Trash2
+  Trash2,
+  FileText,
+  User,
+  Lock,
+  AlertCircle
 } from "lucide-react";
 
 
@@ -83,6 +87,78 @@ export default function ScheduleTabContent() {
   });
   const [submittingAvailability, setSubmittingAvailability] = useState(false);
   const [availabilityError, setAvailabilityError] = useState("");
+
+  // Prep Notes modal states
+  const [notesModalOpen, setNotesModalOpen] = useState(false);
+  const [notesSessionId, setNotesSessionId] = useState("");
+  const [notesStudentEmail, setNotesStudentEmail] = useState("");
+  const [notesStudentName, setNotesStudentName] = useState("");
+  const [notesTopic, setNotesTopic] = useState("");
+  const [notesShared, setNotesShared] = useState("");
+  const [notesInternal, setNotesInternal] = useState("");
+  const [loadingNotes, setLoadingNotes] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
+  const [notesError, setNotesError] = useState("");
+  const [notesSaved, setNotesSaved] = useState(false);
+
+  const handleOpenNotes = async (sessionId: string, studentEmail: string, studentName: string, topic: string) => {
+    setNotesSessionId(sessionId);
+    setNotesStudentEmail(studentEmail);
+    setNotesStudentName(studentName);
+    setNotesTopic(topic);
+    setNotesShared("");
+    setNotesInternal("");
+    setNotesError("");
+    setNotesSaved(false);
+    setNotesModalOpen(true);
+    setLoadingNotes(true);
+
+    try {
+      const res = await getSessionNote(sessionId, studentEmail);
+      if (res?.message?.data) {
+        setNotesShared(res.message.data.shared_with_student || "");
+        setNotesInternal(res.message.data.notes || "");
+      }
+    } catch (err) {
+      console.error("Failed to fetch session notes", err);
+    } finally {
+      setLoadingNotes(false);
+    }
+  };
+
+  const handleSaveNotes = async () => {
+    if (!notesSessionId || !notesStudentEmail) return;
+    setSavingNotes(true);
+    setNotesError("");
+    setNotesSaved(false);
+    try {
+      await saveSessionNotes({
+        session_name: notesSessionId,
+        student: notesStudentEmail,
+        notes: notesInternal,
+        shared_with_student: notesShared
+      });
+      setNotesSaved(true);
+    } catch (err: any) {
+      console.error("Failed to save notes", err);
+      let errorMessage = "Failed to save notes. Please try again.";
+      const errorData = err.data || err.response?.data;
+      if (errorData?._server_messages) {
+        try {
+          const messages = JSON.parse(errorData._server_messages);
+          if (messages.length > 0) {
+            const msgObj = JSON.parse(messages[0]);
+            errorMessage = msgObj.message || errorMessage;
+          }
+        } catch (e) {}
+      } else if (err.message && !err.message.includes("Traceback")) {
+        errorMessage = err.message;
+      }
+      setNotesError(errorMessage);
+    } finally {
+      setSavingNotes(false);
+    }
+  };
 
   const handleRescheduleClick = (sessionId: string) => {
     setSelectedSessionId(sessionId);
@@ -425,7 +501,7 @@ export default function ScheduleTabContent() {
   });
 
   const dynamicWeeklyBooked = (Array.isArray(weeklyBooked) ? weeklyBooked : []).map((s, index) => {
-    const studentName = s.student_name || s.student?.split('@')[0] || "Unknown";
+    const studentName = s.student_full_name || s.student_name || s.student?.split('@')[0] || "Unknown";
     const initials = studentName.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2) || "??";
     const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
     const color = colors[index % colors.length];
@@ -443,6 +519,7 @@ export default function ScheduleTabContent() {
       id: s.name,
       initials,
       name: studentName,
+      studentEmail: s.student || "",
       topic: s.topic || "Session",
       date: `${dateStr} - ${timeStr}`,
       duration: `${s.duration || 60} min`,
@@ -453,7 +530,7 @@ export default function ScheduleTabContent() {
   });
 
   const dynamicMonthlyBooked = (Array.isArray(monthlyBooked) ? monthlyBooked : []).map((s, index) => {
-    const studentName = s.student_name || s.student?.split('@')[0] || "Unknown";
+    const studentName = s.student_full_name || s.student_name || s.student?.split('@')[0] || "Unknown";
     const initials = studentName.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2) || "??";
     const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
     const color = colors[index % colors.length];
@@ -471,6 +548,7 @@ export default function ScheduleTabContent() {
       id: s.name,
       initials,
       name: studentName,
+      studentEmail: s.student || "",
       topic: s.topic || "Session",
       date: `${dateStr} - ${timeStr}`,
       duration: `${s.duration || 60} min`,
@@ -481,7 +559,7 @@ export default function ScheduleTabContent() {
   });
 
   const dynamicUpcomingBookings = (Array.isArray(upcoming) ? upcoming : []).map((s, index) => {
-    const studentName = s.student_name || (s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : null) || s.student?.split('@')[0] || "Unknown";
+    const studentName = s.student_full_name || s.student_name || (s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : null) || s.student?.split('@')[0] || "Unknown";
     const initials = studentName.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2) || "??";
     const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
     const color = colors[index % colors.length];
@@ -494,6 +572,7 @@ export default function ScheduleTabContent() {
       id: s.name,
       initials,
       name: studentName,
+      studentEmail: s.student || "",
       color,
       topic: s.topic || "Session",
       date: `${dateStr} • ${timeStr}`,
@@ -587,7 +666,10 @@ export default function ScheduleTabContent() {
                         <Video className="w-3.5 h-3.5" /> Join
                       </a>
                     )}
-                    <button className="px-3 py-1.5 text-orange-600 hover:bg-orange-50 bg-orange-50/50 border border-orange-100 text-sm font-semibold rounded-lg transition-colors flex items-center gap-1">
+                    <button
+                      onClick={() => handleOpenNotes(session.id, session.studentEmail, session.name, session.topic)}
+                      className="px-3 py-1.5 text-orange-600 hover:bg-orange-50 bg-orange-50/50 border border-orange-100 text-sm font-semibold rounded-lg transition-colors flex items-center gap-1"
+                    >
                       <Edit3 className="w-3.5 h-3.5" /> Prep Notes
                     </button>
                   </div>
@@ -747,7 +829,12 @@ export default function ScheduleTabContent() {
                           <Video className="w-3.5 h-3.5" /> Join
                         </a>
                       )}
-                      <button className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors">Notes</button>
+                      <button
+                        onClick={() => handleOpenNotes(session.id, session.studentEmail, session.name, session.topic)}
+                        className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors"
+                      >
+                        Notes
+                      </button>
                       <button 
                         onClick={() => handleRescheduleClick(session.id)}
                         className="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-colors">Reschedule</button>
@@ -1103,6 +1190,106 @@ export default function ScheduleTabContent() {
                 className="flex-1 px-4 py-2 bg-slate-800 hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-bold transition-colors flex justify-center items-center gap-2"
               >
                 {submittingAvailability ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Availability"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Prep Notes Modal */}
+      {notesModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-lg overflow-hidden flex flex-col mx-4 max-h-[90vh]">
+            <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div>
+                <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-orange-500" /> Prep Notes
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {notesStudentName} — {notesTopic}
+                </p>
+              </div>
+              <button
+                onClick={() => setNotesModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {notesError && (
+              <div className="px-5 py-3 bg-red-50 border-b border-red-100 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-600 font-medium">{notesError}</p>
+              </div>
+            )}
+
+            {notesSaved && (
+              <div className="px-5 py-3 bg-emerald-50 border-b border-emerald-100 flex items-start gap-2">
+                <FileText className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-emerald-600 font-medium">Notes saved successfully!</p>
+              </div>
+            )}
+
+            <div className="p-5 space-y-4 overflow-y-auto flex-1">
+              {loadingNotes ? (
+                <div className="py-8 flex flex-col items-center gap-2 text-slate-500">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="text-sm">Loading notes...</span>
+                </div>
+              ) : (
+                <>
+                  {/* Shared with Student */}
+                  <div className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1">
+                        <User className="w-3 h-3" /> Shared with Student
+                      </div>
+                      <span className="text-xs text-slate-400">Visible on student's profile</span>
+                    </div>
+                    <textarea
+                      className="w-full text-sm text-slate-700 bg-white border border-emerald-200 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 resize-none"
+                      rows={4}
+                      value={notesShared}
+                      onChange={(e) => { setNotesShared(e.target.value); setNotesSaved(false); }}
+                      placeholder="Enter notes to share with student..."
+                    />
+                  </div>
+
+                  {/* Internal Note */}
+                  <div className="bg-orange-50/50 border border-orange-100 rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="text-orange-600 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1 bg-orange-100/50">
+                        <Lock className="w-3 h-3" /> Internal Note Only
+                      </div>
+                      <span className="text-xs text-slate-400">Not visible to student</span>
+                    </div>
+                    <textarea
+                      className="w-full text-sm text-slate-700 bg-white border border-orange-200 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 resize-none"
+                      rows={4}
+                      value={notesInternal}
+                      onChange={(e) => { setNotesInternal(e.target.value); setNotesSaved(false); }}
+                      placeholder="Enter internal prep notes..."
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex gap-3 justify-end shrink-0">
+              <button
+                onClick={() => setNotesModalOpen(false)}
+                className="flex-1 px-4 py-2 text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-sm font-bold transition-colors"
+                disabled={savingNotes}
+              >
+                Close
+              </button>
+              <button
+                onClick={handleSaveNotes}
+                disabled={savingNotes || loadingNotes}
+                className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-bold transition-colors flex justify-center items-center gap-2"
+              >
+                {savingNotes ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save Notes"}
               </button>
             </div>
           </div>
