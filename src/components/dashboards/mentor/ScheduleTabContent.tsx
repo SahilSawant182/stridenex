@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getUpcomingSessions, getSlotCalendar, getWeeklyBookedSessions, getMonthlyBookedSessions, blockTime, rescheduleSession, saveMentorAvailability, deleteMentorAvailability, getSessionNote, saveSessionNotes } from "@/services/mentor.services";
 
@@ -21,6 +21,7 @@ import {
   Lock,
   AlertCircle
 } from "lucide-react";
+import { Pagination } from "@/components/ui/Pagination";
 
 
 
@@ -49,6 +50,14 @@ export default function ScheduleTabContent() {
   const [loading, setLoading] = useState(true);
   const [loadingMonthly, setLoadingMonthly] = useState(false);
   const [loadingWeekly, setLoadingWeekly] = useState(false);
+
+  const [bookedSessionsPage, setBookedSessionsPage] = useState<number>(1);
+  const [upcomingBookingsPage, setUpcomingBookingsPage] = useState<number>(1);
+  const ITEMS_PER_PAGE = 3;
+
+  useEffect(() => {
+    setBookedSessionsPage(1);
+  }, [viewType]);
 
   // Block time states
   const [blockModalOpen, setBlockModalOpen] = useState(false);
@@ -584,6 +593,46 @@ export default function ScheduleTabContent() {
     };
   });
 
+  const currentBookedSessions = useMemo(() => {
+    return viewType === 'week' ? dynamicWeeklyBooked : dynamicMonthlyBooked;
+  }, [viewType, dynamicWeeklyBooked, dynamicMonthlyBooked]);
+
+  const totalBookedPages = Math.ceil(currentBookedSessions.length / ITEMS_PER_PAGE) || 1;
+
+  useEffect(() => {
+    if (currentBookedSessions.length > 0) {
+      const maxPage = Math.ceil(currentBookedSessions.length / ITEMS_PER_PAGE);
+      if (bookedSessionsPage > maxPage) {
+        setBookedSessionsPage(maxPage);
+      }
+    } else {
+      setBookedSessionsPage(1);
+    }
+  }, [currentBookedSessions.length, bookedSessionsPage]);
+
+  const paginatedBookedSessions = useMemo(() => {
+    const startIndex = (bookedSessionsPage - 1) * ITEMS_PER_PAGE;
+    return currentBookedSessions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [currentBookedSessions, bookedSessionsPage]);
+
+  const totalUpcomingPages = Math.ceil(dynamicUpcomingBookings.length / ITEMS_PER_PAGE) || 1;
+
+  useEffect(() => {
+    if (dynamicUpcomingBookings.length > 0) {
+      const maxPage = Math.ceil(dynamicUpcomingBookings.length / ITEMS_PER_PAGE);
+      if (upcomingBookingsPage > maxPage) {
+        setUpcomingBookingsPage(maxPage);
+      }
+    } else {
+      setUpcomingBookingsPage(1);
+    }
+  }, [dynamicUpcomingBookings.length, upcomingBookingsPage]);
+
+  const paginatedUpcomingBookings = useMemo(() => {
+    const startIndex = (upcomingBookingsPage - 1) * ITEMS_PER_PAGE;
+    return dynamicUpcomingBookings.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [dynamicUpcomingBookings, upcomingBookingsPage]);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-end mb-6">
@@ -634,47 +683,55 @@ export default function ScheduleTabContent() {
           <div className="p-6 pt-0 space-y-4">
             {(viewType === 'week' ? (loading || loadingWeekly) : loadingMonthly) ? (
               <div className="text-center text-slate-500 py-8">Loading booked sessions...</div>
-            ) : (viewType === 'week' ? dynamicWeeklyBooked : dynamicMonthlyBooked).length === 0 ? (
+            ) : currentBookedSessions.length === 0 ? (
               <div className="text-center text-slate-500 py-8">
                 {viewType === 'week' ? 'No booked sessions for this week.' : 'No booked sessions for this month.'}
               </div>
             ) : (
-              (viewType === 'week' ? dynamicWeeklyBooked : dynamicMonthlyBooked).map((session, i) => (
-                <div key={i} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-xl border-slate-200 ${session.borderColor} border-l-[4px] shadow-sm`}>
-                  <div className="flex items-start gap-4 mb-4 sm:mb-0">
-                    <div className={`w-10 h-10 rounded-full ${session.color} flex items-center justify-center text-white font-bold text-sm shrink-0 mt-1`}>
-                      {session.initials}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-800">{session.name}</h4>
-                      <p className="text-sm text-slate-600 mb-2">{session.topic}</p>
-                      <div className="flex items-center gap-3">
-                        <span className="flex items-center gap-1 text-xs font-medium text-slate-500">
-                          <Calendar className="w-3.5 h-3.5" /> {session.date} • {session.duration}
-                        </span>
+              <>
+                {paginatedBookedSessions.map((session, i) => (
+                  <div key={i} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-xl border-slate-200 ${session.borderColor} border-l-[4px] shadow-sm`}>
+                    <div className="flex items-start gap-4 mb-4 sm:mb-0">
+                      <div className={`w-10 h-10 rounded-full ${session.color} flex items-center justify-center text-white font-bold text-sm shrink-0 mt-1`}>
+                        {session.initials}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-800">{session.name}</h4>
+                        <p className="text-sm text-slate-600 mb-2">{session.topic}</p>
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1 text-xs font-medium text-slate-500">
+                            <Calendar className="w-3.5 h-3.5" /> {session.date} • {session.duration}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {session.meeting_link && (
-                      <a
-                        href={session.meeting_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-1"
+                    <div className="flex flex-col gap-2">
+                      {session.meeting_link && (
+                        <a
+                          href={session.meeting_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-1"
+                        >
+                          <Video className="w-3.5 h-3.5" /> Join
+                        </a>
+                      )}
+                      <button
+                        onClick={() => handleOpenNotes(session.id, session.studentEmail, session.name, session.topic)}
+                        className="px-3 py-1.5 text-orange-600 hover:bg-orange-50 bg-orange-50/50 border border-orange-100 text-sm font-semibold rounded-lg transition-colors flex items-center gap-1"
                       >
-                        <Video className="w-3.5 h-3.5" /> Join
-                      </a>
-                    )}
-                    <button
-                      onClick={() => handleOpenNotes(session.id, session.studentEmail, session.name, session.topic)}
-                      className="px-3 py-1.5 text-orange-600 hover:bg-orange-50 bg-orange-50/50 border border-orange-100 text-sm font-semibold rounded-lg transition-colors flex items-center gap-1"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" /> Prep Notes
-                    </button>
+                        <Edit3 className="w-3.5 h-3.5" /> Prep Notes
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+                <Pagination
+                  currentPage={bookedSessionsPage}
+                  totalPages={totalBookedPages}
+                  onPageChange={setBookedSessionsPage}
+                  className="mt-4"
+                />
+              </>
             )}
           </div>
         </motion.div>
@@ -797,7 +854,7 @@ export default function ScheduleTabContent() {
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-slate-500">No upcoming bookings.</td>
                 </tr>
-              ) : dynamicUpcomingBookings.map((session, i) => (
+              ) : paginatedUpcomingBookings.map((session, i) => (
                 <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                   <td className="py-4 px-6 text-slate-500 font-medium whitespace-nowrap">{session.id}</td>
                   <td className="py-4 px-6">
@@ -845,6 +902,12 @@ export default function ScheduleTabContent() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={upcomingBookingsPage}
+          totalPages={totalUpcomingPages}
+          onPageChange={setUpcomingBookingsPage}
+          className="border-0 border-t border-slate-100 rounded-none shadow-none p-4"
+        />
       </motion.div>
 
       {/* Block Time Modal */}
