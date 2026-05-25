@@ -138,7 +138,7 @@ export default function ScheduleTabContent() {
         notes: notesInternal,
         shared_with_student: notesShared
       });
-      setNotesSaved(true);
+      setNotesModalOpen(false);
     } catch (err: any) {
       console.error("Failed to save notes", err);
       let errorMessage = "Failed to save notes. Please try again.";

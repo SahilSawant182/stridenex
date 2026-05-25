@@ -348,7 +348,10 @@ export default function OverviewTabContent() {
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-slate-500" /> Upcoming Sessions
               </h3>
-              <button className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+              <button
+                onClick={() => router.push('/mentor/dashboard/schedule')}
+                className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              >
                 Manage Schedule <ChevronRight className="w-4 h-4" />
               </button>
             </div>
