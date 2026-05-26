@@ -584,10 +584,12 @@ export default function MentorOnboarding({
       errors.profile_description =
         "Profile description is required";
     } else {
-      const charCount =
-        formData.profile_description.trim().length;
-      if (charCount < 50)
-        errors.profile_description = `Please enter at least 50 characters (current: ${charCount} characters)`;
+      const wordCount = formData.profile_description
+        .trim()
+        .split(/\s+/)
+        .filter((w) => w.length > 0).length;
+      if (wordCount < 50)
+        errors.profile_description = `Please write at least 50 words (current: ${wordCount} word${wordCount === 1 ? '' : 's'})`;
     }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
@@ -1462,7 +1464,7 @@ export default function MentorOnboarding({
         fieldtype: "Text",
         required: true,
         placeholder:
-          "Tell us about your expertise, experience, and what you can offer as a mentor… (minimum 50 characters)",
+          "Tell us about your expertise, experience, and what you can offer as a mentor… (minimum 50 words)",
         layout: "full",
         inputClassName: "min-h-[150px]",
         minLetters: 50
