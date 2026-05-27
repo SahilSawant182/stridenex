@@ -73,14 +73,18 @@ export default function OverviewTabContent() {
   const [loading, setLoading] = useState(true);
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState("");
+  const [selectedSessionMentor, setSelectedSessionMentor] = useState("");
+  const [selectedSessionStudent, setSelectedSessionStudent] = useState("");
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleFromTime, setRescheduleFromTime] = useState("");
   const [rescheduleToTime, setRescheduleToTime] = useState("");
   const [submittingReschedule, setSubmittingReschedule] = useState(false);
   const [rescheduleError, setRescheduleError] = useState("");
 
-  const handleRescheduleClick = (sessionId: string) => {
+  const handleRescheduleClick = (sessionId: string, mentor: string, student: string) => {
     setSelectedSessionId(sessionId);
+    setSelectedSessionMentor(mentor);
+    setSelectedSessionStudent(student);
     setRescheduleDate("");
     setRescheduleFromTime("");
     setRescheduleToTime("");
@@ -101,7 +105,9 @@ export default function OverviewTabContent() {
         session_name: selectedSessionId,
         new_date: rescheduleDate,
         new_from_time: formatTimeToSeconds(rescheduleFromTime),
-        new_to_time: formatTimeToSeconds(rescheduleToTime)
+        new_to_time: formatTimeToSeconds(rescheduleToTime),
+        mentor: selectedSessionMentor,
+        student: selectedSessionStudent
       });
       setRescheduleModalOpen(false);
       const email = currentUser || localStorage.getItem("userEmail") || "";
@@ -222,7 +228,7 @@ export default function OverviewTabContent() {
   };
 
   const dynamicUpcomingSessions = (Array.isArray(upcoming) ? upcoming : []).slice(0, 4).map((s, index) => {
-    const studentName = s.student_name || (s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : null) || s.student?.split('@')[0] || "Unknown";
+    const studentName = s.student_full_name || s.student_name || (s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : null) || s.student?.split('@')[0] || "Unknown";
     const initials = getInitials(studentName);
     const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
     const color = colors[index % colors.length];
@@ -235,6 +241,8 @@ export default function OverviewTabContent() {
       id: s.name,
       initials,
       name: studentName,
+      mentor: s.mentor || "",
+      student: s.student || "",
       topic: s.topic || "Session",
       date: `${dateStr} ${timeStr}`,
       duration: `${s.duration} min`,
@@ -395,7 +403,7 @@ export default function OverviewTabContent() {
                       </a>
                     )}
                     <button
-                      onClick={() => handleRescheduleClick(session.id)}
+                      onClick={() => handleRescheduleClick(session.id, session.mentor, session.student)}
                       className="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-lg transition-colors">
                       Reschedule
                     </button>

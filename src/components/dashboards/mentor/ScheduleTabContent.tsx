@@ -69,6 +69,8 @@ export default function ScheduleTabContent() {
 
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState("");
+  const [selectedSessionMentor, setSelectedSessionMentor] = useState("");
+  const [selectedSessionStudent, setSelectedSessionStudent] = useState("");
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleFromTime, setRescheduleFromTime] = useState("");
   const [rescheduleToTime, setRescheduleToTime] = useState("");
@@ -169,8 +171,10 @@ export default function ScheduleTabContent() {
     }
   };
 
-  const handleRescheduleClick = (sessionId: string) => {
+  const handleRescheduleClick = (sessionId: string, mentor: string, student: string) => {
     setSelectedSessionId(sessionId);
+    setSelectedSessionMentor(mentor);
+    setSelectedSessionStudent(student);
     setRescheduleDate("");
     setRescheduleFromTime("");
     setRescheduleToTime("");
@@ -191,7 +195,9 @@ export default function ScheduleTabContent() {
         session_name: selectedSessionId,
         new_date: rescheduleDate,
         new_from_time: formatTimeToSeconds(rescheduleFromTime),
-        new_to_time: formatTimeToSeconds(rescheduleToTime)
+        new_to_time: formatTimeToSeconds(rescheduleToTime),
+        mentor: selectedSessionMentor,
+        student: selectedSessionStudent
       });
       setRescheduleModalOpen(false);
       const email = currentUser || localStorage.getItem("userEmail") || "";
@@ -529,6 +535,8 @@ export default function ScheduleTabContent() {
       initials,
       name: studentName,
       studentEmail: s.student || "",
+      mentor: s.mentor || "",
+      student: s.student || "",
       topic: s.topic || "Session",
       date: `${dateStr} - ${timeStr}`,
       duration: `${s.duration || 60} min`,
@@ -558,6 +566,8 @@ export default function ScheduleTabContent() {
       initials,
       name: studentName,
       studentEmail: s.student || "",
+      mentor: s.mentor || "",
+      student: s.student || "",
       topic: s.topic || "Session",
       date: `${dateStr} - ${timeStr}`,
       duration: `${s.duration || 60} min`,
@@ -582,6 +592,8 @@ export default function ScheduleTabContent() {
       initials,
       name: studentName,
       studentEmail: s.student || "",
+      mentor: s.mentor || "",
+      student: s.student || "",
       color,
       topic: s.topic || "Session",
       date: `${dateStr} • ${timeStr}`,
@@ -893,7 +905,7 @@ export default function ScheduleTabContent() {
                         Notes
                       </button>
                       <button 
-                        onClick={() => handleRescheduleClick(session.id)}
+                        onClick={() => handleRescheduleClick(session.id, session.mentor, session.student)}
                         className="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-colors">Reschedule</button>
                     </div>
                   </td>
