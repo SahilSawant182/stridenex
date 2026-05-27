@@ -629,7 +629,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
 
       case "Text":
       case "Long Text":
-        const letterCount = value ? value.length : 0;
+        const wordCount = value ? value.trim().split(/\s+/).filter((w: string) => w.length > 0).length : 0;
         const minLetters = field.minLetters || 0;
         return (
           <div className="space-y-1">
@@ -643,15 +643,18 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
               maxLength={field.maxLength}
             />
             {minLetters > 0 && (
-              <div className="flex justify-between items-center">
-                <p className={`text-xs ${letterCount >= minLetters ? 'text-emerald-600' : 'text-amber-600'}`}>
-                  Characters: {letterCount} / {minLetters}
-                </p>
-                {letterCount < minLetters && (
+              <div className="flex items-center justify-between mt-1">
+                {wordCount >= minLetters ? (
+                  <p className="text-xs text-emerald-600 font-medium">
+                    ✓ Minimum reached — feel free to write more!
+                  </p>
+                ) : (
                   <p className="text-xs text-amber-600">
-                    {minLetters - letterCount} more characters needed
+                    {minLetters - wordCount} more {minLetters - wordCount === 1 ? 'word' : 'words'} needed
+                    <span className="text-slate-400 ml-1">(minimum {minLetters} words)</span>
                   </p>
                 )}
+                <p className="text-xs text-slate-400">{wordCount} {wordCount === 1 ? 'word' : 'words'}</p>
               </div>
             )}
           </div>
