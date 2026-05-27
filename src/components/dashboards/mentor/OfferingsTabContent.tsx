@@ -107,23 +107,23 @@ export default function OfferingsTabContent() {
       );
     }
 
-    fields.push({
-      name: "is_featured", label: "Feature on Profile", type: "custom", colSpan: 1,
-      customRender: (formData, setFieldValue) => (
-        <div
-          onClick={() => setFieldValue(formData.is_featured === "1" ? "0" : "1")}
-          className="flex items-center gap-3 h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-100 transition-all"
-        >
-          <input
-            type="checkbox"
-            checked={formData.is_featured === "1"}
-            onChange={() => { }}
-            className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500 cursor-pointer"
-          />
-          <span className="text-sm font-semibold text-slate-700">Display on main profile</span>
-        </div>
-      )
-    });
+    // fields.push({
+    //   name: "is_featured", label: "Feature on Profile", type: "custom", colSpan: 1,
+    //   customRender: (formData, setFieldValue) => (
+    //     <div
+    //       onClick={() => setFieldValue(formData.is_featured === "1" ? "0" : "1")}
+    //       className="flex items-center gap-3 h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-100 transition-all"
+    //     >
+    //       <input
+    //         type="checkbox"
+    //         checked={formData.is_featured === "1"}
+    //         onChange={() => { }}
+    //         className="w-4 h-4 rounded border-slate-300 text-orange-500 focus:ring-orange-500 cursor-pointer"
+    //       />
+    //       <span className="text-sm font-semibold text-slate-700">Display on main profile</span>
+    //     </div>
+    //   )
+    // });
 
     return fields;
   }, [modalValues.offering_type, modalValues.start_date]);
