@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import OnboardingLayout from "./OnboardingLayout";
 import { Button } from "@/components/ui/button";
@@ -90,6 +90,8 @@ export default function MentorOnboarding({
   onSkip
 }: MentorOnboardingProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isMobileSource = searchParams.get("source") === "mobile";
   const { isOnboarded, isInitialized, currentUser, updateOnboardedFlag, logout } = useAuth();
 
   // ── UI state ────────────────────────────────────────────────────────────────
@@ -776,7 +778,7 @@ export default function MentorOnboarding({
 
           // Wait 2 seconds for user to see success message, then logout and go to login
           setTimeout(() => {
-            logout("/login");
+            logout(isMobileSource ? "https://testwebstridenex.quantcloud.in/login" : "/login");
           }, 2000);
         }
       } else {
@@ -948,7 +950,7 @@ export default function MentorOnboarding({
        * 
        * This ensures the skip flow works every time the user skips and logs in again.
        */
-      await logout("/login");
+      await logout(isMobileSource ? "https://testwebstridenex.quantcloud.in/login" : "/login");
     }
   };
 
