@@ -352,9 +352,9 @@ export const deleteCampusPartner = async (name: string) => {
   }
 };
 
-export const getFindTalentList = async (industry: string, college?: string) => {
+export const getFindTalentList = async (industry: string, college?: string, page: number = 1, page_size: number = 20) => {
   try {
-    let url = `method/stridenex_app.stridenex_app.doctype.student.student.get_student_list?industry=${encodeURIComponent(industry)}`;
+    let url = `method/stridenex_app.stridenex_app.doctype.student.student.get_student_list?industry=${encodeURIComponent(industry)}&page=${page}&page_size=${page_size}`;
     if (college) {
       url += `&college=${encodeURIComponent(college)}`;
     }

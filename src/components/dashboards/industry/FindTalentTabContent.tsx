@@ -6,6 +6,7 @@ import { Search, ChevronDown, Download, Sparkles, Bookmark, Loader2, UserX, Targ
 
 import { useIndustry } from "@/context/IndustryContext";
 import { getFindTalentList, getMasterData } from "@/services/industry.services";
+import { Pagination } from "@/components/ui/Pagination";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -36,6 +37,17 @@ export default function FindTalentTabContent() {
 
 
 
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pagination, setPagination] = useState<any>({
+    total: 0,
+    page: 1,
+    page_size: 20,
+    total_pages: 1,
+    has_next: false,
+    has_prev: false
+  });
+  const PAGE_SIZE = 20;
+
   const fetchColleges = async () => {
     if (colleges.length > 0 || isFetchingColleges) return;
     try {
@@ -62,18 +74,35 @@ export default function FindTalentTabContent() {
   }, []);
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCollege]);
 
+  useEffect(() => {
     const fetchStudents = async () => {
       const industryName = industryData?.company_name;
       if (!industryName) return;
 
       try {
         setLoading(true);
-        const response = await getFindTalentList(industryName, selectedCollege);
+        const response = await getFindTalentList(industryName, selectedCollege, currentPage, PAGE_SIZE);
         console.log("Student API Response:", response);
 
-        const apiData = response?.data || response?.message?.data || response?.message || [];
-        setStudents(Array.isArray(apiData) ? apiData : []);
+        const dataObj = response?.data || response?.message?.data || response?.message || {};
+        const studentsList = dataObj?.students || (Array.isArray(dataObj) ? dataObj : []);
+        setStudents(studentsList);
+
+        if (dataObj?.pagination) {
+          setPagination(dataObj.pagination);
+        } else {
+          setPagination({
+            total: studentsList.length,
+            page: currentPage,
+            page_size: PAGE_SIZE,
+            total_pages: 1,
+            has_next: false,
+            has_prev: false
+          });
+        }
       } catch (err: any) {
         console.error("Error fetching students:", err);
         setError(err.message || "Failed to load students");
@@ -83,7 +112,7 @@ export default function FindTalentTabContent() {
     };
 
     fetchStudents();
-  }, [industryData?.company_name, selectedCollege]);
+  }, [industryData?.company_name, selectedCollege, currentPage]);
 
 
   const transformStudent = (student: any) => {
@@ -280,7 +309,7 @@ export default function FindTalentTabContent() {
         <div className="flex items-center justify-between mb-4 px-1">
           <div className="flex items-center gap-3">
             <h3 className="text-lg font-bold text-slate-800">
-              {loading ? "Searching candidates..." : `${students.length} candidates match`}
+              {loading ? "Searching candidates..." : `${pagination.total || students.length} candidates match`}
             </h3>
             {loading && <Loader2 className="w-4 h-4 text-orange-500 animate-spin" />}
           </div>
@@ -314,62 +343,66 @@ export default function FindTalentTabContent() {
             ))}
           </div>
         ) : students.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {students.map((rawStudent) => {
-              const candidate = transformStudent(rawStudent);
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {students.map((rawStudent) => {
+                const candidate = transformStudent(rawStudent);
 
-              const tagTypes = [
-                { value: rawStudent.course, bg: "bg-blue-50", text: "text-blue-600" },
-                { value: rawStudent.stream, bg: "bg-indigo-50", text: "text-indigo-600" },
-                { value: rawStudent.department, bg: "bg-slate-100", text: "text-slate-600" }
-              ].filter(t => t.value);
-
-              return (
-                <div key={candidate.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow relative">
-                  {/* Match Score Ring - Compact */}
-                  <div className="absolute right-4 top-4 w-10 h-10 rounded-full border-2 border-emerald-500 flex items-center justify-center">
-                    <span className="text-emerald-600 font-bold text-xs">{candidate.match}%</span>
-                  </div>
-
-                  <div className="flex items-start gap-3.5 mb-4">
-                    {/* Avatar - Compact & Colorful */}
-                    <div className={`w-12 h-12 rounded-full ${candidate.bgColor} text-white flex items-center justify-center text-lg font-bold shrink-0 border-2 border-white shadow-sm`}>
-                      {candidate.initials}
+                return (
+                  <div key={candidate.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow relative">
+                    {/* Match Score Ring - Compact */}
+                    <div className="absolute right-4 top-4 w-10 h-10 rounded-full border-2 border-emerald-500 flex items-center justify-center">
+                      <span className="text-emerald-600 font-bold text-xs">{candidate.match}%</span>
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-bold text-slate-800 leading-tight truncate pr-10">{candidate.name}</h3>
-                      <p className="text-slate-500 font-medium text-xs mb-3 truncate">
-                        {candidate.college} • CGPA 8.7
-                      </p>
+                    <div className="flex items-start gap-3.5 mb-4">
+                      {/* Avatar - Compact & Colorful */}
+                      <div className={`w-12 h-12 rounded-full ${candidate.bgColor} text-white flex items-center justify-center text-lg font-bold shrink-0 border-2 border-white shadow-sm`}>
+                        {candidate.initials}
+                      </div>
 
-                      {/* Distinguishable Tags - Labeled */}
-                      <div className="flex flex-wrap gap-2">
-                        {candidate.details.map((tag, idx) => (
-                          <span key={idx} className={`px-3 py-1 ${tag.bg} ${tag.text} text-[10px] font-bold rounded-lg border border-transparent whitespace-nowrap capitalize`}>
-                            {tag.label}: {tag.value}
-                          </span>
-                        ))}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg font-bold text-slate-800 leading-tight truncate pr-10">{candidate.name}</h3>
+                        <p className="text-slate-500 font-medium text-xs mb-3 truncate">
+                          {candidate.college}
+                        </p>
+
+                        {/* Distinguishable Tags - Labeled */}
+                        <div className="flex flex-wrap gap-2">
+                          {candidate.details.map((tag, idx) => (
+                            <span key={idx} className={`px-3 py-1 ${tag.bg} ${tag.text} text-[10px] font-bold rounded-lg border border-transparent whitespace-nowrap capitalize`}>
+                              {tag.label}: {tag.value}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Action Buttons - Compact & Elegant */}
-                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-50">
-                    <button className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-2 rounded-xl transition-colors text-xs border border-slate-200">
-                      View Ledger
-                    </button>
-                    <button className="flex-1 bg-white border-2 border-[#f97316] text-[#f97316] hover:bg-[#f97316] hover:text-white font-bold py-2 rounded-xl transition-all flex items-center justify-center gap-2 text-xs group">
-                      <Sparkles className="w-3.5 h-3.5 text-[#f97316] group-hover:text-white transition-colors" /> Invite
-                    </button>
-                    <button className="w-9 h-9 border border-slate-200 rounded-xl text-slate-400 hover:text-orange-500 hover:bg-orange-50 transition-colors flex items-center justify-center shrink-0">
-                      <Bookmark className="w-4 h-4" />
-                    </button>
+                    {/* Action Buttons - Compact & Elegant */}
+                    <div className="flex items-center gap-2 mt-4 pt-4 border-t border-slate-50">
+                      <button className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold py-2 rounded-xl transition-colors text-xs border border-slate-200">
+                        View Ledger
+                      </button>
+                      <button className="flex-1 bg-white border-2 border-[#f97316] text-[#f97316] hover:bg-[#f97316] hover:text-white font-bold py-2 rounded-xl transition-all flex items-center justify-center gap-2 text-xs group">
+                        <Sparkles className="w-3.5 h-3.5 text-[#f97316] group-hover:text-white transition-colors" /> Invite
+                      </button>
+                      <button className="w-9 h-9 border border-slate-200 rounded-xl text-slate-400 hover:text-orange-500 hover:bg-orange-50 transition-colors flex items-center justify-center shrink-0">
+                        <Bookmark className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+            {pagination.total_pages > 1 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={pagination.total_pages}
+                onPageChange={setCurrentPage}
+                className="mt-6"
+              />
+            )}
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center py-20 bg-white border border-dashed border-slate-200 rounded-2xl text-center">
             <div className="p-4 bg-slate-50 rounded-full mb-4">
