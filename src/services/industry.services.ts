@@ -153,10 +153,10 @@ export const createProject = async (data: any) => {
   }
 };
 
-export const getProjectList = async (industry: string) => {
+export const getProjectList = async (industry: string, page: number = 1, page_size: number = 5) => {
   try {
     const response = await apiService.get(
-      `method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.get_project_list?industry=${encodeURIComponent(industry)}`
+      `method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.get_project_list?industry=${encodeURIComponent(industry)}&page=${page}&page_size=${page_size}`
     );
     return response;
   } catch (error) {
@@ -216,10 +216,10 @@ export const updateInternship = async (name: string, data: any) => {
   }
 };
 
-export const getInternshipList = async (industry: string) => {
+export const getInternshipList = async (industry: string, page: number = 1, page_size: number = 7) => {
   try {
     const response = await apiService.get(
-      `method/stridenex_app.stridenex_app.doctype.internship.internship.get_internship_list?industry=${encodeURIComponent(industry)}`
+      `method/stridenex_app.stridenex_app.doctype.internship.internship.get_internship_list?industry=${encodeURIComponent(industry)}&page=${page}&page_size=${page_size}`
     );
     return response;
   } catch (error) {

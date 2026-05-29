@@ -73,25 +73,25 @@ export default function IndustryBannerWrapper() {
     },
     {
       key: "applications",
-      value: "247",
+      value: "0",
       label: "Applications",
       icon: Users
     },
     {
       key: "ctc",
-      value: "₹18.5L",
+      value: "₹00.0L",
       label: "Avg CTC",
       icon: Target
     },
     {
       key: "rating",
-      value: "4.1",
+      value: "0",
       label: "Rating",
       icon: Star
     },
     {
       key: "hired",
-      value: "247",
+      value: "0",
       label: "Hired",
       icon: Users
     }

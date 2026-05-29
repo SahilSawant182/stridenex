@@ -53,20 +53,22 @@ export default function InternshipsTabContent() {
   const [error, setError] = useState<string | null>(null);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7;
+  const [pagination, setPagination] = useState<any>({
+    total: 0,
+    page: 1,
+    page_size: 7,
+    total_pages: 1,
+  });
+  const PAGE_SIZE = 7;
+  const [isServerPaged, setIsServerPaged] = useState(false);
 
-  const totalPages = Math.ceil(internships.length / itemsPerPage) || 1;
-
-  useEffect(() => {
-    if (currentPage > totalPages && totalPages > 0) {
-      setCurrentPage(totalPages);
+  const displayedInternships = useMemo(() => {
+    if (isServerPaged) {
+      return internships;
     }
-  }, [internships.length, currentPage, totalPages]);
-
-  const paginatedInternships = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return internships.slice(startIndex, startIndex + itemsPerPage);
-  }, [internships, currentPage]);
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return internships.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [internships, isServerPaged, currentPage]);
 
   const companyName = industryData?.company_name || "";
 
@@ -175,10 +177,49 @@ export default function InternshipsTabContent() {
     try {
       setLoading(true);
       setError(null);
-      const response = await getInternshipList(industry);
+      const response = await getInternshipList(industry, currentPage, PAGE_SIZE);
 
-      const projectData = response?.data || response?.message?.data || response?.message || [];
-      setInternships(Array.isArray(projectData) ? projectData : []);
+      const dataObj = response?.data || response?.message?.data || response?.message || {};
+      
+      let internshipList = [];
+      let serverPaged = false;
+      let totalPages = 1;
+      let totalCount = 0;
+
+      if (dataObj?.pagination) {
+        serverPaged = true;
+        internshipList = dataObj.internships || [];
+        totalPages = dataObj.pagination.total_pages || 1;
+        totalCount = dataObj.pagination.total || internshipList.length;
+        setPagination(dataObj.pagination);
+      } else {
+        // Fallback to array check
+        let rawData = [];
+        if (Array.isArray(dataObj)) {
+          rawData = dataObj;
+        } else if (Array.isArray(dataObj?.internships)) {
+          rawData = dataObj.internships;
+        } else if (Array.isArray(response?.data)) {
+          rawData = response.data;
+        } else if (Array.isArray(response?.message)) {
+          rawData = response.message;
+        } else if (Array.isArray(response?.message?.data)) {
+          rawData = response.message.data;
+        }
+        internshipList = rawData;
+        totalCount = rawData.length;
+        totalPages = Math.ceil(rawData.length / PAGE_SIZE) || 1;
+        
+        setPagination({
+          total: totalCount,
+          page: currentPage,
+          page_size: PAGE_SIZE,
+          total_pages: totalPages,
+        });
+      }
+
+      setInternships(internshipList);
+      setIsServerPaged(serverPaged);
     } catch (err: any) {
       console.error("Error fetching internships:", err);
       const isNotFound = err?.status === 404 || err?.message?.includes("not found");
@@ -193,13 +234,16 @@ export default function InternshipsTabContent() {
   };
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [companyName]);
+
+  useEffect(() => {
     if (companyName) {
       fetchInternships(companyName);
-      setCurrentPage(1);
     } else if (!industryLoading) {
       setLoading(false);
     }
-  }, [companyName, industryLoading]);
+  }, [companyName, currentPage, industryLoading]);
 
   const handleModalSubmit = async (formData: any) => {
     setModalLoading(true);
@@ -373,7 +417,7 @@ export default function InternshipsTabContent() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {paginatedInternships.map((internship, idx) => (
+                {displayedInternships.map((internship, idx) => (
                   <tr key={internship.name || idx} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="py-4 px-6 whitespace-nowrap font-bold text-slate-800 text-sm">
                        {internship.title}
@@ -467,11 +511,11 @@ export default function InternshipsTabContent() {
             </div>
           )}
         </div>
-        {totalPages > 1 && (
+        {pagination.total_pages > 1 && (
           <div className="p-4 border-t border-slate-100 bg-white">
             <Pagination
               currentPage={currentPage}
-              totalPages={totalPages}
+              totalPages={pagination.total_pages}
               onPageChange={setCurrentPage}
             />
           </div>

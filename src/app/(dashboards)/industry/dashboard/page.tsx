@@ -133,8 +133,8 @@ export default function IndustryOverviewPage() {
     {
       id: 1,
       title: "SEARCHABLE STUDENTS",
-      value: "12,840",
-      change: 2100,
+      value: "0",
+      change: 0,
       changeLabel: "this month",
       icon: Users,
       iconBg: "bg-blue-50",
@@ -145,7 +145,7 @@ export default function IndustryOverviewPage() {
       id: 2,
       title: "APPLICATIONS RECEIVED",
       value: loadingPipeline ? "..." : appliedCount.toString(),
-      change: 8,
+      change: 0,
       changeLabel: "new applicants",
       icon: ClipboardList,
       iconBg: "bg-slate-100",
@@ -155,9 +155,9 @@ export default function IndustryOverviewPage() {
     {
       id: 3,
       title: "AVG SKILL MATCH",
-      value: "89%",
-      change: 17,
-      changeLabel: "vs 72% industry",
+      value: "0%",
+      change: 0,
+      changeLabel: "vs 00% industry",
       icon: Award,
       iconBg: "bg-orange-50",
       iconColor: "text-orange-500",
@@ -166,9 +166,9 @@ export default function IndustryOverviewPage() {
     {
       id: 4,
       title: "TIME TO SHORTLIST",
-      value: "4.2d",
-      change: 12,
-      changeLabel: "vs 12 days manual",
+      value: "0d",
+      change: 0,
+      changeLabel: "vs 0 days manual",
       icon: Zap,
       iconBg: "bg-emerald-50",
       iconColor: "text-emerald-500",
@@ -202,58 +202,12 @@ export default function IndustryOverviewPage() {
         ))}
       </motion.div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column - Top AI Candidates */}
-        <motion.div variants={item} className="flex flex-col gap-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="w-5 h-5 text-red-500" />
-            <h2 className="text-lg font-bold text-slate-800">Top AI-Matched Candidates</h2>
-          </div>
-          
-          <div className="space-y-4">
-            {topCandidates.map((candidate) => (
-              <div key={candidate.id} className="bg-white border text-center lg:text-left border-slate-200 rounded-xl p-5 hover:border-slate-300 transition-colors shadow-sm relative">
-                {/* Match Badge */}
-                <div className="absolute right-6 top-6 w-12 h-12 rounded-full border-[3px] border-emerald-500 flex items-center justify-center">
-                  <span className="text-emerald-600 font-bold text-sm">{candidate.match}%</span>
-                </div>
-                
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 mb-4">
-                  <div className={`w-12 h-12 rounded-full ${candidate.bgColor} text-white flex items-center justify-center text-lg font-bold shrink-0`}>
-                    {candidate.initials}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-slate-800">{candidate.name}</h3>
-                    <p className="text-sm text-slate-500 mb-2">{candidate.college}</p>
-                    <div className="flex flex-wrap justify-center sm:justify-start gap-2">
-                      {candidate.skills.map(skill => (
-                        <span key={skill} className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-semibold rounded-full border border-blue-100">
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <button className="flex-1 bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm">
-                    <Sparkles className="w-4 h-4" />
-                    Invite
-                  </button>
-                  <button className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium py-2 rounded-lg border border-slate-200 transition-colors text-sm">
-                    View Ledger
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* Right Column - Pipeline & Actions */}
-        <motion.div variants={item} className="flex flex-col gap-6">
-          <BaseCard className="border-slate-200">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Pipeline */}
+        <motion.div variants={item} className="lg:col-span-2">
+          <BaseCard className="border-slate-200 h-full flex flex-col">
             <CardHeader title="Application Pipeline" />
-            <div className="p-5 space-y-5 min-h-[300px] flex flex-col justify-center">
+            <div className="p-5 space-y-5 min-h-[300px] flex-1 flex flex-col justify-center">
               {loadingPipeline ? (
                 <div className="flex flex-col items-center justify-center space-y-3 opacity-60">
                   <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
@@ -266,11 +220,11 @@ export default function IndustryOverviewPage() {
                       {item.stage}
                     </div>
                     <div className="flex-1 mx-4 h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <motion.div 
+                      <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: item.width }}
                         transition={{ duration: 1, ease: "easeOut" }}
-                        className={`h-full rounded-full ${item.color}`} 
+                        className={`h-full rounded-full ${item.color}`}
                       />
                     </div>
                     <div className="w-8 text-right font-bold text-slate-800 text-sm">
@@ -281,28 +235,31 @@ export default function IndustryOverviewPage() {
               )}
             </div>
           </BaseCard>
+        </motion.div>
 
-          <BaseCard className="border-slate-200 p-5">
+        {/* Right Column - Actions */}
+        <motion.div variants={item} className="lg:col-span-1">
+          <BaseCard className="border-slate-200 p-5 h-full">
             <h3 className="font-bold text-slate-800 mb-4 text-base">Quick Actions</h3>
             <div className="space-y-3">
-                <button 
-                  onClick={() => router.push("/industry/dashboard/internships?action=post-new")}
-                  className="w-full text-left px-4 py-3 border border-slate-200 rounded-xl flex items-center gap-3 hover:border-slate-300 hover:bg-slate-50 transition-colors"
-                >
-                   <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
-                     <Briefcase className="w-4 h-4 text-orange-500" />
-                   </div>
-                   <span className="font-medium text-slate-700 text-sm flex-1">Post New Internship</span>
-                </button>
-                <button 
-                  onClick={() => router.push("/industry/dashboard/projects?action=post-new")}
-                  className="w-full text-left px-4 py-3 border border-slate-200 rounded-xl flex items-center gap-3 hover:border-slate-300 hover:bg-slate-50 transition-colors"
-                >
-                   <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
-                     <Target className="w-4 h-4 text-blue-500" />
-                   </div>
-                   <span className="font-medium text-slate-700 text-sm flex-1">Post Live Project</span>
-                </button>
+              <button
+                onClick={() => router.push("/industry/dashboard/internships?action=post-new")}
+                className="w-full text-left px-4 py-3 border border-slate-200 rounded-xl flex items-center gap-3 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center shrink-0">
+                  <Briefcase className="w-4 h-4 text-orange-500" />
+                </div>
+                <span className="font-medium text-slate-700 text-sm flex-1">Post New Internship</span>
+              </button>
+              <button
+                onClick={() => router.push("/industry/dashboard/projects?action=post-new")}
+                className="w-full text-left px-4 py-3 border border-slate-200 rounded-xl flex items-center gap-3 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center shrink-0">
+                  <Target className="w-4 h-4 text-blue-500" />
+                </div>
+                <span className="font-medium text-slate-700 text-sm flex-1">Post Live Project</span>
+              </button>
             </div>
           </BaseCard>
         </motion.div>

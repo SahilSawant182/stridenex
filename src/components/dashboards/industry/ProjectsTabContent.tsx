@@ -49,21 +49,23 @@ export default function ProjectsTabContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [projectsPage, setProjectsPage] = useState(1);
-  const projectsPerPage = 5;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<any>({
+    total: 0,
+    page: 1,
+    page_size: 5,
+    total_pages: 1,
+  });
+  const PAGE_SIZE = 5;
+  const [isServerPaged, setIsServerPaged] = useState(false);
 
-  const totalProjectsPages = Math.ceil(projects.length / projectsPerPage) || 1;
-
-  useEffect(() => {
-    if (projectsPage > totalProjectsPages && totalProjectsPages > 0) {
-      setProjectsPage(totalProjectsPages);
+  const displayedProjects = useMemo(() => {
+    if (isServerPaged) {
+      return projects;
     }
-  }, [projects.length, projectsPage, totalProjectsPages]);
-
-  const paginatedProjects = useMemo(() => {
-    const startIndex = (projectsPage - 1) * projectsPerPage;
-    return projects.slice(startIndex, startIndex + projectsPerPage);
-  }, [projects, projectsPage]);
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return projects.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [projects, isServerPaged, currentPage]);
 
   const companyName = industryData?.company_name || "";
 
@@ -153,20 +155,49 @@ export default function ProjectsTabContent() {
     try {
       setLoading(true);
       setError(null);
-      const response = await getProjectList(industry);
+      const response = await getProjectList(industry, currentPage, PAGE_SIZE);
 
-      const apiMessage = response?.message;
-      let projectData = [];
+      const dataObj = response?.data || response?.message?.data || response?.message || {};
+      
+      let projectList = [];
+      let serverPaged = false;
+      let totalPages = 1;
+      let totalCount = 0;
 
-      if (Array.isArray(apiMessage?.data)) {
-        projectData = apiMessage.data;
-      } else if (Array.isArray(response?.data)) {
-        projectData = response.data;
-      } else if (Array.isArray(response)) {
-        projectData = response;
+      if (dataObj?.pagination) {
+        serverPaged = true;
+        projectList = dataObj.projects || [];
+        totalPages = dataObj.pagination.total_pages || 1;
+        totalCount = dataObj.pagination.total || projectList.length;
+        setPagination(dataObj.pagination);
+      } else {
+        // Fallback to array check
+        let rawData = [];
+        if (Array.isArray(dataObj)) {
+          rawData = dataObj;
+        } else if (Array.isArray(dataObj?.projects)) {
+          rawData = dataObj.projects;
+        } else if (Array.isArray(response?.data)) {
+          rawData = response.data;
+        } else if (Array.isArray(response?.message)) {
+          rawData = response.message;
+        } else if (Array.isArray(response?.message?.data)) {
+          rawData = response.message.data;
+        }
+        projectList = rawData;
+        totalCount = rawData.length;
+        totalPages = Math.ceil(rawData.length / PAGE_SIZE) || 1;
+        
+        setPagination({
+          total: totalCount,
+          page: currentPage,
+          page_size: PAGE_SIZE,
+          total_pages: totalPages,
+        });
       }
 
-      setProjects(projectData);
+      setProjects(projectList);
+      setIsServerPaged(serverPaged);
     } catch (err: any) {
       console.error("Error fetching projects:", err);
       const isNotFound = err?.status === 404 || err?.message?.includes("not found");
@@ -243,10 +274,18 @@ export default function ProjectsTabContent() {
   };
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [companyName]);
+
+  useEffect(() => {
     if (companyName) {
       fetchProjects(companyName);
+    }
+  }, [companyName, currentPage]);
+
+  useEffect(() => {
+    if (companyName) {
       fetchApplicationCount(companyName);
-      setProjectsPage(1);
     } else if (!industryLoading) {
       setLoading(false);
     }
@@ -431,7 +470,7 @@ export default function ProjectsTabContent() {
       <div className="space-y-4">
         <AnimatePresence mode="popLayout">
           {projects.length > 0 ? (
-            paginatedProjects.map((project, idx) => (
+            displayedProjects.map((project, idx) => (
               <motion.div
                 key={project.name || `project-${idx}`}
                 variants={item}
@@ -545,11 +584,11 @@ export default function ProjectsTabContent() {
           )}
         </AnimatePresence>
 
-        {totalProjectsPages > 1 && (
+        {pagination.total_pages > 1 && (
           <Pagination
-            currentPage={projectsPage}
-            totalPages={totalProjectsPages}
-            onPageChange={setProjectsPage}
+            currentPage={currentPage}
+            totalPages={pagination.total_pages}
+            onPageChange={setCurrentPage}
             className="mt-6"
           />
         )}
