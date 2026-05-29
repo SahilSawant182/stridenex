@@ -35,6 +35,7 @@ import { updateIndustry, addRequiredRole, updateIndustryRole, deleteIndustryRole
 import { useIndustry, IndustryData, IndustryRole, HiringRound } from "@/context/IndustryContext";
 import { useToast } from "@/context/ToastContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
+import { Pagination } from "@/components/ui/Pagination";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -107,6 +108,22 @@ export default function CompanyProfileTabContent() {
 
   const [skillDomains, setSkillDomains] = useState<any[]>([]);
   const [skillsLoading, setSkillsLoading] = useState(false);
+
+  const [skillsPage, setSkillsPage] = useState(1);
+  const skillsPerPage = 2;
+
+  const totalSkillsPages = Math.ceil(skillDomains.length / skillsPerPage) || 1;
+
+  useEffect(() => {
+    if (skillsPage > totalSkillsPages && totalSkillsPages > 0) {
+      setSkillsPage(totalSkillsPages);
+    }
+  }, [skillDomains.length, skillsPage, totalSkillsPages]);
+
+  const paginatedSkillDomains = useMemo(() => {
+    const startIndex = (skillsPage - 1) * skillsPerPage;
+    return skillDomains.slice(startIndex, startIndex + skillsPerPage);
+  }, [skillDomains, skillsPage]);
 
   const [campusPartners, setCampusPartners] = useState<any[]>([]);
   const [campusPartnersLoading, setCampusPartnersLoading] = useState(false);
@@ -185,6 +202,7 @@ export default function CompanyProfileTabContent() {
     fetchMasterOptions("Designation", setDesignationOptions);
     fetchMasterOptions("College", setCollegeOptions);
     fetchMasterOptions("Domain", setDomainOptions);
+    setSkillsPage(1);
   }, [data?.company_name]);
 
 
@@ -672,7 +690,7 @@ export default function CompanyProfileTabContent() {
                   </div>
                 </div>
               ) : skillDomains.length > 0 ? (
-                skillDomains.map((domain) => (
+                paginatedSkillDomains.map((domain) => (
                   <motion.div
                     key={domain.id}
                     initial={{ opacity: 0, y: 20 }}
@@ -748,6 +766,15 @@ export default function CompanyProfileTabContent() {
                 </div>
               )}
             </div>
+
+            {totalSkillsPages > 1 && (
+              <Pagination
+                currentPage={skillsPage}
+                totalPages={totalSkillsPages}
+                onPageChange={setSkillsPage}
+                className="mt-4"
+              />
+            )}
           </div>
 
         </div>

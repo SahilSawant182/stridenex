@@ -24,6 +24,7 @@ import {
 import { getInternshipList, createInternship, updateInternship, deleteInternship, getMasterData, createSkill, getDepartmentsByCourse } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
+import { Pagination } from "@/components/ui/Pagination";
 import { calculateEndDate } from "@/utils/date.utils";
 import { useToast } from "@/context/ToastContext";
 
@@ -50,6 +51,22 @@ export default function InternshipsTabContent() {
   const [internships, setInternships] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 7;
+
+  const totalPages = Math.ceil(internships.length / itemsPerPage) || 1;
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [internships.length, currentPage, totalPages]);
+
+  const paginatedInternships = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return internships.slice(startIndex, startIndex + itemsPerPage);
+  }, [internships, currentPage]);
 
   const companyName = industryData?.company_name || "";
 
@@ -178,6 +195,7 @@ export default function InternshipsTabContent() {
   useEffect(() => {
     if (companyName) {
       fetchInternships(companyName);
+      setCurrentPage(1);
     } else if (!industryLoading) {
       setLoading(false);
     }
@@ -339,26 +357,26 @@ export default function InternshipsTabContent() {
       {/* Error Display */}
 
       <motion.div variants={item} className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto hide-scrollbar">
+        <div className="overflow-x-auto overflow-y-auto max-h-[480px] hide-scrollbar">
           {internships.length > 0 ? (
             <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
                 <tr className="border-b border-slate-200/60 bg-slate-50/50">
-                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Role</th>
-                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Type</th>
-                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Location</th>
-                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Stipend</th>
-                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Skills</th>
-                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Openings</th>
-                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
-                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Actions</th>
+                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest sticky top-0 bg-slate-50 z-10 border-b border-slate-200/60">Role</th>
+                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest sticky top-0 bg-slate-50 z-10 border-b border-slate-200/60">Type</th>
+                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest sticky top-0 bg-slate-50 z-10 border-b border-slate-200/60">Location</th>
+                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest sticky top-0 bg-slate-50 z-10 border-b border-slate-200/60">Stipend</th>
+                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest sticky top-0 bg-slate-50 z-10 border-b border-slate-200/60">Skills</th>
+                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest sticky top-0 bg-slate-50 z-10 border-b border-slate-200/60">Openings</th>
+                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest sticky top-0 bg-slate-50 z-10 border-b border-slate-200/60">Status</th>
+                  <th className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right sticky top-0 bg-slate-50 z-10 border-b border-slate-200/60">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {internships.map((internship, idx) => (
+                {paginatedInternships.map((internship, idx) => (
                   <tr key={internship.name || idx} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="py-4 px-6 whitespace-nowrap font-bold text-slate-800 text-sm">
-                      {internship.title}
+                       {internship.title}
                     </td>
                     <td className="py-4 px-6 whitespace-nowrap">
                       <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-full border border-slate-200">
@@ -449,6 +467,15 @@ export default function InternshipsTabContent() {
             </div>
           )}
         </div>
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-slate-100 bg-white">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
       </motion.div>
 
       <DashboardDynamicModal

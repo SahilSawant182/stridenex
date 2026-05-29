@@ -20,6 +20,7 @@ import {
 import { getProjectList, createProject, updateProject, deleteProject, getMasterData, getProjectApplicationCount, createSkill, getDepartmentsByCourse } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
+import { Pagination } from "@/components/ui/Pagination";
 import ApplicationsPipelineModal from "./ApplicationsPipelineModal";
 import { calculateEndDate } from "@/utils/date.utils";
 import { useToast } from "@/context/ToastContext";
@@ -47,6 +48,22 @@ export default function ProjectsTabContent() {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [projectsPage, setProjectsPage] = useState(1);
+  const projectsPerPage = 5;
+
+  const totalProjectsPages = Math.ceil(projects.length / projectsPerPage) || 1;
+
+  useEffect(() => {
+    if (projectsPage > totalProjectsPages && totalProjectsPages > 0) {
+      setProjectsPage(totalProjectsPages);
+    }
+  }, [projects.length, projectsPage, totalProjectsPages]);
+
+  const paginatedProjects = useMemo(() => {
+    const startIndex = (projectsPage - 1) * projectsPerPage;
+    return projects.slice(startIndex, startIndex + projectsPerPage);
+  }, [projects, projectsPage]);
 
   const companyName = industryData?.company_name || "";
 
@@ -229,6 +246,7 @@ export default function ProjectsTabContent() {
     if (companyName) {
       fetchProjects(companyName);
       fetchApplicationCount(companyName);
+      setProjectsPage(1);
     } else if (!industryLoading) {
       setLoading(false);
     }
@@ -413,7 +431,7 @@ export default function ProjectsTabContent() {
       <div className="space-y-4">
         <AnimatePresence mode="popLayout">
           {projects.length > 0 ? (
-            projects.map((project, idx) => (
+            paginatedProjects.map((project, idx) => (
               <motion.div
                 key={project.name || `project-${idx}`}
                 variants={item}
@@ -526,6 +544,15 @@ export default function ProjectsTabContent() {
             </div>
           )}
         </AnimatePresence>
+
+        {totalProjectsPages > 1 && (
+          <Pagination
+            currentPage={projectsPage}
+            totalPages={totalProjectsPages}
+            onPageChange={setProjectsPage}
+            className="mt-6"
+          />
+        )}
       </div>
 
       <DashboardDynamicModal
