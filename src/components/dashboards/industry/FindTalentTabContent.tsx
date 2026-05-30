@@ -34,6 +34,8 @@ export default function FindTalentTabContent() {
   const [isCollegeDropdownOpen, setIsCollegeDropdownOpen] = useState(false);
   const [collegeSearchTerm, setCollegeSearchTerm] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [searchVal, setSearchVal] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
 
 
 
@@ -75,7 +77,7 @@ export default function FindTalentTabContent() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCollege]);
+  }, [selectedCollege, searchQuery]);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -84,7 +86,7 @@ export default function FindTalentTabContent() {
 
       try {
         setLoading(true);
-        const response = await getFindTalentList(industryName, selectedCollege, currentPage, PAGE_SIZE);
+        const response = await getFindTalentList(industryName, selectedCollege, currentPage, PAGE_SIZE, searchQuery);
         console.log("Student API Response:", response);
 
         const dataObj = response?.data || response?.message?.data || response?.message || response || {};
@@ -112,7 +114,7 @@ export default function FindTalentTabContent() {
     };
 
     fetchStudents();
-  }, [industryData?.company_name, selectedCollege, currentPage]);
+  }, [industryData?.company_name, selectedCollege, currentPage, searchQuery]);
 
 
   const transformStudent = (student: any) => {
@@ -186,9 +188,15 @@ export default function FindTalentTabContent() {
           <div className="flex-1 relative">
             <input
               type="text"
-              placeholder="Required Skills (e.g. Python, ML, SQL)"
-              className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm"
-              defaultValue="Python, Machine Learning, SQL"
+              placeholder="Search by name, email, skills..."
+              className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 text-sm font-semibold"
+              value={searchVal}
+              onChange={(e) => setSearchVal(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setSearchQuery(searchVal);
+                }
+              }}
             />
           </div>
 
@@ -291,7 +299,10 @@ export default function FindTalentTabContent() {
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
           </div>
 
-          <button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-xl font-medium transition-colors text-sm whitespace-nowrap">
+          <button
+            onClick={() => setSearchQuery(searchVal)}
+            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 rounded-xl font-medium transition-colors text-sm whitespace-nowrap"
+          >
             Search
           </button>
         </div>
