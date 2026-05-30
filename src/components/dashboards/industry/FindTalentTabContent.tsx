@@ -87,7 +87,7 @@ export default function FindTalentTabContent() {
         const response = await getFindTalentList(industryName, selectedCollege, currentPage, PAGE_SIZE);
         console.log("Student API Response:", response);
 
-        const dataObj = response?.data || response?.message?.data || response?.message || {};
+        const dataObj = response?.data || response?.message?.data || response?.message || response || {};
         const studentsList = dataObj?.students || (Array.isArray(dataObj) ? dataObj : []);
         setStudents(studentsList);
 

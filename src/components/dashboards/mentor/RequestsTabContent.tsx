@@ -19,6 +19,14 @@ import { BASE_DOMAIN } from "@/services/api.services";
 import { Pagination } from "@/components/ui/Pagination";
 
 
+const getFeedbackMessage = (res: any, defaultMsg: string): string => {
+  if (!res) return defaultMsg;
+  if (typeof res.message === 'object' && res.message) {
+    return res.message.message || JSON.stringify(res.message);
+  }
+  return res.message || defaultMsg;
+};
+
 export default function RequestsTabContent() {
   const { currentUser } = useAuth();
   const [requests, setRequests] = useState<any[]>([]);
@@ -109,7 +117,7 @@ export default function RequestsTabContent() {
       });
       setFeedback({
         type: 'success',
-        message: typeof res.message === 'object' ? JSON.stringify(res.message) : res.message || "Request accepted successfully."
+        message: getFeedbackMessage(res, "Request accepted successfully.")
       });
       fetchRequests();
     } catch (err: any) {
@@ -131,7 +139,7 @@ export default function RequestsTabContent() {
       });
       setFeedback({
         type: 'success',
-        message: typeof res.message === 'object' ? JSON.stringify(res.message) : res.message || "Request declined successfully."
+        message: getFeedbackMessage(res, "Request declined successfully.")
       });
       fetchRequests();
     } catch (err: any) {
@@ -191,7 +199,7 @@ export default function RequestsTabContent() {
       const res = await verifyAndEndorseSkill(evidenceName);
       setFeedback({
         type: 'success',
-        message: typeof res.message === 'object' ? JSON.stringify(res.message) : res.message || "Skill verified and endorsed successfully."
+        message: getFeedbackMessage(res, "Skill verified and endorsed successfully.")
       });
       fetchVerifyQueue();
     } catch (err: any) {
@@ -213,7 +221,7 @@ export default function RequestsTabContent() {
       const res = await rejectSkillEvidence(evidenceName);
       setFeedback({
         type: 'success',
-        message: typeof res.message === 'object' ? JSON.stringify(res.message) : res.message || "Skill evidence rejected."
+        message: getFeedbackMessage(res, "Skill evidence rejected.")
       });
       fetchVerifyQueue();
     } catch (err: any) {
