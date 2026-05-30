@@ -30,7 +30,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { getMentorListings, getMentorSlotCalendar, bookMentorSlot, getMentorNextAvailableSlot, createGroupSessionBooking, getBookedSessions } from "@/services/student.services";
+import { Pagination } from "@/components/ui/Pagination";
+import { getMentorList, getMentorSlotCalendar, bookMentorSlot, getMentorNextAvailableSlot, createGroupSessionBooking, getBookedSessions } from "@/services/student.services";
 
 // Types
 interface Mentor {
@@ -94,6 +95,18 @@ export default function MentorsTabContent() {
   const [error, setError] = useState<string | null>(null);
   const [bookedSessions, setBookedSessions] = useState<BookedSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<any>({
+    total: 0,
+    page: 1,
+    page_size: 20,
+    total_pages: 1,
+    has_next: false,
+    has_prev: false,
+  });
+  const PAGE_SIZE = 20;
 
   // Booking Modal States
   const [selectedMentorForBooking, setSelectedMentorForBooking] = useState<Mentor | null>(null);
@@ -225,7 +238,10 @@ export default function MentorsTabContent() {
 
 
   useEffect(() => {
-    fetchMentors();
+    fetchMentors(currentPage);
+  }, [currentPage]);
+
+  useEffect(() => {
     fetchBookedSessions();
   }, []);
 
@@ -257,16 +273,27 @@ export default function MentorsTabContent() {
     );
   };
 
-  const fetchMentors = async () => {
+  const fetchMentors = async (page: number = currentPage) => {
     try {
       setLoading(true);
-      const userEmail = localStorage.getItem("currentUser") || "";
+      setError(null);
+      const response = await getMentorList(page, PAGE_SIZE);
+      console.log(response, 'response');
+      
+      const dataObj = response?.data || {};
+      const mentorList = dataObj.Mentor || [];
+      const paginationData = dataObj.pagination || {
+        total: mentorList.length,
+        page: page,
+        page_size: PAGE_SIZE,
+        total_pages: 1,
+        has_next: false,
+        has_prev: false,
+      };
 
-      const response = await getMentorListings();
-      console.log(response, 'response')
-      if (response && response.message && Array.isArray(response.message)) {
-        const mappedMentors = response.message.map((m: any, index: number) => {
-          const name = m.full_name || m.mentor || "Unknown Mentor";
+      if (Array.isArray(mentorList)) {
+        const mappedMentors = mentorList.map((m: any, index: number) => {
+          const name = `${m.first_name || ""} ${m.last_name || ""}`.trim() || m.name || "Unknown Mentor";
           const initials = name
             .split(" ")
             .map((n: string) => n[0])
@@ -274,26 +301,31 @@ export default function MentorsTabContent() {
             .slice(0, 2)
             .toUpperCase() || "M";
 
+          const expertise = m.domain 
+            ? [m.domain, m.other_domain].filter(Boolean)
+            : (m.type && m.type !== "RAW" ? [m.type] : []);
+
           return {
-            id: m.offering_name || `mentor-${index}`,
+            id: m.name || `mentor-${index}`,
             name: name,
-            email: m.mentor || "unknown@example.com",
+            email: m.email_id || m.name || "unknown@example.com",
             initials,
-            role: m.designation || "Mentor",
+            role: m.role || m.type || "Mentor",
             company: m.company || "Independent",
-            expertise: m.tags || [],
+            expertise: expertise,
             rating: m.avg_rating || 0,
             sessions: m.total_sessions || 0,
-            hourlyRate: m.price_per_hour ? `₹${m.price_per_hour}/hr` : "Free",
-            availability: m.next_slot || "Contact for availability",
-            tags: m.tags || [],
+            hourlyRate: "Free",
+            availability: "Contact for availability",
+            tags: expertise,
             avatarColor: COLORS[index % COLORS.length],
             profileImage: m.profile_image || "",
-            offering_type: m.offering_type || "1:1 Mentorship",
-            batch_name: m.batch_name || ""
+            offering_type: "1:1 Mentorship",
+            batch_name: ""
           };
         });
         setMentors(mappedMentors);
+        setPagination(paginationData);
       } else {
         setMentors([]);
       }
@@ -385,104 +417,115 @@ export default function MentorsTabContent() {
           No mentors available at the moment.
         </motion.div>
       ) : (
-        /* Mentors Grid */
-        <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {mentors.map((mentor) => (
-            <BaseCard key={mentor.id} className="overflow-hidden hover:shadow-lg transition-all group">
-              <div className="p-5 flex flex-col h-full">
-                <div className="flex-1">
-                  {/* Header with Avatar and Company */}
-                  <div className="flex justify-between items-start mb-4 gap-2">
-                    <div className="flex gap-3 flex-1 min-w-0">
-                      <Avatar className="w-11 h-11 shrink-0">
-                        {mentor.profileImage ? (
-                          <AvatarImage src={mentor.profileImage} alt={mentor.name} className="object-cover" />
-                        ) : null}
-                        <AvatarFallback className={`${mentor.avatarColor} text-white font-medium`}>
-                          {mentor.initials}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-slate-800 break-all text-sm leading-tight mt-0.5" title={mentor.name}>
-                          {mentor.name}
-                        </h3>
-                        <p className="text-xs text-slate-500 truncate flex items-center gap-1 mt-1" title={`${mentor.role} • ${mentor.company}`}>
-                          <Briefcase className="w-3 h-3 shrink-0" />
-                          <span className="truncate">{mentor.role} • {mentor.company}</span>
-                        </p>
+        <>
+          {/* Mentors Grid */}
+          <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {mentors.map((mentor) => (
+              <BaseCard key={mentor.id} className="overflow-hidden hover:shadow-lg transition-all group">
+                <div className="p-5 flex flex-col h-full">
+                  <div className="flex-1">
+                    {/* Header with Avatar and Company */}
+                    <div className="flex justify-between items-start mb-4 gap-2">
+                      <div className="flex gap-3 flex-1 min-w-0">
+                        <Avatar className="w-11 h-11 shrink-0">
+                          {mentor.profileImage ? (
+                            <AvatarImage src={mentor.profileImage} alt={mentor.name} className="object-cover" />
+                          ) : null}
+                          <AvatarFallback className={`${mentor.avatarColor} text-white font-medium`}>
+                            {mentor.initials}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-slate-800 break-all text-sm leading-tight mt-0.5" title={mentor.name}>
+                            {mentor.name}
+                          </h3>
+                          <p className="text-xs text-slate-500 truncate flex items-center gap-1 mt-1" title={`${mentor.role} • ${mentor.company}`}>
+                            <Briefcase className="w-3 h-3 shrink-0" />
+                            <span className="truncate">{mentor.role} • {mentor.company}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <Badge 
+                        variant="outline" 
+                        className={`${
+                          isSessionAlreadyBooked(mentor)
+                            ? 'bg-slate-50 text-slate-600 border-slate-200'
+                            : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                        } text-[10px] px-1.5 py-0 shrink-0 h-fit mt-0.5`}
+                      >
+                        {isSessionAlreadyBooked(mentor) ? 'Booked' : 'Available'}
+                      </Badge>
+                    </div>
+
+                    {/* Expertise Tags */}
+                    {mentor.expertise && mentor.expertise.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-4">
+                        {mentor.expertise.map((exp, i) => (
+                          <Badge key={i} variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-xs">
+                            {exp}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Stats Row */}
+                    <div className="flex items-center justify-between mb-4 mt-auto">
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                        <span className="text-sm font-semibold text-slate-800">{mentor.rating.toFixed(1)}</span>
+                        <span className="text-xs text-slate-400">({mentor.sessions})</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-4 h-4 text-slate-400" />
+                        <span className="text-sm font-medium text-slate-600">{mentor.hourlyRate}</span>
                       </div>
                     </div>
-                    <Badge 
-                      variant="outline" 
-                      className={`${
-                        isSessionAlreadyBooked(mentor)
-                          ? 'bg-slate-50 text-slate-600 border-slate-200'
-                          : 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                      } text-[10px] px-1.5 py-0 shrink-0 h-fit mt-0.5`}
-                    >
-                      {isSessionAlreadyBooked(mentor) ? 'Booked' : 'Available'}
-                    </Badge>
-                  </div>
 
-                  {/* Expertise Tags */}
-                  {mentor.expertise && mentor.expertise.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mb-4">
-                      {mentor.expertise.map((exp, i) => (
-                        <Badge key={i} variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-xs">
-                          {exp}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Stats Row */}
-                  <div className="flex items-center justify-between mb-4 mt-auto">
-                    <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                      <span className="text-sm font-semibold text-slate-800">{mentor.rating.toFixed(1)}</span>
-                      <span className="text-xs text-slate-400">({mentor.sessions})</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4 text-slate-400" />
-                      <span className="text-sm font-medium text-slate-600">{mentor.hourlyRate}</span>
+                    {/* Next Available */}
+                    <div className="flex items-center gap-2 mb-4 p-2 bg-slate-50 rounded-lg">
+                      <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+                      <span className="text-xs text-slate-600">Next available: </span>
+                      <span className="text-xs font-medium text-slate-800 truncate">
+                        {mentor.nextAvailableSlot || mentor.availability}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Next Available */}
-                  <div className="flex items-center gap-2 mb-4 p-2 bg-slate-50 rounded-lg">
-                    <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-                    <span className="text-xs text-slate-600">Next available: </span>
-                    <span className="text-xs font-medium text-slate-800 truncate">
-                      {mentor.nextAvailableSlot || mentor.availability}
-                    </span>
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2 mt-auto">
+                    {isSessionAlreadyBooked(mentor) ? (
+                      <Button 
+                        className="flex-1 bg-slate-400 text-white text-sm cursor-not-allowed"
+                        disabled
+                      >
+                        Booked
+                      </Button>
+                    ) : (
+                      <Button 
+                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm"
+                        onClick={() => handleBookSession(mentor)}
+                      >
+                        Book Session
+                      </Button>
+                    )}
+                    <Button variant="outline" size="icon" className="border-slate-200 shrink-0">
+                      <ChevronRight className="w-4 h-4 text-slate-600" />
+                    </Button>
                   </div>
                 </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2 mt-auto">
-                  {isSessionAlreadyBooked(mentor) ? (
-                    <Button 
-                      className="flex-1 bg-slate-400 text-white text-sm cursor-not-allowed"
-                      disabled
-                    >
-                      Booked
-                    </Button>
-                  ) : (
-                    <Button 
-                      className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm"
-                      onClick={() => handleBookSession(mentor)}
-                    >
-                      Book Session
-                    </Button>
-                  )}
-                  <Button variant="outline" size="icon" className="border-slate-200 shrink-0">
-                    <ChevronRight className="w-4 h-4 text-slate-600" />
-                  </Button>
-                </div>
-              </div>
-            </BaseCard>
-          ))}
-        </motion.div>
+              </BaseCard>
+            ))}
+          </motion.div>
+          {pagination.total_pages > 1 && (
+            <motion.div variants={item} className="mt-4">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={pagination.total_pages}
+                onPageChange={setCurrentPage}
+              />
+            </motion.div>
+          )}
+        </>
       )}
 
       {/* Booked Sessions Section */}
