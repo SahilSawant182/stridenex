@@ -17,6 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getPendingRequests, suggestAltTime, acceptRequest, declineRequest, getMentorPendingVerifications, verifyAndEndorseSkill, rejectSkillEvidence } from "@/services/mentor.services";
 import { BASE_DOMAIN } from "@/services/api.services";
 import { Pagination } from "@/components/ui/Pagination";
+import { useToast } from "@/context/ToastContext";
 
 
 const getFeedbackMessage = (res: any, defaultMsg: string): string => {
@@ -29,6 +30,7 @@ const getFeedbackMessage = (res: any, defaultMsg: string): string => {
 
 export default function RequestsTabContent() {
   const { currentUser } = useAuth();
+  const { showToast } = useToast();
   const [requests, setRequests] = useState<any[]>([]);
   const [requestsPage, setRequestsPage] = useState<number>(1);
   const [verifyQueue, setVerifyQueue] = useState<any[]>([]);
@@ -99,9 +101,11 @@ export default function RequestsTabContent() {
         alt_time: altTime
       });
       setAltTimeModal({ isOpen: false, req: null });
+      showToast("Alternate time suggested successfully.", "success");
       fetchRequests();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to suggest alternate time", err);
+      showToast(err?.message || "Failed to suggest alternate time.", "error");
     } finally {
       setSubmittingAlt(false);
     }
@@ -115,17 +119,21 @@ export default function RequestsTabContent() {
         from_time: req.from_time,
         to_time: req.to_time
       });
+      const msg = getFeedbackMessage(res, "Request accepted successfully.");
       setFeedback({
         type: 'success',
-        message: getFeedbackMessage(res, "Request accepted successfully.")
+        message: msg
       });
+      showToast(msg, "success");
       fetchRequests();
     } catch (err: any) {
       console.error("Failed to accept request", err);
+      const errMsg = err?.message || "Failed to accept request.";
       setFeedback({
         type: 'error',
-        message: err?.message || "Failed to accept request."
+        message: errMsg
       });
+      showToast(errMsg, "error");
     } finally {
       setAcceptingId(null);
     }
@@ -137,17 +145,21 @@ export default function RequestsTabContent() {
       const res = await declineRequest({
         booking_name: req.name
       });
+      const msg = getFeedbackMessage(res, "Request declined successfully.");
       setFeedback({
         type: 'success',
-        message: getFeedbackMessage(res, "Request declined successfully.")
+        message: msg
       });
+      showToast(msg, "success");
       fetchRequests();
     } catch (err: any) {
       console.error("Failed to decline request", err);
+      const errMsg = err?.message || "Failed to decline request.";
       setFeedback({
         type: 'error',
-        message: err?.message || "Failed to decline request."
+        message: errMsg
       });
+      showToast(errMsg, "error");
     } finally {
       setDecliningId(null);
     }
@@ -197,17 +209,21 @@ export default function RequestsTabContent() {
       setProcessingEvidenceName(evidenceName);
       setActionType('verify');
       const res = await verifyAndEndorseSkill(evidenceName);
+      const msg = getFeedbackMessage(res, "Skill verified and endorsed successfully.");
       setFeedback({
         type: 'success',
-        message: getFeedbackMessage(res, "Skill verified and endorsed successfully.")
+        message: msg
       });
+      showToast(msg, "success");
       fetchVerifyQueue();
     } catch (err: any) {
       console.error("Failed to verify skill:", err);
+      const errMsg = err?.message || "Failed to verify and endorse skill.";
       setFeedback({
         type: 'error',
-        message: err?.message || "Failed to verify and endorse skill."
+        message: errMsg
       });
+      showToast(errMsg, "error");
     } finally {
       setProcessingEvidenceName(null);
       setActionType(null);
@@ -219,17 +235,21 @@ export default function RequestsTabContent() {
       setProcessingEvidenceName(evidenceName);
       setActionType('reject');
       const res = await rejectSkillEvidence(evidenceName);
+      const msg = getFeedbackMessage(res, "Skill evidence rejected.");
       setFeedback({
         type: 'success',
-        message: getFeedbackMessage(res, "Skill evidence rejected.")
+        message: msg
       });
+      showToast(msg, "success");
       fetchVerifyQueue();
     } catch (err: any) {
       console.error("Failed to reject skill evidence:", err);
+      const errMsg = err?.message || "Failed to reject skill evidence.";
       setFeedback({
         type: 'error',
-        message: err?.message || "Failed to reject skill evidence."
+        message: errMsg
       });
+      showToast(errMsg, "error");
     } finally {
       setProcessingEvidenceName(null);
       setActionType(null);

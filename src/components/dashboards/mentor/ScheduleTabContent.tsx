@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getUpcomingSessions, getSlotCalendar, getWeeklyBookedSessions, getMonthlyBookedSessions, blockTime, rescheduleSession, saveMentorAvailability, deleteMentorAvailability, getSessionNote, saveSessionNotes } from "@/services/mentor.services";
+import { useToast } from "@/context/ToastContext";
 
 import { motion } from "framer-motion";
 import {
@@ -42,6 +43,7 @@ const upcomingBookings = [
 
 export default function ScheduleTabContent() {
   const { currentUser } = useAuth();
+  const { showToast } = useToast();
   const [upcoming, setUpcoming] = useState<any[]>([]);
   const [slotCalendar, setSlotCalendar] = useState<Record<string, any[]>>({});
   const [weeklyBooked, setWeeklyBooked] = useState<any[]>([]);
@@ -149,6 +151,7 @@ export default function ScheduleTabContent() {
         notes: notesInternal,
         shared_with_student: notesShared
       });
+      showToast("Session notes saved successfully.", "success");
       setNotesModalOpen(false);
     } catch (err: any) {
       console.error("Failed to save notes", err);
@@ -166,6 +169,7 @@ export default function ScheduleTabContent() {
         errorMessage = err.message;
       }
       setNotesError(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setSavingNotes(false);
     }
@@ -199,6 +203,7 @@ export default function ScheduleTabContent() {
         mentor: selectedSessionMentor,
         student: selectedSessionStudent
       });
+      showToast("Session rescheduled successfully.", "success");
       setRescheduleModalOpen(false);
       const email = currentUser || localStorage.getItem("userEmail") || "";
       if (email) {
@@ -234,6 +239,7 @@ export default function ScheduleTabContent() {
       }
 
       setRescheduleError(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setSubmittingReschedule(false);
     }
@@ -266,9 +272,10 @@ export default function ScheduleTabContent() {
       setLoading(true);
       await deleteMentorAvailability(email);
       await reloadSlotCalendar();
+      showToast("Availability cleared successfully.", "success");
     } catch (err: any) {
       console.error("Failed to delete availability", err);
-      alert(err.message || "Failed to clear availability.");
+      showToast(err.message || "Failed to clear availability.", "error");
     } finally {
       setLoading(false);
     }
@@ -339,11 +346,13 @@ export default function ScheduleTabContent() {
         Sunday: { active: false, fromTime: "", toTime: "" }
       });
 
+      showToast("Availability saved successfully.", "success");
       setAvailabilityModalOpen(false);
       await reloadSlotCalendar();
     } catch (err: any) {
       console.error("Failed to save availability", err);
       setAvailabilityError(err.message || "Failed to save availability. Please try again.");
+      showToast(err.message || "Failed to save availability.", "error");
     } finally {
       setSubmittingAvailability(false);
     }
@@ -452,6 +461,7 @@ export default function ScheduleTabContent() {
         reason: blockReason
       });
 
+      showToast("Time blocked successfully.", "success");
       setBlockDate("");
       setBlockFromTime("");
       setBlockToTime("");
@@ -470,8 +480,9 @@ export default function ScheduleTabContent() {
       } else {
         setSlotCalendar({});
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to block time", err);
+      showToast(err?.message || "Failed to block time.", "error");
     } finally {
       setSubmittingBlock(false);
     }

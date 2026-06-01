@@ -1,5 +1,4 @@
-import axios from "axios";
-import { BASE_URL } from "./api.services";
+import { apiService } from "./api.services";
 
 export interface College {
     name: string;
@@ -63,8 +62,8 @@ export interface OtpVerification {
 // Send mobile OTP
 export const sendMobileOTP = async (mobileNo: string, email: string): Promise<OtpResponse> => {
     try {
-        const response = await axios.get(
-            `${BASE_URL}method/stridenex_app.api_stridenex_app.app.send_mobile_otp`,
+        const response = await apiService.get(
+            `method/stridenex_app.api_stridenex_app.app.send_mobile_otp`,
             {
                 params: {
                     mobile_no: mobileNo,
@@ -72,7 +71,7 @@ export const sendMobileOTP = async (mobileNo: string, email: string): Promise<Ot
                 }
             }
         );
-        return response.data;
+        return response;
     } catch (error) {
         console.error("Error sending mobile OTP:", error);
         throw error;
@@ -82,10 +81,10 @@ export const sendMobileOTP = async (mobileNo: string, email: string): Promise<Ot
 // Verify mobile OTP
 export const verifyMobileOTP = async (mobileNo: string, otp: string, email: string): Promise<any> => {
     try {
-        const url = `${BASE_URL}method/stridenex_app.api_stridenex_app.app.validate_mobile_otp?mobile_no=${encodeURIComponent(mobileNo)}&otp=${encodeURIComponent(otp)}&email=${encodeURIComponent(email)}`;
-        console.log("Calling verification URL:", url);
-        const response = await axios.get(url);
-        return response.data;
+        const response = await apiService.get(
+            `method/stridenex_app.api_stridenex_app.app.validate_mobile_otp?mobile_no=${encodeURIComponent(mobileNo)}&otp=${encodeURIComponent(otp)}&email=${encodeURIComponent(email)}`
+        );
+        return response;
     } catch (error) {
         console.error("Error verifying mobile OTP:", error);
         throw error;
@@ -97,10 +96,10 @@ export const verifyMobileOTP = async (mobileNo: string, otp: string, email: stri
 // Send email OTP
 export const sendEmailOTP = async (email: string): Promise<EmailOtpResponse> => {
     try {
-        const url = `${BASE_URL}method/stridenex_app.api_stridenex_app.app.send_email_otp?email=${encodeURIComponent(email)}`;
-        console.log("Calling send email OTP URL:", url);
-        const response = await axios.get(url);
-        return response.data;
+        const response = await apiService.get(
+            `method/stridenex_app.api_stridenex_app.app.send_email_otp?email=${encodeURIComponent(email)}`
+        );
+        return response;
     } catch (error) {
         console.error("Error sending email OTP:", error);
         throw error;
@@ -110,10 +109,10 @@ export const sendEmailOTP = async (email: string): Promise<EmailOtpResponse> => 
 // Verify email OTP
 export const verifyEmailOTP = async (email: string, otp: string): Promise<any> => {
     try {
-        const url = `${BASE_URL}method/stridenex_app.api_stridenex_app.app.validate_email_otp?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`;
-        console.log("Calling verify email OTP URL:", url);
-        const response = await axios.get(url);
-        return response.data;
+        const response = await apiService.get(
+            `method/stridenex_app.api_stridenex_app.app.validate_email_otp?email=${encodeURIComponent(email)}&otp=${encodeURIComponent(otp)}`
+        );
+        return response;
     } catch (error) {
         console.error("Error verifying email OTP:", error);
         throw error;
@@ -147,8 +146,8 @@ export const createStudent = async (payload: CreateStudentPayload) => {
       console.log(pair[0] + ': ' + pair[1]);
     }
 
-    const response = await axios.post(
-      `${BASE_URL}method/stridenex_app.api_stridenex_app.student.student.create_student`,
+    const response = await apiService.post(
+      `method/stridenex_app.api_stridenex_app.student.student.create_student`,
       formData,
       {
         headers: {
@@ -157,7 +156,7 @@ export const createStudent = async (payload: CreateStudentPayload) => {
       }
     );
     
-    return response.data;
+    return response;
   } catch (error) {
     console.error("Error creating student:", error);
     throw error;

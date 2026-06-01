@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getSessionHistory, updateMentorStats, getSessionNote, saveSessionNotes, emailSessionNoteToStudent } from "@/services/mentor.services";
+import { useToast } from "@/context/ToastContext";
 
 import { motion } from "framer-motion";
 import { 
@@ -40,6 +41,7 @@ const sessionHistoryList = [
 
 export default function SessionHistoryTabContent() {
   const { currentUser } = useAuth();
+  const { showToast } = useToast();
   const [sessions, setSessions] = useState<any[]>([]);
   const [stats, setStats] = useState({ total_sessions: 0, total_hours: 0, total_earnings: 0, avg_rating: 0 });
   const [loading, setLoading] = useState(true);
@@ -57,7 +59,7 @@ export default function SessionHistoryTabContent() {
   const handleEmailStudent = async (id: string, studentEmail: string) => {
     const currentNotes = sessionNotes[id] || { shared_with_student: "" };
     if (!currentNotes.shared_with_student) {
-      alert("No notes available to share. Please add and save notes for the student first.");
+      showToast("No notes available to share. Please add and save notes for the student first.", "error");
       return;
     }
 
@@ -70,9 +72,9 @@ export default function SessionHistoryTabContent() {
         message: currentNotes.shared_with_student
       });
       if (res?.message?.status === "success" || res?.message?.message) {
-        alert(res.message.message || "Email sent successfully.");
+        showToast(res.message.message || "Email sent successfully.", "success");
       } else {
-        alert("Email sent successfully!");
+        showToast("Email sent successfully!", "success");
       }
     } catch (err: any) {
       console.error("Failed to email notes", err);
@@ -97,7 +99,7 @@ export default function SessionHistoryTabContent() {
         errorMessage = err.message;
       }
       
-      alert(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setEmailingNotes(prev => ({ ...prev, [id]: false }));
     }
@@ -153,8 +155,10 @@ export default function SessionHistoryTabContent() {
       await saveSessionNotes(payload);
       setSessionNotes(prev => ({ ...prev, [id]: draftNotes[id] }));
       setEditingNotes(prev => ({ ...prev, [id]: false }));
-    } catch (err) {
+      showToast("Session notes saved successfully.", "success");
+    } catch (err: any) {
       console.error("Failed to save notes", err);
+      showToast(err?.message || "Failed to save notes.", "error");
     } finally {
       setSavingNotes(prev => ({ ...prev, [id]: false }));
     }

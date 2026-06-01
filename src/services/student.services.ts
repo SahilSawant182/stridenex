@@ -116,10 +116,16 @@ export const getMasterData = async (doctype: string, additionalPayload: any = {}
 /**
  * Fetch mentor list for students.
  */
-export const getMentorList = async (page: number = 1, page_size: number = 20) => {
+export const getMentorList = async (page: number = 1, page_size: number = 20, search?: string) => {
   try {
+    const params = new URLSearchParams();
+    params.append("page", String(page));
+    params.append("page_size", String(page_size));
+    if (search) {
+      params.append("search", search);
+    }
     const response = await apiService.get(
-      `method/stridenex_app.api_stridenex_app.mentor.mentor.get_mentor_list?page=${page}&page_size=${page_size}`
+      `method/stridenex_app.api_stridenex_app.mentor.mentor.get_mentor_list?${params.toString()}`
     );
     return response;
   } catch (error) {

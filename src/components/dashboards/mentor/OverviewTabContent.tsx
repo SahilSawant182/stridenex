@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getUpcomingSessions, getPendingRequests, rescheduleSession, getMentorDashboardStats, getMentorPendingVerifications } from "@/services/mentor.services";
+import { useToast } from "@/context/ToastContext";
 
 import { motion } from "framer-motion";
 import {
@@ -64,6 +65,7 @@ const thisMonthStats = [
 export default function OverviewTabContent() {
   const router = useRouter();
   const { currentUser } = useAuth();
+  const { showToast } = useToast();
   const [upcoming, setUpcoming] = useState<any[]>([]);
   const [pending, setPending] = useState<any[]>([]);
   const [pendingRequestsCount, setPendingRequestsCount] = useState<number>(0);
@@ -109,6 +111,7 @@ export default function OverviewTabContent() {
         mentor: selectedSessionMentor,
         student: selectedSessionStudent
       });
+      showToast("Session rescheduled successfully.", "success");
       setRescheduleModalOpen(false);
       const email = currentUser || localStorage.getItem("userEmail") || "";
       if (email) {
@@ -144,6 +147,7 @@ export default function OverviewTabContent() {
       }
 
       setRescheduleError(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setSubmittingReschedule(false);
     }

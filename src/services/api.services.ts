@@ -31,7 +31,31 @@ const apiRequest = async (config: AxiosRequestConfig) => {
     if (error.response && error.response.data) {
       const data = error.response.data;
       // Extract the most meaningful error message from Frappe/ERPNext response
-      let serverMessage = data.message || data.exc || (data._server_messages ? JSON.parse(data._server_messages).map((m: any) => JSON.parse(m).message).join(", ") : null);
+      let serverMessage = null;
+
+      if (data._server_messages) {
+        try {
+          const messages = typeof data._server_messages === 'string' ? JSON.parse(data._server_messages) : data._server_messages;
+          if (Array.isArray(messages)) {
+            serverMessage = messages.map((m: any) => {
+              const msgObj = typeof m === 'string' ? JSON.parse(m) : m;
+              return msgObj?.message;
+            }).filter(Boolean).join(", ");
+          }
+        } catch (e) {
+          console.error("Error parsing _server_messages", e);
+        }
+      }
+
+      if (!serverMessage && data.exception) {
+        const excStr = String(data.exception);
+        const index = excStr.indexOf(":");
+        serverMessage = index !== -1 ? excStr.slice(index + 1).trim() : excStr;
+      }
+
+      if (!serverMessage) {
+        serverMessage = data.message || (data.exc && typeof data.exc === 'string' && !data.exc.includes("Traceback") ? data.exc : null);
+      }
       
       // Cleanup common raw database errors
       if (serverMessage && typeof serverMessage === 'string') {

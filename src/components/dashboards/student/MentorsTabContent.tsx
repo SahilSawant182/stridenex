@@ -1,7 +1,7 @@
 // components/dashboards/student/MentorsTabContent.tsx
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import {
   Star,
@@ -107,6 +107,38 @@ export default function MentorsTabContent() {
     has_prev: false,
   });
   const PAGE_SIZE = 20;
+
+  // Search states
+  const [searchVal, setSearchVal] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleSearchChange = (val: string) => {
+    setSearchVal(val);
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    debounceTimeoutRef.current = setTimeout(() => {
+      setSearchQuery(val);
+      setCurrentPage(1);
+    }, 500);
+  };
+
+  const handleSearchSubmit = () => {
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    setSearchQuery(searchVal);
+    setCurrentPage(1);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Booking Modal States
   const [selectedMentorForBooking, setSelectedMentorForBooking] = useState<Mentor | null>(null);
@@ -238,8 +270,8 @@ export default function MentorsTabContent() {
 
 
   useEffect(() => {
-    fetchMentors(currentPage);
-  }, [currentPage]);
+    fetchMentors(currentPage, searchQuery);
+  }, [currentPage, searchQuery]);
 
   useEffect(() => {
     fetchBookedSessions();
@@ -273,11 +305,11 @@ export default function MentorsTabContent() {
     );
   };
 
-  const fetchMentors = async (page: number = currentPage) => {
+  const fetchMentors = async (page: number = currentPage, search: string = searchQuery) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await getMentorList(page, PAGE_SIZE);
+      const response = await getMentorList(page, PAGE_SIZE, search);
       console.log(response, 'response');
       
       const dataObj = response?.data || {};
@@ -404,6 +436,13 @@ export default function MentorsTabContent() {
             <Input
               placeholder="Search mentors..."
               className="pl-9 pr-4 py-2 w-full md:w-64 bg-white border-slate-200 text-sm"
+              value={searchVal}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSearchSubmit();
+                }
+              }}
             />
           </div>
           <Button variant="outline" size="icon" className="border-slate-200 shrink-0">
@@ -414,7 +453,7 @@ export default function MentorsTabContent() {
 
       {mentors.length === 0 ? (
         <motion.div variants={item} className="text-center py-20 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
-          No mentors available at the moment.
+          {searchQuery ? "No mentors found matching your search." : "No mentors available at the moment."}
         </motion.div>
       ) : (
         <>
