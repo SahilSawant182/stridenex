@@ -120,13 +120,13 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
                   </div>
                 </div>
               </div>
-            ) : data.job_function && data.job_function.length > 0 ? (
+            ) : (data.job_functions || data.job_function) && (data.job_functions || data.job_function).length > 0 ? (
               <div className="flex items-start gap-3">
                 <Target className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
                 <div className="flex-1">
                   <span className="text-sm font-semibold text-slate-900 mb-2 block">Specialisations</span>
                   <div className="flex flex-wrap gap-2">
-                    {data.job_function.map((jf: any, idx: number) => (
+                    {(data.job_functions || data.job_function).map((jf: any, idx: number) => (
                       <span key={idx} className="bg-slate-100 border border-slate-200 text-slate-600 text-xs px-2.5 py-1 rounded-md font-medium">
                         {jf.job_function || jf}
                       </span>

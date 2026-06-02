@@ -207,7 +207,7 @@ export default function IndustryOnboarding({
                         city: data.city || "",
                         turn_over_in_cr: data.turn_over_in_cr?.toString() || "",
                         company_website: data.company_website || "",
-                        job_function: (data.job_function || []).map((jf: any) => jf.job_function) // Key is singular job_function
+                        job_function: (data.job_functions || data.job_function || []).map((jf: any) => jf.job_function) // Key is singular job_function
                     }));
 
                     // Map contact persons
@@ -448,7 +448,7 @@ export default function IndustryOnboarding({
                 other_industry_sector: isCustomIndustrySector ? formData.industry_sector : "",
                 employee_head_count: 0,
                 internship_per_year: 0,
-                job_function: [], // Key is singular job_function
+                job_functions: [],
                 country: "",
                 state: "",
                 district: "",
@@ -493,7 +493,7 @@ export default function IndustryOnboarding({
 
                 // Include Step 3 data
                 if (step >= 3 || recordExists) {
-                    payload.job_function = jobFunctionArray;
+                    payload.job_functions = jobFunctionArray;
                     payload.country = formData.country;
                     payload.state = formData.state;
                     payload.district = formData.district;
