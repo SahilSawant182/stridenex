@@ -30,6 +30,7 @@ import { useEffect, useState, useMemo } from "react";
 import { getStudentByEmail, updateStudent } from "@/services/student.services";
 import { updateIndustry } from "@/services/industry.services";
 import { getMentorByEmail, getMentorDashboardStats } from "@/services/mentor.services";
+import { getCollegeDetails } from "@/services/college.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { useToast } from "@/context/ToastContext";
 import { OperatingHoursTable, OperatingHour } from "@/components/dashboards/shared/OperatingHoursTable";
@@ -146,6 +147,9 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
   const [mentorData, setMentorData] = useState<any>(null);
   const [mentorStats, setMentorStats] = useState<any>(null);
 
+  // College specific state
+  const [collegeData, setCollegeData] = useState<any>(null);
+
   const fetchStudentData = async () => {
     const email = currentUser || (typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail")) : "") || "";
     if (role !== "student" || !email) return;
@@ -182,11 +186,31 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     }
   };
 
+  const fetchCollegeData = async () => {
+    const email = currentUser || (typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail")) : "") || "";
+    if (role !== "college" || !email) return;
+    try {
+      const response = await getCollegeDetails(email);
+      const data = response?.data || response?.message?.data || response?.message;
+      if (data && typeof data === 'object') {
+        setCollegeData(data);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem("collegeDetails", JSON.stringify(data));
+          window.dispatchEvent(new Event("college-details-fetched"));
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching college data in banner:", error);
+    }
+  };
+
   useEffect(() => {
     if (role === "student") {
       fetchStudentData();
     } else if (role === "mentor") {
       fetchMentorData();
+    } else if (role === "college") {
+      fetchCollegeData();
     }
   }, [role, currentUser]);
 
@@ -393,7 +417,12 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
   }, [mentorData, role, fullName]);
 
   // Get title from customData or userFullName or default
-  const title = customData?.title || userFullName || config.defaultTitle;
+  const title = useMemo(() => {
+    if (role === "college") {
+      return collegeData?.college_name || config.defaultTitle;
+    }
+    return customData?.title || userFullName || config.defaultTitle;
+  }, [role, collegeData, config.defaultTitle, customData?.title, userFullName]);
 
   const mentorSubtitle = useMemo(() => {
     if (role !== "mentor") return null;
@@ -409,6 +438,21 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     return "Verified Mentor";
   }, [mentorData, role]);
 
+  const collegeSubtitle = useMemo(() => {
+    if (role !== "college" || !collegeData) return null;
+    const parts = [];
+    if (collegeData.university) parts.push(collegeData.university);
+    if (collegeData.college_type) parts.push(collegeData.college_type);
+    if (collegeData.year_of_establishment) parts.push(`Estd. ${collegeData.year_of_establishment}`);
+    const locationParts = [];
+    if (collegeData.city) locationParts.push(collegeData.city);
+    if (collegeData.state) locationParts.push(collegeData.state);
+    if (locationParts.length > 0) {
+      parts.push(locationParts.join(", "));
+    }
+    return parts.join(" • ");
+  }, [collegeData, role]);
+
   // Get subtitle from customData or default
   const subtitle = customData?.subtitle || 
     (role === "student" && studentData ? (
@@ -423,6 +467,8 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       </div>
     ) : role === "mentor" ? (
       mentorSubtitle
+    ) : role === "college" && collegeData ? (
+      collegeSubtitle
     ) : config.defaultSubtitle);
 
   // Get progress value
@@ -436,6 +482,13 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       if (fn || ln) {
         return `${fn?.[0] || ""}${ln?.[0] || ""}`.toUpperCase();
       }
+    }
+    if (role === "college" && collegeData?.college_name) {
+      const parts = collegeData.college_name.split(' ');
+      if (parts.length >= 2) {
+        return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+      }
+      return collegeData.college_name.slice(0, 2).toUpperCase();
     }
     const nameVal = fullName || (typeof window !== "undefined" ? localStorage.getItem("fullName") : "") || "";
     if (nameVal) {
@@ -506,6 +559,25 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
         value: mentorData?.avg_rating > 0 ? Number(mentorData.avg_rating).toFixed(1) : "New", 
         label: "Avg Rating", 
         icon: Award 
+      }
+    ] : role === "college" && collegeData ? [
+      { 
+        key: "students", 
+        value: collegeData.intake_capacity ? Number(collegeData.intake_capacity).toLocaleString() : "2,847", 
+        label: "Intake Capacity", 
+        icon: Users 
+      },
+      { 
+        key: "placements", 
+        value: "94%", 
+        label: "Placement Rate", 
+        icon: Briefcase 
+      },
+      { 
+        key: "partners", 
+        value: "78%", 
+        label: "Avg Employability", 
+        icon: TrendingUp 
       }
     ] : config.metrics.map(m => ({
       key: m.key,
