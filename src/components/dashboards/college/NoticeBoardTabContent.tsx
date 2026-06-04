@@ -3,10 +3,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, Variants } from "framer-motion";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
-import { Trophy, Calendar, Briefcase, Plus, FileText, Pen, Loader2 } from "lucide-react";
+import { Trophy, Calendar, Briefcase, Plus, FileText, Pen, Loader2, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
-import { getCollegeDetails, getCollegeEvents, createCollegeEvent, updateCollegeEvent } from "@/services/college.services";
+import {
+  getCollegeDetails,
+  getCollegeEvents,
+  createCollegeEvent,
+  updateCollegeEvent,
+  getCollegeNotices,
+  createCollegeNotice,
+  updateCollegeNotice,
+  deleteCollegeNotice
+} from "@/services/college.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { Pagination } from "@/components/ui/Pagination";
 
@@ -63,15 +72,27 @@ export default function NoticeBoardTabContent() {
   const [loading, setLoading] = useState(true);
   const [eventsLoading, setEventsLoading] = useState(false);
 
+  // Notices States
+  const [noticesList, setNoticesList] = useState<any[]>([]);
+  const [noticesLoading, setNoticesLoading] = useState(false);
+  const [noticeCurrentPage, setNoticeCurrentPage] = useState(1);
+  const [noticeTotalPages, setNoticeTotalPages] = useState(1);
+
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Modal State
+  // Event Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEvent, setEditingEvent] = useState<any>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+
+  // Notice Modal State
+  const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
+  const [editingNotice, setEditingNotice] = useState<any>(null);
+  const [noticeModalLoading, setNoticeModalLoading] = useState(false);
+  const [noticeModalError, setNoticeModalError] = useState<string | null>(null);
 
   // Load college details from localStorage or API
   useEffect(() => {
@@ -120,7 +141,7 @@ export default function NoticeBoardTabContent() {
       if (data && typeof data === 'object') {
         const eventsArray = Array.isArray(data.events) ? data.events : (Array.isArray(data) ? data : []);
         setEventsList(eventsArray);
-        
+
         if (data.pagination) {
           setCurrentPage(data.pagination.page || page);
           setTotalPages(data.pagination.total_pages || 1);
@@ -160,6 +181,97 @@ export default function NoticeBoardTabContent() {
     window.addEventListener("college-details-fetched", handleDetailsFetched);
     return () => window.removeEventListener("college-details-fetched", handleDetailsFetched);
   }, []);
+
+  // Fetch notices when collegeDetails are available
+  const fetchNotices = async (page: number = 1) => {
+    const collegeId = collegeDetails?.name;
+    if (!collegeId) return;
+    try {
+      setNoticesLoading(true);
+      const res = await getCollegeNotices(collegeId, page, 5);
+      const data = res?.data || res?.message?.data || res?.message || res;
+      if (data && typeof data === 'object') {
+        const noticesArray = Array.isArray(data.notice)
+          ? data.notice
+          : (Array.isArray(data.notices)
+            ? data.notices
+            : (Array.isArray(data) ? data : []));
+        setNoticesList(noticesArray);
+
+        if (data.pagination) {
+          setNoticeCurrentPage(data.pagination.page || page);
+          setNoticeTotalPages(data.pagination.total_pages || 1);
+        } else {
+          setNoticeCurrentPage(page);
+          setNoticeTotalPages(1);
+        }
+      } else {
+        setNoticesList([]);
+        setNoticeCurrentPage(1);
+        setNoticeTotalPages(1);
+      }
+    } catch (err) {
+      console.error("Failed to fetch notices:", err);
+    } finally {
+      setNoticesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (collegeDetails) {
+      fetchNotices(1);
+    }
+  }, [collegeDetails]);
+
+  const handleNoticeModalSubmit = async (formData: any) => {
+    setNoticeModalLoading(true);
+    setNoticeModalError(null);
+    try {
+      const collegeId = collegeDetails?.name;
+      if (!collegeId) {
+        throw new Error("College details not loaded yet");
+      }
+
+      const payload = {
+        college: collegeId,
+        notice: formData.notice,
+        date: formData.date,
+        notice_type: formData.notice_type,
+        company: formData.company || null
+      };
+
+      if (editingNotice) {
+        await updateCollegeNotice(editingNotice.name, {
+          name: editingNotice.name,
+          ...payload
+        });
+        showToast("Notice updated successfully", "success");
+      } else {
+        await createCollegeNotice(payload);
+        showToast("Notice created successfully", "success");
+      }
+
+      setIsNoticeModalOpen(false);
+      fetchNotices(editingNotice ? noticeCurrentPage : 1);
+    } catch (err: any) {
+      setNoticeModalError(err?.message || "Failed to save notice");
+      showToast(err?.message || "Failed to save notice", "error");
+    } finally {
+      setNoticeModalLoading(false);
+    }
+  };
+
+  const handleDeleteNoticeClick = async (noticeName: string) => {
+    if (confirm("Are you sure you want to delete this notice?")) {
+      try {
+        await deleteCollegeNotice(noticeName);
+        showToast("Notice deleted successfully", "success");
+        fetchNotices(noticeCurrentPage);
+      } catch (err: any) {
+        showToast(err?.message || "Failed to delete notice", "error");
+      }
+    }
+  };
 
   const handleModalSubmit = async (formData: any) => {
     setModalLoading(true);
@@ -303,6 +415,65 @@ export default function NoticeBoardTabContent() {
     return `${startFormatted} - ${endFormatted}`;
   };
 
+  const noticeFields: DynamicField[] = useMemo(() => [
+    { name: "notice", label: "Notice Content / Title", type: "text", required: true, colSpan: 2, placeholder: "e.g., VJTI–TCS iON Internship Drive — Applications Open" },
+    {
+      name: "notice_type",
+      label: "Notice Type",
+      type: "select",
+      options: ["Placement", "Academic", "Event", "Compliance"],
+      required: true
+    },
+    { name: "date", label: "Notice Date", type: "date", required: true },
+    { name: "company", label: "Partnering Company", type: "text", required: false, colSpan: 2, placeholder: "e.g., TCS (Optional)" }
+  ], []);
+
+  const noticeInitialValues = useMemo(() => {
+    if (editingNotice) {
+      return {
+        notice: editingNotice.notice,
+        notice_type: editingNotice.notice_type,
+        date: editingNotice.date,
+        company: editingNotice.company || ""
+      };
+    }
+    return {
+      date: new Date().toISOString().split('T')[0]
+    };
+  }, [editingNotice]);
+
+  const getNoticeColorClasses = (category: string) => {
+    const c = (category || "").toLowerCase();
+    if (c.includes("placement")) {
+      return {
+        bgClass: "bg-orange-500",
+        textClass: "text-orange-500"
+      };
+    } else if (c.includes("academic")) {
+      return {
+        bgClass: "bg-blue-500",
+        textClass: "text-blue-500"
+      };
+    } else if (c.includes("event")) {
+      return {
+        bgClass: "bg-emerald-500",
+        textClass: "text-emerald-500"
+      };
+    } else {
+      return {
+        bgClass: "bg-amber-500",
+        textClass: "text-amber-500"
+      };
+    }
+  };
+
+  const formatNoticeDate = (dateStr: string) => {
+    if (!dateStr) return "";
+    const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+    const dateObj = new Date(dateStr);
+    return dateObj.toLocaleDateString('en-US', options);
+  };
+
   const handlePageChange = (page: number) => {
     fetchEvents(page);
   };
@@ -444,45 +615,94 @@ export default function NoticeBoardTabContent() {
           <div className="flex items-center justify-between mb-1">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Internal updates</h3>
           </div>
-          
+
           <BaseCard className="border-slate-200 p-0 overflow-hidden shadow-sm flex flex-col bg-white">
             <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="text-xs font-bold text-slate-800 flex items-center gap-2 tracking-wide uppercase">
                 <FileText className="w-4 h-4 text-slate-500" />
                 Digital Notices
               </h3>
-              <button className="text-[10px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 uppercase tracking-wider">
+              <button
+                onClick={() => {
+                  setEditingNotice(null);
+                  setIsNoticeModalOpen(true);
+                }}
+                className="text-[10px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 uppercase tracking-wider"
+              >
                 <Plus className="w-3 h-3" /> Post Notice
               </button>
             </div>
 
             <div className="p-4 space-y-3 overflow-y-auto max-h-[550px] custom-scrollbar">
-              {notices.map((notice, idx) => {
-                const bgClass = notice.colorClass.includes('bg-') ? notice.colorClass.split(' ').find(c => c.startsWith('bg-')) : 'bg-blue-500';
-                const textClass = notice.colorClass.includes('text-') ? notice.colorClass.split(' ').find(c => c.startsWith('text-')) : 'text-blue-500';
-                return (
-                  <div key={idx} className="p-3.5 border border-slate-100 rounded-xl relative overflow-hidden bg-white hover:border-slate-200 hover:shadow-sm transition-all">
-                    <div className={`absolute top-0 bottom-0 left-0 w-1 ${bgClass}`}></div>
-                    <div className="pl-2">
-                      <div className="flex justify-between items-start mb-1">
-                        <h4 className="text-xs font-bold text-slate-800 line-clamp-2 leading-snug pr-4">
-                          {notice.title}
-                        </h4>
-                        {notice.urgent && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0 mt-1"></span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-2">
-                        <span className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${bgClass} bg-opacity-10 ${textClass}`}>
-                          {notice.category}
-                        </span>
-                        <span className="text-[9px] text-slate-400 font-semibold">{notice.date}</span>
+              {noticesLoading ? (
+                <div className="flex flex-col items-center justify-center py-10">
+                  <Loader2 className="w-6 h-6 text-blue-500 animate-spin mb-2" />
+                  <p className="text-xs text-slate-500">Loading notices...</p>
+                </div>
+              ) : noticesList.length === 0 ? (
+                <div className="text-center py-10">
+                  <FileText className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-xs text-slate-500 font-semibold">No notices posted yet</p>
+                </div>
+              ) : (
+                noticesList.map((notice, idx) => {
+                  const theme = getNoticeColorClasses(notice.notice_type);
+                  return (
+                    <div key={notice.name || idx} className="p-3.5 border border-slate-100 rounded-xl relative overflow-hidden bg-white hover:border-slate-200 hover:shadow-sm transition-all group">
+                      <div className={`absolute top-0 bottom-0 left-0 w-1 ${theme.bgClass}`}></div>
+                      <div className="pl-2">
+                        <div className="flex justify-between items-start mb-1">
+                          <h4 className="text-xs font-bold text-slate-800 line-clamp-2 leading-snug pr-12">
+                            {notice.notice}
+                          </h4>
+                          {/* Notice Actions */}
+                          <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white pl-1">
+                            <button
+                              onClick={() => {
+                                setEditingNotice(notice);
+                                setIsNoticeModalOpen(true);
+                              }}
+                              className="p-1 hover:bg-slate-100 rounded text-slate-500 hover:text-orange-600 transition-colors"
+                              title="Edit Notice"
+                            >
+                              <Pen className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteNoticeClick(notice.name)}
+                              className="p-1 hover:bg-red-50 rounded text-slate-400 hover:text-red-600 transition-colors"
+                              title="Delete Notice"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className={`text-[9px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded ${theme.bgClass} bg-opacity-10 ${theme.textClass}`}>
+                            {notice.notice_type}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-semibold">{formatNoticeDate(notice.date)}</span>
+                          {notice.company && (
+                            <span className="text-[9px] text-slate-400 font-semibold bg-slate-50 px-1 py-0.5 rounded">
+                              {notice.company}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
+            {noticeTotalPages > 1 && (
+              <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex justify-center">
+                <Pagination
+                  currentPage={noticeCurrentPage}
+                  totalPages={noticeTotalPages}
+                  onPageChange={(page) => fetchNotices(page)}
+                  className="w-full shadow-none border-none p-0 bg-transparent"
+                />
+              </div>
+            )}
           </BaseCard>
         </div>
 
@@ -501,6 +721,21 @@ export default function NoticeBoardTabContent() {
         onSubmit={handleModalSubmit}
         loading={modalLoading}
         error={modalError}
+      />
+
+      {/* Edit/Create Notice Modal */}
+      <DashboardDynamicModal
+        isOpen={isNoticeModalOpen}
+        onClose={() => setIsNoticeModalOpen(false)}
+        title={editingNotice ? "Edit Digital Notice" : "Post New Notice"}
+        subtitle={editingNotice ? "Update details for this notice" : "Publish a new announcement on the notice board"}
+        headerIcon={FileText}
+        iconBgColor="bg-blue-600"
+        fields={noticeFields}
+        initialValues={noticeInitialValues}
+        onSubmit={handleNoticeModalSubmit}
+        loading={noticeModalLoading}
+        error={noticeModalError}
       />
     </motion.div>
   );
