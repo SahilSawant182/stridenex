@@ -28,10 +28,8 @@ export default function OnboardingLayout({
 }: OnboardingLayoutProps) {
 
   const getStepCompletion = () => {
-    if (currentStep === 1) return 0;
-    if (currentStep === 2) return 33;
-    if (currentStep === 3) return 67;
-    return 0;
+    if (totalSteps <= 0) return 0;
+    return Math.round(((currentStep - 1) / totalSteps) * 100);
   };
 
   return (

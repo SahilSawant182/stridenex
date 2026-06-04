@@ -17,7 +17,7 @@ import { validateLoginForm } from "@/lib/validators";
  *   student  →  flag >= 2  (2 steps)
  *   mentor   →  flag >= 3  (3 steps)
  *   industry →  flag >= 3  (3 meaningful steps)
- *   college  →  flag >= 1  (1 step)
+ *   college  →  flag >= 4  (4 steps)
  *
  * This single source-of-truth is used both here (post-login routing) and
  * in each onboarding component so the thresholds are never out of sync.
@@ -26,7 +26,7 @@ const ONBOARDING_COMPLETE: Record<string, number> = {
   student: 2,
   mentor: 3,
   industry: 3,
-  college: 1
+  college: 4
 };
 
 function isFullyOnboarded(role: string, flag: number): boolean {
