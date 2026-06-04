@@ -493,7 +493,7 @@ export default function NoticeBoardTabContent() {
       {/* Header Section */}
       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-xl font-black text-slate-800 tracking-tight">Notice Board & Events</h2>
+          <h2 className="text-xl font-bold text-slate-800 tracking-tight">Notice Board & Events</h2>
           <p className="text-sm font-medium text-slate-500">Manage internal announcements and student events</p>
         </div>
         <button

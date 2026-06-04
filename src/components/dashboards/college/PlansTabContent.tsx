@@ -31,9 +31,9 @@ export default function PlansTabContent() {
          <motion.div variants={itemVariants}>
            <BaseCard className="p-8 border-slate-200 shadow-sm h-full flex flex-col bg-white">
               <div>
-                <h3 className="text-xl font-black text-slate-800 tracking-tight">Starter</h3>
+                <h3 className="text-xl font-bold text-slate-800 tracking-tight">Starter</h3>
                 <div className="flex items-baseline gap-1 mt-2 mb-8">
-                  <span className="text-4xl font-black text-slate-400">₹4,999</span>
+                  <span className="text-4xl font-bold text-slate-400">₹4,999</span>
                   <span className="text-sm font-bold text-slate-400">/mo</span>
                 </div>
                 
@@ -65,14 +65,14 @@ export default function PlansTabContent() {
          <motion.div variants={itemVariants}>
            <div className="relative h-full">
                <BaseCard className="p-8 border-orange-500 shadow-md h-full flex flex-col bg-white ring-1 ring-orange-500/50">
-                  <div className="absolute top-4 right-4 bg-orange-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
+                  <div className="absolute top-4 right-4 bg-orange-500 text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm">
                     Current Plan
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-black text-orange-500 tracking-tight">Institution</h3>
+                    <h3 className="text-xl font-bold text-orange-500 tracking-tight">Institution</h3>
                     <div className="flex items-baseline gap-1 mt-2 mb-8">
-                      <span className="text-4xl font-black text-orange-500">₹14,999</span>
+                      <span className="text-4xl font-bold text-orange-500">₹14,999</span>
                       <span className="text-sm font-bold text-orange-400">/mo</span>
                     </div>
                     
