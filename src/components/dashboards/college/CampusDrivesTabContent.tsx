@@ -2,31 +2,33 @@
 
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Briefcase, 
-  Calendar, 
-  Clock, 
-  Plus, 
-  Search, 
-  Users, 
-  Trophy, 
-  ArrowLeft, 
-  Download, 
-  CheckCircle2, 
-  ChevronRight, 
-  Mail, 
-  Send, 
-  Bell, 
+import {
+  Briefcase,
+  Calendar,
+  Clock,
+  Plus,
+  Search,
+  Users,
+  Trophy,
+  ArrowLeft,
+  Download,
+  CheckCircle2,
+  ChevronRight,
+  Mail,
+  Send,
+  Bell,
   FileText,
   DollarSign,
   Star,
   Hourglass,
   Check,
-  ChevronDown
+  ChevronDown,
+  TrendingUp
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { useToast } from "@/context/ToastContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
+import PlacementTabContent from "./PlacementTabContent";
 
 // Rich student dataset for the tracker and eligibility checks
 const initialStudents = [
@@ -131,8 +133,8 @@ export default function CampusDrivesTabContent() {
   const [drivesList, setDrivesList] = useState<any[]>(initialDrives);
   const [studentsList, setStudentsList] = useState<any[]>(initialStudents);
   const [selectedDrive, setSelectedDrive] = useState<any | null>(null);
-  const [activeSubTab, setActiveSubTab] = useState<"drives" | "tracker" | "eligibility" | "stats">("drives");
-  
+  const [activeSubTab, setActiveSubTab] = useState<"drives" | "placement" | "tracker" | "eligibility" | "stats">("drives");
+
   // Eligibility view active drive selection state
   const [eligibilityDriveId, setEligibilityDriveId] = useState(initialDrives[0].id);
 
@@ -144,7 +146,7 @@ export default function CampusDrivesTabContent() {
 
   // Filter drives list based on search query
   const filteredDrives = useMemo(() => {
-    return drivesList.filter(drive => 
+    return drivesList.filter(drive =>
       drive.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
       drive.role.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -191,7 +193,7 @@ export default function CampusDrivesTabContent() {
         let reason = "Branch not eligible";
         if (failsBacklog) reason = "Has backlogs";
         else if (failsCgpa) reason = "Low CGPA";
-        
+
         notEligible.push({ ...student, reason });
       } else {
         eligible.push(student);
@@ -208,12 +210,12 @@ export default function CampusDrivesTabContent() {
     { name: "driveDate", label: "Drive Date", type: "date", required: true },
     { name: "regDeadline", label: "Registration Deadline", type: "date", required: true },
     { name: "package", label: "CTC Package Offered", type: "text", required: true, placeholder: "e.g., ₹12-15 LPA" },
-    { 
-      name: "type", 
-      label: "Job Type", 
-      type: "select", 
-      options: ["Full-Time", "Full-Time + PPO", "Internship"], 
-      required: true 
+    {
+      name: "type",
+      label: "Job Type",
+      type: "select",
+      options: ["Full-Time", "Full-Time + PPO", "Internship"],
+      required: true
     },
     { name: "minCgpa", label: "Minimum CGPA Criteria", type: "number", required: true, placeholder: "e.g. 6.0" },
     { name: "backlogs", label: "Max Allowed Backlogs", type: "number", required: true, placeholder: "e.g. 0" },
@@ -376,44 +378,50 @@ export default function CampusDrivesTabContent() {
         <div className="flex items-center gap-2 border-b border-slate-200 pb-px overflow-x-auto hide-scrollbar">
           <button
             onClick={() => setActiveSubTab("drives")}
-            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${
-              activeSubTab === "drives" 
-                ? "border-blue-600 text-blue-600 bg-blue-50/40 rounded-t-lg font-bold" 
-                : "border-transparent text-slate-500 hover:text-slate-800 font-semibold"
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${activeSubTab === "drives"
+              ? "border-blue-600 text-blue-600 bg-blue-50/40 rounded-t-lg font-bold"
+              : "border-transparent text-slate-500 hover:text-slate-800 font-semibold"
+              }`}
           >
             <Briefcase className="w-3.5 h-3.5" />
             Campus Drives
           </button>
           <button
+            onClick={() => setActiveSubTab("placement")}
+            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${activeSubTab === "placement"
+              ? "border-blue-600 text-blue-600 bg-blue-50/40 rounded-t-lg font-bold"
+              : "border-transparent text-slate-500 hover:text-slate-800 font-semibold"
+              }`}
+          >
+            <TrendingUp className="w-3.5 h-3.5" />
+            Placement
+          </button>
+          <button
             onClick={() => setActiveSubTab("tracker")}
-            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${
-              activeSubTab === "tracker" 
-                ? "border-blue-600 text-blue-600 bg-blue-50/40 rounded-t-lg font-bold" 
-                : "border-transparent text-slate-500 hover:text-slate-800 font-semibold"
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${activeSubTab === "tracker"
+              ? "border-blue-600 text-blue-600 bg-blue-50/40 rounded-t-lg font-bold"
+              : "border-transparent text-slate-500 hover:text-slate-800 font-semibold"
+              }`}
           >
             <Users className="w-3.5 h-3.5" />
             Student Tracker
           </button>
           <button
             onClick={() => setActiveSubTab("eligibility")}
-            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${
-              activeSubTab === "eligibility" 
-                ? "border-blue-600 text-blue-600 bg-blue-50/40 rounded-t-lg font-bold" 
-                : "border-transparent text-slate-500 hover:text-slate-800 font-semibold"
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${activeSubTab === "eligibility"
+              ? "border-blue-600 text-blue-600 bg-blue-50/40 rounded-t-lg font-bold"
+              : "border-transparent text-slate-500 hover:text-slate-800 font-semibold"
+              }`}
           >
             <CheckCircle2 className="w-3.5 h-3.5" />
             Eligibility Check
           </button>
           <button
             onClick={() => setActiveSubTab("stats")}
-            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${
-              activeSubTab === "stats" 
-                ? "border-blue-600 text-blue-600 bg-blue-50/40 rounded-t-lg font-bold" 
-                : "border-transparent text-slate-500 hover:text-slate-800 font-semibold"
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${activeSubTab === "stats"
+              ? "border-blue-600 text-blue-600 bg-blue-50/40 rounded-t-lg font-bold"
+              : "border-transparent text-slate-500 hover:text-slate-800 font-semibold"
+              }`}
           >
             <Trophy className="w-3.5 h-3.5" />
             Placement Stats
@@ -452,7 +460,7 @@ export default function CampusDrivesTabContent() {
                   <div className="space-y-2">
                     <h2 className="text-xl font-bold tracking-tight">{selectedDrive.company} — Campus Drive 2025</h2>
                     <p className="text-slate-200 text-sm font-semibold">{selectedDrive.role}</p>
-                    
+
                     <div className="flex flex-wrap gap-3 pt-1 text-xs font-semibold text-slate-100">
                       <span className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full">
                         <Calendar className="w-3.5 h-3.5 text-blue-300" />
@@ -477,11 +485,10 @@ export default function CampusDrivesTabContent() {
 
             {/* Sub-tab Filtering Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div 
+              <div
                 onClick={() => setSelectedStudentStatusFilter("Eligible")}
-                className={`p-5 rounded-2xl border bg-white shadow-sm cursor-pointer transition-all hover:scale-[1.02] flex flex-col justify-between border-t-4 border-t-blue-500 ${
-                  selectedStudentStatusFilter === "Eligible" ? "ring-2 ring-blue-500/25 border-blue-500 shadow-md" : "border-slate-200"
-                }`}
+                className={`p-5 rounded-2xl border bg-white shadow-sm cursor-pointer transition-all hover:scale-[1.02] flex flex-col justify-between border-t-4 border-t-blue-500 ${selectedStudentStatusFilter === "Eligible" ? "ring-2 ring-blue-500/25 border-blue-500 shadow-md" : "border-slate-200"
+                  }`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Eligible</span>
@@ -490,11 +497,10 @@ export default function CampusDrivesTabContent() {
                 <h4 className="text-xl font-bold text-slate-800">{selectedDrive.stats.eligible} <span className="text-xs font-semibold text-slate-400">Students</span></h4>
               </div>
 
-              <div 
+              <div
                 onClick={() => setSelectedStudentStatusFilter("Registered")}
-                className={`p-5 rounded-2xl border bg-white shadow-sm cursor-pointer transition-all hover:scale-[1.02] flex flex-col justify-between border-t-4 border-t-orange-500 ${
-                  selectedStudentStatusFilter === "Registered" ? "ring-2 ring-orange-500/25 border-orange-500 shadow-md" : "border-slate-200"
-                }`}
+                className={`p-5 rounded-2xl border bg-white shadow-sm cursor-pointer transition-all hover:scale-[1.02] flex flex-col justify-between border-t-4 border-t-orange-500 ${selectedStudentStatusFilter === "Registered" ? "ring-2 ring-orange-500/25 border-orange-500 shadow-md" : "border-slate-200"
+                  }`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Registered</span>
@@ -503,11 +509,10 @@ export default function CampusDrivesTabContent() {
                 <h4 className="text-xl font-bold text-slate-800">{selectedDrive.stats.registered} <span className="text-xs font-semibold text-slate-400">Students</span></h4>
               </div>
 
-              <div 
+              <div
                 onClick={() => setSelectedStudentStatusFilter("Shortlisted")}
-                className={`p-5 rounded-2xl border bg-white shadow-sm cursor-pointer transition-all hover:scale-[1.02] flex flex-col justify-between border-t-4 border-t-amber-500 ${
-                  selectedStudentStatusFilter === "Shortlisted" ? "ring-2 ring-amber-500/25 border-amber-500 shadow-md" : "border-slate-200"
-                }`}
+                className={`p-5 rounded-2xl border bg-white shadow-sm cursor-pointer transition-all hover:scale-[1.02] flex flex-col justify-between border-t-4 border-t-amber-500 ${selectedStudentStatusFilter === "Shortlisted" ? "ring-2 ring-amber-500/25 border-amber-500 shadow-md" : "border-slate-200"
+                  }`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Shortlisted</span>
@@ -516,11 +521,10 @@ export default function CampusDrivesTabContent() {
                 <h4 className="text-xl font-bold text-slate-800">{selectedDrive.stats.shortlisted} <span className="text-xs font-semibold text-slate-400">Students</span></h4>
               </div>
 
-              <div 
+              <div
                 onClick={() => setSelectedStudentStatusFilter("Selected")}
-                className={`p-5 rounded-2xl border bg-white shadow-sm cursor-pointer transition-all hover:scale-[1.02] flex flex-col justify-between border-t-4 border-t-emerald-500 ${
-                  selectedStudentStatusFilter === "Selected" ? "ring-2 ring-emerald-500/25 border-emerald-500 shadow-md" : "border-slate-200"
-                }`}
+                className={`p-5 rounded-2xl border bg-white shadow-sm cursor-pointer transition-all hover:scale-[1.02] flex flex-col justify-between border-t-4 border-t-emerald-500 ${selectedStudentStatusFilter === "Selected" ? "ring-2 ring-emerald-500/25 border-emerald-500 shadow-md" : "border-slate-200"
+                  }`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Selected</span>
@@ -532,7 +536,7 @@ export default function CampusDrivesTabContent() {
 
             {/* Split Content */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-              
+
               {/* Left Column: Student Table */}
               <div className="lg:col-span-2 space-y-4">
                 <BaseCard className="bg-white border-slate-200/60 shadow-sm p-0 overflow-hidden">
@@ -602,13 +606,12 @@ export default function CampusDrivesTabContent() {
                               <td className="py-3.5 px-5 text-right">
                                 <button
                                   onClick={() => handleStudentAction(student.id, student.status)}
-                                  className={`px-3.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all border ${
-                                    student.status === "Registered" 
-                                      ? "bg-orange-500 hover:bg-orange-600 border-orange-500 text-white hover:border-orange-600" 
-                                      : student.status === "Shortlisted"
-                                        ? "bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white" 
-                                        : "bg-white hover:bg-slate-50 text-slate-600 border-slate-200"
-                                  }`}
+                                  className={`px-3.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all border ${student.status === "Registered"
+                                    ? "bg-orange-500 hover:bg-orange-600 border-orange-500 text-white hover:border-orange-600"
+                                    : student.status === "Shortlisted"
+                                      ? "bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white"
+                                      : "bg-white hover:bg-slate-50 text-slate-600 border-slate-200"
+                                    }`}
                                 >
                                   {student.status === "Registered" && "Shortlist"}
                                   {student.status === "Shortlisted" && "Select"}
@@ -798,15 +801,14 @@ export default function CampusDrivesTabContent() {
                         </td>
                         <td className="py-3.5 px-4 text-xs font-bold text-amber-700">{student.package || <span className="text-slate-400 font-normal">—</span>}</td>
                         <td className="py-3.5 px-4">
-                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
-                            student.status === "Placed" 
-                              ? "bg-emerald-50 text-emerald-600 border border-emerald-200/50" 
-                              : student.status === "Shortlisted" 
-                                ? "bg-orange-50 text-orange-600 border border-orange-200/50"
-                                : student.status === "In Process" 
-                                  ? "bg-blue-50 text-blue-600 border border-blue-200/50"
-                                  : "bg-slate-50 text-slate-500 border border-slate-200/50"
-                          }`}>
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${student.status === "Placed"
+                            ? "bg-emerald-50 text-emerald-600 border border-emerald-200/50"
+                            : student.status === "Shortlisted"
+                              ? "bg-orange-50 text-orange-600 border border-orange-200/50"
+                              : student.status === "In Process"
+                                ? "bg-blue-50 text-blue-600 border border-blue-200/50"
+                                : "bg-slate-50 text-slate-500 border border-slate-200/50"
+                            }`}>
                             {student.status === "Placed" && "✓ Placed"}
                             {student.status === "Shortlisted" && "Shortlisted"}
                             {student.status === "In Process" && "In Process"}
@@ -814,7 +816,7 @@ export default function CampusDrivesTabContent() {
                           </span>
                         </td>
                         <td className="py-3.5 px-5 text-right">
-                          <button 
+                          <button
                             onClick={() => showToast(`Opening profile of ${student.name}`, "info")}
                             className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider shadow-sm transition-all"
                           >
@@ -884,7 +886,7 @@ export default function CampusDrivesTabContent() {
                   <span>Max Backlogs: <strong className="text-blue-600 text-sm font-bold">{activeEligibilityDrive.criteria.backlogs}</strong></span>
                   <span>Year: <strong className="text-blue-600 text-sm font-bold">{activeEligibilityDrive.criteria.passingYear}</strong></span>
                   <span className="flex items-center gap-1">
-                    Eligible Branches: 
+                    Eligible Branches:
                     <strong className="text-orange-600 font-bold">{activeEligibilityDrive.criteria.branches.join(", ")}</strong>
                   </span>
                 </div>
@@ -903,7 +905,7 @@ export default function CampusDrivesTabContent() {
 
             {/* Eligible / Non Eligible Split Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              
+
               {/* Eligible Column */}
               <BaseCard className="bg-white border-slate-200/60 shadow-sm p-0 overflow-hidden">
                 <div className="p-4 border-b border-slate-100 bg-emerald-50/20 flex items-center justify-between">
@@ -1038,7 +1040,7 @@ export default function CampusDrivesTabContent() {
 
             {/* Split Panel: Company-wise selections and Branch-wise rates */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              
+
               {/* Company Selections Panel */}
               <BaseCard className="bg-white border-slate-200/60 shadow-sm p-5 space-y-4">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Company-wise Selections</h3>
@@ -1115,7 +1117,7 @@ export default function CampusDrivesTabContent() {
                         <p className="text-slate-300 uppercase tracking-widest text-[8px]">{item.desc}</p>
                       </div>
                     )}
-                    
+
                     {/* Animated vertical bar */}
                     <motion.div
                       initial={{ height: 0 }}
@@ -1138,8 +1140,19 @@ export default function CampusDrivesTabContent() {
               </div>
             </BaseCard>
           </motion.div>
+        ) : activeSubTab === "placement" ? (
+          // ==================== 4. PLACEMENT OVERVIEW VIEW ====================
+          <motion.div
+            key="placement-view"
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            className="space-y-6"
+          >
+            <PlacementTabContent />
+          </motion.div>
         ) : (
-          // ==================== 4. GENERAL CAMPUS DRIVES LIST (Image 1) ====================
+          // ==================== 5. GENERAL CAMPUS DRIVES LIST (Image 1) ====================
           <motion.div
             key="list-view"
             initial={{ opacity: 0, y: 15 }}
@@ -1212,14 +1225,12 @@ export default function CampusDrivesTabContent() {
               ) : (
                 filteredDrives.map(drive => (
                   <BaseCard key={drive.id} className="p-5 bg-white border-slate-200 hover:border-slate-300 shadow-sm hover:shadow transition-all relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 group">
-                    <div className={`absolute top-0 bottom-0 left-0 w-1 ${
-                      drive.company === 'TCS' ? 'bg-blue-600' : drive.company === 'Infosys' ? 'bg-emerald-600' : 'bg-orange-600'
-                    }`}></div>
+                    <div className={`absolute top-0 bottom-0 left-0 w-1 ${drive.company === 'TCS' ? 'bg-blue-600' : drive.company === 'Infosys' ? 'bg-emerald-600' : 'bg-orange-600'
+                      }`}></div>
 
                     <div className="flex items-start gap-4 pl-2 max-w-xl">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0 shadow-sm ${
-                        drive.company === 'TCS' ? 'bg-blue-600' : drive.company === 'Infosys' ? 'bg-emerald-600' : 'bg-orange-600'
-                      }`}>
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg shrink-0 shadow-sm ${drive.company === 'TCS' ? 'bg-blue-600' : drive.company === 'Infosys' ? 'bg-emerald-600' : 'bg-orange-600'
+                        }`}>
                         {drive.company.charAt(0)}
                       </div>
                       <div className="space-y-1.5">
@@ -1230,7 +1241,7 @@ export default function CampusDrivesTabContent() {
                           </span>
                         </div>
                         <p className="text-xs font-semibold text-slate-500">{drive.role}</p>
-                        
+
                         <div className="flex flex-wrap gap-2.5 pt-1 text-[11px] text-slate-500 font-medium">
                           <span className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg">
                             <Calendar className="w-3 h-3 text-slate-400" />
