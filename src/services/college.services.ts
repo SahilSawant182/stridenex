@@ -114,4 +114,116 @@ export const deleteCollegeNotice = async (name: string) => {
   }
 };
 
+export const getCollegeDrives = async (college: string, page: number = 1, pageSize: number = 20) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.college_campus_drives.college_campus_drives.get_drives_by_college?college=${encodeURIComponent(college)}&page=${page}&page_size=${pageSize}`
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error fetching drives for college ${college}:`, error);
+    throw error;
+  }
+};
+
+export const createCollegeDrive = async (driveData: any) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.college_campus_drives.college_campus_drives.create_drive`,
+      driveData
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating college drive:", error);
+    throw error;
+  }
+};
+
+export const updateCollegeDrive = async (driveData: any) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.college_campus_drives.college_campus_drives.update_drive`,
+      driveData
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating college drive:", error);
+    throw error;
+  }
+};
+
+export const deleteCollegeDrive = async (driveName: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.college_campus_drives.college_campus_drives.delete_drive?name=${encodeURIComponent(driveName)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error deleting college drive:", error);
+    throw error;
+  }
+};
+
+export const getDriveCount = async (college: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.college_campus_drives.college_campus_drives.get_drive_count/?college=${encodeURIComponent(college)}`
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error fetching drive count for college ${college}:`, error);
+    throw error;
+  }
+};
+
+export const getPlacementList = async (college: string, name?: string) => {
+  try {
+    let url = `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.get_placement_list?college=${encodeURIComponent(college)}`;
+    if (name) url += `&name=${encodeURIComponent(name)}`;
+    const response = await apiService.get(url);
+    return response;
+  } catch (error) {
+    console.error(`Error fetching placement list for college ${college}:`, error);
+    throw error;
+  }
+};
+
+export const getPlacementCounts = async (college: string, name?: string) => {
+  try {
+    let url = `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.get_placement_counts?college=${encodeURIComponent(college)}`;
+    if (name) url += `&name=${encodeURIComponent(name)}`;
+    const response = await apiService.get(url);
+    return response;
+  } catch (error) {
+    console.error(`Error fetching placement counts for college ${college}:`, error);
+    throw error;
+  }
+};
+
+export const getOpenRegistrationCount = async (college: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.college_campus_drives.college_campus_drives.open_registration_count?college=${encodeURIComponent(college)}`
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error fetching open registration count for college ${college}:`, error);
+    throw error;
+  }
+};
+
+export const getEligibleStudents = async (driveName: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.get_eligible_students?drive=${encodeURIComponent(driveName)}`
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error fetching eligible students for drive ${driveName}:`, error);
+    throw error;
+  }
+};
+
+
+
 

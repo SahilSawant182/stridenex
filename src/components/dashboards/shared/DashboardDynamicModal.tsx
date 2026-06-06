@@ -81,6 +81,7 @@ export default function DashboardDynamicModal({
   useEffect(() => {
     if (isOpen && initialValues) {
       const currentInitialStr = JSON.stringify(initialValues);
+      console.log("DashboardDynamicModal: initialValues changed:", initialValues);
 
       // Only update if the stringified values have actually changed or it's the first load
       if (lastInitialValuesRef.current !== currentInitialStr) {
@@ -92,6 +93,7 @@ export default function DashboardDynamicModal({
           }
           initial[field.name] = val ?? (field.multiple ? [] : (field.type === "number" ? "" : ""));
         });
+        console.log("DashboardDynamicModal: setting formData from initialValues:", initial);
         setFormData(initial);
         lastInitialValuesRef.current = currentInitialStr;
       }
@@ -360,7 +362,6 @@ function DynamicFieldItem({
   }, [activeSelect, field.name, setActiveSelect, setSearchTerm]);
 
   useEffect(() => {
-    // Only fetch if not disabled and we have an endpoint
     if (field.apiEndpoint && !field.disabled) {
       fetchApiOptions();
     }
@@ -685,7 +686,7 @@ function DynamicFieldItem({
           <Input
             name={field.name}
             type={field.type}
-            value={formData[field.name] || ""}
+            value={formData[field.name] !== undefined && formData[field.name] !== null ? formData[field.name] : ""}
             onChange={handleChange}
             onFocus={() => {
               if (field.onFocus) field.onFocus(field.name);
