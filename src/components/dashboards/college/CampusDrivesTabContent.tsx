@@ -38,10 +38,14 @@ import {
   updateCollegeDrive,
   deleteCollegeDrive,
   getDriveCount,
-  getOpenRegistrationCount,
   getPlacementList,
   getPlacementCounts,
-  getEligibleStudents
+  getEligibleStudents,
+  getMasterData,
+  updateCampusDriveApplicationStatus,
+  sendCandidateStatusMail,
+  getPlacementStats,
+  getBranchWisePerformance
 } from "@/services/college.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import PlacementTabContent from "./PlacementTabContent";
@@ -169,9 +173,10 @@ export default function CampusDrivesTabContent() {
   const [isSubmittingDrive, setIsSubmittingDrive] = useState(false);
   const [isDeletingDrive, setIsDeletingDrive] = useState(false);
 
-  // API-driven metrics for Total Drives and Reg Open Now cards
-  const [totalDriveCount, setTotalDriveCount] = useState<number | null>(null);
-  const [openRegCount, setOpenRegCount] = useState<number | null>(null);
+  // API-driven metrics for campus drives
+  const [driveCounts, setDriveCounts] = useState<any>(null);
+  const [placementStats, setPlacementStats] = useState<any>(null);
+  const [branchPerformance, setBranchPerformance] = useState<any[] | null>(null);
 
   // Placement tracker API state (Student Tracker tab)
   const [placementList, setPlacementList] = useState<any[]>([]);
@@ -186,6 +191,29 @@ export default function CampusDrivesTabContent() {
   // Tab Eligibility API state
   const [tabEligibleStudents, setTabEligibleStudents] = useState<any | null>(null);
   const [tabEligibleLoading, setTabEligibleLoading] = useState(false);
+  const [eligibilityBranch, setEligibilityBranch] = useState("");
+  const [eligibilityCgpa, setEligibilityCgpa] = useState("");
+  const [eligibilityBacklog, setEligibilityBacklog] = useState("");
+  const [availableBranches, setAvailableBranches] = useState<string[]>(["CS", "CSE", "ECE", "IT", "ME", "MBA", "Civil", "EE"]);
+
+  // Fetch available branches from master API
+  useEffect(() => {
+    const fetchBranches = async () => {
+      try {
+        const res = await getMasterData("College Department");
+        const raw = res?.data ?? res?.message?.data ?? res?.message ?? res;
+        const arr = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+        if (arr.length > 0) {
+          const names = arr.map((item: any) => item.branch_name || item.branch || item.name || String(item)).filter(Boolean);
+          const uniqueBranches = Array.from(new Set([...names, "CS", "CSE", "ECE", "IT", "ME", "MBA", "Civil", "EE"]));
+          setAvailableBranches(uniqueBranches);
+        }
+      } catch (err) {
+        console.error("Failed to fetch branches from master:", err);
+      }
+    };
+    fetchBranches();
+  }, []);
 
   // Load college details from localStorage or API
   useEffect(() => {
@@ -306,25 +334,10 @@ export default function CampusDrivesTabContent() {
 
   const fetchMetrics = async (collegeName: string) => {
     try {
-      const [countRes, openRes] = await Promise.allSettled([
-        getDriveCount(collegeName),
-        getOpenRegistrationCount(collegeName)
-      ]);
-
-      if (countRes.status === "fulfilled") {
-        const countData = countRes.value?.data ?? countRes.value?.message?.data ?? countRes.value?.message;
-        const count = countData?.drive_count ?? countData?.count ?? countData;
-        if (count !== undefined && count !== null) {
-          setTotalDriveCount(Number(count));
-        }
-      }
-
-      if (openRes.status === "fulfilled") {
-        const openData = openRes.value?.data ?? openRes.value?.message?.data ?? openRes.value?.message;
-        const openCount = openData?.open_registration_count ?? openData?.count ?? openData;
-        if (openCount !== undefined && openCount !== null) {
-          setOpenRegCount(Number(openCount));
-        }
+      const res = await getDriveCount(collegeName);
+      const raw = res?.message ?? res;
+      if (raw && raw.data) {
+        setDriveCounts(raw.data);
       }
     } catch (err) {
       console.error("Failed to fetch drive metric counts:", err);
@@ -372,9 +385,11 @@ export default function CampusDrivesTabContent() {
     const collegeName = collegeDetails?.name;
     if (!collegeName) return;
     try {
-      const [listRes, countsRes] = await Promise.allSettled([
+      const [listRes, countsRes, statsRes, branchRes] = await Promise.allSettled([
         getPlacementList(collegeName),
-        getPlacementCounts(collegeName)
+        getPlacementCounts(collegeName),
+        getPlacementStats(collegeName),
+        getBranchWisePerformance(collegeName)
       ]);
 
       if (listRes.status === "fulfilled") {
@@ -388,6 +403,20 @@ export default function CampusDrivesTabContent() {
         const counts = raw?.data ?? raw;
         if (counts && typeof counts === 'object') {
           setPlacementCounts(counts);
+        }
+      }
+
+      if (statsRes.status === "fulfilled") {
+        const raw = statsRes.value?.message ?? statsRes.value;
+        if (raw && raw.data) {
+          setPlacementStats(raw.data);
+        }
+      }
+
+      if (branchRes.status === "fulfilled") {
+        const raw = branchRes.value?.message ?? branchRes.value;
+        if (raw && raw.data) {
+          setBranchPerformance(raw.data);
         }
       }
       setTrackerLoaded(true);
@@ -409,7 +438,11 @@ export default function CampusDrivesTabContent() {
       const [countsRes, listRes, eligibleRes] = await Promise.allSettled([
         getPlacementCounts(collegeName, drive.name),
         getPlacementList(collegeName, drive.name),
-        getEligibleStudents(drive.name)
+        getEligibleStudents({
+          branch: drive.criteria?.branches?.[0] || "",
+          cgpa: drive.criteria?.minCgpa !== undefined ? drive.criteria.minCgpa : "",
+          backlog: drive.criteria?.backlogs !== undefined ? drive.criteria.backlogs : ""
+        })
       ]);
 
       if (countsRes.status === "fulfilled") {
@@ -437,21 +470,117 @@ export default function CampusDrivesTabContent() {
     }
   };
 
-  // Set default active eligibility drive selection
-  useEffect(() => {
-    if (drivesList.length > 0 && !eligibilityDriveId) {
-      setEligibilityDriveId(drivesList[0].id);
+  const handleUpdateApplicationStatus = async (applicationId: string, status: string, studentName: string, email?: string) => {
+    try {
+      showToast(`Updating status to ${status} for ${studentName}...`, "info");
+      await updateCampusDriveApplicationStatus(applicationId, status);
+      showToast(`Status updated to ${status} for ${studentName}!`, "success");
+
+      // Send status mail to candidate
+      const lowercaseStatus = status.toLowerCase(); // shortlisted, selected, rejected
+      const resolvedEmail = email || drivePlacementList.find(r => r.application_id === applicationId)?.email;
+      if (resolvedEmail) {
+        try {
+          await sendCandidateStatusMail({
+            email: resolvedEmail,
+            status: lowercaseStatus,
+            candidate_name: studentName,
+            drive_name: selectedDrive?.name || selectedDrive?.company || ""
+          });
+          showToast(`Notification email sent to ${studentName}!`, "success");
+        } catch (mailErr) {
+          console.error("Failed to send status email:", mailErr);
+        }
+      }
+      
+      // Refresh current drive data
+      if (selectedDrive) {
+        const collegeName = collegeDetails?.name;
+        if (collegeName) {
+          const [countsRes, listRes] = await Promise.allSettled([
+            getPlacementCounts(collegeName, selectedDrive.name),
+            getPlacementList(collegeName, selectedDrive.name)
+          ]);
+
+          if (countsRes.status === "fulfilled") {
+            const raw = countsRes.value?.data ?? countsRes.value?.message?.data ?? countsRes.value?.message;
+            const counts = raw?.data ?? raw;
+            if (counts && typeof counts === 'object') {
+              setDrivePlacementCounts(counts);
+            }
+          }
+
+          if (listRes.status === "fulfilled") {
+            const raw = listRes.value?.data ?? listRes.value?.message?.data ?? listRes.value?.message;
+            const arr = Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw) ? raw : []);
+            setDrivePlacementList(arr);
+          }
+        }
+      }
+      
+      // Also refresh main overall stats
+      fetchPlacementData();
+    } catch (err: any) {
+      console.error("Failed to update application status:", err);
+      showToast(err.message || "Failed to update application status", "error");
     }
+  };
+
+  const handleNotifyCandidateMail = async (student: any, status: string, driveName: string) => {
+    const email = student.email || student.email_id || student.name || student.student_id;
+    const fullName = `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.name || student.student_id || student.email || "Candidate";
+    if (!email) {
+      showToast("Student email is not available", "error");
+      return;
+    }
+    try {
+      showToast(`Sending notification email to ${fullName}...`, "info");
+      await sendCandidateStatusMail({
+        email,
+        status,
+        candidate_name: fullName,
+        drive_name: driveName
+      });
+      showToast(`Notification email sent to ${fullName}!`, "success");
+    } catch (err: any) {
+      console.error("Failed to send candidate status email:", err);
+      showToast(err.message || "Failed to send notification email", "error");
+    }
+  };
+
+  // Resolve active eligibility drive details
+  const activeEligibilityDrive = useMemo(() => {
+    return drivesList.find(d => d.id === eligibilityDriveId) || null;
   }, [drivesList, eligibilityDriveId]);
 
-  // Fetch eligibility data for eligibility tab
+  // Sync criteria when selected eligibility drive changes
+  useEffect(() => {
+    if (activeEligibilityDrive) {
+      const branchVal = activeEligibilityDrive.criteria?.branches?.[0] || "";
+      const cgpaVal = activeEligibilityDrive.criteria?.minCgpa !== undefined ? String(activeEligibilityDrive.criteria.minCgpa) : "";
+      const backlogVal = activeEligibilityDrive.criteria?.backlogs !== undefined ? String(activeEligibilityDrive.criteria.backlogs) : "";
+      
+      setEligibilityBranch(branchVal);
+      setEligibilityCgpa(cgpaVal);
+      setEligibilityBacklog(backlogVal);
+    } else {
+      setEligibilityBranch("");
+      setEligibilityCgpa("");
+      setEligibilityBacklog("");
+    }
+  }, [activeEligibilityDrive]);
+
+  // Fetch eligibility data for eligibility tab using custom branch, cgpa, backlog, and drive filters
   useEffect(() => {
     const fetchTabEligibility = async () => {
-      if (!eligibilityDriveId) return;
       setTabEligibleLoading(true);
       try {
-        const res = await getEligibleStudents(eligibilityDriveId);
-        const raw = res?.data ?? res?.message?.data ?? res?.message;
+        const res = await getEligibleStudents({
+          branch: eligibilityBranch,
+          cgpa: eligibilityCgpa,
+          backlog: eligibilityBacklog
+        });
+        const raw = res?.message ?? res;
         if (raw) {
           setTabEligibleStudents(raw);
         }
@@ -462,10 +591,10 @@ export default function CampusDrivesTabContent() {
       }
     };
 
-    if (activeSubTab === "eligibility" && eligibilityDriveId) {
+    if (activeSubTab === "eligibility") {
       fetchTabEligibility();
     }
-  }, [eligibilityDriveId, activeSubTab]);
+  }, [eligibilityBranch, eligibilityCgpa, eligibilityBacklog, activeSubTab]);
 
   // Filter drives list based on search query
   const filteredDrives = useMemo(() => {
@@ -477,14 +606,13 @@ export default function CampusDrivesTabContent() {
 
   // Compute drives metrics banner
   const drivesMetrics = useMemo(() => {
-    // Use API-fetched counts when available, otherwise fallback to local list length
-    const totalDrives = totalDriveCount !== null ? totalDriveCount : drivesList.length;
-    const regOpenNow = openRegCount !== null ? openRegCount : drivesList.filter(d => d.status === "Registrations Open").length;
-    const studentsRegistered = 826;
-    const offersConfirmed = 2;
-
-    return { totalDrives, regOpenNow, studentsRegistered, offersConfirmed };
-  }, [drivesList, totalDriveCount, openRegCount]);
+    return {
+      totalDrives: driveCounts?.total_drives !== undefined ? driveCounts.total_drives : drivesList.length,
+      upcomingDrives: driveCounts?.upcoming_drives !== undefined ? driveCounts.upcoming_drives : drivesList.filter(d => d.status === "Registrations Open").length,
+      studentsRegistered: driveCounts?.total_registered !== undefined ? driveCounts.total_registered : 0,
+      offersConfirmed: driveCounts?.total_placed !== undefined ? driveCounts.total_placed : 0
+    };
+  }, [drivesList, driveCounts]);
 
   // Compute Student Tracker metrics — use API counts when available
   const trackerMetrics = useMemo(() => {
@@ -504,10 +632,6 @@ export default function CampusDrivesTabContent() {
     return { placed, shortlisted, applied, notApplied };
   }, [placementCounts, studentsList]);
 
-  // Resolve active eligibility drive details
-  const activeEligibilityDrive = useMemo(() => {
-    return drivesList.find(d => d.id === eligibilityDriveId) || drivesList[0];
-  }, [drivesList, eligibilityDriveId]);
 
   // Calculate dynamic eligibility lists based on selected drive criteria
   const eligibilityLists = useMemo(() => {
@@ -538,17 +662,48 @@ export default function CampusDrivesTabContent() {
   // Dynamic lists from get_eligible_students API (tab)
   const tabEligibleLists = useMemo(() => {
     if (tabEligibleStudents) {
-      const eligible = tabEligibleStudents.eligible?.data || [];
-      const notEligible = tabEligibleStudents.not_eligible?.data || [];
+      const eligible = Array.isArray(tabEligibleStudents.data)
+        ? tabEligibleStudents.data
+        : (Array.isArray(tabEligibleStudents.eligible?.data)
+          ? tabEligibleStudents.eligible.data
+          : (Array.isArray(tabEligibleStudents.eligible) ? tabEligibleStudents.eligible : []));
+      
+      const notEligible = Array.isArray(tabEligibleStudents.not_eligible?.data)
+        ? tabEligibleStudents.not_eligible.data
+        : (Array.isArray(tabEligibleStudents.not_eligible) ? tabEligibleStudents.not_eligible : []);
+      
       return { eligible, notEligible };
     }
     return eligibilityLists;
   }, [tabEligibleStudents, eligibilityLists]);
 
+  // Compute total eligible student count for display
+  const eligibleStudentsCount = useMemo(() => {
+    if (driveEligibleStudents) {
+      const total = driveEligibleStudents.pagination?.total ?? driveEligibleStudents.eligible?.pagination?.total;
+      if (total !== undefined && total !== null) return total;
+      
+      const len = driveEligibleStudents.data?.length ?? driveEligibleStudents.eligible?.data?.length ?? driveEligibleStudents.eligible?.length;
+      if (len !== undefined && len !== null) return len;
+    }
+    return selectedDrive?.stats?.eligible ?? 0;
+  }, [driveEligibleStudents, selectedDrive]);
+
   // Dynamic list for the managed drive (panel)
   const eligibleStudentsToRender = useMemo(() => {
-    if (driveEligibleStudents?.eligible?.data) {
-      return driveEligibleStudents.eligible.data;
+    if (driveEligibleStudents) {
+      if (Array.isArray(driveEligibleStudents.data)) {
+        return driveEligibleStudents.data;
+      }
+      if (Array.isArray(driveEligibleStudents.eligible?.data)) {
+        return driveEligibleStudents.eligible.data;
+      }
+      if (Array.isArray(driveEligibleStudents.eligible)) {
+        return driveEligibleStudents.eligible;
+      }
+      if (Array.isArray(driveEligibleStudents)) {
+        return driveEligibleStudents;
+      }
     }
     if (!selectedDrive) return [];
     const criteria = selectedDrive.criteria;
@@ -766,20 +921,108 @@ export default function CampusDrivesTabContent() {
   };
 
   // Notification buttons toast triggers
-  const triggerNotification = (type: string) => {
+  const triggerNotification = async (type: string) => {
+    if (!selectedDrive) return;
+    const driveName = selectedDrive.name || selectedDrive.company || "";
+
     switch (type) {
       case 'eligible':
-        showToast(`Notification sent to all eligible students!`, "success");
+        try {
+          showToast("Sending notification email to all eligible students...", "info");
+          const eligibleList = eligibleStudentsToRender;
+          if (eligibleList.length === 0) {
+            showToast("No eligible students to notify", "warning");
+            return;
+          }
+          let sentCount = 0;
+          await Promise.allSettled(
+            eligibleList.map(async (student: any) => {
+              const email = student.email || student.email_id || student.name || student.student_id;
+              const fullName = `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.name || "Candidate";
+              if (email) {
+                await sendCandidateStatusMail({
+                  email,
+                  status: "eligible",
+                  candidate_name: fullName,
+                  drive_name: driveName
+                });
+                sentCount++;
+              }
+            })
+          );
+          showToast(`Notification email sent to ${sentCount} eligible students!`, "success");
+        } catch (err) {
+          console.error(err);
+          showToast("Failed to send notifications to some students", "error");
+        }
         break;
+
       case 'remind':
-        showToast(`Registration reminder sent to registered students!`, "success");
+        try {
+          showToast("Sending reminders to registered students...", "info");
+          const registeredList = drivePlacementList.filter((r: any) => r.status === "Registered");
+          if (registeredList.length === 0) {
+            showToast("No registered students to remind", "warning");
+            return;
+          }
+          let sentCount = 0;
+          await Promise.allSettled(
+            registeredList.map(async (record: any) => {
+              const email = record.email || record.email_id || record.student_id;
+              const fullName = `${record.first_name || ""} ${record.last_name || ""}`.trim() || "Candidate";
+              if (email) {
+                await sendCandidateStatusMail({
+                  email,
+                  status: "applied",
+                  candidate_name: fullName,
+                  drive_name: driveName
+                });
+                sentCount++;
+              }
+            })
+          );
+          showToast(`Reminder email sent to ${sentCount} registered students!`, "success");
+        } catch (err) {
+          console.error(err);
+          showToast("Failed to send reminders", "error");
+        }
         break;
+
       case 'notice':
         showToast("Campus drive details successfully posted to College Notice Board!", "success");
         break;
+
       case 'shortlist':
-        showToast(`Shortlist results dispatched to candidates!`, "success");
+        try {
+          showToast("Sending shortlist results to candidates...", "info");
+          const shortlistedList = drivePlacementList.filter((r: any) => r.status === "Shortlisted");
+          if (shortlistedList.length === 0) {
+            showToast("No shortlisted students to notify", "warning");
+            return;
+          }
+          let sentCount = 0;
+          await Promise.allSettled(
+            shortlistedList.map(async (record: any) => {
+              const email = record.email || record.email_id || record.student_id;
+              const fullName = `${record.first_name || ""} ${record.last_name || ""}`.trim() || "Candidate";
+              if (email) {
+                await sendCandidateStatusMail({
+                  email,
+                  status: "shortlisted",
+                  candidate_name: fullName,
+                  drive_name: driveName
+                });
+                sentCount++;
+              }
+            })
+          );
+          showToast(`Shortlist results email sent to ${sentCount} candidates!`, "success");
+        } catch (err) {
+          console.error(err);
+          showToast("Failed to send shortlist notifications", "error");
+        }
         break;
+
       default:
         break;
     }
@@ -874,7 +1117,10 @@ export default function CampusDrivesTabContent() {
             Eligibility Check
           </button>
           <button
-            onClick={() => setActiveSubTab("stats")}
+            onClick={() => {
+              setActiveSubTab("stats");
+              if (!trackerLoaded) fetchPlacementData();
+            }}
             className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${activeSubTab === "stats"
               ? "border-blue-600 text-blue-600 bg-blue-50/40 rounded-t-lg font-bold"
               : "border-transparent text-slate-500 hover:text-slate-800 font-semibold"
@@ -982,7 +1228,7 @@ export default function CampusDrivesTabContent() {
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Eligible</span>
                   <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
                 </div>
-                <p className="text-2xl font-bold text-slate-800 leading-tight">{driveEligibleStudents?.eligible?.pagination?.total ?? driveEligibleStudents?.eligible?.data?.length ?? selectedDrive.stats.eligible}</p>
+                <p className="text-2xl font-bold text-slate-800 leading-tight">{eligibleStudentsCount}</p>
                 <p className="text-[10px] text-slate-400 font-semibold">Students</p>
               </div>
 
@@ -1056,7 +1302,7 @@ export default function CampusDrivesTabContent() {
                             ? (drivePlacementCounts?.shortlisted ?? selectedDrive.stats.shortlisted)
                             : selectedStudentStatusFilter === "Selected"
                               ? (drivePlacementCounts?.placed ?? selectedDrive.stats.selected)
-                              : (driveEligibleStudents?.eligible?.pagination?.total ?? driveEligibleStudents?.eligible?.data?.length ?? selectedDrive.stats.eligible)
+                              : eligibleStudentsCount
                       })
                     </h3>
                     <button onClick={handleExportCSV} className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
@@ -1085,13 +1331,13 @@ export default function CampusDrivesTabContent() {
                               <p className="text-xs text-slate-400 font-semibold">No eligible students</p>
                             </td></tr>
                           ) : eligibleStudentsToRender.map((student: any) => {
-                            const fullName = student.name || `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.student_id || student.email || "—";
+                            const fullName = `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.name || student.student_id || student.email || "—";
                             const initials = fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
-                            const branch = student.branch || student.branch_name || "—";
+                            const branch = student.branch || student.branch_name || student.department || "—";
                             const cgpa = student.cgpa !== undefined && student.cgpa !== null ? student.cgpa : "—";
                             const backlogs = student.backlog !== undefined && student.backlog !== null ? student.backlog : (student.backlogs !== undefined ? student.backlogs : 0);
                             return (
-                              <tr key={student.id || student.email || student.student_id} className="hover:bg-slate-50/50 transition-colors">
+                              <tr key={student.name || student.email_id || student.id || student.email || student.student_id} className="hover:bg-slate-50/50 transition-colors">
                                 <td className="py-3.5 px-5">
                                   <div className="flex items-center gap-3">
                                     <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0 border border-slate-200">{initials}</div>
@@ -1107,7 +1353,7 @@ export default function CampusDrivesTabContent() {
                                   {backlogs === 0 ? "✓" : backlogs}
                                 </td>
                                 <td className="py-3.5 px-5 text-right">
-                                  <button onClick={() => showToast(`Notified ${fullName}`, "info")} className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-1.5 rounded-lg text-[10px] uppercase tracking-wider shadow-sm transition-all">Notify</button>
+                                  <button onClick={() => handleNotifyCandidateMail(student, "eligible", selectedDrive?.name || selectedDrive?.company || "")} className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-1.5 rounded-lg text-[10px] uppercase tracking-wider shadow-sm transition-all">Notify</button>
                                 </td>
                               </tr>
                             );
@@ -1154,7 +1400,7 @@ export default function CampusDrivesTabContent() {
                                 <td className="py-3.5 px-4 font-bold text-xs text-orange-500">{record.cgpa || "—"}</td>
                                 <td className="py-3.5 px-4 text-xs font-semibold text-emerald-600">✓</td>
                                 <td className="py-3.5 px-5 text-right">
-                                  <button onClick={() => showToast(`Shortlisting ${fullName}`, "info")} className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-3.5 py-1.5 rounded-lg text-[10px] uppercase tracking-wider shadow-sm transition-all">Shortlist</button>
+                                  <button onClick={() => handleUpdateApplicationStatus(record.application_id, "Shortlisted", fullName, record.email)} className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-3.5 py-1.5 rounded-lg text-[10px] uppercase tracking-wider shadow-sm transition-all">Shortlist</button>
                                 </td>
                               </tr>
                             );
@@ -1197,8 +1443,8 @@ export default function CampusDrivesTabContent() {
                                 <td className="py-3.5 px-4 text-xs font-semibold text-emerald-600">✓</td>
                                 <td className="py-3.5 px-5 text-right">
                                   <div className="flex items-center justify-end gap-1.5">
-                                    <button onClick={() => showToast(`Selecting ${fullName}`, "success")} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider shadow-sm transition-all flex items-center gap-1">✓ Select</button>
-                                    <button onClick={() => showToast(`Removing ${fullName} from shortlist`, "info")} className="w-7 h-7 bg-red-50 hover:bg-red-100 border border-red-200 text-red-500 font-bold rounded-lg text-xs transition-all flex items-center justify-center">✕</button>
+                                    <button onClick={() => handleUpdateApplicationStatus(record.application_id, "Selected", fullName, record.email)} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider shadow-sm transition-all flex items-center gap-1">✓ Select</button>
+                                    <button onClick={() => handleUpdateApplicationStatus(record.application_id, "Rejected", fullName, record.email)} className="bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider transition-all flex items-center gap-1">✕ Reject</button>
                                   </div>
                                 </td>
                               </tr>
@@ -1493,7 +1739,7 @@ export default function CampusDrivesTabContent() {
             exit={{ opacity: 0, y: -15 }}
             className="space-y-6"
           >
-            {!activeEligibilityDrive ? (
+            {drivesList.length === 0 ? (
               <div className="text-center py-16 bg-white border border-slate-200 rounded-2xl">
                 <Briefcase className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                 <h4 className="text-base font-bold text-slate-700">No active drives available</h4>
@@ -1501,41 +1747,95 @@ export default function CampusDrivesTabContent() {
               </div>
             ) : (
               <>
-                {/* Top Selection Row */}
-                <BaseCard className="p-5 bg-white border-slate-200/60 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 w-full md:max-w-md">
-                    <span className="text-xs font-bold text-slate-500 shrink-0">Check eligibility for:</span>
-                    <div className="relative flex-1">
-                      <select
-                        value={eligibilityDriveId}
-                        onChange={(e) => setEligibilityDriveId(e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold outline-none focus:border-blue-500 appearance-none pr-8 cursor-pointer"
+                {/* Top Selection Row & Filters */}
+                <BaseCard className="p-5 bg-white border-slate-200/60 shadow-sm flex flex-col gap-5">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-3 w-full md:max-w-md">
+                      <span className="text-xs font-bold text-slate-500 shrink-0">Check eligibility for:</span>
+                      <div className="relative flex-1">
+                        <select
+                          value={eligibilityDriveId}
+                          onChange={(e) => setEligibilityDriveId(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold outline-none focus:border-blue-500 appearance-none pr-8 cursor-pointer"
+                        >
+                          <option value="">All Drives / General Eligibility</option>
+                          {drivesList.map(drive => (
+                            <option key={drive.id} value={drive.id}>
+                              {drive.company} — {drive.driveDate ? new Date(drive.driveDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "—"}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5 self-end md:self-auto">
+                      <button
+                        onClick={() => triggerNotification('eligible')}
+                        className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-colors"
                       >
-                        {drivesList.map(drive => (
-                          <option key={drive.id} value={drive.id}>
-                            {drive.company} — {new Date(drive.driveDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <Bell className="w-3.5 h-3.5" />
+                        Notify Eligible
+                      </button>
+                      <button
+                        onClick={handleExportCSV}
+                        className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all"
+                      >
+                        <Download className="w-3.5 h-3.5 text-slate-400" />
+                        Export List
+                      </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2.5 self-end md:self-auto">
-                    <button
-                      onClick={() => triggerNotification('eligible')}
-                      className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-colors"
-                    >
-                      <Bell className="w-3.5 h-3.5" />
-                      Notify Eligible
-                    </button>
-                    <button
-                      onClick={handleExportCSV}
-                      className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all"
-                    >
-                      <Download className="w-3.5 h-3.5 text-slate-400" />
-                      Export List
-                    </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="relative">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Branch</label>
+                      <div className="relative">
+                        <select
+                          value={eligibilityBranch}
+                          onChange={(e) => setEligibilityBranch(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold outline-none focus:border-blue-500 focus:bg-white appearance-none cursor-pointer pr-8"
+                        >
+                          <option value="">All Branches</option>
+                          {availableBranches.map((br) => (
+                            <option key={br} value={br}>{br}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Min CGPA</label>
+                      <div className="relative">
+                        <select
+                          value={eligibilityCgpa}
+                          onChange={(e) => setEligibilityCgpa(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold outline-none focus:border-blue-500 focus:bg-white appearance-none cursor-pointer pr-8"
+                        >
+                          <option value="">All CGPA</option>
+                          {["0.0", "1.0", "2.0", "3.0", "4.0", "5.0", "6.0", "6.5", "7.0", "7.5", "8.0", "8.5", "9.0", "9.5", "10.0"].map((cg) => (
+                            <option key={cg} value={cg}>{cg}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Max Backlog</label>
+                      <div className="relative">
+                        <select
+                          value={eligibilityBacklog}
+                          onChange={(e) => setEligibilityBacklog(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold outline-none focus:border-blue-500 focus:bg-white appearance-none cursor-pointer pr-8"
+                        >
+                          <option value="">All Backlogs</option>
+                          {["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"].map((bl) => (
+                            <option key={bl} value={bl}>{bl}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+                    </div>
                   </div>
                 </BaseCard>
 
@@ -1550,15 +1850,21 @@ export default function CampusDrivesTabContent() {
                     <div className="p-6 rounded-2xl bg-slate-50 border border-slate-200/70 flex flex-col md:flex-row md:items-center justify-between gap-6">
                       <div className="space-y-3">
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Selected Drive Criteria</span>
-                        <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs font-semibold text-slate-600">
-                          <span>Min CGPA: <strong className="text-blue-600 text-sm font-bold">{activeEligibilityDrive.criteria.minCgpa}</strong></span>
-                          <span>Max Backlogs: <strong className="text-blue-600 text-sm font-bold">{activeEligibilityDrive.criteria.backlogs}</strong></span>
-                          <span>Year: <strong className="text-blue-600 text-sm font-bold">{activeEligibilityDrive.criteria.passingYear}</strong></span>
-                          <span className="flex items-center gap-1">
-                            Eligible Branches:
-                            <strong className="text-orange-600 font-bold">{activeEligibilityDrive.criteria.branches.join(", ")}</strong>
-                          </span>
-                        </div>
+                        {activeEligibilityDrive ? (
+                          <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs font-semibold text-slate-600">
+                            <span>Min CGPA: <strong className="text-blue-600 text-sm font-bold">{activeEligibilityDrive.criteria?.minCgpa ?? "—"}</strong></span>
+                            <span>Max Backlogs: <strong className="text-blue-600 text-sm font-bold">{activeEligibilityDrive.criteria?.backlogs ?? "—"}</strong></span>
+                            <span>Year: <strong className="text-blue-600 text-sm font-bold">{activeEligibilityDrive.criteria?.passingYear ?? "—"}</strong></span>
+                            <span className="flex items-center gap-1">
+                              Eligible Branches:
+                              <strong className="text-orange-600 font-bold">{activeEligibilityDrive.criteria?.branches?.join(", ") || "All"}</strong>
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="text-xs font-semibold text-slate-500">
+                            Showing all final year students with no active drive criteria filter. Use filters below to search.
+                          </div>
+                        )}
                       </div>
 
                       <div className="text-center shrink-0 bg-white border border-slate-200/50 p-4 rounded-xl shadow-sm flex items-center gap-4">
@@ -1603,12 +1909,12 @@ export default function CampusDrivesTabContent() {
                                   </td>
                                 </tr>
                               ) : tabEligibleLists.eligible.map((student: any) => {
-                                const fullName = student.name || `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.student_id || student.email || "—";
-                                const branch = student.branch || student.branch_name || "—";
+                                const fullName = `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.name || student.student_id || student.email || "—";
+                                const branch = student.branch || student.branch_name || student.department || "—";
                                 const cgpa = student.cgpa !== undefined && student.cgpa !== null ? student.cgpa : "—";
                                 const backlogs = student.backlog !== undefined && student.backlog !== null ? student.backlog : (student.backlogs !== undefined ? student.backlogs : 0);
                                 return (
-                                  <tr key={student.id || student.email || student.student_id} className="hover:bg-slate-50/50 transition-colors">
+                                  <tr key={student.name || student.email_id || student.id || student.email || student.student_id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="py-3 px-4 font-bold text-slate-800">{fullName}</td>
                                     <td className="py-3 px-4"><span className="bg-slate-100 px-2 py-0.5 rounded font-bold">{branch}</span></td>
                                     <td className="py-3 px-4 font-bold text-emerald-600">{cgpa}</td>
@@ -1617,7 +1923,7 @@ export default function CampusDrivesTabContent() {
                                     </td>
                                     <td className="py-3 px-4 text-right">
                                       <button
-                                        onClick={() => showToast(`Notified ${fullName} about ${activeEligibilityDrive.company} drive eligibility!`, "success")}
+                                        onClick={() => handleNotifyCandidateMail(student, "eligible", activeEligibilityDrive?.name || activeEligibilityDrive?.company || "")}
                                         className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1 rounded-lg text-[10px] uppercase tracking-wider transition-colors shadow-sm"
                                       >
                                         Notify
@@ -1658,12 +1964,12 @@ export default function CampusDrivesTabContent() {
                                   </td>
                                 </tr>
                               ) : tabEligibleLists.notEligible.map((student: any) => {
-                                const fullName = student.name || `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.student_id || student.email || "—";
-                                const branch = student.branch || student.branch_name || "—";
+                                const fullName = `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.name || student.student_id || student.email || "—";
+                                const branch = student.branch || student.branch_name || student.department || "—";
                                 const cgpa = student.cgpa !== undefined && student.cgpa !== null ? student.cgpa : "—";
                                 const reason = student.reason || "Criteria mismatch";
                                 return (
-                                  <tr key={student.id || student.email || student.student_id} className="hover:bg-slate-50/50 transition-colors">
+                                  <tr key={student.name || student.email_id || student.id || student.email || student.student_id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="py-3 px-4 font-bold text-slate-800">{fullName}</td>
                                     <td className="py-3 px-4 font-bold text-slate-500">{cgpa}</td>
                                     <td className="py-3 px-4"><span className="bg-slate-100 px-2 py-0.5 rounded font-bold">{branch}</span></td>
@@ -1699,7 +2005,13 @@ export default function CampusDrivesTabContent() {
               <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Placement Rate</p>
-                  <h4 className="text-2xl font-bold text-slate-800">82%</h4>
+                  <h4 className="text-2xl font-bold text-slate-800">
+                    {placementStats === null ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-blue-400 inline" />
+                    ) : (
+                      `${placementStats.placement_rate ?? 0}%`
+                    )}
+                  </h4>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm shadow-blue-100">
                   <FileText className="w-5 h-5" />
@@ -1708,7 +2020,13 @@ export default function CampusDrivesTabContent() {
               <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Average CTC</p>
-                  <h4 className="text-2xl font-bold text-slate-800">₹11.2L</h4>
+                  <h4 className="text-2xl font-bold text-slate-800">
+                    {placementStats === null ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-amber-400 inline" />
+                    ) : (
+                      `₹${placementStats.average_ctc ?? 0} LPA`
+                    )}
+                  </h4>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shadow-sm shadow-amber-100">
                   <FaRupeeSign className="w-5 h-5" />
@@ -1717,7 +2035,13 @@ export default function CampusDrivesTabContent() {
               <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Highest CTC</p>
-                  <h4 className="text-2xl font-bold text-slate-800">₹55 LPA</h4>
+                  <h4 className="text-2xl font-bold text-slate-800">
+                    {placementStats === null ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-purple-400 inline" />
+                    ) : (
+                      `₹${placementStats.highest_ctc ?? 0} LPA`
+                    )}
+                  </h4>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 shadow-sm shadow-purple-100">
                   <Trophy className="w-5 h-5" />
@@ -1726,7 +2050,13 @@ export default function CampusDrivesTabContent() {
               <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Companies Visited</p>
-                  <h4 className="text-2xl font-bold text-slate-800">24</h4>
+                  <h4 className="text-2xl font-bold text-slate-800">
+                    {placementStats === null ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-slate-600 inline" />
+                    ) : (
+                      placementStats.companies_visited ?? 0
+                    )}
+                  </h4>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 shadow-sm shadow-slate-100">
                   <Briefcase className="w-5 h-5" />
@@ -1741,28 +2071,33 @@ export default function CampusDrivesTabContent() {
               <BaseCard className="bg-white border-slate-200/60 shadow-sm p-5 space-y-4">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Company-wise Selections</h3>
                 <div className="space-y-4">
-                  {[
-                    { company: "TCS", range: "₹7-11 LPA", color: "bg-blue-600" },
-                    { company: "Infosys", range: "₹6.5 LPA", color: "bg-emerald-600" },
-                    { company: "Razorpay", range: "₹18-24 LPA", color: "bg-orange-600" },
-                    { company: "Wipro", range: "₹6.5-8 LPA", color: "bg-indigo-600" },
-                    { company: "Accenture", range: "₹7-10 LPA", color: "bg-purple-600" }
-                  ].map((c, i) => (
-                    <div key={i} className="flex items-center justify-between py-1 border-b border-slate-50 last:border-0">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg ${c.color} flex items-center justify-center text-white font-bold text-xs shrink-0`}>
-                          {c.company.charAt(0)}
+                  {drivesList.length === 0 ? (
+                    <p className="text-xs text-slate-400 font-semibold text-center py-4">No campus drives found</p>
+                  ) : (
+                    drivesList.map((c, i) => {
+                      const colors = ["bg-blue-600", "bg-emerald-600", "bg-orange-600", "bg-indigo-600", "bg-purple-600", "bg-pink-600", "bg-teal-600"];
+                      const color = colors[i % colors.length];
+                      const displayPackage = c.package
+                        ? (String(c.package).includes("LPA") || String(c.package).includes("₹") ? c.package : `₹${c.package} LPA`)
+                        : "—";
+                      return (
+                        <div key={i} className="flex items-center justify-between py-1 border-b border-slate-50 last:border-0">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center text-white font-bold text-xs shrink-0`}>
+                              {(c.company || "C").charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-slate-800">{c.company || "Unnamed Company"}</p>
+                              <p className="text-[10px] text-slate-400 font-semibold">{displayPackage}</p>
+                            </div>
+                          </div>
+                          <span className="w-12 h-1.5 rounded-full bg-slate-100 overflow-hidden relative">
+                            <span className={`absolute top-0 bottom-0 left-0 ${color}`} style={{ width: `${Math.max(15, 100 - i * 12)}%` }}></span>
+                          </span>
                         </div>
-                        <div>
-                          <p className="text-xs font-bold text-slate-800">{c.company}</p>
-                          <p className="text-[10px] text-slate-400 font-semibold">{c.range}</p>
-                        </div>
-                      </div>
-                      <span className="w-12 h-1.5 rounded-full bg-slate-100 overflow-hidden relative">
-                        <span className={`absolute top-0 bottom-0 left-0 ${c.color}`} style={{ width: `${80 - i * 15}%` }}></span>
-                      </span>
-                    </div>
-                  ))}
+                      );
+                    })
+                  )}
                 </div>
               </BaseCard>
 
@@ -1770,24 +2105,38 @@ export default function CampusDrivesTabContent() {
               <BaseCard className="bg-white border-slate-200/60 shadow-sm p-5 space-y-4">
                 <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Branch-wise Placement Rate</h3>
                 <div className="space-y-3.5">
-                  {[
-                    { branch: "CSE", ratio: "38/42", rate: 90, color: "bg-emerald-500" },
-                    { branch: "ECE", ratio: "28/36", rate: 78, color: "bg-emerald-500" },
-                    { branch: "IT", ratio: "22/28", rate: 79, color: "bg-emerald-500" },
-                    { branch: "MBA", ratio: "14/18", rate: 78, color: "bg-emerald-500" },
-                    { branch: "ME", ratio: "18/34", rate: 53, color: "bg-red-500" },
-                    { branch: "Civil", ratio: "8/22", rate: 36, color: "bg-red-500" }
-                  ].map((b, i) => (
-                    <div key={i} className="space-y-1.5">
-                      <div className="flex justify-between text-xs font-semibold">
-                        <span className="text-slate-700">{b.branch} <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">({b.ratio})</span></span>
-                        <span className="font-bold text-slate-800">{b.rate}%</span>
-                      </div>
-                      <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                        <div className={`h-full ${b.color} rounded-full`} style={{ width: `${b.rate}%` }}></div>
-                      </div>
+                  {branchPerformance === null ? (
+                    <div className="flex items-center justify-center py-10">
+                      <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
                     </div>
-                  ))}
+                  ) : branchPerformance.length === 0 ? (
+                    <p className="text-xs text-slate-400 font-semibold text-center py-4">No branch performance data found</p>
+                  ) : (
+                    branchPerformance.map((b: any, i: number) => {
+                      const branchName = b.department || "—";
+                      const placed = b.placed_students ?? 0;
+                      const total = b.total_students ?? 0;
+                      const rate = b.placement_rate !== undefined ? Number(b.placement_rate).toFixed(1) : "0.0";
+                      const rateNum = Number(rate);
+                      const color = rateNum >= 50 ? "bg-emerald-500" : "bg-red-500";
+                      return (
+                        <div key={i} className="space-y-1.5">
+                          <div className="flex justify-between text-xs font-semibold">
+                            <span className="text-slate-700">
+                              {branchName}{" "}
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                ({placed}/{total})
+                              </span>
+                            </span>
+                            <span className="font-bold text-slate-800">{rate}%</span>
+                          </div>
+                          <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                            <div className={`h-full ${color} rounded-full`} style={{ width: `${Math.min(100, Math.max(0, rateNum))}%` }}></div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </BaseCard>
 
@@ -1860,9 +2209,9 @@ export default function CampusDrivesTabContent() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Total Drives (2025)</p>
+                  <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Total Drives</p>
                   <h4 className="text-2xl font-bold text-slate-800">
-                    {totalDriveCount === null ? (
+                    {driveCounts === null ? (
                       <Loader2 className="w-5 h-5 animate-spin text-blue-400 inline" />
                     ) : drivesMetrics.totalDrives}
                   </h4>
@@ -1873,11 +2222,11 @@ export default function CampusDrivesTabContent() {
               </BaseCard>
               <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
                 <div>
-                  <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Reg Open Now</p>
+                  <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Upcoming Drives</p>
                   <h4 className="text-2xl font-bold text-slate-800">
-                    {openRegCount === null ? (
+                    {driveCounts === null ? (
                       <Loader2 className="w-5 h-5 animate-spin text-orange-400 inline" />
-                    ) : drivesMetrics.regOpenNow}
+                    ) : drivesMetrics.upcomingDrives}
                   </h4>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 shadow-sm shadow-orange-100">
@@ -1887,7 +2236,11 @@ export default function CampusDrivesTabContent() {
               <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Students Registered</p>
-                  <h4 className="text-2xl font-bold text-slate-800">{drivesMetrics.studentsRegistered}</h4>
+                  <h4 className="text-2xl font-bold text-slate-800">
+                    {driveCounts === null ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-emerald-400 inline" />
+                    ) : drivesMetrics.studentsRegistered}
+                  </h4>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-sm shadow-emerald-100">
                   <Users className="w-5 h-5" />
@@ -1896,7 +2249,11 @@ export default function CampusDrivesTabContent() {
               <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
                 <div>
                   <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Offers Confirmed</p>
-                  <h4 className="text-2xl font-bold text-slate-800">{drivesMetrics.offersConfirmed}</h4>
+                  <h4 className="text-2xl font-bold text-slate-800">
+                    {driveCounts === null ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-purple-400 inline" />
+                    ) : drivesMetrics.offersConfirmed}
+                  </h4>
                 </div>
                 <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 shadow-sm shadow-purple-100">
                   <Trophy className="w-5 h-5" />

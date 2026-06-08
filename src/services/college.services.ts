@@ -212,17 +212,115 @@ export const getOpenRegistrationCount = async (college: string) => {
   }
 };
 
-export const getEligibleStudents = async (driveName: string) => {
+export const getEligibleStudents = async (
+  params: string | { branch?: string; cgpa?: number | string; backlog?: number | string; drive?: string }
+) => {
   try {
-    const response = await apiService.get(
-      `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.get_eligible_students?drive=${encodeURIComponent(driveName)}`
-    );
+    let url = `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.get_eligible_students`;
+    
+    if (typeof params === 'string') {
+      url += `?drive=${encodeURIComponent(params)}`;
+    } else {
+      const queryParts: string[] = [];
+      if (params.branch) queryParts.push(`branch=${encodeURIComponent(params.branch)}`);
+      if (params.cgpa !== undefined && params.cgpa !== "") queryParts.push(`cgpa=${encodeURIComponent(params.cgpa)}`);
+      if (params.backlog !== undefined && params.backlog !== "") queryParts.push(`backlog=${encodeURIComponent(params.backlog)}`);
+      if (params.drive) queryParts.push(`drive=${encodeURIComponent(params.drive)}`);
+      if (queryParts.length > 0) {
+        url += `?${queryParts.join("&")}`;
+      }
+    }
+    
+    const response = await apiService.get(url);
     return response;
   } catch (error) {
-    console.error(`Error fetching eligible students for drive ${driveName}:`, error);
+    console.error(`Error fetching eligible students:`, error);
     throw error;
   }
 };
+
+export const updateCampusDriveApplicationStatus = async (applicationName: string, status: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.update_application_status?application_name=${encodeURIComponent(applicationName)}&status=${encodeURIComponent(status)}`
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error updating campus drive application status for ${applicationName}:`, error);
+    throw error;
+  }
+};
+
+export const sendCandidateStatusMail = async (data: {
+  email: string;
+  status: string;
+  candidate_name: string;
+  drive_name: string;
+}) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.send_candidate_status_mail`,
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error sending candidate status mail to ${data.email}:`, error);
+    throw error;
+  }
+};
+
+export const getStudentAnalyticsList = async (params: {
+  search?: string;
+  college?: string;
+  department?: string;
+  page?: number;
+  page_size?: number;
+}) => {
+  try {
+    const queryParts: string[] = [];
+    if (params.search !== undefined) queryParts.push(`search=${encodeURIComponent(params.search)}`);
+    if (params.college !== undefined) queryParts.push(`college=${encodeURIComponent(params.college)}`);
+    if (params.department !== undefined) queryParts.push(`department=${encodeURIComponent(params.department)}`);
+    if (params.page !== undefined) queryParts.push(`page=${encodeURIComponent(params.page)}`);
+    if (params.page_size !== undefined) queryParts.push(`page_size=${encodeURIComponent(params.page_size)}`);
+    
+    let url = `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.get_student_Analytics_list`;
+    if (queryParts.length > 0) {
+      url += `?${queryParts.join("&")}`;
+    }
+    
+    const response = await apiService.get(url);
+    return response;
+  } catch (error) {
+    console.error("Error fetching student analytics list:", error);
+    throw error;
+  }
+};
+
+export const getPlacementStats = async (college: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.college_campus_drives.college_campus_drives.get_placement_stats?college=${encodeURIComponent(college)}`
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error fetching placement stats for college ${college}:`, error);
+    throw error;
+  }
+};
+
+export const getBranchWisePerformance = async (college: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.college_campus_drives.college_campus_drives.get_branch_wise_performance?college=${encodeURIComponent(college)}`
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error fetching branch wise performance for college ${college}:`, error);
+    throw error;
+  }
+};
+
 
 
 
