@@ -30,7 +30,7 @@ import { useEffect, useState, useMemo } from "react";
 import { getStudentByEmail, updateStudent } from "@/services/student.services";
 import { updateIndustry } from "@/services/industry.services";
 import { getMentorByEmail, getMentorDashboardStats } from "@/services/mentor.services";
-import { getCollegeDetails } from "@/services/college.services";
+import { getCollegeDetails, updateCollegeDetails } from "@/services/college.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { useToast } from "@/context/ToastContext";
 import { OperatingHoursTable, OperatingHour } from "@/components/dashboards/shared/OperatingHoursTable";
@@ -148,7 +148,18 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
   const [mentorStats, setMentorStats] = useState<any>(null);
 
   // College specific state
-  const [collegeData, setCollegeData] = useState<any>(null);
+  const [collegeData, setCollegeData] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("collegeDetails");
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch (_) {}
+      }
+    }
+    return null;
+  });
+  const [collegeFormState, setCollegeFormState] = useState<any>({});
 
   const fetchStudentData = async () => {
     const email = currentUser || (typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail")) : "") || "";
@@ -248,6 +259,98 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     { name: "cgpa", label: "CGPA", type: "number", icon: Award, required: true },
   ], []);
 
+  const collegeFields: DynamicField[] = useMemo(() => [
+    { name: "college_name", label: "College Name", type: "text", icon: Building2, required: true, colSpan: 2 },
+    { name: "trust__governing_body", label: "Trust / Governing Body", type: "text", icon: Shield, required: true, colSpan: 2 },
+    { name: "year_of_establishment", label: "Year of Establishment", type: "number", icon: Calendar, required: true },
+    { name: "intake_capacity", label: "Intake Capacity", type: "number", icon: Users, required: true },
+    { name: "college_code", label: "College Code", type: "text", icon: Target, required: true },
+    { name: "email", label: "Email Address", type: "email", icon: Mail, required: true, disabled: true },
+    { 
+      name: "university", 
+      label: "Affiliated University", 
+      type: "select", 
+      icon: GraduationCap, 
+      required: true, 
+      colSpan: 2,
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: { doctype: "University" },
+      mapOptions: (data) => data.map((u: any) => ({ value: u.name, label: u.name }))
+    },
+    { 
+      name: "college_type", 
+      label: "College Type", 
+      type: "select", 
+      icon: Layers, 
+      required: true,
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: { doctype: "College Type" },
+      mapOptions: (data) => data.map((ct: any) => ({ value: ct.name, label: ct.name }))
+    },
+    { name: "website", label: "Website", type: "url", icon: Globe, required: false },
+    { 
+      name: "state", 
+      label: "State", 
+      type: "select", 
+      icon: MapPin, 
+      required: true,
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: { doctype: "State" },
+      mapOptions: (data) => data.map((s: any) => ({ value: s.name, label: s.name }))
+    },
+    { 
+      name: "district", 
+      label: "District", 
+      type: "select", 
+      icon: MapPin, 
+      required: true,
+      disabled: !collegeFormState.state,
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: collegeFormState.state ? {
+        doctype: "District",
+        fields: ["name", "district_name"],
+        filters: [["state", "=", collegeFormState.state]],
+        order_by: "district_name asc",
+        limit_page_length: 1000
+      } : undefined,
+      mapOptions: (data) => data.map((d: any) => ({ value: d.name, label: d.district_name || d.name }))
+    },
+    { 
+      name: "taluka", 
+      label: "Taluka / Tahsil", 
+      type: "select", 
+      icon: MapPin, 
+      required: true,
+      disabled: !collegeFormState.district,
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: collegeFormState.district ? {
+        doctype: "Tahsil",
+        fields: ["name", "tahsil_name"],
+        filters: [["district", "=", collegeFormState.district]],
+        order_by: "tahsil_name asc",
+        limit_page_length: 1000
+      } : undefined,
+      mapOptions: (data) => data.map((t: any) => ({ value: t.name, label: t.name }))
+    },
+    { 
+      name: "city", 
+      label: "City", 
+      type: "select", 
+      icon: MapPin, 
+      required: true,
+      disabled: !collegeFormState.taluka,
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: collegeFormState.taluka ? {
+        doctype: "City",
+        fields: ["name", "city_name"],
+        filters: [["tahsil", "=", collegeFormState.taluka]],
+        order_by: "city_name asc",
+        limit_page_length: 1000
+      } : undefined,
+      mapOptions: (data) => data.map((c: any) => ({ value: c.name, label: c.name }))
+    },
+  ], [collegeFormState]);
+
   const industryFields: DynamicField[] = useMemo(() => {
     const fields: DynamicField[] = [
       { name: "company_name", label: "Company Name", type: "text", icon: Building2, required: true, colSpan: 2 },
@@ -336,6 +439,24 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
         if (customData?.onUpdateSuccess) {
           await customData.onUpdateSuccess();
         }
+      } else if (role === "college") {
+        const payload = {
+          ...collegeData,
+          college_name: formData.college_name,
+          trust__governing_body: formData.trust__governing_body,
+          year_of_establishment: formData.year_of_establishment ? Number(formData.year_of_establishment) : undefined,
+          intake_capacity: formData.intake_capacity ? Number(formData.intake_capacity) : undefined,
+          college_code: formData.college_code,
+          university: formData.university,
+          college_type: formData.college_type,
+          website: formData.website,
+          state: formData.state,
+          district: formData.district,
+          taluka: formData.taluka,
+          city: formData.city,
+        };
+        await updateCollegeDetails(currentUser, payload);
+        await fetchCollegeData();
       }
       showToast("Profile updated successfully", "success");
       setIsModalOpen(false);
@@ -349,6 +470,24 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
 
   // Compute initial values for the modal
   const computedInitialValues = useMemo(() => {
+    if (role === "college") {
+      return {
+        college_name: collegeData?.college_name || "",
+        trust__governing_body: collegeData?.trust__governing_body || "",
+        year_of_establishment: collegeData?.year_of_establishment || "",
+        intake_capacity: collegeData?.intake_capacity || "",
+        college_code: collegeData?.college_code || "",
+        email: collegeData?.email || currentUser || "",
+        university: collegeData?.university || "",
+        college_type: collegeData?.college_type || "",
+        website: collegeData?.website || "",
+        state: collegeData?.state || "",
+        district: collegeData?.district || "",
+        taluka: collegeData?.taluka || collegeData?.tahsil || "",
+        city: collegeData?.city || "",
+      };
+    }
+
     if (role === "industry") {
       const raw = customData?.rawIndustryData || {};
       return {
@@ -404,7 +543,13 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       last_name: lastName || studentData?.last_name || "",
       email_id: currentUser || studentData?.email_id || "",
     };
-  }, [studentData, fullName, currentUser, customData?.rawIndustryData, role]);
+  }, [studentData, collegeData, fullName, currentUser, customData?.rawIndustryData, role]);
+
+  useEffect(() => {
+    if (isModalOpen && role === "college") {
+      setCollegeFormState(computedInitialValues);
+    }
+  }, [isModalOpen, role, computedInitialValues]);
 
   const userFullName = useMemo(() => {
     if (role === "mentor") {
@@ -616,9 +761,14 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
                   <Shield className="w-3 h-3" /> VERIFIED
                 </span>
               )}
-              {(role === "student" || role === "industry") && (
+              {(role === "student" || role === "industry" || role === "college") && (
                 <button 
-                  onClick={() => setIsModalOpen(true)}
+                  onClick={() => {
+                    if (role === "college") {
+                      fetchCollegeData();
+                    }
+                    setIsModalOpen(true);
+                  }}
                   className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group/edit"
                 >
                   <Pen className="w-4 h-4 text-white/50 group-hover/edit:text-white transition-colors" />
@@ -677,19 +827,37 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
         </div>
       )}
 
-      {(role === "student" || role === "industry") && (
+      {(role === "student" || role === "industry" || role === "college") && (
         <DashboardDynamicModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          title={role === "student" ? "Update Profile" : "Edit Company Profile"}
-          subtitle={role === "student" ? "Keep your academic details up to date" : (customData?.title || "Manage your company's presence")}
-          headerIcon={role === "student" ? Pen : Building2}
-          iconBgColor={role === "student" ? "bg-orange-500" : "bg-blue-600"}
-          fields={role === "student" ? studentFields : (customData?.fields || industryFields)}
+          title={role === "student" ? "Update Profile" : role === "college" ? "Edit College Details" : "Edit Company Profile"}
+          subtitle={role === "student" ? "Keep your academic details up to date" : role === "college" ? "Update your college onboarding information" : (customData?.title || "Manage your company's presence")}
+          headerIcon={role === "student" ? Pen : role === "college" ? Building2 : Building2}
+          iconBgColor={role === "student" ? "bg-orange-500" : role === "college" ? "bg-emerald-600" : "bg-blue-600"}
+          fields={role === "student" ? studentFields : role === "college" ? collegeFields : (customData?.fields || industryFields)}
           initialValues={computedInitialValues}
           onSubmit={handleUpdateProfile}
           loading={modalLoading}
           error={modalError}
+          onValuesChange={(updatedValues, changedFieldName) => {
+            if (role === "college") {
+              const sideEffects: any = {};
+              if (changedFieldName === "state") {
+                sideEffects.district = "";
+                sideEffects.taluka = "";
+                sideEffects.city = "";
+              } else if (changedFieldName === "district") {
+                sideEffects.taluka = "";
+                sideEffects.city = "";
+              } else if (changedFieldName === "taluka") {
+                sideEffects.city = "";
+              }
+              const newFormState = { ...updatedValues, ...sideEffects };
+              setCollegeFormState(newFormState);
+              return sideEffects;
+            }
+          }}
         />
       )}
     </motion.div>

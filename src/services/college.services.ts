@@ -321,6 +321,19 @@ export const getBranchWisePerformance = async (college: string) => {
   }
 };
 
+export const updateCollegeDetails = async (email: string, payload: any) => {
+  try {
+    const response = await apiService.put(
+      `method/stridenex_app.api_stridenex_app.college.college.update_college?email=${encodeURIComponent(email)}`,
+      payload
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error updating college details for ${email}:`, error);
+    throw error;
+  }
+};
+
 
 
 
