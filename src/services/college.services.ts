@@ -217,7 +217,7 @@ export const getEligibleStudents = async (
 ) => {
   try {
     let url = `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.get_eligible_students`;
-    
+
     if (typeof params === 'string') {
       url += `?drive=${encodeURIComponent(params)}`;
     } else {
@@ -230,7 +230,7 @@ export const getEligibleStudents = async (
         url += `?${queryParts.join("&")}`;
       }
     }
-    
+
     const response = await apiService.get(url);
     return response;
   } catch (error) {
@@ -283,12 +283,12 @@ export const getStudentAnalyticsList = async (params: {
     if (params.department !== undefined) queryParts.push(`department=${encodeURIComponent(params.department)}`);
     if (params.page !== undefined) queryParts.push(`page=${encodeURIComponent(params.page)}`);
     if (params.page_size !== undefined) queryParts.push(`page_size=${encodeURIComponent(params.page_size)}`);
-    
+
     let url = `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.get_student_Analytics_list`;
     if (queryParts.length > 0) {
       url += `?${queryParts.join("&")}`;
     }
-    
+
     const response = await apiService.get(url);
     return response;
   } catch (error) {
@@ -341,6 +341,84 @@ export const getSalaryBands = async (college: string) => {
     return response;
   } catch (error) {
     console.error(`Error fetching salary bands for college ${college}:`, error);
+    throw error;
+  }
+};
+
+export const getNonEligibleStudents = async (params: {
+  branch?: string;
+  cgpa?: number | string;
+  backlog?: number | string;
+  college?: string;
+}) => {
+  try {
+    const queryParts: string[] = [];
+    if (params.branch) queryParts.push(`branch=${encodeURIComponent(params.branch)}`);
+    if (params.cgpa !== undefined && params.cgpa !== "") queryParts.push(`cgpa=${encodeURIComponent(params.cgpa)}`);
+    if (params.backlog !== undefined && params.backlog !== "") queryParts.push(`backlog=${encodeURIComponent(params.backlog)}`);
+    if (params.college) queryParts.push(`college=${encodeURIComponent(params.college)}`);
+
+    let url = `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.get_not_eligible_students`;
+    if (queryParts.length > 0) {
+      url += `?${queryParts.join("&")}`;
+    }
+
+    const response = await apiService.get(url);
+    return response;
+  } catch (error) {
+    console.error("Error fetching non-eligible students:", error);
+    throw error;
+  }
+};
+
+export const exportEligibleStudents = async (params: {
+  branch?: string;
+  cgpa?: number | string;
+  backlog?: number | string;
+  college?: string;
+}) => {
+  try {
+    const queryParts: string[] = [];
+    if (params.branch) queryParts.push(`branch=${encodeURIComponent(params.branch)}`);
+    if (params.cgpa !== undefined && params.cgpa !== "") queryParts.push(`cgpa=${encodeURIComponent(params.cgpa)}`);
+    if (params.backlog !== undefined && params.backlog !== "") queryParts.push(`backlog=${encodeURIComponent(params.backlog)}`);
+    if (params.college) queryParts.push(`college=${encodeURIComponent(params.college)}`);
+
+    let url = `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.export_eligible_students`;
+    if (queryParts.length > 0) {
+      url += `?${queryParts.join("&")}`;
+    }
+
+    const response = await apiService.get(url, { responseType: 'blob' });
+    return response;
+  } catch (error) {
+    console.error("Error exporting eligible students:", error);
+    throw error;
+  }
+};
+
+export const exportNotEligibleStudents = async (params: {
+  branch?: string;
+  cgpa?: number | string;
+  backlog?: number | string;
+  college?: string;
+}) => {
+  try {
+    const queryParts: string[] = [];
+    if (params.branch) queryParts.push(`branch=${encodeURIComponent(params.branch)}`);
+    if (params.cgpa !== undefined && params.cgpa !== "") queryParts.push(`cgpa=${encodeURIComponent(params.cgpa)}`);
+    if (params.backlog !== undefined && params.backlog !== "") queryParts.push(`backlog=${encodeURIComponent(params.backlog)}`);
+    if (params.college) queryParts.push(`college=${encodeURIComponent(params.college)}`);
+
+    let url = `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.export_not_eligible_students`;
+    if (queryParts.length > 0) {
+      url += `?${queryParts.join("&")}`;
+    }
+
+    const response = await apiService.get(url, { responseType: 'blob' });
+    return response;
+  } catch (error) {
+    console.error("Error exporting not eligible students:", error);
     throw error;
   }
 };

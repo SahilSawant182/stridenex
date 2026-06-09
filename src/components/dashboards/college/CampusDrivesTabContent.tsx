@@ -48,7 +48,10 @@ import {
   getPlacementStats,
   getBranchWisePerformance,
   getPlacementFunnel,
-  getSalaryBands
+  getSalaryBands,
+  getNonEligibleStudents,
+  exportEligibleStudents,
+  exportNotEligibleStudents
 } from "@/services/college.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { FaRupeeSign } from 'react-icons/fa';
@@ -219,6 +222,7 @@ export default function CampusDrivesTabContent() {
 
   // Tab Eligibility API state
   const [tabEligibleStudents, setTabEligibleStudents] = useState<any | null>(null);
+  const [tabNonEligibleStudents, setTabNonEligibleStudents] = useState<any | null>(null);
   const [tabEligibleLoading, setTabEligibleLoading] = useState(false);
   const [eligibilityBranch, setEligibilityBranch] = useState("");
   const [eligibilityCgpa, setEligibilityCgpa] = useState("");
@@ -696,15 +700,38 @@ export default function CampusDrivesTabContent() {
   useEffect(() => {
     const fetchTabEligibility = async () => {
       setTabEligibleLoading(true);
+      const collegeName = collegeDetails?.name || collegeDetails?.email || currentUser || "guptateena960@gmail.com";
       try {
-        const res = await getEligibleStudents({
-          branch: eligibilityBranch,
-          cgpa: eligibilityCgpa,
-          backlog: eligibilityBacklog
-        });
-        const raw = res?.message ?? res;
-        if (raw) {
-          setTabEligibleStudents(raw);
+        const [eligibleRes, nonEligibleRes] = await Promise.allSettled([
+          getEligibleStudents({
+            branch: eligibilityBranch,
+            cgpa: eligibilityCgpa,
+            backlog: eligibilityBacklog
+          }),
+          getNonEligibleStudents({
+            branch: eligibilityBranch,
+            cgpa: eligibilityCgpa,
+            backlog: eligibilityBacklog,
+            college: collegeName
+          })
+        ]);
+
+        if (eligibleRes.status === "fulfilled") {
+          const raw = eligibleRes.value?.message ?? eligibleRes.value;
+          if (raw) {
+            setTabEligibleStudents(raw);
+          }
+        } else {
+          console.error("Failed to fetch tab eligible students:", eligibleRes.reason);
+        }
+
+        if (nonEligibleRes.status === "fulfilled") {
+          const raw = nonEligibleRes.value?.message ?? nonEligibleRes.value;
+          if (raw) {
+            setTabNonEligibleStudents(raw);
+          }
+        } else {
+          console.error("Failed to fetch tab non-eligible students:", nonEligibleRes.reason);
         }
       } catch (err) {
         console.error("Failed to fetch tab eligibility:", err);
@@ -716,7 +743,7 @@ export default function CampusDrivesTabContent() {
     if (activeSubTab === "eligibility") {
       fetchTabEligibility();
     }
-  }, [eligibilityBranch, eligibilityCgpa, eligibilityBacklog, activeSubTab]);
+  }, [eligibilityBranch, eligibilityCgpa, eligibilityBacklog, activeSubTab, collegeDetails, currentUser]);
 
   // Filter drives list based on search query
   const filteredDrives = useMemo(() => {
@@ -781,23 +808,40 @@ export default function CampusDrivesTabContent() {
     return { eligible, notEligible };
   }, [activeEligibilityDrive, studentsList]);
 
-  // Dynamic lists from get_eligible_students API (tab)
+  // Dynamic lists from get_eligible_students and get_non_eligible_students APIs (tab)
   const tabEligibleLists = useMemo(() => {
-    if (tabEligibleStudents) {
-      const eligible = Array.isArray(tabEligibleStudents.data)
-        ? tabEligibleStudents.data
-        : (Array.isArray(tabEligibleStudents.eligible?.data)
-          ? tabEligibleStudents.eligible.data
-          : (Array.isArray(tabEligibleStudents.eligible) ? tabEligibleStudents.eligible : []));
+    if (tabEligibleStudents || tabNonEligibleStudents) {
+      let eligible: any[] = [];
+      if (tabEligibleStudents) {
+        eligible = Array.isArray(tabEligibleStudents.data)
+          ? tabEligibleStudents.data
+          : (Array.isArray(tabEligibleStudents.eligible?.data)
+            ? tabEligibleStudents.eligible.data
+            : (Array.isArray(tabEligibleStudents.eligible) ? tabEligibleStudents.eligible : []));
+      }
 
-      const notEligible = Array.isArray(tabEligibleStudents.not_eligible?.data)
-        ? tabEligibleStudents.not_eligible.data
-        : (Array.isArray(tabEligibleStudents.not_eligible) ? tabEligibleStudents.not_eligible : []);
+      let notEligible: any[] = [];
+      if (tabNonEligibleStudents) {
+        if (Array.isArray(tabNonEligibleStudents.data)) {
+          notEligible = tabNonEligibleStudents.data;
+        } else if (Array.isArray(tabNonEligibleStudents.message)) {
+          notEligible = tabNonEligibleStudents.message;
+        } else if (tabNonEligibleStudents.message && Array.isArray(tabNonEligibleStudents.message.data)) {
+          notEligible = tabNonEligibleStudents.message.data;
+        } else if (Array.isArray(tabNonEligibleStudents)) {
+          notEligible = tabNonEligibleStudents;
+        }
+      } else if (tabEligibleStudents) {
+        // Fallback if non-eligible list hasn't resolved
+        notEligible = Array.isArray(tabEligibleStudents.not_eligible?.data)
+          ? tabEligibleStudents.not_eligible.data
+          : (Array.isArray(tabEligibleStudents.not_eligible) ? tabEligibleStudents.not_eligible : []);
+      }
 
       return { eligible, notEligible };
     }
     return eligibilityLists;
-  }, [tabEligibleStudents, eligibilityLists]);
+  }, [tabEligibleStudents, tabNonEligibleStudents, eligibilityLists]);
 
   // Compute total eligible student count for display
   const eligibleStudentsCount = useMemo(() => {
@@ -1238,6 +1282,76 @@ export default function CampusDrivesTabContent() {
   // CSV download notification
   const handleExportCSV = () => {
     showToast("Preparing CSV export... Student list downloaded successfully.", "success");
+  };
+
+  const handleExportEligible = async () => {
+    const collegeName = collegeDetails?.name || collegeDetails?.email || currentUser || "guptateena960@gmail.com";
+    showToast("Preparing eligible students CSV export...", "info");
+    try {
+      const res = await exportEligibleStudents({
+        branch: eligibilityBranch,
+        cgpa: eligibilityCgpa,
+        backlog: eligibilityBacklog,
+        college: collegeName
+      });
+      
+      const blob = res instanceof Blob ? res : (res?.data instanceof Blob ? res.data : new Blob([res]));
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `eligible_students_${eligibilityBranch || 'all'}_cgpa${eligibilityCgpa || 'any'}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      showToast("Eligible students list exported successfully.", "success");
+      if (typeof window !== "undefined") {
+        window.alert("Eligible students list exported successfully.");
+      }
+    } catch (err: any) {
+      console.error("Failed to export eligible students:", err);
+      const errMsg = err?.message || "Failed to export eligible students";
+      showToast(errMsg, "error");
+      if (typeof window !== "undefined") {
+        window.alert(`Error: ${errMsg}`);
+      }
+    }
+  };
+
+  const handleExportNotEligible = async () => {
+    const collegeName = collegeDetails?.name || collegeDetails?.email || currentUser || "guptateena960@gmail.com";
+    showToast("Preparing non-eligible students CSV export...", "info");
+    try {
+      const res = await exportNotEligibleStudents({
+        branch: eligibilityBranch,
+        cgpa: eligibilityCgpa,
+        backlog: eligibilityBacklog,
+        college: collegeName
+      });
+      
+      const blob = res instanceof Blob ? res : (res?.data instanceof Blob ? res.data : new Blob([res]));
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `non_eligible_students_${eligibilityBranch || 'all'}_cgpa${eligibilityCgpa || 'any'}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      showToast("Non-eligible students list exported successfully.", "success");
+      if (typeof window !== "undefined") {
+        window.alert("Non-eligible students list exported successfully.");
+      }
+    } catch (err: any) {
+      console.error("Failed to export non-eligible students:", err);
+      const errMsg = err?.message || "Failed to export non-eligible students";
+      showToast(errMsg, "error");
+      if (typeof window !== "undefined") {
+        window.alert(`Error: ${errMsg}`);
+      }
+    }
   };
 
   if (loading && drivesList.length === 0) {
@@ -1974,13 +2088,6 @@ export default function CampusDrivesTabContent() {
                         <Bell className="w-3.5 h-3.5" />
                         Notify Eligible
                       </button>
-                      <button
-                        onClick={handleExportCSV}
-                        className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all"
-                      >
-                        <Download className="w-3.5 h-3.5 text-slate-400" />
-                        Export List
-                      </button>
                     </div>
                   </div>
 
@@ -2085,6 +2192,13 @@ export default function CampusDrivesTabContent() {
                             <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                             Eligible Students ({tabEligibleLists.eligible.length})
                           </h3>
+                          <button
+                            onClick={handleExportEligible}
+                            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-sm transition-all"
+                          >
+                            <Download className="w-3 h-3 text-slate-400" />
+                            Export
+                          </button>
                         </div>
 
                         <div className="overflow-x-auto">
@@ -2141,6 +2255,13 @@ export default function CampusDrivesTabContent() {
                             <Clock className="w-4 h-4 text-red-600" />
                             Not Eligible ({tabEligibleLists.notEligible.length})
                           </h3>
+                          <button
+                            onClick={handleExportNotEligible}
+                            className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-wider flex items-center gap-1 shadow-sm transition-all"
+                          >
+                            <Download className="w-3 h-3 text-slate-400" />
+                            Export
+                          </button>
                         </div>
 
                         <div className="overflow-x-auto">
@@ -2164,7 +2285,9 @@ export default function CampusDrivesTabContent() {
                                 const fullName = `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.name || student.student_id || student.email || "—";
                                 const branch = student.branch || student.branch_name || student.department || "—";
                                 const cgpa = student.cgpa !== undefined && student.cgpa !== null ? student.cgpa : "—";
-                                const reason = student.reason || "Criteria mismatch";
+                                const reason = Array.isArray(student.reasons)
+                                  ? student.reasons.join(", ")
+                                  : (student.reason || "Criteria mismatch");
                                 return (
                                   <tr key={student.name || student.email_id || student.id || student.email || student.student_id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="py-3 px-4 font-bold text-slate-800">{fullName}</td>
