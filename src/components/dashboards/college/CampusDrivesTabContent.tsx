@@ -26,7 +26,8 @@ import {
   TrendingUp,
   Loader2,
   Pen,
-  Trash2
+  Trash2,
+  BarChart
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { useToast } from "@/context/ToastContext";
@@ -45,10 +46,11 @@ import {
   updateCampusDriveApplicationStatus,
   sendCandidateStatusMail,
   getPlacementStats,
-  getBranchWisePerformance
+  getBranchWisePerformance,
+  getPlacementFunnel,
+  getSalaryBands
 } from "@/services/college.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
-import PlacementTabContent from "./PlacementTabContent";
 import { FaRupeeSign } from 'react-icons/fa';
 
 
@@ -149,6 +151,30 @@ const initialDrives = [
     ]
   }
 ];
+const funnelData = [
+  { label: "Final Year Students", value: 680, width: "100%", color: "bg-slate-800" },
+  { label: "Eligible (Score ≥60)", value: 521, width: "80%", color: "bg-blue-900" },
+  { label: "Applications Sent", value: 847, width: "120%", color: "bg-blue-600" },
+  { label: "Shortlisted", value: 312, width: "50%", color: "bg-orange-500" },
+  { label: "Interviews Done", value: 156, width: "25%", color: "bg-orange-400" },
+  { label: "Offers Received", value: 98, width: "15%", color: "bg-emerald-500" },
+  { label: "Accepted Offers", value: 89, width: "12%", color: "bg-emerald-600" },
+];
+
+const salaryBands = [
+  { range: "<4 LPA", percentage: 12, color: "bg-red-500" },
+  { range: "4-8 LPA", percentage: 38, color: "bg-orange-400" },
+  { range: "8-15 LPA", percentage: 35, color: "bg-emerald-500" },
+  { range: "15+ LPA", percentage: 15, color: "bg-blue-600" },
+];
+
+const mockRecruiters = [
+  { name: "TCS", offers: 24, package: "₹3.5 LPA", color: "bg-blue-600" },
+  { name: "Infosys", offers: 18, package: "₹4.5 LPA", color: "bg-emerald-600" },
+  { name: "Zepto", offers: 5, package: "₹8.0 LPA", color: "bg-orange-600" },
+  { name: "Razorpay", offers: 8, package: "₹15.0 LPA", color: "bg-indigo-600" },
+  { name: "Google", offers: 3, package: "₹32.0 LPA", color: "bg-purple-600" },
+];
 
 export default function CampusDrivesTabContent() {
   const { showToast } = useToast();
@@ -161,7 +187,7 @@ export default function CampusDrivesTabContent() {
   const [studentsList, setStudentsList] = useState<any[]>(initialStudents);
   const [selectedDrive, setSelectedDrive] = useState<any | null>(null);
   const [editingDrive, setEditingDrive] = useState<any | null>(null);
-  const [activeSubTab, setActiveSubTab] = useState<"drives" | "placement" | "tracker" | "eligibility" | "stats">("drives");
+  const [activeSubTab, setActiveSubTab] = useState<"drives" | "tracker" | "eligibility" | "stats">("drives");
 
   // Eligibility view active drive selection state
   const [eligibilityDriveId, setEligibilityDriveId] = useState("");
@@ -177,11 +203,14 @@ export default function CampusDrivesTabContent() {
   const [driveCounts, setDriveCounts] = useState<any>(null);
   const [placementStats, setPlacementStats] = useState<any>(null);
   const [branchPerformance, setBranchPerformance] = useState<any[] | null>(null);
+  const [dynamicFunnelData, setDynamicFunnelData] = useState<any[] | null>(null);
+  const [dynamicSalaryBands, setDynamicSalaryBands] = useState<any | null>(null);
 
   // Placement tracker API state (Student Tracker tab)
   const [placementList, setPlacementList] = useState<any[]>([]);
   const [placementCounts, setPlacementCounts] = useState<{ placed: number; shortlisted: number; applied_to_drives: number; not_applied_yet: number } | null>(null);
   const [trackerLoaded, setTrackerLoaded] = useState(false);
+  const [statsLoaded, setStatsLoaded] = useState(false);
 
   // Per-drive placement state (Manage panel)
   const [drivePlacementCounts, setDrivePlacementCounts] = useState<{ placed: number; shortlisted: number; applied_to_drives: number; not_applied_yet: number } | null>(null);
@@ -287,12 +316,12 @@ export default function CampusDrivesTabContent() {
     const firstDesignation = designations && designations[0] ? designations[0] : "";
     const role = dbDrive.role || firstDesignation || "";
 
-    // Compute stats or default
-    const stats = dbDrive.stats || {
-      eligible: 0,
-      registered: 0,
-      shortlisted: 0,
-      selected: 0
+    // Compute stats from API response fields or stats sub-object or default
+    const stats = {
+      shortlisted: dbDrive.shortlisted !== undefined && dbDrive.shortlisted !== null ? Number(dbDrive.shortlisted) : (dbDrive.stats?.shortlisted ?? 0),
+      registered: dbDrive.total_applications !== undefined && dbDrive.total_applications !== null ? Number(dbDrive.total_applications) : (dbDrive.stats?.registered ?? 0),
+      selected: dbDrive.placed !== undefined && dbDrive.placed !== null ? Number(dbDrive.placed) : (dbDrive.stats?.selected ?? 0),
+      eligible: dbDrive.stats?.eligible ?? 0
     };
 
     // If stats are empty/0, let's compute them dynamically from studentsList for visual richness
@@ -345,7 +374,7 @@ export default function CampusDrivesTabContent() {
   };
 
   const fetchDrives = async () => {
-    const collegeName = collegeDetails?.name;
+    const collegeName = collegeDetails?.name || collegeDetails?.email || currentUser || "guptateena960@gmail.com";
     if (!collegeName) return;
 
     try {
@@ -378,18 +407,21 @@ export default function CampusDrivesTabContent() {
   useEffect(() => {
     if (collegeDetails) {
       fetchDrives();
+      if (activeSubTab === "tracker") {
+        fetchTrackerData();
+      } else if (activeSubTab === "stats") {
+        fetchStatsData();
+      }
     }
-  }, [collegeDetails]);
+  }, [collegeDetails, activeSubTab]);
 
-  const fetchPlacementData = async () => {
-    const collegeName = collegeDetails?.name;
+  const fetchTrackerData = async () => {
+    const collegeName = collegeDetails?.name || collegeDetails?.email || currentUser || "guptateena960@gmail.com";
     if (!collegeName) return;
     try {
-      const [listRes, countsRes, statsRes, branchRes] = await Promise.allSettled([
+      const [listRes, countsRes] = await Promise.allSettled([
         getPlacementList(collegeName),
-        getPlacementCounts(collegeName),
-        getPlacementStats(collegeName),
-        getBranchWisePerformance(collegeName)
+        getPlacementCounts(collegeName)
       ]);
 
       if (listRes.status === "fulfilled") {
@@ -405,6 +437,22 @@ export default function CampusDrivesTabContent() {
           setPlacementCounts(counts);
         }
       }
+      setTrackerLoaded(true);
+    } catch (err) {
+      console.error("Failed to fetch tracker data:", err);
+    }
+  };
+
+  const fetchStatsData = async () => {
+    const collegeName = collegeDetails?.name || collegeDetails?.email || currentUser || "guptateena960@gmail.com";
+    if (!collegeName) return;
+    try {
+      const [statsRes, branchRes, funnelRes, salaryBandsRes] = await Promise.allSettled([
+        getPlacementStats(collegeName),
+        getBranchWisePerformance(collegeName),
+        getPlacementFunnel(collegeName),
+        getSalaryBands(collegeName)
+      ]);
 
       if (statsRes.status === "fulfilled") {
         const raw = statsRes.value?.message ?? statsRes.value;
@@ -419,9 +467,34 @@ export default function CampusDrivesTabContent() {
           setBranchPerformance(raw.data);
         }
       }
-      setTrackerLoaded(true);
+
+      if (funnelRes.status === "fulfilled") {
+        const raw = funnelRes.value?.message ?? funnelRes.value;
+        if (raw && raw.data && Array.isArray(raw.data.funnel)) {
+          const funnelArr = raw.data.funnel;
+          const maxVal = Math.max(...funnelArr.map((item: any) => item.count || 0), 1);
+          const mapped = funnelArr.map((stage: any) => {
+            const pct = ((stage.count || 0) / maxVal) * 100;
+            return {
+              label: stage.label,
+              value: stage.count ?? 0,
+              width: `${Math.min(100, Math.max(2, pct))}%`,
+              color: stage.color || "#3b82f6"
+            };
+          });
+          setDynamicFunnelData(mapped);
+        }
+      }
+
+      if (salaryBandsRes.status === "fulfilled") {
+        const raw = salaryBandsRes.value?.message ?? salaryBandsRes.value;
+        if (raw && raw.data) {
+          setDynamicSalaryBands(raw.data);
+        }
+      }
+      setStatsLoaded(true);
     } catch (err) {
-      console.error("Failed to fetch placement data:", err);
+      console.error("Failed to fetch stats data:", err);
     }
   };
 
@@ -474,25 +547,51 @@ export default function CampusDrivesTabContent() {
     try {
       showToast(`Updating status to ${status} for ${studentName}...`, "info");
       await updateCampusDriveApplicationStatus(applicationId, status);
-      showToast(`Status updated to ${status} for ${studentName}!`, "success");
+
+      let successMessage = `Status updated to ${status} for ${studentName}!`;
+      if (status === "Shortlisted") {
+        successMessage = `${studentName} shortlisted successfully!`;
+      } else if (status === "Selected") {
+        successMessage = `${studentName} selected successfully!`;
+      } else if (status === "Rejected") {
+        successMessage = `${studentName} rejected successfully!`;
+      }
+      showToast(successMessage, "success");
+      if (typeof window !== "undefined") {
+        window.alert(successMessage);
+      }
 
       // Send status mail to candidate
       const lowercaseStatus = status.toLowerCase(); // shortlisted, selected, rejected
       const resolvedEmail = email || drivePlacementList.find(r => r.application_id === applicationId)?.email;
       if (resolvedEmail) {
         try {
-          await sendCandidateStatusMail({
+          const mailRes = await sendCandidateStatusMail({
             email: resolvedEmail,
             status: lowercaseStatus,
             candidate_name: studentName,
             drive_name: selectedDrive?.name || selectedDrive?.company || ""
           });
-          showToast(`Notification email sent to ${studentName}!`, "success");
-        } catch (mailErr) {
+
+          if (mailRes && mailRes.message && (mailRes.message.status === 'error' || mailRes.message.status === 'failed' || mailRes.message.status === 'fail')) {
+            throw new Error(mailRes.message.message || "Failed to send email notification");
+          }
+
+          const successMailMsg = mailRes?.message?.message || `Email sent successfully to ${studentName}!`;
+          showToast(successMailMsg, "success");
+          if (typeof window !== "undefined") {
+            window.alert(successMailMsg);
+          }
+        } catch (mailErr: any) {
           console.error("Failed to send status email:", mailErr);
+          const errorMsg = mailErr.message || `Failed to send email to ${studentName}`;
+          showToast(errorMsg, "error");
+          if (typeof window !== "undefined") {
+            window.alert(`Error: ${errorMsg}`);
+          }
         }
       }
-      
+
       // Refresh current drive data
       if (selectedDrive) {
         const collegeName = collegeDetails?.name;
@@ -517,12 +616,19 @@ export default function CampusDrivesTabContent() {
           }
         }
       }
-      
+
       // Also refresh main overall stats
-      fetchPlacementData();
+      fetchTrackerData();
+      if (statsLoaded) {
+        fetchStatsData();
+      }
     } catch (err: any) {
       console.error("Failed to update application status:", err);
-      showToast(err.message || "Failed to update application status", "error");
+      const errMsg = err.message || "Failed to update application status";
+      showToast(errMsg, "error");
+      if (typeof window !== "undefined") {
+        window.alert(`Error: ${errMsg}`);
+      }
     }
   };
 
@@ -531,20 +637,36 @@ export default function CampusDrivesTabContent() {
     const fullName = `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.name || student.student_id || student.email || "Candidate";
     if (!email) {
       showToast("Student email is not available", "error");
+      if (typeof window !== "undefined") {
+        window.alert("Error: Student email is not available");
+      }
       return;
     }
     try {
       showToast(`Sending notification email to ${fullName}...`, "info");
-      await sendCandidateStatusMail({
+      const mailRes = await sendCandidateStatusMail({
         email,
         status,
         candidate_name: fullName,
         drive_name: driveName
       });
-      showToast(`Notification email sent to ${fullName}!`, "success");
+
+      if (mailRes && mailRes.message && (mailRes.message.status === 'error' || mailRes.message.status === 'failed' || mailRes.message.status === 'fail')) {
+        throw new Error(mailRes.message.message || "Failed to send email notification");
+      }
+
+      const successMailMsg = mailRes?.message?.message || `Email sent successfully to ${fullName}!`;
+      showToast(successMailMsg, "success");
+      if (typeof window !== "undefined") {
+        window.alert(successMailMsg);
+      }
     } catch (err: any) {
       console.error("Failed to send candidate status email:", err);
-      showToast(err.message || "Failed to send notification email", "error");
+      const errMsg = err.message || "Failed to send notification email";
+      showToast(errMsg, "error");
+      if (typeof window !== "undefined") {
+        window.alert(`Error: ${errMsg}`);
+      }
     }
   };
 
@@ -559,7 +681,7 @@ export default function CampusDrivesTabContent() {
       const branchVal = activeEligibilityDrive.criteria?.branches?.[0] || "";
       const cgpaVal = activeEligibilityDrive.criteria?.minCgpa !== undefined ? String(activeEligibilityDrive.criteria.minCgpa) : "";
       const backlogVal = activeEligibilityDrive.criteria?.backlogs !== undefined ? String(activeEligibilityDrive.criteria.backlogs) : "";
-      
+
       setEligibilityBranch(branchVal);
       setEligibilityCgpa(cgpaVal);
       setEligibilityBacklog(backlogVal);
@@ -667,11 +789,11 @@ export default function CampusDrivesTabContent() {
         : (Array.isArray(tabEligibleStudents.eligible?.data)
           ? tabEligibleStudents.eligible.data
           : (Array.isArray(tabEligibleStudents.eligible) ? tabEligibleStudents.eligible : []));
-      
+
       const notEligible = Array.isArray(tabEligibleStudents.not_eligible?.data)
         ? tabEligibleStudents.not_eligible.data
         : (Array.isArray(tabEligibleStudents.not_eligible) ? tabEligibleStudents.not_eligible : []);
-      
+
       return { eligible, notEligible };
     }
     return eligibilityLists;
@@ -682,7 +804,7 @@ export default function CampusDrivesTabContent() {
     if (driveEligibleStudents) {
       const total = driveEligibleStudents.pagination?.total ?? driveEligibleStudents.eligible?.pagination?.total;
       if (total !== undefined && total !== null) return total;
-      
+
       const len = driveEligibleStudents.data?.length ?? driveEligibleStudents.eligible?.data?.length ?? driveEligibleStudents.eligible?.length;
       if (len !== undefined && len !== null) return len;
     }
@@ -717,7 +839,7 @@ export default function CampusDrivesTabContent() {
 
   // Add Drive Modal setup
   const addDriveFields: DynamicField[] = useMemo(() => [
-    { name: "company", label: "Company Name", type: "text", required: true, placeholder: "e.g., Google" },
+    { name: "company", label: "Company Name", type: "text", required: true, placeholder: "e.g., Google", colSpan: 2, },
     { name: "role", label: "Job Role / Title", type: "text", required: true, colSpan: 2, placeholder: "e.g., Software Engineer" },
     { name: "driveDate", label: "Drive Date", type: "date", required: true, textTransform: "uppercase" },
     { name: "regDeadline", label: "Registration Deadline", type: "date", required: true, textTransform: "uppercase" },
@@ -932,28 +1054,55 @@ export default function CampusDrivesTabContent() {
           const eligibleList = eligibleStudentsToRender;
           if (eligibleList.length === 0) {
             showToast("No eligible students to notify", "warning");
+            if (typeof window !== "undefined") {
+              window.alert("Warning: No eligible students to notify");
+            }
             return;
           }
-          let sentCount = 0;
-          await Promise.allSettled(
+          const results = await Promise.allSettled(
             eligibleList.map(async (student: any) => {
               const email = student.email || student.email_id || student.name || student.student_id;
               const fullName = `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.name || "Candidate";
               if (email) {
-                await sendCandidateStatusMail({
+                const res = await sendCandidateStatusMail({
                   email,
                   status: "eligible",
                   candidate_name: fullName,
                   drive_name: driveName
                 });
-                sentCount++;
+                if (res && res.message && (res.message.status === 'error' || res.message.status === 'failed' || res.message.status === 'fail')) {
+                  throw new Error(res.message.message || "Failed to send email");
+                }
+              } else {
+                throw new Error("Missing email");
               }
             })
           );
-          showToast(`Notification email sent to ${sentCount} eligible students!`, "success");
-        } catch (err) {
+
+          const fulfilledCount = results.filter(r => r.status === "fulfilled").length;
+          const rejectedCount = results.filter(r => r.status === "rejected").length;
+
+          if (fulfilledCount > 0) {
+            const successMsg = `Notification email sent successfully to ${fulfilledCount} eligible students!`;
+            showToast(successMsg, "success");
+            if (typeof window !== "undefined") {
+              window.alert(successMsg);
+            }
+          }
+          if (rejectedCount > 0) {
+            const errorMsg = `Failed to send email to ${rejectedCount} students.`;
+            showToast(errorMsg, "error");
+            if (typeof window !== "undefined") {
+              window.alert(`Error: ${errorMsg}`);
+            }
+          }
+        } catch (err: any) {
           console.error(err);
-          showToast("Failed to send notifications to some students", "error");
+          const errMsg = err.message || "Failed to send notifications to students";
+          showToast(errMsg, "error");
+          if (typeof window !== "undefined") {
+            window.alert(`Error: ${errMsg}`);
+          }
         }
         break;
 
@@ -963,33 +1112,64 @@ export default function CampusDrivesTabContent() {
           const registeredList = drivePlacementList.filter((r: any) => r.status === "Registered");
           if (registeredList.length === 0) {
             showToast("No registered students to remind", "warning");
+            if (typeof window !== "undefined") {
+              window.alert("Warning: No registered students to remind");
+            }
             return;
           }
-          let sentCount = 0;
-          await Promise.allSettled(
+          const results = await Promise.allSettled(
             registeredList.map(async (record: any) => {
               const email = record.email || record.email_id || record.student_id;
               const fullName = `${record.first_name || ""} ${record.last_name || ""}`.trim() || "Candidate";
               if (email) {
-                await sendCandidateStatusMail({
+                const res = await sendCandidateStatusMail({
                   email,
                   status: "applied",
                   candidate_name: fullName,
                   drive_name: driveName
                 });
-                sentCount++;
+                if (res && res.message && (res.message.status === 'error' || res.message.status === 'failed' || res.message.status === 'fail')) {
+                  throw new Error(res.message.message || "Failed to send email");
+                }
+              } else {
+                throw new Error("Missing email");
               }
             })
           );
-          showToast(`Reminder email sent to ${sentCount} registered students!`, "success");
-        } catch (err) {
+
+          const fulfilledCount = results.filter(r => r.status === "fulfilled").length;
+          const rejectedCount = results.filter(r => r.status === "rejected").length;
+
+          if (fulfilledCount > 0) {
+            const successMsg = `Reminder email sent successfully to ${fulfilledCount} registered students!`;
+            showToast(successMsg, "success");
+            if (typeof window !== "undefined") {
+              window.alert(successMsg);
+            }
+          }
+          if (rejectedCount > 0) {
+            const errorMsg = `Failed to send reminders to ${rejectedCount} students.`;
+            showToast(errorMsg, "error");
+            if (typeof window !== "undefined") {
+              window.alert(`Error: ${errorMsg}`);
+            }
+          }
+        } catch (err: any) {
           console.error(err);
-          showToast("Failed to send reminders", "error");
+          const errMsg = err.message || "Failed to send reminders";
+          showToast(errMsg, "error");
+          if (typeof window !== "undefined") {
+            window.alert(`Error: ${errMsg}`);
+          }
         }
         break;
 
       case 'notice':
-        showToast("Campus drive details successfully posted to College Notice Board!", "success");
+        const noticeMsg = "Campus drive details successfully posted to College Notice Board!";
+        showToast(noticeMsg, "success");
+        if (typeof window !== "undefined") {
+          window.alert(noticeMsg);
+        }
         break;
 
       case 'shortlist':
@@ -998,28 +1178,55 @@ export default function CampusDrivesTabContent() {
           const shortlistedList = drivePlacementList.filter((r: any) => r.status === "Shortlisted");
           if (shortlistedList.length === 0) {
             showToast("No shortlisted students to notify", "warning");
+            if (typeof window !== "undefined") {
+              window.alert("Warning: No shortlisted students to notify");
+            }
             return;
           }
-          let sentCount = 0;
-          await Promise.allSettled(
+          const results = await Promise.allSettled(
             shortlistedList.map(async (record: any) => {
               const email = record.email || record.email_id || record.student_id;
               const fullName = `${record.first_name || ""} ${record.last_name || ""}`.trim() || "Candidate";
               if (email) {
-                await sendCandidateStatusMail({
+                const res = await sendCandidateStatusMail({
                   email,
                   status: "shortlisted",
                   candidate_name: fullName,
                   drive_name: driveName
                 });
-                sentCount++;
+                if (res && res.message && (res.message.status === 'error' || res.message.status === 'failed' || res.message.status === 'fail')) {
+                  throw new Error(res.message.message || "Failed to send email");
+                }
+              } else {
+                throw new Error("Missing email");
               }
             })
           );
-          showToast(`Shortlist results email sent to ${sentCount} candidates!`, "success");
-        } catch (err) {
+
+          const fulfilledCount = results.filter(r => r.status === "fulfilled").length;
+          const rejectedCount = results.filter(r => r.status === "rejected").length;
+
+          if (fulfilledCount > 0) {
+            const successMsg = `Shortlist results email sent successfully to ${fulfilledCount} candidates!`;
+            showToast(successMsg, "success");
+            if (typeof window !== "undefined") {
+              window.alert(successMsg);
+            }
+          }
+          if (rejectedCount > 0) {
+            const errorMsg = `Failed to send shortlist notifications to ${rejectedCount} candidates.`;
+            showToast(errorMsg, "error");
+            if (typeof window !== "undefined") {
+              window.alert(`Error: ${errorMsg}`);
+            }
+          }
+        } catch (err: any) {
           console.error(err);
-          showToast("Failed to send shortlist notifications", "error");
+          const errMsg = err.message || "Failed to send shortlist notifications";
+          showToast(errMsg, "error");
+          if (typeof window !== "undefined") {
+            window.alert(`Error: ${errMsg}`);
+          }
         }
         break;
 
@@ -1084,19 +1291,9 @@ export default function CampusDrivesTabContent() {
             Campus Drives
           </button>
           <button
-            onClick={() => setActiveSubTab("placement")}
-            className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${activeSubTab === "placement"
-              ? "border-blue-600 text-blue-600 bg-blue-50/40 rounded-t-lg font-bold"
-              : "border-transparent text-slate-500 hover:text-slate-800 font-semibold"
-              }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5" />
-            Placement
-          </button>
-          <button
             onClick={() => {
               setActiveSubTab("tracker");
-              if (!trackerLoaded) fetchPlacementData();
+              if (!trackerLoaded) fetchTrackerData();
             }}
             className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${activeSubTab === "tracker"
               ? "border-blue-600 text-blue-600 bg-blue-50/40 rounded-t-lg font-bold"
@@ -1119,7 +1316,7 @@ export default function CampusDrivesTabContent() {
           <button
             onClick={() => {
               setActiveSubTab("stats");
-              if (!trackerLoaded) fetchPlacementData();
+              if (!statsLoaded) fetchStatsData();
             }}
             className={`flex items-center gap-2 px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${activeSubTab === "stats"
               ? "border-blue-600 text-blue-600 bg-blue-50/40 rounded-t-lg font-bold"
@@ -1994,208 +2191,309 @@ export default function CampusDrivesTabContent() {
           </motion.div>
         ) : activeSubTab === "stats" ? (
           // ==================== 3. PLACEMENT STATS VIEW ====================
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            className="space-y-6"
-          >
-            {/* Stats Metrics banner */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Placement Rate</p>
-                  <h4 className="text-2xl font-bold text-slate-800">
-                    {placementStats === null ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-blue-400 inline" />
-                    ) : (
-                      `${placementStats.placement_rate ?? 0}%`
-                    )}
-                  </h4>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm shadow-blue-100">
-                  <FileText className="w-5 h-5" />
-                </div>
-              </BaseCard>
-              <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Average CTC</p>
-                  <h4 className="text-2xl font-bold text-slate-800">
-                    {placementStats === null ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-amber-400 inline" />
-                    ) : (
-                      `₹${placementStats.average_ctc ?? 0} LPA`
-                    )}
-                  </h4>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shadow-sm shadow-amber-100">
-                  <FaRupeeSign className="w-5 h-5" />
-                </div>
-              </BaseCard>
-              <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Highest CTC</p>
-                  <h4 className="text-2xl font-bold text-slate-800">
-                    {placementStats === null ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-purple-400 inline" />
-                    ) : (
-                      `₹${placementStats.highest_ctc ?? 0} LPA`
-                    )}
-                  </h4>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 shadow-sm shadow-purple-100">
-                  <Trophy className="w-5 h-5" />
-                </div>
-              </BaseCard>
-              <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Companies Visited</p>
-                  <h4 className="text-2xl font-bold text-slate-800">
-                    {placementStats === null ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-slate-600 inline" />
-                    ) : (
-                      placementStats.companies_visited ?? 0
-                    )}
-                  </h4>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 shadow-sm shadow-slate-100">
-                  <Briefcase className="w-5 h-5" />
-                </div>
-              </BaseCard>
-            </div>
+          (() => {
+            const getNumericPackage = (pkgStr: any): number => {
+              if (!pkgStr) return 0;
+              const match = String(pkgStr).match(/[\d.]+/);
+              return match ? parseFloat(match[0]) : 0;
+            };
 
-            {/* Split Panel: Company-wise selections and Branch-wise rates */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            const displayRecruiters = drivesList.length > 0
+              ? [...drivesList].map(d => ({
+                name: d.company || d.name || "Unnamed Company",
+                offers: d.stats?.selected ?? 0,
+                package: d.package ? (String(d.package).includes("LPA") || String(d.package).includes("₹") ? d.package : `₹${d.package} LPA`) : "—",
+                rawPackage: d.package
+              })).sort((a, b) => getNumericPackage(a.rawPackage) - getNumericPackage(b.rawPackage))
+              : mockRecruiters;
 
-              {/* Company Selections Panel */}
-              <BaseCard className="bg-white border-slate-200/60 shadow-sm p-5 space-y-4">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Company-wise Selections</h3>
-                <div className="space-y-4">
-                  {drivesList.length === 0 ? (
-                    <p className="text-xs text-slate-400 font-semibold text-center py-4">No campus drives found</p>
-                  ) : (
-                    drivesList.map((c, i) => {
-                      const colors = ["bg-blue-600", "bg-emerald-600", "bg-orange-600", "bg-indigo-600", "bg-purple-600", "bg-pink-600", "bg-teal-600"];
-                      const color = colors[i % colors.length];
-                      const displayPackage = c.package
-                        ? (String(c.package).includes("LPA") || String(c.package).includes("₹") ? c.package : `₹${c.package} LPA`)
-                        : "—";
-                      return (
-                        <div key={i} className="flex items-center justify-between py-1 border-b border-slate-50 last:border-0">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center text-white font-bold text-xs shrink-0`}>
-                              {(c.company || "C").charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="text-xs font-bold text-slate-800">{c.company || "Unnamed Company"}</p>
-                              <p className="text-[10px] text-slate-400 font-semibold">{displayPackage}</p>
-                            </div>
-                          </div>
-                          <span className="w-12 h-1.5 rounded-full bg-slate-100 overflow-hidden relative">
-                            <span className={`absolute top-0 bottom-0 left-0 ${color}`} style={{ width: `${Math.max(15, 100 - i * 12)}%` }}></span>
-                          </span>
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </BaseCard>
+            const finalAverageCtc = placementStats?.average_ctc ?? dynamicSalaryBands?.average_ctc;
+            const averageCtcDisplay = finalAverageCtc !== undefined && finalAverageCtc !== null
+              ? `₹${finalAverageCtc} LPA`
+              : "₹8.4 LPA";
 
-              {/* Branch Placements Panel */}
-              <BaseCard className="bg-white border-slate-200/60 shadow-sm p-5 space-y-4">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Branch-wise Placement Rate</h3>
-                <div className="space-y-3.5">
-                  {branchPerformance === null ? (
-                    <div className="flex items-center justify-center py-10">
-                      <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+            const funnelToRender = dynamicFunnelData || funnelData;
+
+            const bandsToRender = (dynamicSalaryBands && Array.isArray(dynamicSalaryBands.bands))
+              ? dynamicSalaryBands.bands.map((band: any) => ({
+                range: band.label,
+                percentage: band.percent !== undefined ? Math.round(band.percent) : 0,
+                color: band.color || "#3b82f6",
+                count: band.count ?? 0
+              }))
+              : salaryBands;
+
+            const getFunnelValue = (label: string, defaultVal: number) => {
+              if (!dynamicFunnelData) return defaultVal;
+              const item = dynamicFunnelData.find(f =>
+                f.label.toLowerCase() === label.toLowerCase() ||
+                (label.toLowerCase() === "interviews scheduled" && f.label.toLowerCase() === "interviews done")
+              );
+              return item ? item.value : 0;
+            };
+
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                className="space-y-6"
+              >
+                {/* 1. Placement Metrics (4 cards) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                  <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Applications Sent</p>
+                      <h4 className="text-2xl font-bold text-slate-800">
+                        {placementStats?.total_applications ?? getFunnelValue("Applications Sent", 847)}
+                      </h4>
                     </div>
-                  ) : branchPerformance.length === 0 ? (
-                    <p className="text-xs text-slate-400 font-semibold text-center py-4">No branch performance data found</p>
-                  ) : (
-                    branchPerformance.map((b: any, i: number) => {
-                      const branchName = b.department || "—";
-                      const placed = b.placed_students ?? 0;
-                      const total = b.total_students ?? 0;
-                      const rate = b.placement_rate !== undefined ? Number(b.placement_rate).toFixed(1) : "0.0";
-                      const rateNum = Number(rate);
-                      const color = rateNum >= 50 ? "bg-emerald-500" : "bg-red-500";
-                      return (
-                        <div key={i} className="space-y-1.5">
-                          <div className="flex justify-between text-xs font-semibold">
-                            <span className="text-slate-700">
-                              {branchName}{" "}
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                ({placed}/{total})
-                              </span>
-                            </span>
-                            <span className="font-bold text-slate-800">{rate}%</span>
-                          </div>
-                          <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                            <div className={`h-full ${color} rounded-full`} style={{ width: `${Math.min(100, Math.max(0, rateNum))}%` }}></div>
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
+                    <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-500 shadow-sm border border-slate-100">
+                      <Send className="w-5 h-5 text-slate-400" />
+                    </div>
+                  </BaseCard>
+                  <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between border-b-4 border-b-orange-500">
+                    <div>
+                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Shortlisted</p>
+                      <h4 className="text-2xl font-bold text-slate-800">
+                        {placementStats?.shortlisted ?? getFunnelValue("Shortlisted", 312)}
+                      </h4>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600 shadow-sm border border-orange-100">
+                      <Star className="w-5 h-5 text-orange-500" />
+                    </div>
+                  </BaseCard>
+                  <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Interviews Scheduled</p>
+                      <h4 className="text-2xl font-bold text-slate-800">
+                        {getFunnelValue("Interviews Scheduled", 156)}
+                      </h4>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center text-red-600 shadow-sm border border-red-100">
+                      <Calendar className="w-5 h-5 text-red-500" />
+                    </div>
+                  </BaseCard>
+                  <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Offers Received</p>
+                      <h4 className="text-2xl font-bold text-slate-800">
+                        {placementStats?.placed ?? getFunnelValue("Offers Received", 98)}
+                      </h4>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100">
+                      <span className="text-xl">🎉</span>
+                    </div>
+                  </BaseCard>
                 </div>
-              </BaseCard>
 
-            </div>
+                {/* 2. Stats Metrics banner (4 cards) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                  <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Placement Rate</p>
+                      <h4 className="text-2xl font-bold text-slate-800">
+                        {placementStats === null ? (
+                          <Loader2 className="w-5 h-5 animate-spin text-blue-400 inline" />
+                        ) : (
+                          `${placementStats.placement_rate ?? 0}%`
+                        )}
+                      </h4>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-sm shadow-blue-100">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                  </BaseCard>
+                  <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Average CTC</p>
+                      <h4 className="text-2xl font-bold text-slate-800">
+                        {placementStats === null ? (
+                          <Loader2 className="w-5 h-5 animate-spin text-amber-400 inline" />
+                        ) : (
+                          `₹${placementStats.average_ctc ?? 0} LPA`
+                        )}
+                      </h4>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 shadow-sm shadow-amber-100">
+                      <FaRupeeSign className="w-5 h-5" />
+                    </div>
+                  </BaseCard>
+                  <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Highest CTC</p>
+                      <h4 className="text-2xl font-bold text-slate-800">
+                        {placementStats === null ? (
+                          <Loader2 className="w-5 h-5 animate-spin text-purple-400 inline" />
+                        ) : (
+                          `₹${placementStats.highest_ctc ?? 0} LPA`
+                        )}
+                      </h4>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 shadow-sm shadow-purple-100">
+                      <Trophy className="w-5 h-5" />
+                    </div>
+                  </BaseCard>
+                  <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Companies Visited</p>
+                      <h4 className="text-2xl font-bold text-slate-800">
+                        {placementStats === null ? (
+                          <Loader2 className="w-5 h-5 animate-spin text-slate-600 inline" />
+                        ) : (
+                          placementStats.companies_visited ?? 0
+                        )}
+                      </h4>
+                    </div>
+                    <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600 shadow-sm shadow-slate-100">
+                      <Briefcase className="w-5 h-5" />
+                    </div>
+                  </BaseCard>
+                </div>
 
-            {/* CTC Distribution Panel (CSS bar graph) */}
-            <BaseCard className="bg-white border-slate-200/60 shadow-sm p-5 space-y-4">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">CTC Distribution</h3>
-              <div className="h-64 flex items-end justify-between pt-6 px-4 md:px-12 border-b border-slate-100 pb-2 gap-4">
-                {[
-                  { range: "<5L", height: "30%", val: "3.5 LPA", desc: "Min CTC" },
-                  { range: "5-8L", height: "50%", val: "10.2 LPA", desc: "Median CTC" },
-                  { range: "8-12L", height: "90%", val: "11.2 LPA", desc: "Mean CTC" },
-                  { range: "12-18L", height: "80%", val: "55 LPA", desc: "Max CTC" },
-                  { range: "18-25L", height: "40%", val: "", desc: "" },
-                  { range: "25L+", height: "20%", val: "", desc: "" }
-                ].map((item, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center group relative h-full justify-end">
-                    {/* Hover tooltip for CTC distribution values */}
-                    {item.val && (
-                      <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-850 bg-slate-800 text-white rounded-lg p-2 text-[10px] font-bold text-center shadow-lg pointer-events-none z-10 w-24">
-                        <p className="text-orange-400">{item.val}</p>
-                        <p className="text-slate-300 uppercase tracking-widest text-[8px]">{item.desc}</p>
-                      </div>
-                    )}
+                {/* 3. Placement Funnel & Company-wise Selections */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Placement Funnel Card */}
+                  <BaseCard className="border-slate-200 p-5">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                      <BarChart className="w-4 h-4 text-green-600" />
+                      Placement Funnel 2024–25
+                    </h3>
+                    <div className="space-y-6">
+                      {funnelToRender.map((stage, idx) => {
+                        const isHex = stage.color && (stage.color.startsWith("#") || stage.color.startsWith("rgb"));
+                        return (
+                          <div key={idx} className="flex items-center gap-6">
+                            <div className="w-40 text-xs font-bold text-slate-600 shrink-0">
+                              {stage.label}
+                            </div>
+                            <div className="flex-1 flex items-center">
+                              <div className="w-full bg-slate-50 h-2 rounded-full overflow-hidden flex-1 relative flex items-center">
+                                <motion.div
+                                  className={`h-2 rounded-full ${!isHex ? stage.color : ""}`}
+                                  style={isHex ? { backgroundColor: stage.color } : {}}
+                                  initial={{ width: 0 }}
+                                  animate={{ width: stage.width }}
+                                  transition={{ duration: 1, delay: idx * 0.1 }}
+                                />
+                              </div>
+                            </div>
+                            <div className="w-8 text-right text-xs font-bold text-slate-800 shrink-0">
+                              {stage.value}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </BaseCard>
 
-                    {/* Animated vertical bar */}
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: item.height }}
-                      transition={{ duration: 0.8, delay: i * 0.05 }}
-                      className="w-full bg-orange-100 group-hover:bg-orange-500 rounded-t-lg transition-colors cursor-pointer relative"
-                    >
-                      {/* Highlight core metrics bar with a darker tone */}
-                      {item.val && (
-                        <div className="absolute inset-0 bg-orange-500/20 rounded-t-lg group-hover:bg-transparent"></div>
+                  {/* Company Selections Panel */}
+                  <BaseCard className="bg-white border-slate-200/60 shadow-sm p-5 space-y-4">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                      Company-wise Selections
+                    </h3>
+                    <div className="space-y-4">
+                      {displayRecruiters.map((recruiter, i) => {
+                        const colors = ["bg-blue-600", "bg-emerald-600", "bg-orange-600", "bg-indigo-600", "bg-purple-600", "bg-pink-600", "bg-teal-600"];
+                        const color = colors[i % colors.length];
+                        return (
+                          <div key={i} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0 last:pb-0">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 rounded-lg ${color} flex items-center justify-center text-white font-bold text-xs shrink-0`}>
+                                {recruiter.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="text-xs font-bold text-slate-800">{recruiter.name}</p>
+                                <p className="text-[10px] text-slate-400 font-semibold">{recruiter.package}</p>
+                              </div>
+                            </div>
+                            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100/50">
+                              {recruiter.offers} offers
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </BaseCard>
+                </div>
+
+                {/* 4. Branch-wise Placement Rate & Salary Bands (replacing CTC Distribution) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Branch Placements Panel */}
+                  <BaseCard className="bg-white border-slate-200/60 shadow-sm p-5 space-y-4">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Branch-wise Placement Rate</h3>
+                    <div className="space-y-3.5">
+                      {branchPerformance === null ? (
+                        <div className="flex items-center justify-center py-10">
+                          <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
+                        </div>
+                      ) : branchPerformance.length === 0 ? (
+                        <p className="text-xs text-slate-400 font-semibold text-center py-4">No branch performance data found</p>
+                      ) : (
+                        branchPerformance.map((b: any, i: number) => {
+                          const branchName = b.department || "—";
+                          const placed = b.placed_students ?? 0;
+                          const total = b.total_students ?? 0;
+                          const rate = b.placement_rate !== undefined ? Number(b.placement_rate).toFixed(1) : "0.0";
+                          const rateNum = Number(rate);
+                          const color = rateNum >= 50 ? "bg-emerald-500" : "bg-red-500";
+                          return (
+                            <div key={i} className="space-y-1.5">
+                              <div className="flex justify-between text-xs font-semibold">
+                                <span className="text-slate-700">
+                                  {branchName}{" "}
+                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                    ({placed}/{total})
+                                  </span>
+                                </span>
+                                <span className="font-bold text-slate-800">{rate}%</span>
+                              </div>
+                              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                                <div className={`h-full ${color} rounded-full`} style={{ width: `${Math.min(100, Math.max(0, rateNum))}%` }}></div>
+                              </div>
+                            </div>
+                          );
+                        })
                       )}
-                    </motion.div>
+                    </div>
+                  </BaseCard>
 
-                    <span className="text-[10px] font-bold text-slate-500 mt-2">{item.range}</span>
-                    {item.val && (
-                      <span className="text-[9px] font-extrabold text-orange-600 mt-0.5 whitespace-nowrap">{item.val}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </BaseCard>
-          </motion.div>
-        ) : activeSubTab === "placement" ? (
-          // ==================== 4. PLACEMENT OVERVIEW VIEW ====================
-          <motion.div
-            key="placement-view"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            className="space-y-6"
-          >
-            <PlacementTabContent />
-          </motion.div>
+                  {/* Salary Bands Card */}
+                  <BaseCard className="border-slate-200 p-5 flex flex-col justify-between h-full bg-white shadow-sm">
+                    <div>
+                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Salary Bands</h3>
+                      <div className="space-y-4">
+                        {bandsToRender.map((band: any, idx: number) => {
+                          const isHex = band.color && (band.color.startsWith("#") || band.color.startsWith("rgb"));
+                          return (
+                            <div key={idx} className="flex items-center gap-4">
+                              <div className="w-20 text-xs font-semibold text-slate-600">
+                                {band.range}
+                              </div>
+                              <div className="flex-1 flex justify-end">
+                                <div
+                                  className={`h-1.5 rounded-full ${!isHex ? band.color : ""}`}
+                                  style={isHex ? { backgroundColor: band.color, width: `${band.percentage}%` } : { width: `${band.percentage}%` }}
+                                />
+                              </div>
+                              <div className={`w-8 text-right text-xs font-bold ${band.percentage > 30 ? 'text-slate-800' : 'text-slate-500'
+                                }`}>
+                                {band.percentage}%
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div className="mt-5 pt-3 border-t border-slate-100 pb-1">
+                      <h2 className="text-2xl font-black text-slate-800">{averageCtcDisplay}</h2>
+                      <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-1">Average CTC 2024–25</p>
+                    </div>
+                  </BaseCard>
+                </div>
+              </motion.div>
+            );
+          })()
         ) : (
           // ==================== 5. GENERAL CAMPUS DRIVES LIST (Image 1) ====================
           <motion.div
@@ -2329,8 +2627,8 @@ export default function CampusDrivesTabContent() {
                     <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 pt-4 md:pt-0 shrink-0">
                       <div className="flex items-center gap-4 text-center">
                         <div>
-                          <p className="text-lg font-bold text-slate-700">{drive.stats.eligible}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Eligible</p>
+                          <p className="text-lg font-bold text-blue-600">{drive.stats.shortlisted}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Shortlisted</p>
                         </div>
                         <div className="h-6 w-px bg-slate-200"></div>
                         <div>

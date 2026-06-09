@@ -321,6 +321,30 @@ export const getBranchWisePerformance = async (college: string) => {
   }
 };
 
+export const getPlacementFunnel = async (college: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.college_campus_drives.college_campus_drives.get_placement_funnel?college=${encodeURIComponent(college)}`
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error fetching placement funnel for college ${college}:`, error);
+    throw error;
+  }
+};
+
+export const getSalaryBands = async (college: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.college_campus_drives.college_campus_drives.get_salary_bands?college=${encodeURIComponent(college)}`
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error fetching salary bands for college ${college}:`, error);
+    throw error;
+  }
+};
+
 export const updateCollegeDetails = async (email: string, payload: any) => {
   try {
     const response = await apiService.put(

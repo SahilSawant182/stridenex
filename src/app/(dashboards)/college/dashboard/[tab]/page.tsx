@@ -1,5 +1,4 @@
 import StudentsTabContent from "@/components/dashboards/college/StudentsTabContent";
-import PlacementTabContent from "@/components/dashboards/college/PlacementTabContent";
 import CampusDrivesTabContent from "@/components/dashboards/college/CampusDrivesTabContent";
 import NepUgcTabContent from "@/components/dashboards/college/NepUgcTabContent";
 import InterventionsTabContent from "@/components/dashboards/college/InterventionsTabContent";
@@ -13,7 +12,6 @@ export default function DynamicCollegeTabPage({ params }: { params: Promise<{ ta
     const unwrappedParams = use(params);
 
     if (unwrappedParams.tab === "students") return <StudentsTabContent />;
-    if (unwrappedParams.tab === "placement") return <PlacementTabContent />;
     if (unwrappedParams.tab === "campus-drives") return <CampusDrivesTabContent />;
     if (unwrappedParams.tab === "nep-ugc") return <NepUgcTabContent />;
     if (unwrappedParams.tab === "interventions") return <InterventionsTabContent />;
