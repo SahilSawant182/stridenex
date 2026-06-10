@@ -206,6 +206,7 @@ export default function SignupPage() {
           localStorage.setItem("userEmail", data.email);
           localStorage.setItem("userFirstName", data.firstName);
           localStorage.setItem("userLastName", data.lastName);
+          localStorage.setItem("userPassword", data.password);
 
           // Navigate based on selected role
           if (selectedRole === "student") {

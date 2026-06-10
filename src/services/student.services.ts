@@ -472,7 +472,7 @@ export const completeHabitPlanStatus = async (planName: string, habitName: strin
   try {
     const response = await apiService.post(
       "method/nexedu.habits_builder.api.complete_habit_plan_status",
-      { 
+      {
         plan_name: planName,
         habit_name: habitName,
         student: student
@@ -492,7 +492,7 @@ export const deleteHabitPlan = async (planName: string, habitName: string, stude
   try {
     const response = await apiService.post(
       "method/nexedu.habits_builder.api.delete_habit_plan",
-      { 
+      {
         plan_name: planName,
         habit_name: habitName,
         student: student
@@ -520,3 +520,17 @@ export const getBookedSessions = async (studentEmail: string) => {
   }
 };
 
+/**
+ * Fetch billing packages for a user by email.
+ */
+export const getUserPackages = async (email: string) => {
+  try {
+    const response = await apiService.get(
+      `method/quantbit_billing_platform.quantbit_billing_platform.api.get_user_packages?email=${encodeURIComponent(email)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching user packages:", error);
+    throw error;
+  }
+};

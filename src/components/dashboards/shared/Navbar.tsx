@@ -2,12 +2,13 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { User, Menu, Search, LogOut, CreditCard, ChevronRight, Pen, Mail, Building2, Phone, Globe, MapPin, CheckCircle2, FileText, Target, Clock, Linkedin, Instagram, Map } from "lucide-react";
-import { getStudentByEmail } from "@/services/student.services";
+import { getStudentByEmail, getUserPackages } from "@/services/student.services";
 import { getIndustryByEmail } from "@/services/industry.services";
 import NotificationDropdown from "@/components/notifications/NotificationDropdown";
 
 function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }: any) {
   const [data, setData] = useState<any>(null);
+  const [packages, setPackages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -19,6 +20,17 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
         } else if (role === 'industry') {
           const res = await getIndustryByEmail(currentUser);
           setData(res?.data || res?.message?.data || res?.message);
+        }
+
+        // Fetch user packages
+        try {
+          const pkgRes = await getUserPackages(currentUser);
+          const pkgData = pkgRes?.message || pkgRes?.data || pkgRes;
+          if (pkgData && pkgData.active_packages) {
+            setPackages(pkgData.active_packages);
+          }
+        } catch (pkgErr) {
+          console.error("Failed to fetch user packages", pkgErr);
         }
       } catch (err) {
         console.error("Failed to fetch profile details", err);
@@ -312,6 +324,27 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
 
           {(!data || role !== 'student') && (
             <p className="text-xs text-slate-500 italic">Basic profile details shown.</p>
+          )}
+
+          {packages && packages.length > 0 && (
+            <div className="flex items-start gap-2 pt-2 border-t border-slate-100 mt-2">
+              <CreditCard className="w-4 h-4 text-slate-400 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-xs text-slate-500 mb-1">Active Package</p>
+                <div className="space-y-1.5">
+                  {packages.map((pkg: any, idx: number) => (
+                    <div key={idx} className="bg-slate-50 border border-slate-100 rounded-lg p-2">
+                      <p className="font-semibold text-xs text-slate-900">{pkg.billing_package}</p>
+                      {pkg.app_name && (
+                        <p className="text-[10px] text-slate-500 mt-0.5">
+                          {pkg.app_name} • {pkg.billing_role || "User"}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
         </div>
 
