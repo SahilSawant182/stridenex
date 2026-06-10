@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import { motion } from "framer-motion";
 import {
   Crown,
@@ -66,7 +67,11 @@ function getAccountTypeFromPath(pathname: string): string {
  *
  * `from_site` is the ERPNext site hostname, derived from BASE_DOMAIN.
  */
-async function redirectToPayment(plan: BillingPackage): Promise<void> {
+async function redirectToPayment(
+  plan: BillingPackage,
+  accountType: string,
+  customerEmail: string
+): Promise<void> {
   // Derive the ERPNext site hostname for the from_site parameter
   let fromSite: string;
   try {
@@ -89,12 +94,15 @@ async function redirectToPayment(plan: BillingPackage): Promise<void> {
   // 2. Build payment query parameters matching what proceedpayment.html expects
   const paymentParams = new URLSearchParams({
     from_site: fromSite,
+    frontend_url: window.location.origin,
     pkg_name: plan.package_name,
     pkg_type: plan.package_type || "",
     pkg_app: plan.app_name || plan.app || "",
     pkg_users: String(plan.no_of_users ?? ""),
     pkg_days: String(plan.no_of_days ?? ""),
     pkg_amount: String(plan.amount ?? ""),
+    account_type: accountType,
+    customer_email: customerEmail,
   });
 
   // 3. Resolve proceedpayment.html relative to the billing URL
@@ -103,7 +111,9 @@ async function redirectToPayment(plan: BillingPackage): Promise<void> {
   const proceedPaymentUrl = new URL("proceedpayment.html", billingUrl);
   const finalUrl = `${proceedPaymentUrl.origin}${proceedPaymentUrl.pathname}?${paymentParams.toString()}`;
 
-  console.log("Redirect URL:", finalUrl);
+  console.log("Account Type:", accountType);
+  console.log("Customer Email:", customerEmail);
+  console.log("Final Payment URL:", finalUrl);
 
   // 4. Redirect
   window.location.href = finalUrl;
@@ -115,7 +125,9 @@ export default function PlansTabContent() {
   const [error, setError] = useState<string | null>(null);
   const [redirectingPlan, setRedirectingPlan] = useState<string | null>(null);
   const pathname = usePathname();
+  const { currentUser } = useAuth();
   const accountType = getAccountTypeFromPath(pathname);
+  const customerEmail = currentUser || "";
 
   /**
    * Handle plan selection: fetch billing URL and redirect.
@@ -124,7 +136,7 @@ export default function PlansTabContent() {
   const handleSelectPlan = async (plan: BillingPackage) => {
     setRedirectingPlan(plan.package_name);
     try {
-      await redirectToPayment(plan);
+      await redirectToPayment(plan, accountType, customerEmail);
     } catch (err: any) {
       console.error("Payment redirect failed:", err);
       setRedirectingPlan(null);
