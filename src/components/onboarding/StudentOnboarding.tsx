@@ -20,6 +20,7 @@ import { BASE_URL } from "@/services/api.services";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Checkbox } from "../ui/checkbox";
+import axios from "axios";
 
 interface StudentOnboardingProps {
   onSubmit?: (data: any) => Promise<void>;
@@ -779,6 +780,63 @@ export default function StudentOnboarding({
       const isSuccess = (responseData?.status === 200 || internalStatus === 200 || internalStatus === "success" || responseData?.message === "Student registered successfully");
 
       if (isSuccess && internalStatus !== 500) {
+        // ─── BILLING INTEGRATION STARTS HERE ─────────────────────────────────
+        try {
+          const userEmail = localStorage.getItem("userEmail") || formData.email || "";
+          const billingPayload = {
+            data: {
+              account_type: "Individual",
+              role_type: "Student Base",
+              email: userEmail,
+              user_password: localStorage.getItem("userPassword") || "",
+              first_name: formData.firstName || localStorage.getItem("userFirstName") || "Test",
+              last_name: formData.lastName || localStorage.getItem("userLastName") || "User",
+              default_currency: "INR",
+              country: "India",
+              billing_details: [{ title: "Stridenex App" }]
+            }
+          };
+          console.log("Submitting Student Billing registration payload:", billingPayload);
+
+          const storedApiKey = localStorage.getItem("apiKey") || "";
+          const storedApiSecret = localStorage.getItem("apiSecret") || "";
+          const billingHeaders: Record<string, string> = {
+            "Content-Type": "application/json"
+          };
+          if (storedApiKey && storedApiSecret) {
+            billingHeaders["Authorization"] = `token ${storedApiKey}:${storedApiSecret}`;
+          }
+
+          const billingResponse = await axios.post(
+            `${BASE_URL}method/quantbit_billing_platform.quantbit_billing_platform.doctype.billing_account_master.billing_account_master.create_billing_registration`,
+            billingPayload,
+            { headers: billingHeaders }
+          );
+
+          console.log("Billing API full response:", billingResponse.data);
+
+          // Frappe wraps return values inside "message", so check the correct path
+          const billingResult = billingResponse.data?.message || billingResponse.data;
+          if (billingResult?.status === "error") {
+            throw new Error(billingResult.message || "Failed to create billing account.");
+          }
+        } catch (billingErr: any) {
+          console.error("Billing API Integration Error:", billingErr);
+          let errorMsg = "Profile saved, but failed to assign the default billing package.";
+          if (billingErr?.message) {
+            errorMsg = billingErr.message;
+          } else if (billingErr?.response?.data?.message) {
+            errorMsg = typeof billingErr.response.data.message === 'string'
+              ? billingErr.response.data.message
+              : "Billing registration failed.";
+          }
+          setError(errorMsg);
+          setLoading(false);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return; // Stop the redirect if billing fails so the user can see the error
+        }
+        // ─── BILLING INTEGRATION ENDS HERE ──────────────────────────────────
+
         // Set success message (this will show in green Alert)
         setSuccess(typeof responseData?.message === 'string' ? responseData.message : "Student registered successfully!");
 

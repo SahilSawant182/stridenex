@@ -113,7 +113,10 @@ export default function IndustryOnboarding({
         email: "",
         emailVerified: false,
         mobileNo: "",
-        mobileVerified: false
+        mobileVerified: false,
+        address_line1: "",
+        address_line2: "",
+        pincode: ""
     });
 
     useEffect(() => {
@@ -392,6 +395,13 @@ export default function IndustryOnboarding({
         if (!formData.district) errors.district = "District is required";
         if (!formData.tahsil) errors.tahsil = "Taluka is required";
         if (!formData.city) errors.city = "City is required";
+        if (!formData.address_line1?.trim())
+            errors.address_line1 = "Address Line 1 is required";
+        if (!formData.pincode) {
+            errors.pincode = "Pincode is required";
+        } else if (!/^\d{6}$/.test(formData.pincode)) {
+            errors.pincode = "Please enter a valid 6-digit pincode";
+        }
         setFieldErrors(errors);
         return Object.keys(errors).length === 0;
     };
@@ -534,6 +544,70 @@ export default function IndustryOnboarding({
                     setSuccess("Step 2 saved successfully!");
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else if (step === 3) {
+                    // ─── BILLING INTEGRATION STARTS HERE ─────────────────────────────────
+                    try {
+                        const billingPayload = {
+                            data: {
+                                account_type: "Organization",
+                                role_type: "Industry Base",
+                                company_name: formData.company_name,
+                                abbr: formData.company_name ? formData.company_name.substring(0, 3).toUpperCase() : "CO",
+                                gstin: formData.gst_number || "",
+                                email: userEmail,
+                                user_password: localStorage.getItem("userPassword") || "",
+                                first_name: localStorage.getItem("userFirstName") || "User",
+                                last_name: localStorage.getItem("userLastName") || "",
+                                default_currency: "INR",
+                                country: formData.country || "India",
+                                state: formData.state,
+                                city: formData.city,
+                                address_line1: formData.address_line1 || "Not Provided",
+                                address_line2: formData.address_line2 || "",
+                                pincode: formData.pincode || "",
+                                billing_details: [{ title: "Stridenex App" }]
+                            }
+                        };
+                        console.log("Submitting Industry Billing registration payload:", billingPayload);
+
+                        const storedApiKey = localStorage.getItem("apiKey") || "";
+                        const storedApiSecret = localStorage.getItem("apiSecret") || "";
+                        const billingHeaders: Record<string, string> = {
+                            "Content-Type": "application/json"
+                        };
+                        if (storedApiKey && storedApiSecret) {
+                            billingHeaders["Authorization"] = `token ${storedApiKey}:${storedApiSecret}`;
+                        }
+
+                        const billingResponse = await axios.post(
+                            `${BASE_URL}method/quantbit_billing_platform.quantbit_billing_platform.doctype.billing_account_master.billing_account_master.create_billing_registration`,
+                            billingPayload,
+                            { headers: billingHeaders }
+                        );
+
+                        console.log("Billing API full response:", billingResponse.data);
+
+                        // Frappe wraps return values inside "message", so check the correct path
+                        const billingResult = billingResponse.data?.message || billingResponse.data;
+                        if (billingResult?.status === "error") {
+                            throw new Error(billingResult.message || "Failed to create billing account.");
+                        }
+                    } catch (billingErr: any) {
+                        console.error("Billing API Integration Error:", billingErr);
+                        let errorMsg = "Profile saved, but failed to assign the default billing package.";
+                        if (billingErr?.message) {
+                            errorMsg = billingErr.message;
+                        } else if (billingErr?.response?.data?.message) {
+                            errorMsg = typeof billingErr.response.data.message === 'string'
+                                ? billingErr.response.data.message
+                                : "Billing registration failed.";
+                        }
+                        setError(errorMsg);
+                        setLoading(false);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                        return; // Stop the redirect if billing fails so the user can see the error
+                    }
+                    // ─── BILLING INTEGRATION ENDS HERE ──────────────────────────────────
+
                     setSuccess("Industry onboarding completed successfully!");
                     localStorage.clear();
                     setTimeout(() => {
@@ -1078,6 +1152,31 @@ export default function IndustryOnboarding({
                 placeholder: "https://www.company.com",
                 layout: "half",
                 inputClassName: "font-mono text-sm"
+            },
+            {
+                fieldname: "address_line1",
+                label: "Address Line 1",
+                fieldtype: "Data",
+                required: true,
+                placeholder: "Enter Address Line 1",
+                layout: "full"
+            },
+            {
+                fieldname: "address_line2",
+                label: "Address Line 2 (Optional)",
+                fieldtype: "Data",
+                required: false,
+                placeholder: "Enter Address Line 2",
+                layout: "full"
+            },
+            {
+                fieldname: "pincode",
+                label: "Pincode",
+                fieldtype: "Data",
+                required: true,
+                placeholder: "Enter 6-digit Pincode",
+                layout: "half",
+                maxLength: 6
             }
         ];
 
