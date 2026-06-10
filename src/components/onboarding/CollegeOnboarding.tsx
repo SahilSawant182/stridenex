@@ -83,7 +83,7 @@ export default function CollegeOnboarding({
   const streamDropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const [contactPersons, setContactPersons] = useState<ContactPerson[]>([
-    { title: "", first_name: "", last_name: "", designation: "", contact_no: "", is_admin: false, email: "" }
+    { title: "", first_name: "", last_name: "", designation: "", contact_no: "", is_admin: true, email: "" }
   ]);
 
   const [courses, setCourses] = useState<Course[]>([
@@ -322,15 +322,27 @@ export default function CollegeOnboarding({
         }));
 
         if (resData.contact_details && Array.isArray(resData.contact_details) && resData.contact_details.length > 0) {
-          setContactPersons(resData.contact_details.map((cp: any) => ({
+          setContactPersons(resData.contact_details.map((cp: any, idx: number) => ({
             title: cp.title || "",
-            first_name: cp.first_name || "",
-            last_name: cp.last_name || "",
+            first_name: cp.first_name || (idx === 0 ? (resData.user_details?.first_name || "") : ""),
+            last_name: cp.last_name || (idx === 0 ? (resData.user_details?.last_name || "") : ""),
             designation: cp.designation || "",
             contact_no: cp.contact_no?.replace(/^\+91-/, '') || "",
-            is_admin: cp.is_admin === 1 || cp.is_admin === true || false,
-            email: cp.email || ""
+            is_admin: cp.is_admin === 1 || cp.is_admin === true || (idx === 0 ? true : false),
+            email: cp.email || (idx === 0 ? (resData.email || "") : "")
           })));
+        } else {
+          setContactPersons([
+            {
+              title: "",
+              first_name: resData.user_details?.first_name || "",
+              last_name: resData.user_details?.last_name || "",
+              designation: "",
+              contact_no: "",
+              is_admin: true,
+              email: resData.email || ""
+            }
+          ]);
         }
 
         if (resData.courses && Array.isArray(resData.courses) && resData.courses.length > 0) {
@@ -1306,6 +1318,18 @@ export default function CollegeOnboarding({
             onRemovePerson={removeContactPerson}
             onAddPerson={addContactPerson}
             getSelectedDesignationLabel={getSelectedDesignationLabel}
+            onCreateCustomDesignation={async (val: string) => {
+              await axios.post(`${BASE_URL}method/stridenex_app.stridenex_app.doctype.job_function.job_function.create_designation`, {
+                designation_name: val
+              }, {
+                headers: {
+                  "Content-Type": "application/json",
+                  "Accept": "application/json",
+                  "Authorization": `token ${apiKey}:${apiSecret}`
+                }
+              });
+              fetchDesignations();
+            }}
           />
         </div>
 
