@@ -176,10 +176,11 @@ export const getDriveCount = async (college: string) => {
   }
 };
 
-export const getPlacementList = async (college: string, name?: string) => {
+export const getPlacementList = async (college: string, name?: string, status?: string) => {
   try {
     let url = `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.get_placement_list?college=${encodeURIComponent(college)}`;
     if (name) url += `&name=${encodeURIComponent(name)}`;
+    if (status) url += `&status=${encodeURIComponent(status)}`;
     const response = await apiService.get(url);
     return response;
   } catch (error) {
@@ -432,6 +433,31 @@ export const updateCollegeDetails = async (email: string, payload: any) => {
     return response;
   } catch (error) {
     console.error(`Error updating college details for ${email}:`, error);
+    throw error;
+  }
+};
+
+export const getLowEmployabilityStudents = async (college: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.college_campus_drives.college_campus_drives.get_low_employability_students?college=${encodeURIComponent(college)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching low employability students:", error);
+    throw error;
+  }
+};
+
+export const assignStudentMentor = async (payload: { student: string; mentor: string }) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.student_mentor_mapping.student_mentor_mapping.create_student_mentor_mapping`,
+      payload
+    );
+    return response;
+  } catch (error) {
+    console.error("Error assigning student mentor:", error);
     throw error;
   }
 };

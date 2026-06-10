@@ -502,6 +502,20 @@ export default function CampusDrivesTabContent() {
     }
   };
 
+  const fetchDrivePlacementListByStatus = async (driveName: string, status: string) => {
+    const collegeName = collegeDetails?.name;
+    if (!collegeName) return;
+    try {
+      const apiStatus = status === "Registered" ? "Applied" : status;
+      const res = await getPlacementList(collegeName, driveName, apiStatus);
+      const raw = res?.data ?? res?.message?.data ?? res?.message;
+      const arr = Array.isArray(raw?.data) ? raw.data : (Array.isArray(raw) ? raw : []);
+      setDrivePlacementList(arr);
+    } catch (err) {
+      console.error(`Failed to fetch placement list for status ${status}:`, err);
+    }
+  };
+
   // Fetch per-drive placement data when user clicks Manage
   const handleManageDrive = async (drive: any) => {
     setSelectedDrive(drive);
@@ -514,7 +528,7 @@ export default function CampusDrivesTabContent() {
     try {
       const [countsRes, listRes, eligibleRes] = await Promise.allSettled([
         getPlacementCounts(collegeName, drive.name),
-        getPlacementList(collegeName, drive.name),
+        getPlacementList(collegeName, drive.name, "Applied"),
         getEligibleStudents({
           branch: drive.criteria?.branches?.[0] || "",
           cgpa: drive.criteria?.minCgpa !== undefined ? drive.criteria.minCgpa : "",
@@ -600,9 +614,10 @@ export default function CampusDrivesTabContent() {
       if (selectedDrive) {
         const collegeName = collegeDetails?.name;
         if (collegeName) {
+          const apiStatus = selectedStudentStatusFilter === "Eligible" ? undefined : (selectedStudentStatusFilter === "Registered" ? "Applied" : selectedStudentStatusFilter);
           const [countsRes, listRes] = await Promise.allSettled([
             getPlacementCounts(collegeName, selectedDrive.name),
-            getPlacementList(collegeName, selectedDrive.name)
+            getPlacementList(collegeName, selectedDrive.name, apiStatus)
           ]);
 
           if (countsRes.status === "fulfilled") {
@@ -1546,7 +1561,12 @@ export default function CampusDrivesTabContent() {
 
               {/* Registered */}
               <div
-                onClick={() => setSelectedStudentStatusFilter("Registered")}
+                onClick={() => {
+                  setSelectedStudentStatusFilter("Registered");
+                  if (selectedDrive) {
+                    fetchDrivePlacementListByStatus(selectedDrive.name, "Registered");
+                  }
+                }}
                 className={`p-4 rounded-xl border bg-white cursor-pointer transition-all flex flex-col gap-1 ${selectedStudentStatusFilter === "Registered"
                   ? "border-orange-400 shadow-md ring-1 ring-orange-300/60"
                   : "border-slate-200 hover:border-slate-300 shadow-sm"
@@ -1564,7 +1584,12 @@ export default function CampusDrivesTabContent() {
 
               {/* Shortlisted */}
               <div
-                onClick={() => setSelectedStudentStatusFilter("Shortlisted")}
+                onClick={() => {
+                  setSelectedStudentStatusFilter("Shortlisted");
+                  if (selectedDrive) {
+                    fetchDrivePlacementListByStatus(selectedDrive.name, "Shortlisted");
+                  }
+                }}
                 className={`p-4 rounded-xl border bg-white cursor-pointer transition-all flex flex-col gap-1 ${selectedStudentStatusFilter === "Shortlisted"
                   ? "border-orange-400 shadow-md ring-1 ring-orange-300/60"
                   : "border-slate-200 hover:border-slate-300 shadow-sm"
@@ -1582,7 +1607,12 @@ export default function CampusDrivesTabContent() {
 
               {/* Selected */}
               <div
-                onClick={() => setSelectedStudentStatusFilter("Selected")}
+                onClick={() => {
+                  setSelectedStudentStatusFilter("Selected");
+                  if (selectedDrive) {
+                    fetchDrivePlacementListByStatus(selectedDrive.name, "Selected");
+                  }
+                }}
                 className={`p-4 rounded-xl border bg-white cursor-pointer transition-all flex flex-col gap-1 ${selectedStudentStatusFilter === "Selected"
                   ? "border-orange-400 shadow-md ring-1 ring-orange-300/60"
                   : "border-slate-200 hover:border-slate-300 shadow-sm"
