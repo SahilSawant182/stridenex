@@ -884,6 +884,18 @@ export default function CampusDrivesTabContent() {
   // Add Drive Modal setup
   const addDriveFields: DynamicField[] = useMemo(() => [
     { name: "company", label: "Company Name", type: "text", required: true, placeholder: "e.g., Google", colSpan: 2, },
+    // {
+    //   name: "designations",
+    //   label: "What position are you hiring for?",
+    //   type: "select",
+    //   multiple: true,
+    //   required: false,
+    //   colSpan: 2,
+    //   apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+    //   apiParams: { doctype: "Designation" },
+    //   allowCustom: true,
+    //   customPlaceholder: "Enter custom designation..."
+    // },
     { name: "role", label: "Job Role / Title", type: "text", required: true, colSpan: 2, placeholder: "e.g., Software Engineer" },
     { name: "driveDate", label: "Drive Date", type: "date", required: true, textTransform: "uppercase" },
     { name: "regDeadline", label: "Registration Deadline", type: "date", required: true, textTransform: "uppercase" },
@@ -909,18 +921,7 @@ export default function CampusDrivesTabContent() {
       allowCustom: true,
       customPlaceholder: "Enter custom branch..."
     },
-    {
-      name: "designations",
-      label: "Eligible Designations",
-      type: "select",
-      multiple: true,
-      required: false,
-      colSpan: 2,
-      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
-      apiParams: { doctype: "Designation" },
-      allowCustom: true,
-      customPlaceholder: "Enter custom designation..."
-    },
+
     {
       name: "required_skills",
       label: "Required Skills",
@@ -965,11 +966,11 @@ export default function CampusDrivesTabContent() {
           ? formData.branches.split(",").map((s: string) => ({ branch_name: s.trim() }))
           : [];
 
-      const designationsArray = Array.isArray(formData.designations)
-        ? formData.designations.map((s: string) => ({ designation: s }))
-        : formData.designations && typeof formData.designations === 'string'
-          ? formData.designations.split(",").map((s: string) => ({ designation: s.trim() }))
-          : [{ designation: formData.role }];
+      // const designationsArray = Array.isArray(formData.designations)
+      //   ? formData.designations.map((s: string) => ({ designation: s }))
+      //   : formData.designations && typeof formData.designations === 'string'
+      //     ? formData.designations.split(",").map((s: string) => ({ designation: s.trim() }))
+      //     : [{ designation: formData.role }];
 
       const skillsArray = Array.isArray(formData.required_skills)
         ? formData.required_skills.map((s: string) => ({ skill: s }))
@@ -990,7 +991,7 @@ export default function CampusDrivesTabContent() {
             ? `${Number(formData.minCgpa).toFixed(1)} CGPA`
             : `${formData.minCgpa}%`),
         role: formData.role,
-        designation: designationsArray,
+        designation: [],
         branches: branchesArray,
         required_skill: skillsArray
       };
@@ -1294,7 +1295,7 @@ export default function CampusDrivesTabContent() {
         backlog: eligibilityBacklog,
         college: collegeName
       });
-      
+
       const blob = res instanceof Blob ? res : (res?.data instanceof Blob ? res.data : new Blob([res]));
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -1304,7 +1305,7 @@ export default function CampusDrivesTabContent() {
       link.click();
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       showToast("Eligible students list exported successfully.", "success");
       if (typeof window !== "undefined") {
         window.alert("Eligible students list exported successfully.");
@@ -1329,7 +1330,7 @@ export default function CampusDrivesTabContent() {
         backlog: eligibilityBacklog,
         college: collegeName
       });
-      
+
       const blob = res instanceof Blob ? res : (res?.data instanceof Blob ? res.data : new Blob([res]));
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -1339,7 +1340,7 @@ export default function CampusDrivesTabContent() {
       link.click();
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
+
       showToast("Non-eligible students list exported successfully.", "success");
       if (typeof window !== "undefined") {
         window.alert("Non-eligible students list exported successfully.");
@@ -2765,12 +2766,35 @@ export default function CampusDrivesTabContent() {
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => handleManageDrive(drive)}
-                        className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm hover:shadow transition-all uppercase tracking-wider shrink-0"
-                      >
-                        Manage <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingDrive(drive);
+                            setIsAddDriveModalOpen(true);
+                          }}
+                          className="bg-slate-50 hover:bg-orange-50 border border-slate-200 hover:border-orange-200 text-slate-600 hover:text-orange-600 p-2.5 rounded-xl transition-all shadow-sm"
+                          title="Edit Campus Drive"
+                        >
+                          <Pen className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteDrive(drive.name);
+                          }}
+                          className="bg-slate-50 hover:bg-red-50 border border-slate-200 hover:border-red-200 text-slate-600 hover:text-red-600 p-2.5 rounded-xl transition-all shadow-sm"
+                          title="Delete Campus Drive"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleManageDrive(drive)}
+                          className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm hover:shadow transition-all uppercase tracking-wider"
+                        >
+                          Manage <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   </BaseCard>
                 ))
