@@ -22,7 +22,8 @@ import {
   X,
   Users,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Loader2
 } from "lucide-react";
 import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
@@ -31,7 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/Pagination";
-import { getMentorList, getMentorSlotCalendar, bookMentorSlot, getMentorNextAvailableSlot, createGroupSessionBooking, getBookedSessions } from "@/services/student.services";
+import { getMentorList, getMentorSlotCalendar, bookMentorSlot, getMentorNextAvailableSlot, getBookedSessions, getMentorOfferings } from "@/services/student.services";
 
 // Types
 interface Mentor {
@@ -142,6 +143,9 @@ export default function MentorsTabContent() {
 
   // Booking Modal States
   const [selectedMentorForBooking, setSelectedMentorForBooking] = useState<Mentor | null>(null);
+  const [mentorOfferings, setMentorOfferings] = useState<any[]>([]);
+  const [isLoadingOfferings, setIsLoadingOfferings] = useState(false);
+  const [selectedOfferingForBooking, setSelectedOfferingForBooking] = useState<any | null>(null);
   const [slotCalendarData, setSlotCalendarData] = useState<{ [date: string]: any[] }>({});
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -151,17 +155,37 @@ export default function MentorsTabContent() {
 
   const handleBookSession = async (mentor: Mentor) => {
     setSelectedMentorForBooking(mentor);
-    setIsLoadingSlots(true);
-    // Reset previous booking states
+    setSelectedOfferingForBooking(null);
     setSelectedSlotForBooking(null);
+    setSelectedDate(null);
+    setBookingTopic("");
+    setSlotCalendarData({});
+    setIsLoadingOfferings(true);
+    try {
+      const response = await getMentorOfferings(mentor.email);
+      const data = response?.message?.data || response?.message || response?.data || [];
+      setMentorOfferings(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Error loading mentor offerings:", err);
+      setMentorOfferings([]);
+    } finally {
+      setIsLoadingOfferings(false);
+    }
+  };
+
+  const handleSelectOffering = async (offering: any) => {
+    setSelectedOfferingForBooking(offering);
+    if (!selectedMentorForBooking) return;
+    setIsLoadingSlots(true);
+    setSelectedSlotForBooking(null);
+    setSelectedDate(null);
     setBookingTopic("");
     try {
-      const response = await getMentorSlotCalendar(mentor.email);
+      const response = await getMentorSlotCalendar(selectedMentorForBooking.email);
       if (response && response.message) {
         setSlotCalendarData(response.message);
         const dates = Object.keys(response.message);
         if (dates.length > 0) {
-          // Sort dates to show earliest first
           dates.sort();
           setSelectedDate(dates[0]);
         } else {
@@ -180,43 +204,11 @@ export default function MentorsTabContent() {
   };
 
   const handleConfirmBooking = async () => {
-    if (!selectedMentorForBooking) return;
+    if (!selectedMentorForBooking || !selectedOfferingForBooking) return;
     
     setIsBooking(true);
     try {
       const studentEmail = localStorage.getItem("currentUser") || "";
-
-      if (selectedMentorForBooking.offering_type === "Group Session") {
-        const payload = {
-          offering: selectedMentorForBooking.id,
-          batch_name: selectedMentorForBooking.batch_name || "offering-gs-1",
-          student: studentEmail
-        };
-        
-        const response = await createGroupSessionBooking(payload);
-        
-        if (response && response.exc_type) {
-          let errMsg = "Failed to book group session. Please try again.";
-          if (response._server_messages) {
-            try {
-              const messages = JSON.parse(response._server_messages);
-              const msgObj = JSON.parse(messages[0]);
-              errMsg = msgObj.message || errMsg;
-            } catch (e) {
-              console.error("Error parsing server messages:", e);
-            }
-          }
-          alert(errMsg);
-          return;
-        }
-
-        // Close modal and reset
-        setSelectedMentorForBooking(null);
-        alert(`Group Session booked successfully! ID: ${response?.message?.session_name || ""}`);
-        fetchMentors();
-        fetchBookedSessions();
-        return;
-      }
 
       // 1:1 Mentorship Logic
       if (!selectedDate || !selectedSlotForBooking) return;
@@ -224,11 +216,11 @@ export default function MentorsTabContent() {
       const payload = {
         mentor: selectedMentorForBooking.email,
         student: studentEmail,
-        offering: selectedMentorForBooking.id,
+        offering: selectedOfferingForBooking.name,
         session_date: selectedDate,
         from_time: selectedSlotForBooking.from_time,
         to_time: selectedSlotForBooking.to_time,
-        topic: bookingTopic || "General Mentorship"
+        topic: bookingTopic || selectedOfferingForBooking.title || "General Mentorship"
       };
       
       const response = await bookMentorSlot(payload);
@@ -250,6 +242,8 @@ export default function MentorsTabContent() {
       
       // Close modal and reset
       setSelectedMentorForBooking(null);
+      setSelectedOfferingForBooking(null);
+      setMentorOfferings([]);
       setSelectedDate(null);
       setSelectedSlotForBooking(null);
       setBookingTopic("");
@@ -683,6 +677,8 @@ export default function MentorsTabContent() {
                 size="icon"
                 onClick={() => {
                   setSelectedMentorForBooking(null);
+                  setSelectedOfferingForBooking(null);
+                  setMentorOfferings([]);
                   setSelectedDate(null);
                   setSelectedSlotForBooking(null);
                   setBookingTopic("");
@@ -696,130 +692,185 @@ export default function MentorsTabContent() {
 
             {/* Modal Body */}
             <div className="p-6 overflow-y-auto flex-1 bg-slate-50">
-              {selectedMentorForBooking.offering_type === "Group Session" ? (
-                <div className="space-y-6">
-                  <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm text-center">
-                    <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Users className="w-8 h-8 text-orange-600" />
-                    </div>
-                    <h3 className="text-lg font-bold text-slate-800 mb-2">Group Session Enrollment</h3>
-                    <p className="text-sm text-slate-500 max-w-sm mx-auto">
-                      You are about to join a group mentorship session. Group sessions follow a preset schedule managed by the mentor.
-                    </p>
-                    <div className="mt-6 p-4 bg-slate-50 rounded-xl border border-slate-100 text-left">
-                       <div className="flex justify-between items-center mb-2">
-                         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Offering ID</span>
-                         <span className="text-sm font-bold text-slate-700">{selectedMentorForBooking.id}</span>
-                       </div>
-                       <div className="flex justify-between items-center">
-                         <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Batch</span>
-                         <span className="text-sm font-bold text-slate-700">{selectedMentorForBooking.batch_name || "N/A"}</span>
-                       </div>
-                    </div>
+              {!selectedOfferingForBooking ? (
+                // Step 1: Offerings Selection Screen
+                isLoadingOfferings ? (
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                    <Loader2 className="animate-spin w-8 h-8 mb-4 text-orange-500" />
+                    <span>Loading mentor offerings...</span>
                   </div>
-                  
-                  <Button 
-                    className="w-full bg-orange-500 hover:bg-orange-600 text-white h-12 text-base font-bold shadow-xl shadow-orange-500/20"
-                    onClick={handleConfirmBooking}
-                    disabled={isBooking}
-                  >
-                    {isBooking ? "Enrolling..." : "Confirm Enrollment"}
-                  </Button>
-                </div>
-              ) : isLoadingSlots ? (
-                <div className="flex flex-col items-center justify-center py-20 text-slate-500">
-                  <BookOpen className="animate-spin w-8 h-8 mb-4 text-orange-500" />
-                  <span>Loading available slots...</span>
-                </div>
-              ) : Object.keys(slotCalendarData).length === 0 ? (
-                <div className="text-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
-                  No slots available for this mentor.
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Date Selector */}
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-orange-500" />
-                      Select Date
-                    </h3>
-                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 snap-x">
-                      {Object.keys(slotCalendarData).map((date) => (
-                        <button
-                          key={date}
-                          onClick={() => {
-                            setSelectedDate(date);
-                            setSelectedSlotForBooking(null);
-                          }}
-                          className={`snap-start shrink-0 px-4 py-3 rounded-xl border transition-all ${
-                            selectedDate === date
-                              ? "bg-orange-50 border-orange-200 text-orange-700 shadow-sm"
-                              : "bg-white border-slate-200 text-slate-600 hover:border-orange-200 hover:bg-orange-50/50"
-                          }`}
+                ) : mentorOfferings.length === 0 ? (
+                  <div className="text-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
+                    No offerings available for this mentor.
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-semibold text-slate-800 mb-2">Select an Offering</h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      {mentorOfferings.map((offering) => (
+                        <div
+                          key={offering.name}
+                          onClick={() => handleSelectOffering(offering)}
+                          className="p-5 bg-white rounded-2xl border border-slate-200 hover:border-orange-500 hover:shadow-md cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                         >
-                          <div className="text-xs font-medium uppercase opacity-70 mb-1">
-                            {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}
+                          <div className="flex-1 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="font-bold text-slate-800 text-sm">{offering.title}</h4>
+                              <Badge className="bg-orange-50 text-orange-600 border-orange-200 text-[10px] px-2 py-0">
+                                {offering.offering_type}
+                              </Badge>
+                              <Badge className="bg-blue-50 text-blue-600 border-blue-200 text-[10px] px-2 py-0">
+                                {offering.category}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-slate-500 line-clamp-2">{offering.description}</p>
+                            <div className="flex gap-4 text-[11px] font-semibold text-slate-400">
+                              <span>Duration: {offering.duration_minutes} mins</span>
+                              {offering.max_group_size > 1 && <span>Max Size: {offering.max_group_size}</span>}
+                            </div>
                           </div>
-                          <div className="font-semibold whitespace-nowrap">
-                            {new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                          <div className="text-left sm:text-right shrink-0">
+                            <div className="text-lg font-extrabold text-slate-800">
+                              {offering.price_per_session ? `₹${offering.price_per_session}` : "Free"}
+                            </div>
+                            <div className="text-xs text-slate-400">Per Session</div>
                           </div>
-                        </button>
+                        </div>
                       ))}
                     </div>
                   </div>
-
-                  {/* Slots Grid */}
-                  {selectedDate && slotCalendarData[selectedDate] && (
+                )
+              ) : (
+                // Step 2: Slot/Booking Screen
+                <div className="space-y-6">
+                  {/* Selected Offering Summary */}
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-orange-500" />
-                        Available Slots
-                      </h3>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-3">
-                        {slotCalendarData[selectedDate].map((slot: any, idx: number) => {
-                          const isAvailable = slot.status === "available";
-                          return (
-                            <div
-                              key={idx}
+                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-0.5">Selected Offering</span>
+                      <h4 className="font-bold text-slate-800 text-sm">{selectedOfferingForBooking.title}</h4>
+                      <span className="text-xs text-slate-500">{selectedOfferingForBooking.offering_type} • {selectedOfferingForBooking.price_per_session ? `₹${selectedOfferingForBooking.price_per_session}` : "Free"}</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedOfferingForBooking(null);
+                        setSelectedSlotForBooking(null);
+                        setSelectedDate(null);
+                        setBookingTopic("");
+                        setSlotCalendarData({});
+                      }}
+                      className="border-slate-200 text-xs font-semibold hover:bg-slate-50 shrink-0"
+                    >
+                      Change
+                    </Button>
+                  </div>
+
+                  {isLoadingSlots ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                      <Loader2 className="animate-spin w-8 h-8 mb-4 text-orange-500" />
+                      <span>Loading available slots...</span>
+                    </div>
+                  ) : Object.keys(slotCalendarData).length === 0 ? (
+                    <div className="text-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
+                      No slots available for this mentor.
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Date Selector */}
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-orange-500" />
+                          Select Date
+                        </h3>
+                        <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 snap-x">
+                          {Object.keys(slotCalendarData).map((date) => (
+                            <button
+                              key={date}
                               onClick={() => {
-                                if (isAvailable) setSelectedSlotForBooking(slot);
+                                setSelectedDate(date);
+                                setSelectedSlotForBooking(null);
                               }}
-                              className={`p-3 rounded-xl border text-center transition-all ${
-                                !isAvailable
-                                  ? "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed"
-                                  : selectedSlotForBooking === slot
-                                  ? "bg-emerald-50 border-emerald-500 shadow-md ring-2 ring-emerald-500/20 cursor-pointer"
-                                  : "bg-white border-emerald-200 hover:border-emerald-500 hover:shadow-md cursor-pointer group"
+                              className={`snap-start shrink-0 px-4 py-3 rounded-xl border transition-all ${
+                                selectedDate === date
+                                  ? "bg-orange-50 border-orange-200 text-orange-700 shadow-sm"
+                                  : "bg-white border-slate-200 text-slate-600 hover:border-orange-200 hover:bg-orange-50/50"
                               }`}
                             >
-                              <div className={`text-sm font-semibold ${isAvailable ? (selectedSlotForBooking === slot ? "text-emerald-800" : "text-slate-800 group-hover:text-emerald-700") : "text-slate-500"}`}>
-                                {slot.from_time.slice(0, 5)} - {slot.to_time.slice(0, 5)}
+                              <div className="text-xs font-medium uppercase opacity-70 mb-1">
+                                {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}
                               </div>
-                              <div className={`text-[10px] mt-1 font-medium ${isAvailable ? "text-emerald-600" : "text-slate-400"}`}>
-                                {isAvailable ? "Available" : "Booked"}
+                              <div className="font-semibold whitespace-nowrap">
+                                {new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
                               </div>
-                            </div>
-                          );
-                        })}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
 
-                  {/* Topic and Confirm */}
-                  {selectedSlotForBooking && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4"
-                    >
-                      <Button 
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-base font-bold shadow-xl shadow-emerald-500/10"
-                        onClick={handleConfirmBooking}
-                        disabled={isBooking}
-                      >
-                        {isBooking ? "Booking..." : "Confirm Booking"}
-                      </Button>
-                    </motion.div>
+                      {/* Slots Grid */}
+                      {selectedDate && slotCalendarData[selectedDate] && (
+                        <div>
+                          <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-orange-500" />
+                            Available Slots
+                          </h3>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-3">
+                            {slotCalendarData[selectedDate].map((slot: any, idx: number) => {
+                              const isAvailable = slot.status === "available";
+                              return (
+                                <div
+                                  key={idx}
+                                  onClick={() => {
+                                    if (isAvailable) setSelectedSlotForBooking(slot);
+                                  }}
+                                  className={`p-3 rounded-xl border text-center transition-all ${
+                                    !isAvailable
+                                      ? "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed"
+                                      : selectedSlotForBooking === slot
+                                      ? "bg-emerald-50 border-emerald-500 shadow-md ring-2 ring-emerald-500/20 cursor-pointer"
+                                      : "bg-white border-emerald-200 hover:border-emerald-500 hover:shadow-md cursor-pointer group"
+                                  }`}
+                                >
+                                  <div className={`text-sm font-semibold ${isAvailable ? (selectedSlotForBooking === slot ? "text-emerald-800" : "text-slate-800 group-hover:text-emerald-700") : "text-slate-500"}`}>
+                                    {slot.from_time.slice(0, 5)} - {slot.to_time.slice(0, 5)}
+                                  </div>
+                                  <div className={`text-[10px] mt-1 font-medium ${isAvailable ? "text-emerald-600" : "text-slate-400"}`}>
+                                    {isAvailable ? "Available" : "Booked"}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Topic and Confirm */}
+                      {selectedSlotForBooking && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4"
+                        >
+                          <div>
+                            <label className="block text-xs font-semibold text-slate-500 mb-1.5">Session Topic / Description (Optional)</label>
+                            <Input
+                              placeholder="e.g. Mock Interview Prep"
+                              className="bg-white border-slate-200 text-sm"
+                              value={bookingTopic}
+                              onChange={(e) => setBookingTopic(e.target.value)}
+                            />
+                          </div>
+                          <Button 
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-base font-bold shadow-xl shadow-emerald-500/10"
+                            onClick={handleConfirmBooking}
+                            disabled={isBooking}
+                          >
+                            {isBooking ? "Booking..." : "Confirm Booking"}
+                          </Button>
+                        </motion.div>
+                      )}
+                    </div>
                   )}
                 </div>
               )}

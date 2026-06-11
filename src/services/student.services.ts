@@ -534,3 +534,17 @@ export const getUserPackages = async (email: string) => {
     throw error;
   }
 };
+//  * Fetch mentor offerings list.
+//  */
+export const getMentorOfferings = async (mentorEmail: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.mentor_offering.mentor_offering.get_mentor_offerings?mentor=${encodeURIComponent(mentorEmail)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching mentor offerings:", error);
+    throw error;
+  }
+};
+
