@@ -4,6 +4,8 @@ import { useAuth } from "@/context/AuthContext";
 import { User, Menu, Search, LogOut, CreditCard, ChevronRight, Pen, Mail, Building2, Phone, Globe, MapPin, CheckCircle2, FileText, Target, Clock, Linkedin, Instagram, Map } from "lucide-react";
 import { getStudentByEmail, getUserPackages } from "@/services/student.services";
 import { getIndustryByEmail } from "@/services/industry.services";
+import { getMentorByEmail } from "@/services/mentor.services";
+import { getCollegeDetails } from "@/services/college.services";
 import NotificationDropdown from "@/components/notifications/NotificationDropdown";
 
 function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }: any) {
@@ -19,6 +21,12 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
           setData(res?.data || res?.message?.data || res?.message);
         } else if (role === 'industry') {
           const res = await getIndustryByEmail(currentUser);
+          setData(res?.data || res?.message?.data || res?.message);
+        } else if (role === 'mentor') {
+          const res = await getMentorByEmail(currentUser);
+          setData(res?.data || res?.message?.data || res?.message);
+        } else if (role === 'college') {
+          const res = await getCollegeDetails(currentUser);
           setData(res?.data || res?.message?.data || res?.message);
         }
 
@@ -156,6 +164,28 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
               <p className="text-sm font-bold text-slate-700">{data.employee_head_count || "Not set"} Employees</p>
             </div>
           </div>
+
+          {/* ACTIVE PACKAGES */}
+          {packages && packages.length > 0 && (
+            <div className="border-t border-slate-100 pt-3">
+              <h3 className="text-[11px] font-bold text-slate-900 mb-3 tracking-widest uppercase">Active Package</h3>
+              <div className="space-y-2">
+                {packages.map((pkg: any, idx: number) => (
+                  <div key={idx} className="bg-slate-50 border border-slate-100 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <CreditCard className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                      <p className="font-semibold text-xs text-slate-900">{pkg.billing_package}</p>
+                    </div>
+                    {pkg.app_name && (
+                      <p className="text-[10px] text-slate-500 ml-6">
+                        {pkg.app_name} • {pkg.billing_role || "User"}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* CONTACT */}
           <div>
@@ -322,7 +352,79 @@ function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }:
             </>
           )}
 
-          {(!data || role !== 'student') && (
+          {role === 'mentor' && data && (
+            <>
+              {(data.role || data.experience) && (
+                <div className="flex items-start gap-2">
+                  <Building2 className="w-4 h-4 text-slate-400 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-slate-500 mb-0.5">Profession</p>
+                    <p className="font-medium">{data.role || "Mentor"}</p>
+                    {data.experience && <p className="text-slate-600 text-xs mt-0.5">{data.experience} Years of Experience</p>}
+                  </div>
+                </div>
+              )}
+              {data.domains && data.domains.length > 0 && (
+                <div className="flex items-start gap-2">
+                  <Target className="w-4 h-4 text-slate-400 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-slate-500 mb-1">Domains</p>
+                    <div className="flex flex-wrap gap-1">
+                      {data.domains.map((d: any, idx: number) => (
+                        <span key={idx} className="bg-slate-100 border border-slate-200 text-slate-600 text-[10px] px-1.5 py-0.5 rounded font-medium">
+                          {d.domain || d}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {data.mobile_no && (
+                <div className="flex items-start gap-2">
+                  <Phone className="w-4 h-4 text-slate-400 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-slate-500 mb-0.5">Phone</p>
+                    <p className="font-medium">{data.mobile_no}</p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {role === 'college' && data && (
+            <>
+              {(data.college_name || data.university) && (
+                <div className="flex items-start gap-2">
+                  <Building2 className="w-4 h-4 text-slate-400 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-slate-500 mb-0.5">Institution</p>
+                    <p className="font-medium">{data.college_name || "College"}</p>
+                    {data.university && <p className="text-slate-600 text-xs mt-0.5">Affiliated with {data.university}</p>}
+                  </div>
+                </div>
+              )}
+              {data.college_type && (
+                <div className="flex items-start gap-2">
+                  <Target className="w-4 h-4 text-slate-400 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-slate-500 mb-0.5">College Type</p>
+                    <p className="font-medium">{data.college_type}</p>
+                  </div>
+                </div>
+              )}
+              {(data.city || data.state) && (
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-slate-400 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-xs text-slate-500 mb-0.5">Location</p>
+                    <p className="font-medium">{[data.city, data.state].filter(Boolean).join(", ")}</p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {!data && (
             <p className="text-xs text-slate-500 italic">Basic profile details shown.</p>
           )}
 
