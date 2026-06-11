@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Edit3, Star, Clock, Loader2, AlertCircle, Layout, Tag, Users, Calendar, Timer, FileText, Info } from "lucide-react";
-import { getMentorOfferings, createMentorOffering, updateMentorOffering } from "@/services/mentor.services";
+import { getMentorOfferings, createMentorOffering, updateMentorOffering, createLmsBatchForOffering } from "@/services/mentor.services";
 import { useAuth } from "@/context/AuthContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { useToast } from "@/context/ToastContext";
@@ -45,6 +45,50 @@ export default function OfferingsTabContent() {
   const [editingOffering, setEditingOffering] = useState<any>(null);
   const [modalValues, setModalValues] = useState<Record<string, any>>({});
 
+  // Batch creation states
+  const [showBatchPrompt, setShowBatchPrompt] = useState(false);
+  const [createdOfferingName, setCreatedOfferingName] = useState<string>("");
+  const [batchLoading, setBatchLoading] = useState(false);
+
+  const handleCreateBatch = async () => {
+    if (!createdOfferingName) return;
+    setBatchLoading(true);
+    try {
+      const response = await createLmsBatchForOffering(createdOfferingName);
+      if (response && response.exc_type) {
+        let errMsg = "Failed to create LMS batch. Please try again.";
+        if (response._server_messages) {
+          try {
+            const messages = JSON.parse(response._server_messages);
+            const msgObj = JSON.parse(messages[0]);
+            errMsg = msgObj.message || errMsg;
+          } catch (e) {
+            console.error("Error parsing server messages:", e);
+          }
+        }
+        alert(errMsg);
+      } else {
+        const msg = response?.message?.message || (typeof response?.message === "string" ? response.message : null) || "Batch created successfully";
+        alert(msg);
+        setShowBatchPrompt(false);
+        setCreatedOfferingName("");
+        fetchOfferings();
+      }
+    } catch (err: any) {
+      console.error("Error creating LMS batch:", err);
+      const errMsg = err?.message || "Failed to create LMS Batch";
+      alert(errMsg);
+    } finally {
+      setBatchLoading(false);
+    }
+  };
+
+  const handleCloseBatchPrompt = () => {
+    setShowBatchPrompt(false);
+    setCreatedOfferingName("");
+    showToast("Offering created successfully", "success");
+  };
+ 
   const fetchOfferings = async () => {
     if (!userEmail) return;
     setLoading(true);
@@ -174,12 +218,22 @@ export default function OfferingsTabContent() {
 
       if (editingOffering) {
         await updateMentorOffering(editingOffering.name, payload);
+        setIsModalOpen(false);
+        fetchOfferings();
       } else {
-        await createMentorOffering(payload);
-      }
+        const response = await createMentorOffering(payload);
+        const createdName = response?.message?.name || response?.name || response?.message || response?.data?.name;
+        
+        setIsModalOpen(false);
+        fetchOfferings();
 
-      setIsModalOpen(false);
-      fetchOfferings();
+        if (createdName && (formData.offering_type === "Group Session" || formData.offering_type === "Workshop")) {
+          setCreatedOfferingName(createdName);
+          setShowBatchPrompt(true);
+        } else {
+          showToast("Offering created successfully", "success");
+        }
+      }
     } catch (err: any) {
       setModalError(err?.message || "Failed to save offering");
     } finally {
@@ -397,6 +451,45 @@ export default function OfferingsTabContent() {
         error={modalError}
         onValuesChange={(values) => setModalValues(values)}
       />
+
+      {/* Create Batch Prompt Modal */}
+      <AnimatePresence>
+        {showBatchPrompt && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col border border-slate-100 p-8 text-center space-y-6"
+            >
+              <div className="mx-auto w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-100">
+                <Users className="w-8 h-8 text-emerald-600" />
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-slate-800">Create Batch</h3>
+                <p className="text-sm text-slate-500 font-semibold leading-relaxed">
+                  Would you like to automatically create an LMS Batch for your newly created offering <span className="font-bold text-slate-700">{createdOfferingName}</span>?
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3 pt-2">
+                <button
+                  onClick={handleCreateBatch}
+                  disabled={batchLoading}
+                  className="w-full h-12 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white transition-all shadow-xl shadow-emerald-600/10 flex items-center justify-center gap-2"
+                >
+                  {batchLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    "Create Batch Now"
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
