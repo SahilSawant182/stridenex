@@ -17,6 +17,7 @@ import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getBillingPackagesByType, getBillingUrl } from "@/services/common.services";
+import { getUserPackages } from "@/services/student.services";
 import { BASE_DOMAIN } from "@/services/api.services";
 import { usePathname } from "next/navigation";
 
@@ -29,6 +30,12 @@ interface BillingPackage {
   app?: string;
   app_name?: string;
   features: string[];
+}
+
+interface ActivePackage {
+  billing_package: string;
+  app_name?: string;
+  billing_role?: string;
 }
 
 const container = {
@@ -121,6 +128,7 @@ async function redirectToPayment(
 
 export default function PlansTabContent() {
   const [packages, setPackages] = useState<BillingPackage[]>([]);
+  const [activePackages, setActivePackages] = useState<ActivePackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [redirectingPlan, setRedirectingPlan] = useState<string | null>(null);
@@ -137,32 +145,50 @@ export default function PlansTabContent() {
     setRedirectingPlan(plan.package_name);
     try {
       await redirectToPayment(plan, accountType, customerEmail);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Payment redirect failed:", err);
       setRedirectingPlan(null);
-      alert(err?.message || "Failed to initiate payment. Please try again.");
+      const errMsg = err instanceof Error ? err.message : (err as { message?: string })?.message || "Failed to initiate payment. Please try again.";
+      alert(errMsg);
     }
   };
 
   useEffect(() => {
-    async function fetchPackages() {
+    async function fetchPackagesAndActive() {
       setLoading(true);
       setError(null);
       try {
-        const res = await getBillingPackagesByType(accountType);
-        const data = res?.message?.data || res?.data || [];
-        // Temporary debug log — verify actual package fields from API
-        console.log("Fetched Billing Packages:", JSON.stringify(data, null, 2));
-        setPackages(data);
-      } catch (err: any) {
-        console.error("Failed to fetch billing packages:", err);
-        setError(err?.message || "Failed to load plans. Please try again.");
+        const [packagesRes, activeRes] = await Promise.allSettled([
+          getBillingPackagesByType(accountType),
+          customerEmail ? getUserPackages(customerEmail) : Promise.reject("No user email")
+        ]);
+
+        if (packagesRes.status === "fulfilled") {
+          const res = packagesRes.value;
+          const data = res?.message?.data || res?.data || [];
+          setPackages(data);
+        } else {
+          console.error("Failed to fetch packages", packagesRes.reason);
+          throw new Error("Failed to load plans.");
+        }
+
+        if (activeRes.status === "fulfilled") {
+          const res = activeRes.value;
+          const pkgData = res?.message || res?.data || res;
+          if (pkgData && pkgData.active_packages) {
+            setActivePackages(pkgData.active_packages);
+          }
+        }
+      } catch (err: unknown) {
+        console.error("Failed to fetch billing data:", err);
+        const errMsg = err instanceof Error ? err.message : (err as { message?: string })?.message || "Failed to load plans. Please try again.";
+        setError(errMsg);
       } finally {
         setLoading(false);
       }
     }
-    fetchPackages();
-  }, [accountType]);
+    fetchPackagesAndActive();
+  }, [accountType, customerEmail]);
 
   if (loading) {
     return (
@@ -214,14 +240,68 @@ export default function PlansTabContent() {
       animate="show"
       className="space-y-6"
     >
+
+
+      {/* Active Plans Section */}
+      {activePackages && activePackages.length > 0 && (
+        <motion.div variants={item} className="mb-6">
+          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-50/80 via-teal-50/50 to-transparent p-6 shadow-sm">
+            {/* Ambient background glows */}
+            <div className="absolute -right-10 -top-10 w-32 h-32 bg-emerald-400/10 rounded-full blur-2xl" />
+            <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-teal-400/10 rounded-full blur-2xl" />
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 flex-shrink-0">
+                  <Crown className="w-6 h-6" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 border border-emerald-200/60 px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                      Current Active Plan
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {activePackages.map((pkg: ActivePackage, idx: number) => (
+                      <div key={idx} className={idx > 0 ? "pt-2 mt-2 border-t border-slate-100" : ""}>
+                        <h3 className="text-lg font-extrabold text-slate-800 tracking-tight">
+                          {pkg.billing_package}
+                        </h3>
+                        {pkg.app_name && (
+                          <p className="text-xs text-slate-500">
+                            {/* App: <span className="font-semibold text-slate-600">{pkg.app_name}</span> */}
+                            {pkg.billing_role && (
+                              <>
+                                {/* <span className="mx-1.5 text-slate-300">•</span> */}
+                                Role: <span className="font-semibold text-slate-600">{pkg.billing_role}</span>
+                              </>
+                            )}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 sm:self-center self-start">
+                <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-0 py-1.5 px-3 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow-sm shadow-emerald-100">
+                  <CheckCircle className="w-4 h-4" /> Subscription Active
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
       {/* Header */}
       <motion.div variants={item}>
         <h2 className="text-lg font-bold text-slate-800 tracking-tight">
           Choose Your Plan
         </h2>
         <p className="text-sm text-slate-500 mt-1">
-          Select a plan that fits your learning journey. All plans include
-          access to the {accountType} dashboard.
+          Select a plan that best suits you. All plans include access to the {accountType} dashboard.
         </p>
       </motion.div>
 
@@ -230,7 +310,7 @@ export default function PlansTabContent() {
         variants={item}
         className={`grid grid-cols-1 ${packages.length === 1
           ? "md:grid-cols-1 max-w-md"
-          : packages.length === 2
+          : packages.length === 2  
             ? "md:grid-cols-2"
             : "md:grid-cols-3"
           } gap-5`}
