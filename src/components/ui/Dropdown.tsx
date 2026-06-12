@@ -2,22 +2,24 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Label } from "@/components/ui/label";
-import { ChevronDown, X, Check } from "lucide-react";
+import { ChevronDown, X, Check, Search } from "lucide-react";
 import axios from "axios";
 
 interface DropdownProps {
   id: string;
-  label: string;
+  label?: string;
   value: string | string[];
   onChange: (value: any) => void;
-  endpoint: string;
+  endpoint?: string;
   params?: Record<string, any>;
-  mapOptions: (data: any) => Array<{ value: string; label: string }>;
+  mapOptions?: (data: any) => Array<{ value: string; label: string }>;
+  options?: Array<{ value: string; label: string }> | string[];
   required?: boolean;
   error?: string;
   disabled?: boolean;
   placeholder?: string;
   multiSelect?: boolean;
+  searchable?: boolean;
 }
 
 export default function Dropdown({
@@ -28,17 +30,20 @@ export default function Dropdown({
   endpoint,
   params = {},
   mapOptions,
+  options: optionsProp,
   required = false,
   error,
   disabled = false,
   placeholder = "Select option",
-  multiSelect = false
+  multiSelect = false,
+  searchable = true
 }: DropdownProps) {
   const [options, setOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState("");
   const [fetched, setFetched] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -46,13 +51,28 @@ export default function Dropdown({
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setSearchTerm("");
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Sync static options
+  useEffect(() => {
+    if (optionsProp) {
+      const mapped = Array.isArray(optionsProp)
+        ? optionsProp.map((opt) =>
+            typeof opt === "string" ? { value: opt, label: opt } : opt
+          )
+        : [];
+      setOptions(mapped);
+      setFetched(true);
+    }
+  }, [optionsProp]);
+
   const fetchOptions = async () => {
+    if (!endpoint) return;
     setLoading(true);
     setFetchError("");
     try {
@@ -66,7 +86,10 @@ export default function Dropdown({
       }
       
       if (Array.isArray(data)) {
-        const mappedOptions = mapOptions(data);
+        const mappedOptions = mapOptions ? mapOptions(data) : data.map((item: any) => ({
+          value: item.name || item.value || String(item),
+          label: item.label || item.name || item.value || String(item)
+        }));
         setOptions(mappedOptions);
         setFetched(true);
       } else {
@@ -74,8 +97,8 @@ export default function Dropdown({
         setFetchError("No data available");
       }
     } catch (err: any) {
-      console.error(`Error fetching ${label}:`, err);
-      setFetchError(err?.response?.data?.message || `Failed to load ${label}`);
+      console.error(`Error fetching ${label || id}:`, err);
+      setFetchError(err?.response?.data?.message || `Failed to load ${label || id}`);
       setOptions([]);
     } finally {
       setLoading(false);
@@ -84,10 +107,13 @@ export default function Dropdown({
 
   const handleClick = () => {
     if (disabled) return;
-    if (!fetched && !loading && !fetchError) {
+    if (!fetched && !loading && !fetchError && endpoint) {
       fetchOptions();
     }
     setIsOpen(!isOpen);
+    if (!isOpen) {
+      setSearchTerm("");
+    }
   };
 
   const handleRetry = () => {
@@ -99,6 +125,7 @@ export default function Dropdown({
   const handleSingleSelect = (selectedValue: string) => {
     onChange(selectedValue);
     setIsOpen(false);
+    setSearchTerm("");
   };
 
   // For multi select
@@ -127,14 +154,17 @@ export default function Dropdown({
   // Get display labels for multi select
   const getSelectedLabels = () => {
     if (!Array.isArray(value) || value.length === 0) return null;
-    return options.filter(opt => value.includes(opt.value));
+    return value.map(val => {
+      const found = options.find(opt => opt.value === val);
+      return found || { value: val, label: val };
+    });
   };
 
   // Get selected option label for single select
   const getSelectedLabel = () => {
-    if (!value) return placeholder;
+    if (!value || Array.isArray(value)) return placeholder;
     const selected = options.find(opt => opt.value === value);
-    return selected ? selected.label : placeholder;
+    return selected ? selected.label : value;
   };
 
   // Check if an option is selected
@@ -145,13 +175,20 @@ export default function Dropdown({
     return value === optionValue;
   };
 
+  // Filter options based on search query
+  const filteredOptions = options.filter(opt =>
+    (opt.label || "").toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <div className="relative space-y-1" ref={containerRef}>
-      <Label htmlFor={id} className="text-sm font-medium text-slate-700">
-        {label} {required && <span className="text-red-500">*</span>}
-      </Label>
+    <div className="relative space-y-1 w-full" ref={containerRef}>
+      {label && (
+        <Label htmlFor={id} className="text-sm font-medium text-slate-700">
+          {label} {required && <span className="text-red-500">*</span>}
+        </Label>
+      )}
       
-      {/* Dropdown trigger button - consistent styling for all types */}
+      {/* Dropdown trigger button */}
       <div
         onClick={handleClick}
         className={`w-full min-h-10 px-3 py-2 rounded-md border ${
@@ -161,7 +198,7 @@ export default function Dropdown({
         }`}
       >
         {multiSelect && Array.isArray(value) && value.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-1 flex-1">
+          <div className="flex flex-wrap items-center gap-1 flex-1 pr-6">
             {getSelectedLabels()?.map((selected) => (
               <span
                 key={selected.value}
@@ -179,21 +216,35 @@ export default function Dropdown({
             ))}
           </div>
         ) : (
-          <span className={`flex-1 truncate ${!value && !multiSelect ? "text-slate-400" : ""}`}>
-            {loading ? "Loading..." : fetchError ? "Failed to load" : multiSelect ? placeholder : getSelectedLabel()}
+          <span className={`flex-1 truncate pr-6 ${!value || (Array.isArray(value) && value.length === 0) ? "text-slate-400" : ""}`}>
+            {loading ? "Loading..." : fetchError ? "Failed to load" : getSelectedLabel()}
           </span>
         )}
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown className={`w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </div>
 
-      {/* Dropdown menu - positioned absolutely below the trigger */}
+      {/* Dropdown menu */}
       {isOpen && !loading && !fetchError && (
-        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-md shadow-lg">
-          {options.length === 0 ? (
-            <div className="p-3 text-sm text-slate-400 text-center">No options available</div>
-          ) : (
-            <div className="py-1">
-              {options.map((option) => (
+        <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg overflow-hidden flex flex-col max-h-60">
+          {searchable && (
+            <div className="p-2 border-b border-slate-200 bg-white sticky top-0 z-10" onClick={(e) => e.stopPropagation()}>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search..."
+                  className="w-full pl-9 pr-3 py-1.5 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                />
+              </div>
+            </div>
+          )}
+          <div className="overflow-y-auto flex-1 max-h-48 py-1">
+            {filteredOptions.length === 0 ? (
+              <div className="p-3 text-sm text-slate-400 text-center">No options available</div>
+            ) : (
+              filteredOptions.map((option) => (
                 <div
                   key={option.value}
                   onClick={(e) => multiSelect ? handleMultiSelect(option.value, e) : handleSingleSelect(option.value)}
@@ -226,15 +277,15 @@ export default function Dropdown({
                   )}
                   <span className="flex-1">{option.label}</span>
                 </div>
-              ))}
-            </div>
-          )}
+              ))
+            )}
+          </div>
         </div>
       )}
 
       {/* Loading and error states */}
       {loading && (
-        <p className="text-xs text-slate-400 mt-1">Fetching {label.toLowerCase()}...</p>
+        <p className="text-xs text-slate-400 mt-1">Fetching options...</p>
       )}
 
       {fetchError && !loading && (

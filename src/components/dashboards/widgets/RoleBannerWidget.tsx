@@ -30,7 +30,7 @@ import { useEffect, useState, useMemo } from "react";
 import { getStudentByEmail, updateStudent } from "@/services/student.services";
 import { updateIndustry } from "@/services/industry.services";
 import { getMentorByEmail, getMentorDashboardStats } from "@/services/mentor.services";
-import { getCollegeDetails, updateCollegeDetails } from "@/services/college.services";
+import { getCollegeDetails, updateCollegeDetails, getPlacementStats, getDashboardSummary } from "@/services/college.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { useToast } from "@/context/ToastContext";
 import { OperatingHoursTable, OperatingHour } from "@/components/dashboards/shared/OperatingHoursTable";
@@ -159,6 +159,8 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     }
     return null;
   });
+  const [placementStats, setPlacementStats] = useState<any>(null);
+  const [dashboardSummary, setDashboardSummary] = useState<any>(null);
   const [collegeFormState, setCollegeFormState] = useState<any>({});
 
   const fetchStudentData = async () => {
@@ -208,6 +210,26 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
         if (typeof window !== 'undefined') {
           localStorage.setItem("collegeDetails", JSON.stringify(data));
           window.dispatchEvent(new Event("college-details-fetched"));
+        }
+
+        const collegeName = data.college_name || data.name || data.email || email;
+        const collegeEmail = data.email || email;
+        const [statsRes, summaryRes] = await Promise.allSettled([
+          getPlacementStats(collegeName),
+          getDashboardSummary(collegeEmail)
+        ]);
+
+        if (statsRes.status === "fulfilled") {
+          const raw = statsRes.value?.message ?? statsRes.value;
+          if (raw && raw.data) {
+            setPlacementStats(raw.data);
+          }
+        }
+        if (summaryRes.status === "fulfilled") {
+          const raw = summaryRes.value?.message ?? summaryRes.value;
+          if (raw && raw.data) {
+            setDashboardSummary(raw.data);
+          }
         }
       }
     } catch (error) {
@@ -617,7 +639,14 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     ) : config.defaultSubtitle);
 
   // Get progress value
-  const progressValue = customData?.profileProgress ?? config.defaultProgress;
+  const progressValue = useMemo(() => {
+    if (role === "college") {
+      if (placementStats?.placement_rate !== undefined) {
+        return Math.round(Number(placementStats.placement_rate));
+      }
+    }
+    return customData?.profileProgress ?? config.defaultProgress;
+  }, [role, placementStats, customData?.profileProgress, config.defaultProgress]);
 
   // Get initials
   const getInitials = () => {
@@ -714,13 +743,17 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       },
       { 
         key: "placements", 
-        value: "94%", 
+        value: placementStats?.placement_rate !== undefined 
+          ? `${Math.round(Number(placementStats.placement_rate))}%` 
+          : "94%", 
         label: "Placement Rate", 
         icon: Briefcase 
       },
       { 
         key: "partners", 
-        value: "78%", 
+        value: dashboardSummary?.avg_employability !== undefined 
+          ? `${Math.round(Number(dashboardSummary.avg_employability))}%` 
+          : "78%", 
         label: "Avg Employability", 
         icon: TrendingUp 
       }

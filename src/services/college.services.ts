@@ -274,6 +274,7 @@ export const getStudentAnalyticsList = async (params: {
   search?: string;
   college?: string;
   department?: string;
+  skill?: string;
   page?: number;
   page_size?: number;
 }) => {
@@ -282,6 +283,7 @@ export const getStudentAnalyticsList = async (params: {
     if (params.search !== undefined) queryParts.push(`search=${encodeURIComponent(params.search)}`);
     if (params.college !== undefined) queryParts.push(`college=${encodeURIComponent(params.college)}`);
     if (params.department !== undefined) queryParts.push(`department=${encodeURIComponent(params.department)}`);
+    if (params.skill !== undefined) queryParts.push(`skill=${encodeURIComponent(params.skill)}`);
     if (params.page !== undefined) queryParts.push(`page=${encodeURIComponent(params.page)}`);
     if (params.page_size !== undefined) queryParts.push(`page_size=${encodeURIComponent(params.page_size)}`);
 
@@ -461,6 +463,57 @@ export const assignStudentMentor = async (payload: { student: string; mentor: st
     throw error;
   }
 };
+
+export const getDashboardSummary = async (college: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.college.college.get_dashboard_summary?college=${encodeURIComponent(college)}`
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error fetching dashboard summary for college ${college}:`, error);
+    throw error;
+  }
+};
+
+export const getEmployabilityDistribution = async (college: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.college.college.get_employability_distribution?college=${encodeURIComponent(college)}`
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error fetching employability distribution for college ${college}:`, error);
+    throw error;
+  }
+};
+
+export const getOnboardingGrowth = async (college: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.college.college.get_onboarding_growth?college=${encodeURIComponent(college)}`
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error fetching onboarding growth for college ${college}:`, error);
+    throw error;
+  }
+};
+
+export const getTopSkillGaps = async (college: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.college.college.get_top_skill_gaps?college=${encodeURIComponent(college)}`
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error fetching top skill gaps for college ${college}:`, error);
+    throw error;
+  }
+};
+
+
+
 
 
 

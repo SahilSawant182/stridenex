@@ -78,7 +78,7 @@ export const collegeConfig: RoleConfig = {
   searchPlaceholder: "Search students, placements, companies...",
   links: [
     { name: "Overview", href: "/college/dashboard", icon: LayoutDashboard },
-    { name: "Students", href: "/college/dashboard/students", icon: GraduationCap },
+    { name: "Student Analytics", href: "/college/dashboard/students", icon: GraduationCap },
     { name: "Campus Drives", href: "/college/dashboard/campus-drives", icon: Briefcase },
     { name: "NEP & UGC 2026", href: "/college/dashboard/nepUgc", icon: Users },
     { name: "Interventions", href: "/college/dashboard/interventions", icon: Building2 },

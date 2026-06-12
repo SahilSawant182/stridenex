@@ -55,6 +55,7 @@ import {
 } from "@/services/college.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { FaRupeeSign } from 'react-icons/fa';
+import Dropdown from "@/components/ui/Dropdown";
 
 
 // Rich student dataset for the tracker and eligibility checks
@@ -192,6 +193,17 @@ export default function CampusDrivesTabContent() {
   const [editingDrive, setEditingDrive] = useState<any | null>(null);
   const [activeSubTab, setActiveSubTab] = useState<"drives" | "tracker" | "eligibility" | "stats">("drives");
 
+  // Sync subtab from URL parameter (e.g. ?subtab=stats)
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const searchParams = new URLSearchParams(window.location.search);
+      const subtab = searchParams.get("subtab");
+      if (subtab === "stats" || subtab === "tracker" || subtab === "eligibility" || subtab === "drives") {
+        setActiveSubTab(subtab);
+      }
+    }
+  }, []);
+
   // Eligibility view active drive selection state
   const [eligibilityDriveId, setEligibilityDriveId] = useState("");
 
@@ -224,7 +236,7 @@ export default function CampusDrivesTabContent() {
   const [tabEligibleStudents, setTabEligibleStudents] = useState<any | null>(null);
   const [tabNonEligibleStudents, setTabNonEligibleStudents] = useState<any | null>(null);
   const [tabEligibleLoading, setTabEligibleLoading] = useState(false);
-  const [eligibilityBranch, setEligibilityBranch] = useState("");
+  const [eligibilityBranches, setEligibilityBranches] = useState<string[]>([]);
   const [eligibilityCgpa, setEligibilityCgpa] = useState("");
   const [eligibilityBacklog, setEligibilityBacklog] = useState("");
   const [availableBranches, setAvailableBranches] = useState<string[]>(["CS", "CSE", "ECE", "IT", "ME", "MBA", "Civil", "EE"]);
@@ -697,19 +709,21 @@ export default function CampusDrivesTabContent() {
   // Sync criteria when selected eligibility drive changes
   useEffect(() => {
     if (activeEligibilityDrive) {
-      const branchVal = activeEligibilityDrive.criteria?.branches?.[0] || "";
+      const branchesList = activeEligibilityDrive.criteria?.branches || [];
       const cgpaVal = activeEligibilityDrive.criteria?.minCgpa !== undefined ? String(activeEligibilityDrive.criteria.minCgpa) : "";
       const backlogVal = activeEligibilityDrive.criteria?.backlogs !== undefined ? String(activeEligibilityDrive.criteria.backlogs) : "";
 
-      setEligibilityBranch(branchVal);
+      setEligibilityBranches(branchesList);
       setEligibilityCgpa(cgpaVal);
       setEligibilityBacklog(backlogVal);
     } else {
-      setEligibilityBranch("");
+      setEligibilityBranches([]);
       setEligibilityCgpa("");
       setEligibilityBacklog("");
     }
   }, [activeEligibilityDrive]);
+
+  const eligibilityBranchesStr = eligibilityBranches.join(",");
 
   // Fetch eligibility data for eligibility tab using custom branch, cgpa, backlog, and drive filters
   useEffect(() => {
@@ -719,12 +733,12 @@ export default function CampusDrivesTabContent() {
       try {
         const [eligibleRes, nonEligibleRes] = await Promise.allSettled([
           getEligibleStudents({
-            branch: eligibilityBranch,
+            branch: eligibilityBranchesStr,
             cgpa: eligibilityCgpa,
             backlog: eligibilityBacklog
           }),
           getNonEligibleStudents({
-            branch: eligibilityBranch,
+            branch: eligibilityBranchesStr,
             cgpa: eligibilityCgpa,
             backlog: eligibilityBacklog,
             college: collegeName
@@ -758,7 +772,7 @@ export default function CampusDrivesTabContent() {
     if (activeSubTab === "eligibility") {
       fetchTabEligibility();
     }
-  }, [eligibilityBranch, eligibilityCgpa, eligibilityBacklog, activeSubTab, collegeDetails, currentUser]);
+  }, [eligibilityBranchesStr, eligibilityCgpa, eligibilityBacklog, activeSubTab, collegeDetails, currentUser]);
 
   // Filter drives list based on search query
   const filteredDrives = useMemo(() => {
@@ -1305,7 +1319,7 @@ export default function CampusDrivesTabContent() {
     showToast("Preparing eligible students CSV export...", "info");
     try {
       const res = await exportEligibleStudents({
-        branch: eligibilityBranch,
+        branch: eligibilityBranches.join(","),
         cgpa: eligibilityCgpa,
         backlog: eligibilityBacklog,
         college: collegeName
@@ -1315,7 +1329,7 @@ export default function CampusDrivesTabContent() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `eligible_students_${eligibilityBranch || 'all'}_cgpa${eligibilityCgpa || 'any'}.csv`);
+      link.setAttribute("download", `eligible_students_${eligibilityBranches.join("_") || 'all'}_cgpa${eligibilityCgpa || 'any'}.csv`);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
@@ -1340,7 +1354,7 @@ export default function CampusDrivesTabContent() {
     showToast("Preparing non-eligible students CSV export...", "info");
     try {
       const res = await exportNotEligibleStudents({
-        branch: eligibilityBranch,
+        branch: eligibilityBranches.join(","),
         cgpa: eligibilityCgpa,
         backlog: eligibilityBacklog,
         college: collegeName
@@ -1350,7 +1364,7 @@ export default function CampusDrivesTabContent() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `non_eligible_students_${eligibilityBranch || 'all'}_cgpa${eligibilityCgpa || 'any'}.csv`);
+      link.setAttribute("download", `non_eligible_students_${eligibilityBranches.join("_") || 'all'}_cgpa${eligibilityCgpa || 'any'}.csv`);
       document.body.appendChild(link);
       link.click();
       link.parentNode?.removeChild(link);
@@ -2112,6 +2126,19 @@ export default function CampusDrivesTabContent() {
                     </div>
 
                     <div className="flex items-center gap-2.5 self-end md:self-auto">
+                      {(eligibilityBranches.length > 0 || eligibilityCgpa !== "" || eligibilityBacklog !== "" || eligibilityDriveId !== "") && (
+                        <button
+                          onClick={() => {
+                            setEligibilityBranches([]);
+                            setEligibilityCgpa("");
+                            setEligibilityBacklog("");
+                            setEligibilityDriveId("");
+                          }}
+                          className="bg-white hover:bg-slate-50 text-slate-500 font-bold px-4 py-2.5 border border-slate-200 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-colors"
+                        >
+                          Clear Filters
+                        </button>
+                      )}
                       <button
                         onClick={() => triggerNotification('eligible')}
                         className="bg-orange-500 hover:bg-orange-600 text-white font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-colors"
@@ -2123,21 +2150,17 @@ export default function CampusDrivesTabContent() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="relative">
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Branch</label>
-                      <div className="relative">
-                        <select
-                          value={eligibilityBranch}
-                          onChange={(e) => setEligibilityBranch(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold outline-none focus:border-blue-500 focus:bg-white appearance-none cursor-pointer pr-8"
-                        >
-                          <option value="">All Branches</option>
-                          {availableBranches.map((br) => (
-                            <option key={br} value={br}>{br}</option>
-                          ))}
-                        </select>
-                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
+                    <div className="relative flex flex-col justify-end">
+                      <Dropdown
+                        id="eligibility-branches-filter"
+                        label="Branch"
+                        placeholder="All Branches"
+                        options={availableBranches}
+                        value={eligibilityBranches}
+                        onChange={setEligibilityBranches}
+                        multiSelect={true}
+                        searchable={true}
+                      />
                     </div>
                     <div className="relative">
                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Min CGPA</label>

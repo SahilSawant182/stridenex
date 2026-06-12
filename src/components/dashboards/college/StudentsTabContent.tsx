@@ -7,6 +7,7 @@ import { Download, Search, Settings2, MoreHorizontal, Loader2, Users } from "luc
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { getCollegeDetails, getMasterData, getStudentAnalyticsList } from "@/services/college.services";
+import Dropdown from "@/components/ui/Dropdown";
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -35,10 +36,12 @@ export default function StudentsTabContent() {
   const [studentsList, setStudentsList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedBranch, setSelectedBranch] = useState("");
+  const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [selectedYear, setSelectedYear] = useState("All");
   const [selectedRisk, setSelectedRisk] = useState("All");
   const [availableBranches, setAvailableBranches] = useState<string[]>(["CS", "CSE", "ECE", "IT", "ME", "MBA", "Civil", "EE"]);
+  const [availableSkills, setAvailableSkills] = useState<string[]>([]);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -65,6 +68,28 @@ export default function StudentsTabContent() {
       }
     };
     fetchBranches();
+  }, []);
+
+  // Fetch available skills from master API
+  useEffect(() => {
+    const fetchSkills = async () => {
+      try {
+        const res = await getMasterData("Skill");
+        const raw = res?.data ?? res?.message?.data ?? res?.message ?? res;
+        const arr = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+        if (arr.length > 0) {
+          const names = arr.map((item: any) => item.skill_name || item.skill || item.name || String(item)).filter(Boolean);
+          const uniqueSkills = Array.from(new Set([...names, "Python", "React", "NodeJS", "TypeScript", "SQL", "Pandas"]));
+          setAvailableSkills(uniqueSkills);
+        } else {
+          setAvailableSkills(["Python", "React", "NodeJS", "TypeScript", "SQL", "Pandas"]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch skills from master:", err);
+        setAvailableSkills(["Python", "React", "NodeJS", "TypeScript", "SQL", "Pandas"]);
+      }
+    };
+    fetchSkills();
   }, []);
 
   // Load college details
@@ -100,6 +125,9 @@ export default function StudentsTabContent() {
     }
   }, [currentUser]);
 
+  const branchesStr = selectedBranches.join(",");
+  const skillsStr = selectedSkills.join(",");
+
   // Fetch students analytics list
   const fetchStudents = async () => {
     try {
@@ -108,7 +136,8 @@ export default function StudentsTabContent() {
       const res = await getStudentAnalyticsList({
         search: searchQuery,
         college: collegeName || "",
-        department: selectedBranch,
+        department: branchesStr,
+        skill: skillsStr,
         page: currentPage,
         page_size: pageSize
       });
@@ -146,13 +175,13 @@ export default function StudentsTabContent() {
   // Reset page to 1 on filters or search queries change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, selectedBranch, selectedYear, selectedRisk]);
+  }, [searchQuery, branchesStr, skillsStr, selectedYear, selectedRisk]);
 
   useEffect(() => {
     if (collegeDetails) {
       fetchStudents();
     }
-  }, [collegeDetails, searchQuery, selectedBranch, currentPage, pageSize]);
+  }, [collegeDetails, searchQuery, branchesStr, skillsStr, currentPage, pageSize]);
 
   // CSV download notification
   const handleExportCSV = () => {
@@ -227,17 +256,25 @@ export default function StudentsTabContent() {
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-          <select 
-            value={selectedBranch}
-            onChange={(e) => setSelectedBranch(e.target.value)}
-            className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 font-medium focus:outline-none"
-          >
-            <option value="">All Branches</option>
-            {availableBranches.map((br) => (
-              <option key={br} value={br}>{br}</option>
-            ))}
-          </select>
+        <div className="flex items-center gap-2 w-full sm:w-auto overflow-visible pb-1 sm:pb-0">
+          <Dropdown
+            id="branches-filter"
+            placeholder="All Branches"
+            options={availableBranches}
+            value={selectedBranches}
+            onChange={setSelectedBranches}
+            multiSelect={true}
+            searchable={true}
+          />
+          <Dropdown
+            id="skills-filter"
+            placeholder="All Skills"
+            options={availableSkills}
+            value={selectedSkills}
+            onChange={setSelectedSkills}
+            multiSelect={true}
+            searchable={true}
+          />
           <select 
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
@@ -259,6 +296,20 @@ export default function StudentsTabContent() {
             <option value="medium">Medium Risk</option>
             <option value="high">High Risk</option>
           </select>
+          {(searchQuery || selectedBranches.length > 0 || selectedSkills.length > 0 || selectedYear !== "All" || selectedRisk !== "All") && (
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedBranches([]);
+                setSelectedSkills([]);
+                setSelectedYear("All");
+                setSelectedRisk("All");
+              }}
+              className="px-3 py-2 text-slate-500 hover:text-slate-700 hover:bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold transition-colors shrink-0 flex items-center gap-1 bg-white"
+            >
+              Clear
+            </button>
+          )}
           <button onClick={handleExportCSV} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg flex items-center gap-2 transition-colors shrink-0">
             Export CSV
           </button>
