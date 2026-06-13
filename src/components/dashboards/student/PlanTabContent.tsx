@@ -17,7 +17,7 @@ import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getBillingPackagesByType, getBillingUrl } from "@/services/common.services";
-import { getUserPackages } from "@/services/student.services";
+import { getUserPackages, getPackageRemainingDays } from "@/services/student.services";
 import { BASE_DOMAIN } from "@/services/api.services";
 import { usePathname } from "next/navigation";
 
@@ -36,6 +36,16 @@ interface ActivePackage {
   billing_package: string;
   app_name?: string;
   billing_role?: string;
+}
+
+interface PackageRemainingDays {
+  success: boolean;
+  status?: string;
+  billing_package?: string;
+  from_date?: string;
+  to_date?: string;
+  remaining_days?: number;
+  message?: string;
 }
 
 const container = {
@@ -129,6 +139,7 @@ async function redirectToPayment(
 export default function PlansTabContent() {
   const [packages, setPackages] = useState<BillingPackage[]>([]);
   const [activePackages, setActivePackages] = useState<ActivePackage[]>([]);
+  const [remainingDays, setRemainingDays] = useState<PackageRemainingDays | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [redirectingPlan, setRedirectingPlan] = useState<string | null>(null);
@@ -158,9 +169,10 @@ export default function PlansTabContent() {
       setLoading(true);
       setError(null);
       try {
-        const [packagesRes, activeRes] = await Promise.allSettled([
+        const [packagesRes, activeRes, remainingDaysRes] = await Promise.allSettled([
           getBillingPackagesByType(accountType),
-          customerEmail ? getUserPackages(customerEmail) : Promise.reject("No user email")
+          customerEmail ? getUserPackages(customerEmail) : Promise.reject("No user email"),
+          customerEmail ? getPackageRemainingDays(customerEmail) : Promise.reject("No user email")
         ]);
 
         if (packagesRes.status === "fulfilled") {
@@ -178,6 +190,12 @@ export default function PlansTabContent() {
           if (pkgData && pkgData.active_packages) {
             setActivePackages(pkgData.active_packages);
           }
+        }
+
+        if (remainingDaysRes.status === "fulfilled") {
+          const res = remainingDaysRes.value;
+          const data = res?.message || res?.data || res;
+          setRemainingDays(data);
         }
       } catch (err: unknown) {
         console.error("Failed to fetch billing data:", err);
@@ -242,56 +260,114 @@ export default function PlansTabContent() {
     >
 
 
-      {/* Active Plans Section */}
-      {activePackages && activePackages.length > 0 && (
+      {/* Active / Expired Plan Section */}
+      {((activePackages && activePackages.length > 0) ||
+        (remainingDays && (remainingDays.status === "Expired" || remainingDays.remaining_days === 0))) && (
         <motion.div variants={item} className="mb-6">
-          <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-50/80 via-teal-50/50 to-transparent p-6 shadow-sm">
-            {/* Ambient background glows */}
-            <div className="absolute -right-10 -top-10 w-32 h-32 bg-emerald-400/10 rounded-full blur-2xl" />
-            <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-teal-400/10 rounded-full blur-2xl" />
+          {remainingDays && (remainingDays.status === "Expired" || remainingDays.remaining_days === 0) ? (
+            <div className="relative overflow-hidden rounded-2xl border border-red-500/20 bg-gradient-to-r from-red-50/80 via-rose-50/50 to-transparent p-6 shadow-sm">
+              {/* Ambient background glows */}
+              <div className="absolute -right-10 -top-10 w-32 h-32 bg-red-400/10 rounded-full blur-2xl" />
+              <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-rose-400/10 rounded-full blur-2xl" />
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 flex-shrink-0">
-                  <Crown className="w-6 h-6" />
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 border border-emerald-200/60 px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                      Current Active Plan
-                    </span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shadow-md shadow-red-500/20 flex-shrink-0">
+                    <AlertCircle className="w-6 h-6" />
                   </div>
-                  <div className="space-y-2">
-                    {activePackages.map((pkg: ActivePackage, idx: number) => (
-                      <div key={idx} className={idx > 0 ? "pt-2 mt-2 border-t border-slate-100" : ""}>
-                        <h3 className="text-lg font-extrabold text-slate-800 tracking-tight">
-                          {pkg.billing_package}
-                        </h3>
-                        {pkg.app_name && (
-                          <p className="text-xs text-slate-500">
-                            {/* App: <span className="font-semibold text-slate-600">{pkg.app_name}</span> */}
-                            {pkg.billing_role && (
-                              <>
-                                {/* <span className="mx-1.5 text-slate-300">•</span> */}
-                                Role: <span className="font-semibold text-slate-600">{pkg.billing_role}</span>
-                              </>
-                            )}
-                          </p>
-                        )}
-                      </div>
-                    ))}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-red-700 bg-red-100/80 border border-red-200/60 px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                        Plan Status
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-extrabold text-slate-800 tracking-tight">
+                        {remainingDays.message || "Package expired"}
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Please renew or subscribe to a new plan below.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 sm:self-center self-start">
-                <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-0 py-1.5 px-3 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow-sm shadow-emerald-100">
-                  <CheckCircle className="w-4 h-4" /> Subscription Active
-                </Badge>
+                <div className="flex items-center gap-2 sm:self-center self-start">
+                  <Badge className="bg-red-500 hover:bg-red-600 text-white border-0 py-1.5 px-3 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow-sm shadow-red-100">
+                    <AlertCircle className="w-4 h-4" /> Package expired
+                  </Badge>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-50/80 via-teal-50/50 to-transparent p-6 shadow-sm">
+              {/* Ambient background glows */}
+              <div className="absolute -right-10 -top-10 w-32 h-32 bg-emerald-400/10 rounded-full blur-2xl" />
+              <div className="absolute -left-10 -bottom-10 w-32 h-32 bg-teal-400/10 rounded-full blur-2xl" />
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 relative z-10">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 flex-shrink-0">
+                    <Crown className="w-6 h-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 border border-emerald-200/60 px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Current Active Plan
+                      </span>
+                    </div>
+                    <div className="space-y-2">
+                      {activePackages.map((pkg: ActivePackage, idx: number) => {
+                        const isMatchingPkg = !remainingDays?.billing_package || remainingDays?.billing_package === pkg.billing_package;
+                        return (
+                          <div key={idx} className={idx > 0 ? "pt-2 mt-2 border-t border-slate-100" : ""}>
+                            <h3 className="text-lg font-extrabold text-slate-800 tracking-tight">
+                              {pkg.billing_package}
+                            </h3>
+                            <div className="flex flex-col gap-1.5 mt-1.5">
+                              {/* {pkg.billing_role && (
+                                <p className="text-xs text-slate-500">
+                                  Role: <span className="font-semibold text-slate-600">{pkg.billing_role}</span>
+                                </p>
+                              )} */}
+                              {isMatchingPkg && remainingDays && (
+                                <>
+                                  {remainingDays.remaining_days !== undefined && remainingDays.remaining_days > 0 ? (
+                                    <p className="text-xs text-emerald-700 font-semibold flex items-center gap-1 mt-0.5">
+                                      <Clock className="w-3.5 h-3.5 text-emerald-500" />
+                                      {remainingDays.remaining_days} days remaining
+                                    </p>
+                                  ) : (
+                                    <p className="text-xs text-red-600 font-semibold flex items-center gap-1 mt-0.5">
+                                      <AlertCircle className="w-3.5 h-3.5 text-red-500" />
+                                      {remainingDays.message || "Package expired"}
+                                    </p>
+                                  )}
+                                  {remainingDays.to_date && (
+                                    <p className="text-xs text-slate-500">
+                                      Active till: <span className="font-semibold text-slate-600">{remainingDays.to_date}</span>
+                                    </p>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 sm:self-center self-start">
+                  <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-0 py-1.5 px-3 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow-sm shadow-emerald-100">
+                    <CheckCircle className="w-4 h-4" /> Subscription Active
+                  </Badge>
+                </div>
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
 
