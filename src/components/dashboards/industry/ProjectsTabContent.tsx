@@ -155,7 +155,7 @@ export default function ProjectsTabContent() {
     try {
       setLoading(true);
       setError(null);
-      const response = await getProjectList(industry, currentPage, PAGE_SIZE);
+      const response = await getProjectList(industry);
 
       const dataObj = response?.data || response?.message?.data || response?.message || {};
       

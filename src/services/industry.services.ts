@@ -153,10 +153,10 @@ export const createProject = async (data: any) => {
   }
 };
 
-export const getProjectList = async (industry: string, page: number = 1, page_size: number = 5) => {
+export const getProjectList = async (industry: string) => {
   try {
     const response = await apiService.get(
-      `method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.get_project_list?industry=${encodeURIComponent(industry)}&page=${page}&page_size=${page_size}`
+      `method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.get_project_list?industry=${encodeURIComponent(industry)}`
     );
     return response;
   } catch (error) {

@@ -226,8 +226,8 @@ export default function OfferingsTabContent() {
         
         setIsModalOpen(false);
         fetchOfferings();
-
-        if (createdName && (formData.offering_type === "Group Session" || formData.offering_type === "Workshop")) {
+ 
+        if (createdName && formData.offering_type === "Group Session") {
           setCreatedOfferingName(createdName);
           setShowBatchPrompt(true);
         } else {
