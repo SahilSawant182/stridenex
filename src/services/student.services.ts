@@ -534,8 +534,9 @@ export const getUserPackages = async (email: string) => {
     throw error;
   }
 };
-//  * Fetch mentor offerings list.
-//  */
+/**
+ * Fetch mentor offerings list.
+ */
 export const getMentorOfferings = async (mentorEmail: string) => {
   try {
     const response = await apiService.get(
@@ -548,3 +549,17 @@ export const getMentorOfferings = async (mentorEmail: string) => {
   }
 };
 
+/**
+ * Fetch package remaining days for a user.
+ */
+export const getPackageRemainingDays = async (user: string) => {
+  try {
+    const response = await apiService.get(
+      `method/quantbit_billing_platform.quantbit_billing_platform.api.get_remaining_days?user=${encodeURIComponent(user)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching package remaining days:", error);
+    throw error;
+  }
+};
