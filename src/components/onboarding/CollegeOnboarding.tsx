@@ -869,7 +869,7 @@ export default function CollegeOnboarding({
     if (onSkip) {
       onSkip();
     } else {
-      await logout("/login");
+      await logout(isMobileSource ? "https://testwebstridenex.quantcloud.in/login" : "/login");
     }
   };
 

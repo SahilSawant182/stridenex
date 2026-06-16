@@ -29,7 +29,7 @@ function MentorOnboardingContent() {
         localStorage.setItem("userType", "mentor");
 
         if (isMobileSource) {
-          window.location.href = "stridenex://login";
+          window.location.href = "https://testwebstridenex.quantcloud.in/login";
         } else {
           router.push("/mentor/dashboard");
         }

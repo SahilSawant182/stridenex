@@ -29,7 +29,7 @@ function CollegeOnboardingContent() {
         localStorage.setItem("userType", "college");
 
         if (isMobileSource) {
-          window.location.href = "stridenex://login";
+          window.location.href = "https://testwebstridenex.quantcloud.in/login";
         } else {
           router.push("/college/dashboard");
         }

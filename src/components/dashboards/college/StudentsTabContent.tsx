@@ -138,6 +138,7 @@ export default function StudentsTabContent() {
         college: collegeName || "",
         department: branchesStr,
         skill: skillsStr,
+        current_year: selectedYear === "All" ? undefined : selectedYear,
         page: currentPage,
         page_size: pageSize
       });
@@ -181,7 +182,7 @@ export default function StudentsTabContent() {
     if (collegeDetails) {
       fetchStudents();
     }
-  }, [collegeDetails, searchQuery, branchesStr, skillsStr, currentPage, pageSize]);
+  }, [collegeDetails, searchQuery, branchesStr, skillsStr, selectedYear, currentPage, pageSize]);
 
   // CSV download notification
   const handleExportCSV = () => {
@@ -217,7 +218,13 @@ export default function StudentsTabContent() {
     const year = student.year || student.academic_year || "—";
     const risk = student.risk_level || student.risk || "low";
     
-    const matchesYear = selectedYear === "All" || String(year).toLowerCase().includes(selectedYear.toLowerCase());
+    const matchesYear = selectedYear === "All" || 
+      String(year).toLowerCase().includes(selectedYear.toLowerCase()) ||
+      (selectedYear === "First Year" && String(year).toLowerCase().includes("1st")) ||
+      (selectedYear === "Second Year" && String(year).toLowerCase().includes("2nd")) ||
+      (selectedYear === "Third Year" && String(year).toLowerCase().includes("3rd")) ||
+      (selectedYear === "Final Year" && String(year).toLowerCase().includes("4th"));
+      
     const matchesRisk = selectedRisk === "All" || String(risk).toLowerCase() === selectedRisk.toLowerCase();
     
     return matchesYear && matchesRisk;
@@ -281,10 +288,10 @@ export default function StudentsTabContent() {
             className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 font-medium focus:outline-none"
           >
             <option value="All">All Years</option>
-            <option value="1st">1st Year</option>
-            <option value="2nd">2nd Year</option>
-            <option value="3rd">3rd Year</option>
-            <option value="4th">4th Year</option>
+            <option value="First Year">First Year</option>
+            <option value="Second Year">Second Year</option>
+            <option value="Third Year">Third Year</option>
+            <option value="Final Year">Final Year</option>
           </select>
           <select 
             value={selectedRisk}

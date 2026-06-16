@@ -78,6 +78,7 @@ export default function StudentOnboarding({
     stream: "",
     course: "",
     semester: "",
+    current_year: "",
     courses: [],
     skills: [],
     careerInterest: [],
@@ -380,6 +381,15 @@ export default function StudentOnboarding({
       disabled: !formData.department
     },
     {
+      fieldname: "current_year",
+      label: "Current Year",
+      fieldtype: "Select",
+      required: true,
+      placeholder: "Select Current Year",
+      layout: "half",
+      options: ["First Year", "Second Year", "Third Year", "Final Year"]
+    },
+    {
       fieldname: "dateOfBirth",
       label: "Date of Birth",
       fieldtype: "Date",
@@ -676,6 +686,11 @@ export default function StudentOnboarding({
       errors.semester = semesterValidation.error || "Semester is required";
     }
 
+    const currentYearValidation = validateRequired(formData.current_year, "Current Year");
+    if (!currentYearValidation.isValid) {
+      errors.current_year = currentYearValidation.error || "Current Year is required";
+    }
+
     const dobValidation = validateRequired(formData.dateOfBirth, "Date of birth");
     if (!dobValidation.isValid) {
       errors.dateOfBirth = dobValidation.error || "Date of birth is required";
@@ -760,6 +775,7 @@ export default function StudentOnboarding({
         department: formData.department || "Dispatch",
         academic_year: academicYearValue,
         semester: formData.semester || "1",
+        current_year: formData.current_year || "",
         date_of_birth: formData.dateOfBirth || new Date().toISOString().split('T')[0],
         skill: skillsArray.length > 0 ? skillsArray : [{ skill: "Creativity & innovation" }],
         career_interest: careerInterestArray.length > 0 ? careerInterestArray : [{ career_interest: "Biotechnology / Genetics" }],
