@@ -1155,6 +1155,7 @@ export default function StudentOnboarding({
           skills: newData.skills ?? prev.skills,
           careerInterest: newData.careerInterest ?? prev.careerInterest,
           gender: newData.gender ?? prev.gender,
+          current_year: newData.current_year ?? prev.current_year,
           resume: newData.resume ?? prev.resume,
           linkedinUrl: newData.linkedinUrl ?? prev.linkedinUrl,
           githubUrl: newData.githubUrl ?? prev.githubUrl
@@ -1195,6 +1196,7 @@ export default function StudentOnboarding({
             skills: formData.skills,
             careerInterest: formData.careerInterest,
             gender: formData.gender,
+            current_year: formData.current_year,
             resume: formData.resume,
             linkedinUrl: formData.linkedinUrl,
             githubUrl: formData.githubUrl

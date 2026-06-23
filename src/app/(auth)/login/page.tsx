@@ -188,6 +188,19 @@ export default function LoginPage() {
           isOnboarded: data.is_onboarded
         });
 
+        if (userRole === "college") {
+          try {
+            const { getCollegeDetails } = await import("@/services/college.services");
+            const res = await getCollegeDetails(email);
+            const collegeDataObj = res?.data || res?.message?.data || res?.message;
+            if (collegeDataObj && typeof collegeDataObj === 'object') {
+              localStorage.setItem("collegeDetails", JSON.stringify(collegeDataObj));
+            }
+          } catch (err) {
+            console.error("Failed to pre-fetch collegeDetails on login:", err);
+          }
+        }
+
         // Do NOT call router.push here — useEffect owns all routing.
       } else {
         const msg = data.message || "Login failed";

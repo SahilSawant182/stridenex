@@ -159,9 +159,17 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     }
     return null;
   });
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      if (role === "college" && localStorage.getItem("collegeDetails")) return false;
+      if (role === "student" && localStorage.getItem("studentDetails")) return false;
+      if (role === "mentor" && localStorage.getItem("mentorDetails")) return false;
+    }
+    return true;
+  });
   const [placementStats, setPlacementStats] = useState<any>(null);
   const [dashboardSummary, setDashboardSummary] = useState<any>(null);
-  const [collegeFormState, setCollegeFormState] = useState<any>({});
+  const [collegeFormState, setCollegeFormState] = useState<any>( {});
 
   const fetchStudentData = async () => {
     const email = currentUser || (typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail")) : "") || "";
@@ -238,13 +246,25 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
   };
 
   useEffect(() => {
-    if (role === "student") {
-      fetchStudentData();
-    } else if (role === "mentor") {
-      fetchMentorData();
-    } else if (role === "college") {
-      fetchCollegeData();
-    }
+    const fetchData = async () => {
+      const hasCache = role === "college" && typeof window !== "undefined" && localStorage.getItem("collegeDetails");
+      if (!hasCache) setLoading(true);
+
+      try {
+        if (role === "student") {
+          await fetchStudentData();
+        } else if (role === "mentor") {
+          await fetchMentorData();
+        } else if (role === "college") {
+          await fetchCollegeData();
+        }
+      } catch (err) {
+        console.error("Error loading banner details:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, [role, currentUser]);
 
   useEffect(() => {
@@ -764,6 +784,39 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       icon: m.icon
     }))
   );
+
+  const isWidgetLoading = useMemo(() => {
+    if (role === "college" && !collegeData && loading) return true;
+    if (role === "student" && !studentData && loading) return true;
+    if (role === "mentor" && !mentorData && loading) return true;
+    return false;
+  }, [role, collegeData, studentData, mentorData, loading]);
+
+  if (isWidgetLoading) {
+    return (
+      <div className={`bg-gradient-to-r ${config.gradient} rounded-2xl p-4 md:p-6 text-white relative overflow-hidden animate-pulse min-h-[180px] flex items-center`}>
+        {/* Background shapes for aesthetics */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+        <div className="absolute bottom-0 right-1/4 w-48 h-48 bg-white/5 rounded-full blur-2xl translate-y-1/2" />
+        
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-white/10" />
+            <div className="space-y-2">
+              <div className="h-3 bg-white/10 rounded w-24" />
+              <div className="h-6 bg-white/20 rounded w-48" />
+              <div className="h-4 bg-white/10 rounded w-64" />
+            </div>
+          </div>
+          <div className="flex gap-4">
+            <div className="h-16 w-24 bg-white/10 rounded-xl" />
+            <div className="h-16 w-24 bg-white/10 rounded-xl" />
+            <div className="h-16 w-24 bg-white/10 rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <motion.div
