@@ -239,6 +239,7 @@ export default function CampusDrivesTabContent() {
   const [eligibilityBranches, setEligibilityBranches] = useState<string[]>([]);
   const [eligibilityCgpa, setEligibilityCgpa] = useState("");
   const [eligibilityBacklog, setEligibilityBacklog] = useState("");
+  const [eligibilityAcademicYear, setEligibilityAcademicYear] = useState("All");
   const [availableBranches, setAvailableBranches] = useState<string[]>(["CS", "CSE", "ECE", "IT", "ME", "MBA", "Civil", "EE"]);
 
   // Fetch available branches from master API
@@ -716,10 +717,12 @@ export default function CampusDrivesTabContent() {
       setEligibilityBranches(branchesList);
       setEligibilityCgpa(cgpaVal);
       setEligibilityBacklog(backlogVal);
+      setEligibilityAcademicYear("All");
     } else {
       setEligibilityBranches([]);
       setEligibilityCgpa("");
       setEligibilityBacklog("");
+      setEligibilityAcademicYear("All");
     }
   }, [activeEligibilityDrive]);
 
@@ -730,18 +733,21 @@ export default function CampusDrivesTabContent() {
     const fetchTabEligibility = async () => {
       setTabEligibleLoading(true);
       const collegeName = collegeDetails?.name || collegeDetails?.email || currentUser || "guptateena960@gmail.com";
+      const academicYearParam = eligibilityAcademicYear === "All" ? undefined : eligibilityAcademicYear;
       try {
         const [eligibleRes, nonEligibleRes] = await Promise.allSettled([
           getEligibleStudents({
             branch: eligibilityBranchesStr,
             cgpa: eligibilityCgpa,
-            backlog: eligibilityBacklog
+            backlog: eligibilityBacklog,
+            academic_year: academicYearParam
           }),
           getNonEligibleStudents({
             branch: eligibilityBranchesStr,
             cgpa: eligibilityCgpa,
             backlog: eligibilityBacklog,
-            college: collegeName
+            college: collegeName,
+            academic_year: academicYearParam
           })
         ]);
 
@@ -772,7 +778,7 @@ export default function CampusDrivesTabContent() {
     if (activeSubTab === "eligibility") {
       fetchTabEligibility();
     }
-  }, [eligibilityBranchesStr, eligibilityCgpa, eligibilityBacklog, activeSubTab, collegeDetails, currentUser]);
+  }, [eligibilityBranchesStr, eligibilityCgpa, eligibilityBacklog, eligibilityAcademicYear, activeSubTab, collegeDetails, currentUser]);
 
   // Filter drives list based on search query
   const filteredDrives = useMemo(() => {
@@ -1322,7 +1328,8 @@ export default function CampusDrivesTabContent() {
         branch: eligibilityBranches.join(","),
         cgpa: eligibilityCgpa,
         backlog: eligibilityBacklog,
-        college: collegeName
+        college: collegeName,
+        academic_year: eligibilityAcademicYear === "All" ? undefined : eligibilityAcademicYear
       });
 
       const blob = res instanceof Blob ? res : (res?.data instanceof Blob ? res.data : new Blob([res]));
@@ -1357,7 +1364,8 @@ export default function CampusDrivesTabContent() {
         branch: eligibilityBranches.join(","),
         cgpa: eligibilityCgpa,
         backlog: eligibilityBacklog,
-        college: collegeName
+        college: collegeName,
+        academic_year: eligibilityAcademicYear === "All" ? undefined : eligibilityAcademicYear
       });
 
       const blob = res instanceof Blob ? res : (res?.data instanceof Blob ? res.data : new Blob([res]));
@@ -2018,6 +2026,7 @@ export default function CampusDrivesTabContent() {
                     <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       <th className="py-3 px-5">Student</th>
                       <th className="py-3 px-4">Course</th>
+                      <th className="py-3 px-4">Academic Year</th>
                       <th className="py-3 px-4">CGPA</th>
                       <th className="py-3 px-4">Drive</th>
                       <th className="py-3 px-4">Company</th>
@@ -2028,7 +2037,7 @@ export default function CampusDrivesTabContent() {
                   <tbody className="divide-y divide-slate-100 text-slate-700">
                     {placementList.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-12 text-center">
+                        <td colSpan={8} className="py-12 text-center">
                           <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                           <p className="text-xs text-slate-400 font-semibold">No placement records found</p>
                         </td>
@@ -2052,6 +2061,9 @@ export default function CampusDrivesTabContent() {
                             </td>
                             <td className="py-3.5 px-4 text-xs font-semibold text-slate-600">
                               {record.course || "—"}
+                            </td>
+                            <td className="py-3.5 px-4 text-xs font-semibold text-slate-600">
+                              {record.academic_year || "—"}
                             </td>
                             <td className="py-3.5 px-4 text-xs font-bold text-emerald-600">
                               {record.cgpa || "—"}
@@ -2126,13 +2138,14 @@ export default function CampusDrivesTabContent() {
                     </div>
 
                     <div className="flex items-center gap-2.5 self-end md:self-auto">
-                      {(eligibilityBranches.length > 0 || eligibilityCgpa !== "" || eligibilityBacklog !== "" || eligibilityDriveId !== "") && (
+                      {(eligibilityBranches.length > 0 || eligibilityCgpa !== "" || eligibilityBacklog !== "" || eligibilityDriveId !== "" || eligibilityAcademicYear !== "All") && (
                         <button
                           onClick={() => {
                             setEligibilityBranches([]);
                             setEligibilityCgpa("");
                             setEligibilityBacklog("");
                             setEligibilityDriveId("");
+                            setEligibilityAcademicYear("All");
                           }}
                           className="bg-white hover:bg-slate-50 text-slate-500 font-bold px-4 py-2.5 border border-slate-200 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-colors"
                         >
@@ -2149,7 +2162,7 @@ export default function CampusDrivesTabContent() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                     <div className="relative flex flex-col justify-end">
                       <Dropdown
                         id="eligibility-branches-filter"
@@ -2161,6 +2174,23 @@ export default function CampusDrivesTabContent() {
                         multiSelect={true}
                         searchable={true}
                       />
+                    </div>
+                    <div className="relative">
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Academic Year</label>
+                      <div className="relative">
+                        <select
+                          value={eligibilityAcademicYear}
+                          onChange={(e) => setEligibilityAcademicYear(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-semibold outline-none focus:border-blue-500 focus:bg-white appearance-none cursor-pointer pr-8"
+                        >
+                          <option value="All">All Years</option>
+                          <option value="First Year">First Year</option>
+                          <option value="Second Year">Second Year</option>
+                          <option value="Third Year">Third Year</option>
+                          <option value="Final Year">Final Year</option>
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
                     </div>
                     <div className="relative">
                       <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Min CGPA</label>
@@ -2261,6 +2291,7 @@ export default function CampusDrivesTabContent() {
                               <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                 <th className="py-2.5 px-4">Student</th>
                                 <th className="py-2.5 px-4">Branch</th>
+                                <th className="py-2.5 px-4">Academic Year</th>
                                 <th className="py-2.5 px-4">CGPA</th>
                                 <th className="py-2.5 px-4">Backlogs</th>
                                 <th className="py-2.5 px-4 text-right">Action</th>
@@ -2269,7 +2300,7 @@ export default function CampusDrivesTabContent() {
                             <tbody className="divide-y divide-slate-100 text-slate-700 text-xs">
                               {tabEligibleLists.eligible.length === 0 ? (
                                 <tr>
-                                  <td colSpan={5} className="py-10 text-center text-slate-400 font-semibold">
+                                  <td colSpan={6} className="py-10 text-center text-slate-400 font-semibold">
                                     No eligible students
                                   </td>
                                 </tr>
@@ -2282,6 +2313,7 @@ export default function CampusDrivesTabContent() {
                                   <tr key={student.name || student.email_id || student.id || student.email || student.student_id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="py-3 px-4 font-bold text-slate-800">{fullName}</td>
                                     <td className="py-3 px-4"><span className="bg-slate-100 px-2 py-0.5 rounded font-bold">{branch}</span></td>
+                                    <td className="py-3 px-4 font-semibold text-slate-600">{student.academic_year || "—"}</td>
                                     <td className="py-3 px-4 font-bold text-emerald-600">{cgpa}</td>
                                     <td className="py-3 px-4">
                                       {backlogs === 0 ? <span className="text-emerald-600 font-bold">✓</span> : backlogs}
@@ -2325,13 +2357,14 @@ export default function CampusDrivesTabContent() {
                                 <th className="py-2.5 px-4">Student</th>
                                 <th className="py-2.5 px-4">CGPA</th>
                                 <th className="py-2.5 px-4">Branch</th>
+                                <th className="py-2.5 px-4">Academic Year</th>
                                 <th className="py-2.5 px-4">Reason</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 text-slate-700 text-xs">
                               {tabEligibleLists.notEligible.length === 0 ? (
                                 <tr>
-                                  <td colSpan={4} className="py-10 text-center text-slate-400 font-semibold">
+                                  <td colSpan={5} className="py-10 text-center text-slate-400 font-semibold">
                                     No non-eligible students
                                   </td>
                                 </tr>
@@ -2347,6 +2380,7 @@ export default function CampusDrivesTabContent() {
                                     <td className="py-3 px-4 font-bold text-slate-800">{fullName}</td>
                                     <td className="py-3 px-4 font-bold text-slate-500">{cgpa}</td>
                                     <td className="py-3 px-4"><span className="bg-slate-100 px-2 py-0.5 rounded font-bold">{branch}</span></td>
+                                    <td className="py-3 px-4 font-semibold text-slate-600">{student.academic_year || "—"}</td>
                                     <td className="py-3 px-4">
                                       <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2.5 py-0.5 rounded-full border border-red-100">
                                         {reason}

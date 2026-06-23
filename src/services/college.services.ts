@@ -214,7 +214,7 @@ export const getOpenRegistrationCount = async (college: string) => {
 };
 
 export const getEligibleStudents = async (
-  params: string | { branch?: string; cgpa?: number | string; backlog?: number | string; drive?: string }
+  params: string | { branch?: string; cgpa?: number | string; backlog?: number | string; drive?: string; academic_year?: string }
 ) => {
   try {
     let url = `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.get_eligible_students`;
@@ -227,6 +227,7 @@ export const getEligibleStudents = async (
       if (params.cgpa !== undefined && params.cgpa !== "") queryParts.push(`cgpa=${encodeURIComponent(params.cgpa)}`);
       if (params.backlog !== undefined && params.backlog !== "") queryParts.push(`backlog=${encodeURIComponent(params.backlog)}`);
       if (params.drive) queryParts.push(`drive=${encodeURIComponent(params.drive)}`);
+      if (params.academic_year) queryParts.push(`academic_year=${encodeURIComponent(params.academic_year)}`);
       if (queryParts.length > 0) {
         url += `?${queryParts.join("&")}`;
       }
@@ -356,6 +357,7 @@ export const getNonEligibleStudents = async (params: {
   cgpa?: number | string;
   backlog?: number | string;
   college?: string;
+  academic_year?: string;
 }) => {
   try {
     const queryParts: string[] = [];
@@ -363,6 +365,7 @@ export const getNonEligibleStudents = async (params: {
     if (params.cgpa !== undefined && params.cgpa !== "") queryParts.push(`cgpa=${encodeURIComponent(params.cgpa)}`);
     if (params.backlog !== undefined && params.backlog !== "") queryParts.push(`backlog=${encodeURIComponent(params.backlog)}`);
     if (params.college) queryParts.push(`college=${encodeURIComponent(params.college)}`);
+    if (params.academic_year) queryParts.push(`academic_year=${encodeURIComponent(params.academic_year)}`);
 
     let url = `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.get_not_eligible_students`;
     if (queryParts.length > 0) {
@@ -382,6 +385,7 @@ export const exportEligibleStudents = async (params: {
   cgpa?: number | string;
   backlog?: number | string;
   college?: string;
+  academic_year?: string;
 }) => {
   try {
     const queryParts: string[] = [];
@@ -389,6 +393,7 @@ export const exportEligibleStudents = async (params: {
     if (params.cgpa !== undefined && params.cgpa !== "") queryParts.push(`cgpa=${encodeURIComponent(params.cgpa)}`);
     if (params.backlog !== undefined && params.backlog !== "") queryParts.push(`backlog=${encodeURIComponent(params.backlog)}`);
     if (params.college) queryParts.push(`college=${encodeURIComponent(params.college)}`);
+    if (params.academic_year) queryParts.push(`academic_year=${encodeURIComponent(params.academic_year)}`);
 
     let url = `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.export_eligible_students`;
     if (queryParts.length > 0) {
@@ -408,6 +413,7 @@ export const exportNotEligibleStudents = async (params: {
   cgpa?: number | string;
   backlog?: number | string;
   college?: string;
+  academic_year?: string;
 }) => {
   try {
     const queryParts: string[] = [];
@@ -415,6 +421,7 @@ export const exportNotEligibleStudents = async (params: {
     if (params.cgpa !== undefined && params.cgpa !== "") queryParts.push(`cgpa=${encodeURIComponent(params.cgpa)}`);
     if (params.backlog !== undefined && params.backlog !== "") queryParts.push(`backlog=${encodeURIComponent(params.backlog)}`);
     if (params.college) queryParts.push(`college=${encodeURIComponent(params.college)}`);
+    if (params.academic_year) queryParts.push(`academic_year=${encodeURIComponent(params.academic_year)}`);
 
     let url = `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.export_not_eligible_students`;
     if (queryParts.length > 0) {
