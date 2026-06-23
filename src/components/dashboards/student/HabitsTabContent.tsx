@@ -17,7 +17,8 @@ import {
     Clock,
     Link,
     Zap,
-    Trash2
+    Trash2,
+    ShieldAlert
 } from "lucide-react";
 import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/context/ToastContext";
+import { useEntitlements, QuotaExceededError } from "@/context/EntitlementContext";
 import { 
     getStudentDashboardHabits, 
     getHabitStreaks, 
@@ -157,6 +159,7 @@ const convertISOToDDMMYYYY = (iso: string): string => {
 
 export default function HabitsTabContent() {
     const { showToast } = useToast();
+    const { checkAndConsume, hasQuota, getRemaining, entitlements } = useEntitlements();
     const [statsData, setStatsData] = useState<StatsData>({
         streak: { current: 0, longest: 0 },
         last30Days: { done: 0, partial: 0, missed: 0, completionRate: 0 },
@@ -303,6 +306,13 @@ export default function HabitsTabContent() {
         try {
             setModalLoading(true);
             setModalError(null);
+
+            // ── Quota gate ───────────────────────────────────────────────
+            // Only check quota for NEW plans (not edits)
+            if (!habitToEdit) {
+                await checkAndConsume("create_new_habit_plan");
+            }
+            // ─────────────────────────────────────────────────────────────
             
             const studentEmail = localStorage.getItem("currentUser") || "";
             const payload = {
@@ -325,9 +335,19 @@ export default function HabitsTabContent() {
             setHabitToEdit(null);
             fetchData();
             showToast("Habit plan created successfully!", "success");
-        } catch (error) {
-            console.error("Error creating habit plan:", error);
-            setModalError("Failed to create habit plan. Please try again.");
+        } catch (error: any) {
+            if (error instanceof QuotaExceededError) {
+                const remaining = getRemaining("create_new_habit_plan");
+                const limit = entitlements["create_new_habit_plan"]?.limit;
+                const message = limit !== undefined
+                    ? `You've reached your habit plan limit (${limit} plans). Upgrade your plan to create more.`
+                    : "You've reached your habit plan limit. Upgrade your plan to create more.";
+                setModalError(message);
+                showToast(message, "warning");
+            } else {
+                console.error("Error creating habit plan:", error);
+                setModalError(error?.message || "Failed to create habit plan. Please try again.");
+            }
         } finally {
             setModalLoading(false);
         }
@@ -738,11 +758,39 @@ export default function HabitsTabContent() {
                 transition={{ delay: 0.3 }}
                 className="bg-white rounded-xl border border-slate-200/60 shadow-sm overflow-hidden"
             >
-                <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-slate-800">My Habit Plans</h3>
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <h3 className="text-sm font-bold text-slate-800">My Habit Plans</h3>
+                        {/* Quota badge */}
+                        {entitlements["create_new_habit_plan"] && (() => {
+                            const ent = entitlements["create_new_habit_plan"];
+                            const isUnlimited = ent.remaining === "Unlimited";
+                            const remaining = ent.remaining as number;
+                            const limit = ent.limit as number;
+                            const exhausted = !isUnlimited && remaining <= 0;
+                            const nearLimit = !isUnlimited && remaining <= Math.max(1, Math.ceil(limit * 0.2));
+                            return (
+                                <span
+                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                                        exhausted
+                                            ? "bg-red-50 text-red-600 border-red-200"
+                                            : nearLimit
+                                            ? "bg-amber-50 text-amber-600 border-amber-200"
+                                            : "bg-emerald-50 text-emerald-600 border-emerald-200"
+                                    }`}
+                                    title={`${isUnlimited ? "Unlimited" : remaining} habit plan${isUnlimited || remaining !== 1 ? "s" : ""} remaining of ${isUnlimited ? "Unlimited" : limit}`}
+                                >
+                                    {exhausted && <ShieldAlert className="w-3 h-3" />}
+                                    {isUnlimited ? "Unlimited" : `${remaining} / ${limit}`}
+                                </span>
+                            );
+                        })()}
+                    </div>
                     <button
                         onClick={handlePostNewHabit}
-                        className="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-orange-500/10"
+                        disabled={!hasQuota("create_new_habit_plan")}
+                        className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 shadow-lg shadow-orange-500/10"
+                        title={!hasQuota("create_new_habit_plan") ? "Habit plan limit reached. Upgrade your plan to add more." : "Create a new habit plan"}
                     >
                         <Plus className="w-4 h-4" /> New Habit
                     </button>

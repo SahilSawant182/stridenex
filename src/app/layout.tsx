@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { AuthProvider } from "@/context/AuthContext";
 import { ToastProvider } from "@/context/ToastContext";
+import { EntitlementProvider } from "@/context/EntitlementContext";
 import "./globals.css";
 import ConditionalLayout from "@/components/layout/ConditionalLayout";
 
@@ -32,9 +33,11 @@ export default function RootLayout({
       <body className={inter.className}>
         <ToastProvider>
           <AuthProvider>
-            <ConditionalLayout>
-              {children}
-            </ConditionalLayout>
+            <EntitlementProvider>
+              <ConditionalLayout>
+                {children}
+              </ConditionalLayout>
+            </EntitlementProvider>
           </AuthProvider>
         </ToastProvider>
       </body>
