@@ -572,6 +572,7 @@ export default function CollegeOnboarding({
       state: formData.state || undefined,
       district: formData.district || undefined,
       taluka: formData.tahsil || undefined,
+      tahsil: formData.tahsil || undefined,
       city: formData.city || undefined,
       university: formData.university || undefined,
       college_type: formData.college_type || undefined,

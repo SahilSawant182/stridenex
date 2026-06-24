@@ -495,6 +495,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
           state: formData.state,
           district: formData.district,
           taluka: formData.taluka,
+          tahsil: formData.taluka,
           city: formData.city,
         };
         await updateCollegeDetails(currentUser, payload);
