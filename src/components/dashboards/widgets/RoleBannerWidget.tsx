@@ -137,15 +137,45 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
   const config = roleConfig[role];
 
   // Student specific state
-  const [studentData, setStudentData] = useState<any>(null);
+  const [studentData, setStudentData] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("studentDetails");
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch (_) {}
+      }
+    }
+    return null;
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   const { showToast } = useToast();
 
   // Mentor specific state
-  const [mentorData, setMentorData] = useState<any>(null);
-  const [mentorStats, setMentorStats] = useState<any>(null);
+  const [mentorData, setMentorData] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("mentorDetails");
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch (_) {}
+      }
+    }
+    return null;
+  });
+  const [mentorStats, setMentorStats] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("mentorStats");
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch (_) {}
+      }
+    }
+    return null;
+  });
 
   // College specific state
   const [collegeData, setCollegeData] = useState<any>(() => {
@@ -180,6 +210,9 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       const data = response?.data || response?.message?.data || response?.message;
       if (data && typeof data === 'object') {
         setStudentData(data);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem("studentDetails", JSON.stringify(data));
+        }
       }
     } catch (error) {
       console.error("Error fetching student data in banner:", error);
@@ -197,10 +230,16 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       const profileData = profileRes?.message?.data || profileRes?.message || null;
       if (profileData && typeof profileData === 'object') {
         setMentorData(profileData);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem("mentorDetails", JSON.stringify(profileData));
+        }
       }
       const statsData = statsRes?.message?.data || statsRes?.message || null;
       if (statsData) {
         setMentorStats(statsData);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem("mentorStats", JSON.stringify(statsData));
+        }
       }
     } catch (error) {
       console.error("Error fetching mentor data in banner:", error);
@@ -247,7 +286,11 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
 
   useEffect(() => {
     const fetchData = async () => {
-      const hasCache = role === "college" && typeof window !== "undefined" && localStorage.getItem("collegeDetails");
+      const hasCache = typeof window !== "undefined" && (
+        (role === "college" && localStorage.getItem("collegeDetails")) ||
+        (role === "student" && localStorage.getItem("studentDetails")) ||
+        (role === "mentor" && localStorage.getItem("mentorDetails"))
+      );
       if (!hasCache) setLoading(true);
 
       try {
