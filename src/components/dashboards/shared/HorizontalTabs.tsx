@@ -54,7 +54,7 @@ const tabConfig = {
     { name: "Overview", path: "/college/dashboard", icon: LayoutDashboard },
     { name: "Student Analytics", path: "/college/dashboard/students", icon: Users },
     { name: "Campus Drives", path: "/college/dashboard/campus-drives", icon: Briefcase },
-    { name: "NEP & UGC 2026", path: "/college/dashboard/nep-ugc", icon: Building2 },
+    // { name: "NEP & UGC 2026", path: "/college/dashboard/nep-ugc", icon: Building2 },
     { name: "Interventions", path: "/college/dashboard/interventions", icon: Target },
     { name: "Notice Board", path: "/college/dashboard/notice-board", icon: BookOpen },
     { name: "Reports", path: "/college/dashboard/reports", icon: BarChart },

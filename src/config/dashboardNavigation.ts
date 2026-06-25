@@ -80,7 +80,7 @@ export const collegeConfig: RoleConfig = {
     { name: "Overview", href: "/college/dashboard", icon: LayoutDashboard },
     { name: "Student Analytics", href: "/college/dashboard/students", icon: GraduationCap },
     { name: "Campus Drives", href: "/college/dashboard/campus-drives", icon: Briefcase },
-    { name: "NEP & UGC 2026", href: "/college/dashboard/nepUgc", icon: Users },
+    // { name: "NEP & UGC 2026", href: "/college/dashboard/nepUgc", icon: Users },
     { name: "Interventions", href: "/college/dashboard/interventions", icon: Building2 },
     { name: "Notice Board", href: "/college/dashboard/noticeBoard", icon: BarChart },
     { name: "Reports", href: "/college/dashboard/reports", icon: Calendar },

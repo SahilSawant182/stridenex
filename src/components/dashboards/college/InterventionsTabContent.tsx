@@ -176,7 +176,7 @@ export default function InterventionsTabContent() {
         <motion.div variants={itemVariants}>
           <MetricCard 
              title="High Risk 40-55" 
-             value="96" 
+             value="0" 
              icon={<AlertTriangle className="w-4 h-4" />} 
              iconColor="text-amber-500" 
              borderColor="border-t-amber-500" 
@@ -185,7 +185,7 @@ export default function InterventionsTabContent() {
         <motion.div variants={itemVariants}>
           <MetricCard 
              title="Declining Progress" 
-             value="128" 
+             value="0" 
              icon={<TrendingDown className="w-4 h-4" />} 
              iconColor="text-blue-400" 
              borderColor="border-t-blue-500" 
@@ -194,7 +194,7 @@ export default function InterventionsTabContent() {
         <motion.div variants={itemVariants}>
           <MetricCard 
              title="Placement-Ready" 
-             value="312" 
+             value="0" 
              icon={<Target className="w-4 h-4" />} 
              iconColor="text-emerald-500" 
              borderColor="border-t-emerald-500" 
