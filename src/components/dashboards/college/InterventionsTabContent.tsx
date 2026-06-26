@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, Variants } from "framer-motion";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
-import { AlertTriangle, Clock, TrendingDown, Target, Zap, Loader2 } from "lucide-react";
+import { AlertTriangle, Clock, TrendingDown, Target, Zap, Loader2, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import {
@@ -99,13 +99,13 @@ export default function InterventionsTabContent() {
   // Load low employability students and mentors
   useEffect(() => {
     const fetchStudentsAndMentors = async () => {
-      const collegeName = collegeDetails?.name || collegeDetails?.email || currentUser || "sanjay9975@gmail.com";
-      if (!collegeName) return;
+      const collegeEmail = collegeDetails?.email || currentUser || "sanjay9975@gmail.com";
+      if (!collegeEmail) return;
 
       try {
         setLoading(true);
         const [studentsRes, mentorsRes] = await Promise.allSettled([
-          getLowEmployabilityStudents(collegeName),
+          getLowEmployabilityStudents(collegeEmail),
           getMasterData("Mentor")
         ]);
 
@@ -228,33 +228,46 @@ export default function InterventionsTabContent() {
                   const detailText = student.course ? `${student.course} ${student.academic_year && student.academic_year !== '0' ? `(${student.academic_year} Yr)` : ''}` : "Critical Student";
                   return (
                     <div key={student.name || student.email || idx} className="flex flex-col sm:flex-row sm:items-center justify-between py-3.5 gap-3">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className={`w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${getAvatarColor(fullName)}`}>
                           {initials || "CS"}
                         </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-800">{fullName} <span className="font-medium text-slate-400 text-xs ml-1">{detailText}</span></h4>
-                          <p className="text-xs font-semibold text-slate-500 mt-0.5">
-                            Employability Score: <span className="text-red-600 font-bold">{student.employability_score !== undefined ? student.employability_score : "—"}</span>
+                        <div className="min-w-0 flex-1">
+                          <h4 className="text-sm font-bold text-slate-800 flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
+                            <span className="truncate max-w-[120px] sm:max-w-[150px]">{fullName}</span>
+                            <span className="font-semibold text-slate-400 text-xs shrink-0 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded">{detailText}</span>
+                          </h4>
+                          <p className="text-xs font-semibold text-slate-500 mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                            <span className="text-slate-500 font-medium">Employability Score:</span>
+                            <span className="text-red-600 font-bold">{student.employability_score !== undefined ? student.employability_score : "—"}</span>
                             {student.cgpa !== undefined && student.cgpa !== null && student.cgpa !== 0 && (
-                              <span className="text-slate-400 font-medium ml-2">| CGPA: {student.cgpa}</span>
+                              <>
+                                <span className="text-slate-300 font-normal">|</span>
+                                <span className="text-slate-500 font-medium">CGPA:</span>
+                                <span className="text-slate-700 font-bold">{student.cgpa}</span>
+                              </>
                             )}
                           </p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <select
-                          value={selectedMentors[student.email || student.name] || ""}
-                          onChange={(e) => setSelectedMentors(prev => ({ ...prev, [student.email || student.name]: e.target.value }))}
-                          className="border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-slate-600 bg-white hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all cursor-pointer"
-                        >
-                          <option value="">Select Mentor</option>
-                          {mentorsList.map((mentor) => (
-                            <option key={mentor.name} value={mentor.name}>
-                              {mentor.mentor_name || mentor.full_name || mentor.name}
-                            </option>
-                          ))}
-                        </select>
+                      <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-between sm:justify-end">
+                        <div className="relative flex-1 sm:flex-none w-full sm:w-40 lg:w-36 xl:w-44">
+                          <select
+                            value={selectedMentors[student.email || student.name] || ""}
+                            onChange={(e) => setSelectedMentors(prev => ({ ...prev, [student.email || student.name]: e.target.value }))}
+                            className="w-full appearance-none border border-slate-200 rounded-xl pl-3 pr-8 py-1.5 text-xs font-semibold text-slate-600 bg-white hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all cursor-pointer truncate"
+                          >
+                            <option value="">Select Mentor</option>
+                            {mentorsList.map((mentor) => (
+                              <option key={mentor.name} value={mentor.name}>
+                                {mentor.mentor_name || mentor.full_name || mentor.name}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
+                            <ChevronDown className="w-3.5 h-3.5" />
+                          </div>
+                        </div>
                         <button
                           onClick={() => handleAssignMentor(student.email || student.name, selectedMentors[student.email || student.name])}
                           disabled={!selectedMentors[student.email || student.name] || assigningMap[student.email || student.name]}

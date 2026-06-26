@@ -83,7 +83,7 @@ export const collegeConfig: RoleConfig = {
     // { name: "NEP & UGC 2026", href: "/college/dashboard/nepUgc", icon: Users },
     { name: "Interventions", href: "/college/dashboard/interventions", icon: Building2 },
     { name: "Notice Board", href: "/college/dashboard/noticeBoard", icon: BarChart },
-    { name: "Reports", href: "/college/dashboard/reports", icon: Calendar },
+    // { name: "Reports", href: "/college/dashboard/reports", icon: Calendar },
   ],
   bottomLinks: [
     { name: "Settings", href: "/college/settings", icon: Settings },
