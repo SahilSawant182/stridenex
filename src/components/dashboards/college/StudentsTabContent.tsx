@@ -190,11 +190,11 @@ export default function StudentsTabContent() {
       showToast("No data to export", "warning");
       return;
     }
-    const headers = "Student,Branch,Year,Employability,Internship,Status,Risk\n";
+    const headers = "Student,Branch,Current Year,Employability,Internship,Status,Risk\n";
     const rows = studentsList.map(student => {
       const fullName = `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.student_name || student.name || "—";
       const branch = student.branch || student.department || "—";
-      const year = student.year || student.academic_year || "—";
+      const year = student.current_year || student.year || student.academic_year || "—";
       const employability = student.employability_score !== undefined ? student.employability_score : (student.employability !== undefined ? student.employability : 75);
       const internship = student.internship_count !== undefined ? student.internship_count : (student.internship || "0");
       const status = student.placement_status || student.status || "—";
@@ -215,7 +215,7 @@ export default function StudentsTabContent() {
 
   // Local filtering for mock year and risk selectors just to maintain UI logic
   const filteredStudents = studentsList.filter(student => {
-    const year = student.year || student.academic_year || "—";
+    const year = student.current_year || student.year || student.academic_year || "—";
     const risk = student.risk_level || student.risk || "low";
     
     const matchesYear = selectedYear === "All" || 
@@ -332,7 +332,7 @@ export default function StudentsTabContent() {
                 <tr className="border-b border-slate-100 text-xs text-slate-400 font-semibold tracking-wider uppercase bg-slate-50/40">
                   <th className="px-6 py-4 font-medium">Student</th>
                   <th className="px-6 py-4 font-medium">Branch</th>
-                  <th className="px-6 py-4 font-medium">Year</th>
+                  <th className="px-6 py-4 font-medium">Current Year</th>
                   <th className="px-6 py-4 font-medium">Employability</th>
                   <th className="px-6 py-4 font-medium">Internship</th>
                   <th className="px-6 py-4 font-medium">Status</th>
@@ -359,7 +359,7 @@ export default function StudentsTabContent() {
                   filteredStudents.map((student, idx) => {
                     const fullName = `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.student_name || student.name || "—";
                     const branch = student.branch || student.department || "—";
-                    const year = student.year || student.academic_year || "—";
+                    const year = student.current_year || student.year || student.academic_year || "—";
                     const employability = student.employability_score !== undefined ? student.employability_score : (student.employability !== undefined ? student.employability : 75);
                     const internship = student.internship_count !== undefined ? student.internship_count : (student.internship || "0");
                     const status = student.placement_status || student.status || "—";
