@@ -214,7 +214,16 @@ export const getOpenRegistrationCount = async (college: string) => {
 };
 
 export const getEligibleStudents = async (
-  params: string | { branch?: string; cgpa?: number | string; backlog?: number | string; drive?: string; academic_year?: string }
+  params: string | { 
+    branch?: string; 
+    cgpa?: number | string; 
+    backlog?: number | string; 
+    drive?: string; 
+    academic_year?: string;
+    college?: string;
+    page?: number | string;
+    page_size?: number | string;
+  }
 ) => {
   try {
     let url = `method/stridenex_app.stridenex_app.doctype.campus_drive_application.campus_drive_application.get_eligible_students`;
@@ -228,6 +237,9 @@ export const getEligibleStudents = async (
       if (params.backlog !== undefined && params.backlog !== "") queryParts.push(`backlog=${encodeURIComponent(params.backlog)}`);
       if (params.drive) queryParts.push(`drive=${encodeURIComponent(params.drive)}`);
       if (params.academic_year) queryParts.push(`academic_year=${encodeURIComponent(params.academic_year)}`);
+      if (params.college) queryParts.push(`college=${encodeURIComponent(params.college)}`);
+      if (params.page !== undefined && params.page !== "") queryParts.push(`page=${encodeURIComponent(params.page)}`);
+      if (params.page_size !== undefined && params.page_size !== "") queryParts.push(`page_size=${encodeURIComponent(params.page_size)}`);
       if (queryParts.length > 0) {
         url += `?${queryParts.join("&")}`;
       }

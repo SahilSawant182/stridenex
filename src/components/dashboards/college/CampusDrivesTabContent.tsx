@@ -231,6 +231,9 @@ export default function CampusDrivesTabContent() {
   const [drivePlacementCounts, setDrivePlacementCounts] = useState<{ placed: number; shortlisted: number; applied_to_drives: number; not_applied_yet: number } | null>(null);
   const [drivePlacementList, setDrivePlacementList] = useState<any[]>([]);
   const [driveEligibleStudents, setDriveEligibleStudents] = useState<any | null>(null);
+  const [driveEligibleLoading, setDriveEligibleLoading] = useState(false);
+  const [eligiblePage, setEligiblePage] = useState(1);
+  const [eligiblePageSize, setEligiblePageSize] = useState(10);
 
   // Tab Eligibility API state
   const [tabEligibleStudents, setTabEligibleStudents] = useState<any | null>(null);
@@ -529,6 +532,30 @@ export default function CampusDrivesTabContent() {
     }
   };
 
+  const fetchDriveEligibleStudents = async (driveName: string, drive: any, pageNum: number) => {
+    const collegeName = collegeDetails?.name;
+    if (!collegeName) return;
+    setDriveEligibleLoading(true);
+    try {
+      const res = await getEligibleStudents({
+        college: collegeName,
+        branch: drive.criteria?.branches?.[0] || "",
+        cgpa: drive.criteria?.minCgpa !== undefined ? drive.criteria.minCgpa : "",
+        backlog: drive.criteria?.backlogs !== undefined ? drive.criteria.backlogs : "",
+        page: pageNum,
+        page_size: eligiblePageSize
+      });
+      const raw = res?.message ?? res?.data ?? res;
+      if (raw) {
+        setDriveEligibleStudents(raw);
+      }
+    } catch (err) {
+      console.error("Failed to fetch drive eligible students:", err);
+    } finally {
+      setDriveEligibleLoading(false);
+    }
+  };
+
   // Fetch per-drive placement data when user clicks Manage
   const handleManageDrive = async (drive: any) => {
     setSelectedDrive(drive);
@@ -536,6 +563,8 @@ export default function CampusDrivesTabContent() {
     setDrivePlacementCounts(null);
     setDrivePlacementList([]);
     setDriveEligibleStudents(null);
+    setEligiblePage(1);
+    setDriveEligibleLoading(false);
     const collegeName = collegeDetails?.name;
     if (!collegeName) return;
     try {
@@ -543,9 +572,12 @@ export default function CampusDrivesTabContent() {
         getPlacementCounts(collegeName, drive.name),
         getPlacementList(collegeName, drive.name, "Applied"),
         getEligibleStudents({
+          college: collegeName,
           branch: drive.criteria?.branches?.[0] || "",
           cgpa: drive.criteria?.minCgpa !== undefined ? drive.criteria.minCgpa : "",
-          backlog: drive.criteria?.backlogs !== undefined ? drive.criteria.backlogs : ""
+          backlog: drive.criteria?.backlogs !== undefined ? drive.criteria.backlogs : "",
+          page: 1,
+          page_size: eligiblePageSize
         })
       ]);
 
@@ -564,7 +596,7 @@ export default function CampusDrivesTabContent() {
       }
 
       if (eligibleRes.status === "fulfilled") {
-        const raw = eligibleRes.value?.data ?? eligibleRes.value?.message?.data ?? eligibleRes.value?.message;
+        const raw = eligibleRes.value?.message ?? eligibleRes.value?.data ?? eligibleRes.value;
         if (raw) {
           setDriveEligibleStudents(raw);
         }
@@ -1567,7 +1599,13 @@ export default function CampusDrivesTabContent() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {/* Eligible */}
               <div
-                onClick={() => setSelectedStudentStatusFilter("Eligible")}
+                onClick={() => {
+                  setSelectedStudentStatusFilter("Eligible");
+                  if (selectedDrive) {
+                    setEligiblePage(1);
+                    fetchDriveEligibleStudents(selectedDrive.name, selectedDrive, 1);
+                  }
+                }}
                 className={`p-4 rounded-xl border bg-white cursor-pointer transition-all flex flex-col gap-1 ${selectedStudentStatusFilter === "Eligible"
                   ? "border-orange-400 shadow-md ring-1 ring-orange-300/60"
                   : "border-slate-200 hover:border-slate-300 shadow-sm"
@@ -1678,52 +1716,147 @@ export default function CampusDrivesTabContent() {
 
                     {/* ELIGIBLE TABLE */}
                     {selectedStudentStatusFilter === "Eligible" && (
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            <th className="py-3 px-5">Student</th>
-                            <th className="py-3 px-4">Branch</th>
-                            <th className="py-3 px-4">CGPA</th>
-                            <th className="py-3 px-4">Backlogs</th>
-                            <th className="py-3 px-5 text-right">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 text-slate-700">
-                          {eligibleStudentsToRender.length === 0 ? (
-                            <tr><td colSpan={5} className="py-10 text-center">
-                              <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                              <p className="text-xs text-slate-400 font-semibold">No eligible students</p>
-                            </td></tr>
-                          ) : eligibleStudentsToRender.map((student: any) => {
-                            const fullName = `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.name || student.student_id || student.email || "—";
-                            const initials = fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
-                            const branch = student.branch || student.branch_name || student.department || "—";
-                            const cgpa = student.cgpa !== undefined && student.cgpa !== null ? student.cgpa : "—";
-                            const backlogs = student.backlog !== undefined && student.backlog !== null ? student.backlog : (student.backlogs !== undefined ? student.backlogs : 0);
-                            return (
-                              <tr key={student.name || student.email_id || student.id || student.email || student.student_id} className="hover:bg-slate-50/50 transition-colors">
-                                <td className="py-3.5 px-5">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0 border border-slate-200">{initials}</div>
-                                    <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                                      {fullName}
-                                      {student.placementStatus && <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">✓ {student.placementStatus}</span>}
-                                    </p>
-                                  </div>
-                                </td>
-                                <td className="py-3.5 px-4"><span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-md">{branch}</span></td>
-                                <td className="py-3.5 px-4 font-bold text-xs text-orange-500">{cgpa}</td>
-                                <td className="py-3.5 px-4 text-xs font-semibold text-emerald-600">
-                                  {backlogs === 0 ? "✓" : backlogs}
-                                </td>
-                                <td className="py-3.5 px-5 text-right">
-                                  <button onClick={() => handleNotifyCandidateMail(student, "eligible", selectedDrive?.name || selectedDrive?.company || "")} className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-1.5 rounded-lg text-[10px] uppercase tracking-wider shadow-sm transition-all">Notify</button>
-                                </td>
+                      <div>
+                        {driveEligibleLoading ? (
+                          <div className="py-12 text-center text-slate-400 font-semibold">
+                            <Loader2 className="w-8 h-8 text-orange-500 animate-spin mx-auto mb-2" />
+                            Loading eligible students...
+                          </div>
+                        ) : (
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                <th className="py-3 px-5">Student</th>
+                                <th className="py-3 px-4">Branch</th>
+                                <th className="py-3 px-4">CGPA</th>
+                                <th className="py-3 px-4">Backlogs</th>
+                                <th className="py-3 px-5 text-right">Action</th>
                               </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 text-slate-700">
+                              {eligibleStudentsToRender.length === 0 ? (
+                                <tr><td colSpan={5} className="py-10 text-center">
+                                  <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                                  <p className="text-xs text-slate-400 font-semibold">No eligible students</p>
+                                </td></tr>
+                              ) : eligibleStudentsToRender.map((student: any) => {
+                                const fullName = `${student.first_name || ""} ${student.last_name || ""}`.trim() || student.name || student.student_id || student.email || "—";
+                                const initials = fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2);
+                                const branch = student.branch || student.branch_name || student.department || "—";
+                                const cgpa = student.cgpa !== undefined && student.cgpa !== null ? student.cgpa : "—";
+                                const backlogs = student.backlog !== undefined && student.backlog !== null ? student.backlog : (student.backlogs !== undefined ? student.backlogs : 0);
+                                return (
+                                  <tr key={student.name || student.email_id || student.id || student.email || student.student_id} className="hover:bg-slate-50/50 transition-colors">
+                                    <td className="py-3.5 px-5">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0 border border-slate-200">{initials}</div>
+                                        <p className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                          {fullName}
+                                          {student.placementStatus && <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">✓ {student.placementStatus}</span>}
+                                        </p>
+                                      </div>
+                                    </td>
+                                    <td className="py-3.5 px-4"><span className="text-xs font-bold text-slate-600 bg-slate-100 px-2 py-1 rounded-md">{branch}</span></td>
+                                    <td className="py-3.5 px-4 font-bold text-xs text-orange-500">{cgpa}</td>
+                                    <td className="py-3.5 px-4 text-xs font-semibold text-emerald-600">
+                                      {backlogs === 0 ? "✓" : backlogs}
+                                    </td>
+                                    <td className="py-3.5 px-5 text-right">
+                                      <button onClick={() => handleNotifyCandidateMail(student, "eligible", selectedDrive?.name || selectedDrive?.company || "")} className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-1.5 rounded-lg text-[10px] uppercase tracking-wider shadow-sm transition-all">Notify</button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        )}
+
+                        {/* Pagination Controls for Eligible Students */}
+                        {!driveEligibleLoading && driveEligibleStudents?.pagination && driveEligibleStudents.pagination.total_pages > 1 && (
+                          <div className="flex items-center justify-between px-6 py-4 bg-slate-50/50 border-t border-slate-100">
+                            <p className="text-xs font-semibold text-slate-500">
+                              Showing <span className="font-bold text-slate-800">{((eligiblePage - 1) * eligiblePageSize) + 1}</span> to{" "}
+                              <span className="font-bold text-slate-800">{Math.min(eligiblePage * eligiblePageSize, driveEligibleStudents.pagination.total)}</span> of{" "}
+                              <span className="font-bold text-slate-800">{driveEligibleStudents.pagination.total}</span> eligible students
+                            </p>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => {
+                                  if (driveEligibleStudents.pagination.has_prev) {
+                                    const prevPage = eligiblePage - 1;
+                                    setEligiblePage(prevPage);
+                                    fetchDriveEligibleStudents(selectedDrive.name, selectedDrive, prevPage);
+                                  }
+                                }}
+                                disabled={!driveEligibleStudents.pagination.has_prev}
+                                className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm ${
+                                  driveEligibleStudents.pagination.has_prev
+                                    ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                                    : "bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed"
+                                }`}
+                              >
+                                Previous
+                              </button>
+                              <div className="flex items-center gap-1.5">
+                                {(() => {
+                                  const totalPages = driveEligibleStudents.pagination.total_pages;
+                                  const pages: (number | string)[] = [];
+                                  const maxVisible = 5;
+                                  if (totalPages <= maxVisible) {
+                                    for (let i = 1; i <= totalPages; i++) pages.push(i);
+                                  } else {
+                                    pages.push(1);
+                                    if (eligiblePage > 3) pages.push("...");
+                                    const start = Math.max(2, eligiblePage - 1);
+                                    const end = Math.min(totalPages - 1, eligiblePage + 1);
+                                    for (let i = start; i <= end; i++) pages.push(i);
+                                    if (eligiblePage < totalPages - 2) pages.push("...");
+                                    pages.push(totalPages);
+                                  }
+                                  return pages;
+                                })().map((p, idx) => (
+                                  <button
+                                    key={idx}
+                                    disabled={p === "..."}
+                                    onClick={() => {
+                                      if (typeof p === 'number') {
+                                        setEligiblePage(p);
+                                        fetchDriveEligibleStudents(selectedDrive.name, selectedDrive, p);
+                                      }
+                                    }}
+                                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${
+                                      p === "..."
+                                        ? "text-slate-400 cursor-default"
+                                        : eligiblePage === p
+                                        ? "bg-orange-500 text-white shadow-sm cursor-pointer"
+                                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
+                                    }`}
+                                  >
+                                    {p}
+                                  </button>
+                                ))}
+                              </div>
+                              <button
+                                onClick={() => {
+                                  if (driveEligibleStudents.pagination.has_next) {
+                                    const nextPage = eligiblePage + 1;
+                                    setEligiblePage(nextPage);
+                                    fetchDriveEligibleStudents(selectedDrive.name, selectedDrive, nextPage);
+                                  }
+                                }}
+                                disabled={!driveEligibleStudents.pagination.has_next}
+                                className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm ${
+                                  driveEligibleStudents.pagination.has_next
+                                    ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                                    : "bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed"
+                                }`}
+                              >
+                                Next
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
 
                     {/* REGISTERED TABLE — from drivePlacementList API */}
