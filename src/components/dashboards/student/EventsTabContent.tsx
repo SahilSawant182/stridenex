@@ -273,10 +273,10 @@ export default function EventsTabContent() {
       if (!email) return;
 
       const response = await getCollegeEventList(college, email);
-      const apiData = response?.data || response?.message?.data || [];
+      const eventsList = response?.data?.events || response?.message?.data?.events || response?.events || (Array.isArray(response?.data) ? response.data : []);
       
-      if (Array.isArray(apiData)) {
-        const mappedEvents: Event[] = apiData.map((item: any, index: number) => {
+      if (Array.isArray(eventsList)) {
+        const mappedEvents: Event[] = eventsList.map((item: any, index: number) => {
           const styles = getEventStyles(item.event_type);
           return {
             id: index + 1,
