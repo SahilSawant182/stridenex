@@ -35,6 +35,16 @@ export const createStudentProjectEnrollment = async (data: any) => {
   }
 };
 
+export const mapYearToWord = (year: any): string | null => {
+  if (!year) return null;
+  const str = String(year).trim().toLowerCase();
+  if (str === "1" || str.includes("1st") || str.includes("first")) return "First Year";
+  if (str === "2" || str.includes("2nd") || str.includes("second")) return "Second Year";
+  if (str === "3" || str.includes("3rd") || str.includes("third")) return "Third Year";
+  if (str === "4" || str.includes("4th") || str.includes("final") || str.includes("fourth")) return "Final Year";
+  return year;
+};
+
 /**
  * Fetch all available internships for students.
  */
@@ -51,7 +61,9 @@ export const getStudentInternshipList = async (
     if (studentEmail) params.append("student", studentEmail);
     params.append("course", course || "null");
     params.append("department", department || "null");
-    // params.append("academic_year", academicYear || "null");
+    
+    const yearWord = mapYearToWord(academicYear);
+    params.append("current_year", yearWord || "null");
 
     const queryString = params.toString();
     if (queryString) {
@@ -82,7 +94,9 @@ export const getStudentProjectList = async (
     if (studentEmail) params.append("student", studentEmail);
     params.append("course", course || "null");
     params.append("department", department || "null");
-    params.append("academic_year", academicYear || "null");
+    
+    const yearWord = mapYearToWord(academicYear);
+    params.append("current_year", yearWord || "null");
 
     const queryString = params.toString();
     if (queryString) {
@@ -560,6 +574,37 @@ export const getPackageRemainingDays = async (user: string) => {
     return response;
   } catch (error) {
     console.error("Error fetching package remaining days:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch skill test questions.
+ */
+export const getSkillTestQuestions = async (student: string, skill: string, level: string) => {
+  try {
+    const response = await apiService.get(
+      `method/nexedu.api.skill_assessment.ai.get_skill_test_questions?student=${encodeURIComponent(student)}&skill=${encodeURIComponent(skill)}&level=${encodeURIComponent(level)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching skill test questions:", error);
+    throw error;
+  }
+};
+
+/**
+ * Submit skill test.
+ */
+export const submitSkillTest = async (sessionId: string, answers: any[]) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.api.skill_assessment.ai.submit_skill_test",
+      { session_id: sessionId, answers }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error submitting skill test:", error);
     throw error;
   }
 };

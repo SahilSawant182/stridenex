@@ -27,7 +27,7 @@ import {
   Linkedin
 } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
-import { getStudentByEmail, updateStudent } from "@/services/student.services";
+import { getStudentByEmail, updateStudent, mapYearToWord } from "@/services/student.services";
 import { updateIndustry } from "@/services/industry.services";
 import { getMentorByEmail, getMentorDashboardStats } from "@/services/mentor.services";
 import { getCollegeDetails, updateCollegeDetails, getPlacementStats, getDashboardSummary } from "@/services/college.services";
@@ -336,7 +336,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     { name: "stream", label: "Stream", type: "text", icon: Layers, required: true },
     { name: "course", label: "Course", type: "text", icon: GraduationCap, required: true },
     { name: "semester", label: "Semester", type: "text", icon: Calendar, required: true },
-    { name: "academic_year", label: "Academic Year", type: "text", icon: Target, required: true },
+    { name: "current_year", label: "Current Year", type: "select", icon: Target, options: ["First Year", "Second Year", "Third Year", "Final Year"], required: true },
     { name: "date_of_birth", label: "Date of Birth", type: "date", icon: Calendar, required: true },
     { name: "gender", label: "Gender", type: "select", icon: Users, options: ["Male", "Female", "Other"], required: true, disabled: true },
     { name: "linkedin", label: "LinkedIn URL", type: "url", icon: Linkedin },
@@ -615,7 +615,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       stream: studentData?.stream || "",
       course: studentData?.course || "",
       semester: studentData?.semester || "",
-      academic_year: studentData?.academic_year || "",
+      current_year: mapYearToWord(studentData?.current_year || studentData?.academic_year) || "",
       date_of_birth: studentData?.date_of_birth || "",
       mobile_no: studentData?.mobile_no || "",
       college: studentData?.college || "",

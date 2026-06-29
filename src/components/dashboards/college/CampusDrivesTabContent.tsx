@@ -51,7 +51,8 @@ import {
   getSalaryBands,
   getNonEligibleStudents,
   exportEligibleStudents,
-  exportNotEligibleStudents
+  exportNotEligibleStudents,
+  createSkill
 } from "@/services/college.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { FaRupeeSign } from 'react-icons/fa';
@@ -334,7 +335,7 @@ export default function CampusDrivesTabContent() {
 
     const company = dbDrive.industry || dbDrive.industry_name || (dbDrive.name && dbDrive.name.includes("-") ? dbDrive.name.split("-")[0] : dbDrive.name) || "";
     const firstDesignation = designations && designations[0] ? designations[0] : "";
-    const role = dbDrive.role || firstDesignation || "";
+    const role = dbDrive.job_title || dbDrive.role || firstDesignation || "";
 
     // Compute stats from API response fields or stats sub-object or default
     const stats = {
@@ -999,7 +1000,15 @@ export default function CampusDrivesTabContent() {
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "Skill" },
       allowCustom: true,
-      customPlaceholder: "Enter custom skill..."
+      customPlaceholder: "Enter custom skill...",
+      onCreateCustomValue: async (val: string) => {
+        try {
+          await createSkill(val);
+        } catch (err) {
+          console.error("Failed to create skill:", err);
+          throw err;
+        }
+      }
     }
   ], []);
 
@@ -1057,7 +1066,7 @@ export default function CampusDrivesTabContent() {
           : (Number(formData.minCgpa) <= 10
             ? `${Number(formData.minCgpa).toFixed(1)} CGPA`
             : `${formData.minCgpa}%`),
-        role: formData.role,
+        job_title: formData.role,
         designation: [],
         branches: branchesArray,
         required_skill: skillsArray

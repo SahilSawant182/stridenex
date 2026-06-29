@@ -534,6 +534,20 @@ export const getTopSkillGaps = async (college: string) => {
   }
 };
 
+export const createSkill = async (skill_name: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.student.student.create_skill`,
+      { skill_name }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating skill:", error);
+    throw error;
+  }
+};
+
+
 
 
 

@@ -66,7 +66,7 @@ export default function ProjectsTabContent() {
           const profile = studentRes?.message?.data || studentRes?.data || {};
           course = profile.course || null;
           department = profile.department || null;
-          academicYear = profile.academic_year || null;
+          academicYear = profile.current_year || profile.academic_year || null;
         } catch (err) {
           console.error("Error fetching student profile:", err);
         }
