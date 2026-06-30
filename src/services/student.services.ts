@@ -256,13 +256,58 @@ export const getStudentByEmail = async (emailId: string) => {
   }
 };
 /**
+ * Format mobile number to standard "+CountryCode-PhoneNumber" (like +91-7656787656)
+ */
+export const formatMobileNumber = (mobileNo: string): string => {
+  if (!mobileNo) return "";
+  let cleaned = String(mobileNo).trim();
+
+  // If already in the format "+XX-XXXXXXXXXX" or similar (+country_code-number)
+  if (/^\+\d+-\d+$/.test(cleaned)) {
+    return cleaned;
+  }
+
+  // Remove all non-digit characters except the leading "+" if present
+  const hasPlus = cleaned.startsWith("+");
+  let digits = cleaned.replace(/\D/g, "");
+
+  if (hasPlus) {
+    if (digits.startsWith("91")) {
+      const rest = digits.substring(2);
+      return `+91-${rest}`;
+    } else {
+      if (digits.length === 11) {
+        return `+${digits.substring(0, 1)}-${digits.substring(1)}`;
+      } else if (digits.length === 12) {
+        return `+${digits.substring(0, 2)}-${digits.substring(2)}`;
+      } else if (digits.length === 13) {
+        return `+${digits.substring(0, 3)}-${digits.substring(3)}`;
+      }
+      return `+${digits}`;
+    }
+  } else {
+    if (digits.startsWith("91") && digits.length === 12) {
+      return `+91-${digits.substring(2)}`;
+    }
+    if (digits.length === 10) {
+      return `+91-${digits}`;
+    }
+    return `+91-${digits}`;
+  }
+};
+
+/**
  * Update student details.
  */
 export const updateStudent = async (emailId: string, data: any) => {
   try {
+    const formattedData = { ...data };
+    if (formattedData.mobile_no) {
+      formattedData.mobile_no = formatMobileNumber(formattedData.mobile_no);
+    }
     const response = await apiService.post(
       `method/stridenex_app.api_stridenex_app.student.student.update_student?email_id=${encodeURIComponent(emailId)}`,
-      data
+      formattedData
     );
     return response;
   } catch (error) {
@@ -584,7 +629,7 @@ export const getPackageRemainingDays = async (user: string) => {
 export const getSkillTestQuestions = async (student: string, skill: string, level: string) => {
   try {
     const response = await apiService.get(
-      `method/nexedu.api.skill_assessment.ai.get_skill_test_questions?student=${encodeURIComponent(student)}&skill=${encodeURIComponent(skill)}&level=${encodeURIComponent(level)}`
+      `method/nexedu.api.skill_assessment_ai.get_skill_test_questions?student=${encodeURIComponent(student)}&skill=${encodeURIComponent(skill)}&level=${encodeURIComponent(level)}`
     );
     return response;
   } catch (error) {
@@ -596,11 +641,16 @@ export const getSkillTestQuestions = async (student: string, skill: string, leve
 /**
  * Submit skill test.
  */
-export const submitSkillTest = async (sessionId: string, answers: any[]) => {
+export const submitSkillTest = async (payload: {
+  student: string;
+  skill: string;
+  level: string;
+  answers: Record<string, string>;
+}) => {
   try {
     const response = await apiService.post(
-      "method/nexedu.api.skill_assessment.ai.submit_skill_test",
-      { session_id: sessionId, answers }
+      "method/nexedu.api.skill_assessment_ai.submit_skill_test",
+      payload
     );
     return response;
   } catch (error) {

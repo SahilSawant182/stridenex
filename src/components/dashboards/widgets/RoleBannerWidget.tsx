@@ -143,7 +143,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       if (stored) {
         try {
           return JSON.parse(stored);
-        } catch (_) {}
+        } catch (_) { }
       }
     }
     return null;
@@ -160,7 +160,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       if (stored) {
         try {
           return JSON.parse(stored);
-        } catch (_) {}
+        } catch (_) { }
       }
     }
     return null;
@@ -171,7 +171,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       if (stored) {
         try {
           return JSON.parse(stored);
-        } catch (_) {}
+        } catch (_) { }
       }
     }
     return null;
@@ -184,7 +184,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       if (stored) {
         try {
           return JSON.parse(stored);
-        } catch (_) {}
+        } catch (_) { }
       }
     }
     return null;
@@ -199,7 +199,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
   });
   const [placementStats, setPlacementStats] = useState<any>(null);
   const [dashboardSummary, setDashboardSummary] = useState<any>(null);
-  const [collegeFormState, setCollegeFormState] = useState<any>( {});
+  const [collegeFormState, setCollegeFormState] = useState<any>({});
 
   const fetchStudentData = async () => {
     const email = currentUser || (typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail")) : "") || "";
@@ -337,7 +337,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     { name: "course", label: "Course", type: "text", icon: GraduationCap, required: true },
     { name: "semester", label: "Semester", type: "text", icon: Calendar, required: true },
     { name: "current_year", label: "Current Year", type: "select", icon: Target, options: ["First Year", "Second Year", "Third Year", "Final Year"], required: true },
-    { name: "date_of_birth", label: "Date of Birth", type: "date", icon: Calendar, required: true },
+    { name: "date_of_birth", label: "Date of Birth", type: "date", icon: Calendar, required: true, textTransform: "uppercase" },
     { name: "gender", label: "Gender", type: "select", icon: Users, options: ["Male", "Female", "Other"], required: true, disabled: true },
     { name: "linkedin", label: "LinkedIn URL", type: "url", icon: Linkedin },
     { name: "github", label: "GitHub URL", type: "url", icon: Github },
@@ -351,43 +351,43 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     { name: "intake_capacity", label: "Intake Capacity", type: "number", icon: Users, required: true },
     { name: "college_code", label: "College Code", type: "text", icon: Target, required: true },
     { name: "email", label: "Email Address", type: "email", icon: Mail, required: true, disabled: true },
-    { 
-      name: "university", 
-      label: "Affiliated University", 
-      type: "select", 
-      icon: GraduationCap, 
-      required: true, 
+    {
+      name: "university",
+      label: "Affiliated University",
+      type: "select",
+      icon: GraduationCap,
+      required: true,
       colSpan: 2,
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "University" },
       mapOptions: (data) => data.map((u: any) => ({ value: u.name, label: u.name }))
     },
-    { 
-      name: "college_type", 
-      label: "College Type", 
-      type: "select", 
-      icon: Layers, 
+    {
+      name: "college_type",
+      label: "College Type",
+      type: "select",
+      icon: Layers,
       required: true,
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "College Type" },
       mapOptions: (data) => data.map((ct: any) => ({ value: ct.name, label: ct.name }))
     },
     { name: "website", label: "Website", type: "url", icon: Globe, required: false },
-    { 
-      name: "state", 
-      label: "State", 
-      type: "select", 
-      icon: MapPin, 
+    {
+      name: "state",
+      label: "State",
+      type: "select",
+      icon: MapPin,
       required: true,
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "State" },
       mapOptions: (data) => data.map((s: any) => ({ value: s.name, label: s.name }))
     },
-    { 
-      name: "district", 
-      label: "District", 
-      type: "select", 
-      icon: MapPin, 
+    {
+      name: "district",
+      label: "District",
+      type: "select",
+      icon: MapPin,
       required: true,
       disabled: !collegeFormState.state,
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
@@ -400,11 +400,11 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       } : undefined,
       mapOptions: (data) => data.map((d: any) => ({ value: d.name, label: d.district_name || d.name }))
     },
-    { 
-      name: "taluka", 
-      label: "Taluka / Tahsil", 
-      type: "select", 
-      icon: MapPin, 
+    {
+      name: "taluka",
+      label: "Taluka / Tahsil",
+      type: "select",
+      icon: MapPin,
       required: true,
       disabled: !collegeFormState.district,
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
@@ -417,11 +417,11 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       } : undefined,
       mapOptions: (data) => data.map((t: any) => ({ value: t.name, label: t.name }))
     },
-    { 
-      name: "city", 
-      label: "City", 
-      type: "select", 
-      icon: MapPin, 
+    {
+      name: "city",
+      label: "City",
+      type: "select",
+      icon: MapPin,
       required: true,
       disabled: !collegeFormState.taluka,
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
@@ -457,12 +457,12 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       { name: "employee_head_count", label: "Employee Count", type: "number", icon: Users, required: true },
       { name: "cin", label: "CIN", type: "text", icon: Mail, required: true },
       { name: "about", label: "About Company", type: "textarea", icon: FileText, required: true, colSpan: 2 },
-      { 
-        name: "specializations", 
-        label: "Specializations", 
-        type: "select", 
-        multiple: true, 
-        icon: Target, 
+      {
+        name: "specializations",
+        label: "Specializations",
+        type: "select",
+        multiple: true,
+        icon: Target,
         colSpan: 2,
         apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
         apiParams: { doctype: "Specialization" },
@@ -484,9 +484,9 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
         type: "custom",
         colSpan: 2,
         customRender: (formData, onChange) => (
-          <OperatingHoursTable 
-            value={formData.operating_hours || []} 
-            onChange={onChange} 
+          <OperatingHoursTable
+            value={formData.operating_hours || []}
+            onChange={onChange}
           />
         )
       },
@@ -604,7 +604,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
     }
 
     if (!studentData && !fullName) return {};
-    
+
     // Split fullName from local storage for first/last name
     const [firstName = "", ...lastNameParts] = (fullName || "").split(" ");
     const lastName = lastNameParts.join(" ");
@@ -623,7 +623,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       github: studentData?.github || "",
       gender: studentData?.gender || "",
       cgpa: studentData?.cgpa || "",
-      
+
       // Local Storage priority
       first_name: firstName || studentData?.first_name || "",
       last_name: lastName || studentData?.last_name || "",
@@ -662,7 +662,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       const expStr = mentorData.experience ? `${mentorData.experience} Years Exp` : "";
       const domainsList = (mentorData.domains || []).map((d: any) => d.domain || d).filter(Boolean);
       const domainsStr = domainsList.length > 0 ? domainsList.join(", ") : "";
-      
+
       const parts = [roleStr, expStr, domainsStr].filter(Boolean);
       return parts.join(" • ") || "Verified Mentor";
     }
@@ -685,7 +685,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
   }, [collegeData, role]);
 
   // Get subtitle from customData or default
-  const subtitle = customData?.subtitle || 
+  const subtitle = customData?.subtitle ||
     (role === "student" && studentData ? (
       <div className="space-y-0.5">
         <p className="font-bold text-white flex items-center gap-2">
@@ -780,46 +780,46 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
       { key: "cgpa", value: studentData.cgpa || 0, label: "Current CGPA", icon: Award },
       { key: "semester", value: studentData.semester || "N/A", label: "Semester", icon: Calendar }
     ] : role === "mentor" && (mentorData || mentorStats) ? [
-      { 
-        key: "students", 
-        value: mentorStats?.total_students_mentored ?? mentorData?.total_students ?? 0, 
-        label: "Total Students", 
-        icon: Users 
+      {
+        key: "students",
+        value: mentorStats?.total_students_mentored ?? mentorData?.total_students ?? 0,
+        label: "Total Students",
+        icon: Users
       },
-      { 
-        key: "sessions", 
-        value: mentorData?.total_sessions ?? mentorStats?.sessions_this_month ?? 0, 
-        label: "Sessions Done", 
-        icon: Calendar 
+      {
+        key: "sessions",
+        value: mentorData?.total_sessions ?? mentorStats?.sessions_this_month ?? 0,
+        label: "Sessions Done",
+        icon: Calendar
       },
-      { 
-        key: "rating", 
-        value: mentorData?.avg_rating > 0 ? Number(mentorData.avg_rating).toFixed(1) : "New", 
-        label: "Avg Rating", 
-        icon: Award 
+      {
+        key: "rating",
+        value: mentorData?.avg_rating > 0 ? Number(mentorData.avg_rating).toFixed(1) : "New",
+        label: "Avg Rating",
+        icon: Award
       }
     ] : role === "college" && collegeData ? [
-      { 
-        key: "students", 
-        value: collegeData.intake_capacity ? Number(collegeData.intake_capacity).toLocaleString() : "2,847", 
-        label: "Intake Capacity", 
-        icon: Users 
+      {
+        key: "students",
+        value: collegeData.intake_capacity ? Number(collegeData.intake_capacity).toLocaleString() : "2,847",
+        label: "Intake Capacity",
+        icon: Users
       },
-      { 
-        key: "placements", 
-        value: placementStats?.placement_rate !== undefined 
-          ? `${Math.round(Number(placementStats.placement_rate))}%` 
-          : "94%", 
-        label: "Placement Rate", 
-        icon: Briefcase 
+      {
+        key: "placements",
+        value: placementStats?.placement_rate !== undefined
+          ? `${Math.round(Number(placementStats.placement_rate))}%`
+          : "94%",
+        label: "Placement Rate",
+        icon: Briefcase
       },
-      { 
-        key: "partners", 
-        value: dashboardSummary?.avg_employability !== undefined 
-          ? `${Math.round(Number(dashboardSummary.avg_employability))}%` 
-          : "78%", 
-        label: "Avg Employability", 
-        icon: TrendingUp 
+      {
+        key: "partners",
+        value: dashboardSummary?.avg_employability !== undefined
+          ? `${Math.round(Number(dashboardSummary.avg_employability))}%`
+          : "78%",
+        label: "Avg Employability",
+        icon: TrendingUp
       }
     ] : config.metrics.map(m => ({
       key: m.key,
@@ -842,7 +842,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
         {/* Background shapes for aesthetics */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
         <div className="absolute bottom-0 right-1/4 w-48 h-48 bg-white/5 rounded-full blur-2xl translate-y-1/2" />
-        
+
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-full bg-white/10" />
@@ -892,7 +892,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
                 </span>
               )}
               {(role === "student" || role === "industry" || role === "college") && (
-                <button 
+                <button
                   onClick={() => {
                     if (role === "college") {
                       fetchCollegeData();

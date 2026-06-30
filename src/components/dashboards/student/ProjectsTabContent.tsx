@@ -73,7 +73,7 @@ export default function ProjectsTabContent() {
       }
 
       const response = await getStudentProjectList(studentEmail, course, department, academicYear);
-      const projectData = response?.message?.data || response?.data || response || [];
+      const projectData = response?.message?.data?.projects || response?.data?.projects || response?.message?.data || response?.data || response || [];
       setProjects(Array.isArray(projectData) ? projectData : []);
     } catch (err) {
       console.error("Error fetching projects:", err);
