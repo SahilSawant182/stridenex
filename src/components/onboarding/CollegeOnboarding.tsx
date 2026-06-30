@@ -118,7 +118,11 @@ export default function CollegeOnboarding({
     approvedStatus: "Pending",
     emailVerified: false,
     mobileNo: "",
-    mobileVerified: false
+    mobileVerified: false,
+    gst_number: "",
+    address_line1: "",
+    address_line2: "",
+    pincode: ""
   });
 
   useEffect(() => {
@@ -318,7 +322,11 @@ export default function CollegeOnboarding({
           college_type: resData.college_type || prev.college_type,
           website: resData.website || prev.website,
           isActive: resData.is_active === 1 || resData.isActive === true || prev.isActive,
-          approvedStatus: resData.approved_status || resData.approvedStatus || prev.approvedStatus
+          approvedStatus: resData.approved_status || resData.approvedStatus || prev.approvedStatus,
+          gst_number: resData.gst_number || prev.gst_number || "",
+          address_line1: resData.address_line1 || prev.address_line1 || "",
+          address_line2: resData.address_line2 || prev.address_line2 || "",
+          pincode: resData.pincode || prev.pincode || ""
         }));
 
         if (resData.contact_details && Array.isArray(resData.contact_details) && resData.contact_details.length > 0) {
@@ -528,6 +536,14 @@ export default function CollegeOnboarding({
     if (!formData.city) errors.city = "City is required";
     if (!formData.university) errors.university = "University is required";
     if (!formData.college_type) errors.college_type = "College type is required";
+    if (!formData.address_line1?.trim()) {
+      errors.address_line1 = "Address Line 1 is required";
+    }
+    if (!formData.pincode) {
+      errors.pincode = "Pincode is required";
+    } else if (!/^\d{6}$/.test(formData.pincode)) {
+      errors.pincode = "Please enter a valid 6-digit pincode";
+    }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -816,6 +832,70 @@ export default function CollegeOnboarding({
       );
 
       if (isSuccess) {
+        // ─── BILLING INTEGRATION STARTS HERE ─────────────────────────────────
+        try {
+          const billingPayload = {
+            data: {
+              account_type: "Organization",
+              role_type: "College Base",
+              company_name: formData.college_name,
+              abbr: formData.college_name ? formData.college_name.substring(0, 3).toUpperCase() : "CO",
+              gstin: formData.gst_number || "",
+              email: userEmail,
+              user_password: localStorage.getItem("userPassword") || "",
+              first_name: localStorage.getItem("userFirstName") || "User",
+              last_name: localStorage.getItem("userLastName") || "",
+              default_currency: "INR",
+              country: formData.country || "India",
+              state: formData.state,
+              city: formData.city,
+              address_line1: formData.address_line1 || "Not Provided",
+              address_line2: formData.address_line2 || "",
+              pincode: formData.pincode || "",
+              billing_details: [{ title: "Stridenex App" }]
+            }
+          };
+          console.log("Submitting College Billing registration payload:", billingPayload);
+
+          const storedApiKey = localStorage.getItem("apiKey") || "";
+          const storedApiSecret = localStorage.getItem("apiSecret") || "";
+          const billingHeaders: Record<string, string> = {
+            "Content-Type": "application/json"
+          };
+          if (storedApiKey && storedApiSecret) {
+            billingHeaders["Authorization"] = `token ${storedApiKey}:${storedApiSecret}`;
+          }
+
+          const billingResponse = await axios.post(
+            `${BASE_URL}method/quantbit_billing_platform.quantbit_billing_platform.doctype.billing_account_master.billing_account_master.create_billing_registration`,
+            billingPayload,
+            { headers: billingHeaders }
+          );
+
+          console.log("Billing API full response:", billingResponse.data);
+
+          // Frappe wraps return values inside "message", so check the correct path
+          const billingResult = billingResponse.data?.message || billingResponse.data;
+          if (billingResult?.status === "error") {
+            throw new Error(billingResult.message || "Failed to create billing account.");
+          }
+        } catch (billingErr: any) {
+          console.error("Billing API Integration Error:", billingErr);
+          let errorMsg = "Profile saved, but failed to assign the default billing package.";
+          if (billingErr?.message) {
+            errorMsg = billingErr.message;
+          } else if (billingErr?.response?.data?.message) {
+            errorMsg = typeof billingErr.response.data.message === 'string'
+              ? billingErr.response.data.message
+              : "Billing registration failed.";
+          }
+          setError(errorMsg);
+          setLoading(false);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          return; // Stop the redirect if billing fails so the user can see the error
+        }
+        // ─── BILLING INTEGRATION ENDS HERE ──────────────────────────────────
+
         setSuccess("College onboarding completed successfully!");
 
         setTimeout(async () => {
@@ -1058,6 +1138,14 @@ export default function CollegeOnboarding({
         placeholder: "Enter registration number",
         layout: "full"
       },
+      {
+        fieldname: "gst_number",
+        label: "GST Number (Optional)",
+        fieldtype: "Data",
+        required: false,
+        placeholder: "Enter GST number",
+        layout: "half"
+      },
     ];
 
     return (
@@ -1214,6 +1302,31 @@ export default function CollegeOnboarding({
         placeholder: "https://www.college.edu",
         layout: "half",
         inputClassName: "font-mono text-sm"
+      },
+      {
+        fieldname: "address_line1",
+        label: "Address Line 1",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Enter Address Line 1",
+        layout: "full"
+      },
+      {
+        fieldname: "address_line2",
+        label: "Address Line 2 (Optional)",
+        fieldtype: "Data",
+        required: false,
+        placeholder: "Enter Address Line 2",
+        layout: "full"
+      },
+      {
+        fieldname: "pincode",
+        label: "Pincode",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Enter 6-digit Pincode",
+        layout: "half",
+        maxLength: 6
       }
     ];
 
