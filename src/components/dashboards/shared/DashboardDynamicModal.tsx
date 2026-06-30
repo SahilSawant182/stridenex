@@ -50,6 +50,7 @@ interface DashboardDynamicModalProps {
   children?: React.ReactNode;
   maxWidth?: string;
   hideFooter?: boolean;
+  submitText?: string;
 }
 
 export default function DashboardDynamicModal({
@@ -68,7 +69,8 @@ export default function DashboardDynamicModal({
   onValuesChange,
   children,
   maxWidth = "max-w-2xl",
-  hideFooter = false
+  hideFooter = false,
+  submitText
 }: DashboardDynamicModalProps) {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -299,7 +301,7 @@ export default function DashboardDynamicModal({
                     ) : (
                       <Save className="w-5 h-5" />
                     )}
-                    Save Changes
+                    {submitText || "Save Changes"}
                   </Button>
                 </div>
               )}

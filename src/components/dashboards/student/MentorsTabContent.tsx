@@ -428,7 +428,7 @@ export default function MentorsTabContent() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
-              placeholder="Search mentors..."
+              placeholder="search for email"
               className="pl-9 pr-4 py-2 w-full md:w-64 bg-white border-slate-200 text-sm"
               value={searchVal}
               onChange={(e) => handleSearchChange(e.target.value)}

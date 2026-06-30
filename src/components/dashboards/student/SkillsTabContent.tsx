@@ -7,9 +7,9 @@ import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { SkillRadar } from "@/components/dashboards/shared/RadarChart";
 import { SummaryList } from "@/components/dashboards/shared/SummaryList";
 import { CircularScore } from "@/components/dashboards/shared/CircularScore";
-import { getSkillLedger, getEmployabilityScore, createStudentSkill, addSkillEvidence } from "@/services/student.services";
-import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
+import { getSkillLedger, getEmployabilityScore, createStudentSkill, addSkillEvidence, getSkillTestQuestions, submitSkillTest } from "@/services/student.services";
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Check, ChevronRight, AlertCircle, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { useToast } from "@/context/ToastContext";
@@ -70,6 +70,17 @@ export default function SkillsTabContent() {
   const [isEvidenceModalOpen, setIsEvidenceModalOpen] = useState(false);
   const { showToast } = useToast();
 
+  // Skill Verification States
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
+  const [testSessionId, setTestSessionId] = useState<string>("");
+  const [testQuestions, setTestQuestions] = useState<any[]>([]);
+  const [testSkill, setTestSkill] = useState<string>("");
+  const [testLevel, setTestLevel] = useState<string>("");
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
+  const [isSubmittingTest, setIsSubmittingTest] = useState(false);
+  const [testResult, setTestResult] = useState<any>(null);
+
   useEffect(() => {
     fetchSkillStats();
   }, []);
@@ -128,65 +139,78 @@ export default function SkillsTabContent() {
     try {
       setIsSubmitting(true);
       const studentEmail = localStorage.getItem("currentUser") || "";
-
-      const payload = {
-        student: studentEmail,
-        skill: formData.skill,
-        current_level: formData.current_level,
-        status: "Active",
-        first_acquired: new Date().toISOString().split('T')[0], // Today's date
-        last_demonstrated: "",
-        self_declared: 1,
-        ai_verified: 0,
-        is_public: 1
-      };
-
-      const response = await createStudentSkill(payload);
-
-      // Handle responses that return 200 OK but contain an error message payload (common in Frappe)
-      const isErrorObj = response?.message?.status === "error" || response?.status === "error";
-      const errMsg = response?.message?.message || response?.message || "";
-      const serverMsgStr = response?._server_messages || "";
-      
-      const isDuplicate = 
-        (typeof errMsg === 'string' && (errMsg.includes("Duplicate entry") || errMsg.includes("already exists") || errMsg.includes("IntegrityError"))) ||
-        (typeof serverMsgStr === 'string' && serverMsgStr.includes("already exists"));
-
-      if (isErrorObj && isDuplicate) {
-        showToast(`You have already added "${formData.skill}" to your skills!`, "error");
-        setIsSubmitting(false);
-        return;
-      } else if (isErrorObj) {
-        showToast("Failed to create skill", "error");
-        setIsSubmitting(false);
+      if (!studentEmail) {
+        showToast("Session expired, please login again", "error");
         return;
       }
 
-      if (response && (response.status === 200 || response.status === "200" || response.message?.name || response.data)) {
-        showToast("Skill created successfully!", "success");
+      // Fetch questions from getSkillTestQuestions
+      const response = await getSkillTestQuestions(studentEmail, formData.skill, formData.current_level);
+      const data = response?.message || response?.data || response;
+
+      if (data && data.questions && data.questions.length > 0) {
+        setTestQuestions(data.questions);
+        setTestSessionId(data.session_id);
+        setTestSkill(formData.skill);
+        setTestLevel(formData.current_level);
+        setUserAnswers({});
+        setCurrentQuestionIndex(0);
+        setTestResult(null);
+
+        // Close Add New Skill modal
         setIsModalOpen(false);
-        fetchSkillStats(); // Refresh ledger
+        // Open Test modal
+        setIsTestModalOpen(true);
+        showToast("Skill test questions loaded successfully!", "success");
       } else {
-        showToast(response?.message || "Failed to create skill", "error");
+        showToast("No test questions available for this skill and level.", "error");
       }
     } catch (err: any) {
-      console.error("Error creating skill:", err);
-      
-      // Also catch exceptions thrown by axios on 4xx/5xx status codes
-      const serverMsgStr = err?.response?.data?._server_messages || "";
-      const innerErrMsg = err?.response?.data?.message?.message || err?.response?.data?.message || err?.message || "";
-      
-      const isDuplicate = 
-        (typeof innerErrMsg === 'string' && (innerErrMsg.includes("Duplicate entry") || innerErrMsg.includes("already exists") || innerErrMsg.includes("IntegrityError"))) ||
-        (typeof serverMsgStr === 'string' && serverMsgStr.includes("already exists"));
-
-      if (isDuplicate) {
-        showToast(`You have already added "${formData.skill}" to your skills!`, "error");
-      } else {
-        showToast(err?.message || "Something went wrong", "error");
-      }
+      console.error("Error fetching skill questions:", err);
+      showToast(err?.message || "Failed to load skill test questions", "error");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmitTest = async () => {
+    const unansweredCount = testQuestions.length - Object.keys(userAnswers).length;
+    if (unansweredCount > 0) {
+      showToast(`Please answer all questions before submitting. (${unansweredCount} remaining)`, "warning");
+      return;
+    }
+
+    try {
+      setIsSubmittingTest(true);
+      
+      const studentEmail = localStorage.getItem("currentUser") || "";
+      const answersPayload: Record<string, string> = {};
+      testQuestions.forEach((q, idx) => {
+        const questionText = q.question;
+        const answerText = userAnswers[idx] || "";
+        answersPayload[questionText] = answerText;
+      });
+
+      const response = await submitSkillTest({
+        student: studentEmail,
+        skill: testSkill,
+        level: testLevel,
+        answers: answersPayload
+      });
+      const data = response?.message || response?.data || response;
+
+      if (data) {
+        setTestResult(data);
+        showToast("Skill verification test submitted successfully!", "success");
+        fetchSkillStats();
+      } else {
+        showToast("Failed to retrieve test result.", "error");
+      }
+    } catch (err: any) {
+      console.error("Error submitting test:", err);
+      showToast(err?.message || "Failed to submit skill test", "error");
+    } finally {
+      setIsSubmittingTest(false);
     }
   };
 
@@ -390,6 +414,7 @@ export default function SkillsTabContent() {
         fields={skillFields}
         onSubmit={handleCreateSkill}
         loading={isSubmitting}
+        submitText="Verify Skills"
       />
 
       {/* Skill Info & Evidence Option Modal */}
@@ -450,6 +475,335 @@ export default function SkillsTabContent() {
         onSubmit={handleAddEvidence}
         loading={isSubmitting}
       />
+
+      {/* Skill Verification Test Modal */}
+      <AnimatePresence>
+        {isTestModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-100"
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-200/50">
+                    {testResult ? (
+                      <ShieldCheck className="w-6 h-6 text-white" />
+                    ) : (
+                      <Sparkles className="w-6 h-6 text-white animate-pulse" />
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-800">
+                      {testResult ? "Verification Result" : "Skill Verification Test"}
+                    </h2>
+                    <p className="text-sm text-slate-500 font-semibold">
+                      {testSkill} • Level: {testLevel}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsTestModalOpen(false)}
+                  className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all shadow-sm"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                {!testResult ? (
+                  // Question View
+                  <div className="space-y-6">
+                    {/* Progress Bar */}
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="bg-orange-500 h-full transition-all duration-300"
+                        style={{
+                          width: `${((currentQuestionIndex + 1) / testQuestions.length) * 100}%`,
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-widest">
+                      <span>Progress</span>
+                      <span>Question {currentQuestionIndex + 1} of {testQuestions.length}</span>
+                    </div>
+
+                    {/* Question Card */}
+                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                      <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-orange-100 text-orange-600 uppercase tracking-widest mb-3">
+                        {testQuestions[currentQuestionIndex]?.difficulty || "Medium"}
+                      </span>
+                      <h3 className="text-base font-bold text-slate-800 leading-snug">
+                        {testQuestions[currentQuestionIndex]?.question}
+                      </h3>
+                    </div>
+
+                    {/* Options List / Text Box */}
+                    {testQuestions[currentQuestionIndex]?.type === "mcq" ? (
+                      <div className="space-y-3">
+                        {testQuestions[currentQuestionIndex]?.options?.map((option: string, oIdx: number) => {
+                          const isSelected = userAnswers[currentQuestionIndex] === option;
+                          return (
+                            <div
+                              key={oIdx}
+                              onClick={() => {
+                                setUserAnswers(prev => ({
+                                  ...prev,
+                                  [currentQuestionIndex]: option
+                                }));
+                              }}
+                              className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center gap-4 ${
+                                isSelected
+                                  ? "border-orange-500 bg-orange-50/30 text-orange-950 font-bold shadow-md shadow-orange-500/5"
+                                  : "border-slate-200 hover:border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+                              }`}
+                            >
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                                isSelected ? "border-orange-500 bg-orange-500 text-white" : "border-slate-300"
+                              }`}>
+                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+                              <span className="text-sm font-semibold leading-tight">{option}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <textarea
+                          value={userAnswers[currentQuestionIndex] || ""}
+                          onChange={(e) => {
+                            setUserAnswers(prev => ({
+                              ...prev,
+                              [currentQuestionIndex]: e.target.value
+                            }));
+                          }}
+                          placeholder="Type your answer here..."
+                          rows={6}
+                          className="w-full px-4 py-3.5 rounded-[1.5rem] border border-slate-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all font-semibold text-sm text-slate-900 resize-none outline-none min-h-[150px]"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // Result Scorecard View
+                  <div className="space-y-6">
+                    {/* Circle Score & Status */}
+                    <div className="flex flex-col items-center justify-center py-4 bg-slate-50 rounded-3xl border border-slate-100">
+                      <div className="relative flex items-center justify-center">
+                        <svg className="w-24 h-24 transform -rotate-90">
+                          <circle
+                            cx="48"
+                            cy="48"
+                            r="40"
+                            className="stroke-slate-200"
+                            strokeWidth="8"
+                            fill="transparent"
+                          />
+                          <circle
+                            cx="48"
+                            cy="48"
+                            r="40"
+                            className={testResult.passed ? "stroke-emerald-500" : "stroke-rose-500"}
+                            strokeWidth="8"
+                            fill="transparent"
+                            strokeDasharray="251.2"
+                            strokeDashoffset={251.2 - (251.2 * (testResult.score || 0)) / 100}
+                          />
+                        </svg>
+                        <div className="absolute flex flex-col items-center justify-center">
+                          <span className="text-2xl font-black text-slate-800">{testResult.score}%</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Score</span>
+                        </div>
+                      </div>
+
+                      <div className={`mt-4 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${
+                        testResult.passed 
+                          ? "bg-emerald-100 text-emerald-700 border border-emerald-200" 
+                          : "bg-rose-100 text-rose-700 border border-rose-200"
+                      }`}>
+                        {testResult.passed ? "Verification Passed" : "Verification Failed"}
+                      </div>
+                      
+                      <p className="text-xs text-slate-500 mt-2 font-medium">
+                        Correct Answers: <span className="font-bold text-slate-800">{testResult.total_correct}</span> / {testResult.total_questions}
+                      </p>
+                    </div>
+
+                    {/* Summary feedback */}
+                    {testResult.feedback?.summary && (
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">AI Assessment Summary</h4>
+                        <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 text-sm font-semibold text-slate-700 leading-relaxed">
+                          {testResult.feedback.summary}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Strengths & Gaps */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {testResult.feedback?.strengths && testResult.feedback.strengths.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 text-emerald-600">Strengths</h4>
+                          <div className="p-4 bg-emerald-50/30 rounded-2xl border border-emerald-100/50 space-y-2">
+                            {testResult.feedback.strengths.map((str: string, sIdx: number) => (
+                              <div key={sIdx} className="flex gap-2 text-xs font-semibold text-slate-700 leading-tight">
+                                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                                <span>{str}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {testResult.feedback?.gaps && testResult.feedback.gaps.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 text-amber-600">Areas to Improve</h4>
+                          <div className="p-4 bg-amber-50/30 rounded-2xl border border-amber-100/50 space-y-2">
+                            {testResult.feedback.gaps.map((gap: string, gIdx: number) => (
+                              <div key={gIdx} className="flex gap-2 text-xs font-semibold text-slate-700 leading-tight">
+                                <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                                <span>{gap}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Next Steps */}
+                    {testResult.feedback?.next_step && (
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 text-blue-600">Recommended Next Steps</h4>
+                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex gap-3">
+                          <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+                            <Sparkles className="w-4 h-4" />
+                          </div>
+                          <p className="text-xs font-semibold text-slate-600 leading-relaxed">
+                            {testResult.feedback.next_step}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Breakdown section */}
+                    {testResult.breakdown && testResult.breakdown.length > 0 && (
+                      <div className="space-y-4">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Question Breakdown</h4>
+                        <div className="space-y-3">
+                          {testResult.breakdown.map((item: any, bIdx: number) => (
+                            <div key={bIdx} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                              <div className="flex justify-between items-start gap-4">
+                                <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-200 text-slate-700 uppercase tracking-widest">
+                                  Question {item.index || bIdx + 1}
+                                </span>
+                                <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest ${
+                                  item.is_correct 
+                                    ? "bg-emerald-100 text-emerald-700" 
+                                    : "bg-rose-100 text-rose-700"
+                                }`}>
+                                  {item.is_correct ? "Correct" : "Incorrect"} ({item.answer_score || 0} pts)
+                                </span>
+                              </div>
+                              <h5 className="text-sm font-bold text-slate-800 leading-snug">
+                                {item.question}
+                              </h5>
+                              <div className="p-3 bg-white rounded-xl border border-slate-100 text-xs text-slate-700">
+                                <span className="font-bold block text-slate-400 text-[10px] uppercase tracking-widest mb-1">Your Answer</span>
+                                {item.selected_answer || <span className="italic text-slate-400">Empty</span>}
+                              </div>
+                              {item.evaluation_comment && (
+                                <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100/30 text-xs text-slate-700 leading-relaxed">
+                                  <span className="font-bold block text-blue-500 text-[10px] uppercase tracking-widest mb-1">AI Evaluation</span>
+                                  {item.evaluation_comment}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="p-4 px-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                {!testResult ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        if (currentQuestionIndex > 0) {
+                          setCurrentQuestionIndex(prev => prev - 1);
+                        } else {
+                          setIsTestModalOpen(false);
+                        }
+                      }}
+                      className="px-6 h-12 rounded-xl text-sm font-bold border-slate-200 text-slate-600 hover:bg-slate-200 transition-all"
+                    >
+                      {currentQuestionIndex > 0 ? "Back" : "Cancel"}
+                    </Button>
+
+                    {currentQuestionIndex < testQuestions.length - 1 ? (
+                      <Button
+                        onClick={() => {
+                          if (!userAnswers[currentQuestionIndex]) {
+                            showToast("Please select an answer to proceed", "warning");
+                            return;
+                          }
+                          setCurrentQuestionIndex(prev => prev + 1);
+                        }}
+                        className="px-8 h-12 rounded-xl text-sm font-bold bg-orange-500 text-white hover:bg-orange-600 transition-all shadow-xl shadow-orange-500/10 flex items-center gap-2"
+                      >
+                        Next Question
+                        <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={handleSubmitTest}
+                        disabled={isSubmittingTest}
+                        className="px-8 h-12 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/10 flex items-center gap-2 disabled:opacity-50"
+                      >
+                        {isSubmittingTest ? (
+                          <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Submitting...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-5 h-5" />
+                            Submit Test
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <div className="w-full flex justify-end">
+                    <Button
+                      onClick={() => setIsTestModalOpen(false)}
+                      className="px-8 h-12 rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10"
+                    >
+                      Close Result
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
