@@ -136,6 +136,7 @@ export default function SkillsTabContent() {
   };
 
   const handleCreateSkill = async (formData: any) => {
+    if (isSubmitting) return;
     try {
       setIsSubmitting(true);
       const studentEmail = localStorage.getItem("currentUser") || "";
@@ -174,6 +175,7 @@ export default function SkillsTabContent() {
   };
 
   const handleSubmitTest = async () => {
+    if (isSubmittingTest) return;
     const unansweredCount = testQuestions.length - Object.keys(userAnswers).length;
     if (unansweredCount > 0) {
       showToast(`Please answer all questions before submitting. (${unansweredCount} remaining)`, "warning");

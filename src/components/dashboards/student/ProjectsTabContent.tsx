@@ -12,11 +12,13 @@ import {
   ArrowRight,
   Loader2,
   Calendar,
-  CheckCircle2
+  CheckCircle2,
+  Search
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { getStudentProjectList, createStudentProjectEnrollment, getStudentByEmail } from "@/services/student.services";
 import { useAuth } from "@/context/AuthContext";
 // import { useToast } from "@/components/ui/use-toast"; // use-toast not available
@@ -44,12 +46,15 @@ export default function ProjectsTabContent() {
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [successfullyEnrolled, setSuccessfullyEnrolled] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
-
-
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetchProjects();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      fetchProjects();
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [search]);
 
   const fetchProjects = async () => {
     try {
@@ -72,7 +77,7 @@ export default function ProjectsTabContent() {
         }
       }
 
-      const response = await getStudentProjectList(studentEmail, course, department, academicYear);
+      const response = await getStudentProjectList(studentEmail, course, department, academicYear, search);
       const projectData = response?.message?.data?.projects || response?.data?.projects || response?.message?.data || response?.data || response || [];
       setProjects(Array.isArray(projectData) ? projectData : []);
     } catch (err) {
@@ -182,6 +187,18 @@ export default function ProjectsTabContent() {
           <p className="text-xs md:text-sm text-slate-500 font-medium mt-1 opacity-90 font-outfit">
             Work on real-world challenges from top companies and earn certificates
           </p>
+        </div>
+        
+        {/* Search Field */}
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            type="text"
+            placeholder="Search projects..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 h-11 bg-white border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus-visible:ring-orange-500 focus-visible:border-orange-500 shadow-sm"
+          />
         </div>
       </motion.div>
 

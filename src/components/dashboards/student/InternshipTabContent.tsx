@@ -19,12 +19,14 @@ import {
   Zap,
   Target,
   GraduationCap,
-  X
+  X,
+  Search
 } from "lucide-react";
 import StatsWidget from "@/components/dashboards/widgets/StatsWidget";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { getStudentInternshipList, createStudentApplication, getStudentByEmail } from "@/services/student.services";
 import { useAuth } from "@/context/AuthContext";
 // import { useToast } from "@/components/ui/use-toast"; // use-toast not available
@@ -56,12 +58,15 @@ export default function InternshipTabContent() {
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [selectedInternship, setSelectedInternship] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
-
-
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
-    fetchInternships();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      fetchInternships();
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [search]);
 
   const fetchInternships = async () => {
     try {
@@ -82,7 +87,7 @@ export default function InternshipTabContent() {
         }
       }
 
-      const response = await getStudentInternshipList(currentUser || undefined, course, department, academicYear);
+      const response = await getStudentInternshipList(currentUser || undefined, course, department, academicYear, search);
       const internshipData = response?.message?.data || response?.data || response || [];
       setInternships(Array.isArray(internshipData) ? internshipData : []);
     } catch (err) {
@@ -228,6 +233,28 @@ export default function InternshipTabContent() {
           <button onClick={() => setFeedback(null)} className="ml-4 opacity-50 hover:opacity-100">×</button>
         </motion.div>
       )}
+
+      {/* Header Section */}
+      <motion.div variants={item} className="flex flex-col md:flex-row items-center justify-between gap-6 px-1">
+        <div className="text-center md:text-left">
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">Internship Openings</h1>
+          <p className="text-xs md:text-sm text-slate-500 font-medium mt-1 opacity-90 font-outfit">
+            Apply to top-tier internship opportunities matching your career track
+          </p>
+        </div>
+        
+        {/* Search Field */}
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Input
+            type="text"
+            placeholder="Search internships..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-10 h-11 bg-white border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus-visible:ring-orange-500 focus-visible:border-orange-500 shadow-sm"
+          />
+        </div>
+      </motion.div>
 
       {/* Stats Grid */}
       <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

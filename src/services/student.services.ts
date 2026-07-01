@@ -52,7 +52,8 @@ export const getStudentInternshipList = async (
   studentEmail?: string,
   course?: string | null,
   department?: string | null,
-  academicYear?: string | null
+  academicYear?: string | null,
+  search?: string
 ) => {
   try {
     let url = "method/stridenex_app.stridenex_app.doctype.internship.internship.get_internship_list";
@@ -64,6 +65,10 @@ export const getStudentInternshipList = async (
     
     const yearWord = mapYearToWord(academicYear);
     params.append("current_year", yearWord || "null");
+
+    if (search) {
+      params.append("search", search);
+    }
 
     const queryString = params.toString();
     if (queryString) {
@@ -85,7 +90,8 @@ export const getStudentProjectList = async (
   studentEmail?: string,
   course?: string | null,
   department?: string | null,
-  academicYear?: string | null
+  academicYear?: string | null,
+  search?: string
 ) => {
   try {
     let url = "method/stridenex_app.stridenex_app.doctype.industry_project.industry_project.get_project_list";
@@ -97,6 +103,10 @@ export const getStudentProjectList = async (
     
     const yearWord = mapYearToWord(academicYear);
     params.append("current_year", yearWord || "null");
+
+    if (search) {
+      params.append("search", search);
+    }
 
     const queryString = params.toString();
     if (queryString) {
