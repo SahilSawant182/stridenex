@@ -193,7 +193,7 @@ export default function HabitsTabContent() {
                 return (
                     <div className="space-y-2">
                         {formData.habits?.map((habit: string, index: number) => (
-                            <div key={`${habit}-${index}`} className="flex items-center gap-2">
+                            <div key={index} className="flex items-center gap-2">
                                 <Target className="w-4 h-4 text-slate-400 flex-shrink-0" />
                                 <input
                                     type="text"
@@ -225,9 +225,9 @@ export default function HabitsTabContent() {
                                 const newHabits = [...(formData.habits || []), ''];
                                 handleChange(newHabits);
                             }}
-                            className="w-full flex items-center justify-center gap-2 p-3 border-2 border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-slate-400 hover:text-slate-600 transition-colors"
+                            className="flex items-center gap-1.5 px-3.5 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-lg transition-all active:scale-95 shadow-sm shadow-orange-500/10"
                         >
-                            <Plus className="w-4 h-4" />
+                            <Plus className="w-3.5 h-3.5" />
                             <span>Add Habit</span>
                         </button>
                     </div>
@@ -886,7 +886,7 @@ export default function HabitsTabContent() {
                     className="bg-white rounded-xl border border-slate-200/60 shadow-sm overflow-hidden"
                 >
                     <div className="p-6 border-b border-slate-100">
-                        <h3 className="text-sm font-bold text-slate-800">Today's Pending Habits</h3>
+                        <h3 className="text-sm font-bold text-slate-800">{"Today's Pending Habits"}</h3>
                     </div>
                     <div className="p-6 space-y-3">
                         {pendingHabits.map((habit, index) => (

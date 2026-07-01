@@ -668,3 +668,33 @@ export const submitSkillTest = async (payload: {
     throw error;
   }
 };
+
+/**
+ * Fetch student career path.
+ */
+export const getStudentCareerPath = async (studentEmail: string) => {
+  try {
+    const response = await apiService.get(
+      `method/nexedu.path_finder.app_api.get_student_career_path?student=${encodeURIComponent(studentEmail)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching student career path:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch recommended paths.
+ */
+export const getRecommendedPaths = async (studentEmail: string) => {
+  try {
+    const response = await apiService.get(
+      `method/nexedu.path_finder.app_api.get_recommended_paths?student=${encodeURIComponent(studentEmail)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching recommended paths:", error);
+    throw error;
+  }
+};

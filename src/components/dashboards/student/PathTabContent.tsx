@@ -1,10 +1,54 @@
 "use client";
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, Circle, AlertCircle, TrendingUp, Building2, BrainCircuit, Target, ArrowRight } from "lucide-react";
+import { CheckCircle2, Circle, TrendingUp, Target, Loader2 } from "lucide-react";
+import { getStudentCareerPath, getRecommendedPaths } from "@/services/student.services";
 
 export default function PathTabContent() {
-  const roadmap = [
+  const [loading, setLoading] = useState(true);
+  const [activePath, setActivePath] = useState<any>(null);
+  const [recommendedPaths, setRecommendedPaths] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const studentEmail = localStorage.getItem("currentUser") || "ac1@gmail.com";
+        
+        // Fetch active career path and recommended paths in parallel
+        const [careerPathRes, recommendedRes] = await Promise.all([
+          getStudentCareerPath(studentEmail).catch(err => {
+            console.warn("getStudentCareerPath API failed or not whitelisted, using fallback data:", err);
+            return null;
+          }),
+          getRecommendedPaths(studentEmail).catch(err => {
+            console.warn("getRecommendedPaths API failed or not whitelisted, using fallback data:", err);
+            return null;
+          })
+        ]);
+
+        if (careerPathRes?.message) {
+          setActivePath(careerPathRes.message);
+        }
+        
+        if (recommendedRes?.message) {
+          const message = recommendedRes.message;
+          setRecommendedPaths(Array.isArray(message) ? message : []);
+        }
+      } catch (error) {
+        console.error("Error loading path tab content:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchData();
+  }, []);
+
+  // Default roadmaps / fallback values
+  const defaultRoadmap = [
     { title: "Python Fundamentals", subtitle: "Complete Python Basics course", date: "Jan 12", status: "completed" },
     { title: "Data Structures & Algo", subtitle: "DSA + 30 LeetCode problems", date: "Jan 28", status: "completed" },
     { title: "SQL & Database Design", subtitle: "Advanced SQL + 2 projects", date: "Feb 5", status: "completed" },
@@ -12,6 +56,91 @@ export default function PathTabContent() {
     { title: "ML Capstone Project", subtitle: "Industry live project submission", date: "Mar 30", status: "upcoming" },
     { title: "Data Science Internship", subtitle: "Apply to shortlisted companies", date: "Apr-Jun", status: "upcoming" },
   ];
+
+  const defaultRecommended = [
+    { title: "ML Engineer", fitScore: 88, skills: ["Python", "TF", "MLOps"] },
+    { title: "Data Analyst", fitScore: 82, skills: ["SQL", "Excel", "Tableau"] },
+    { title: "AI Researcher", fitScore: 71, skills: ["ML", "Maths", "Papers"] }
+  ];
+
+  // Map Active Path
+  const pathData = activePath?.data || activePath;
+  const activePathTitle = pathData?.career_path || pathData?.career_path_name || pathData?.path_name || pathData?.title || "Data Scientist";
+  const activePathProgress = pathData?.progress !== undefined 
+    ? pathData?.progress 
+    : (pathData?.total_skills 
+        ? Math.round(((pathData.matched_count || 0) / pathData.total_skills) * 100) 
+        : (pathData?.completion_rate || 58));
+  const estCompletion = pathData?.estimated_completion || pathData?.est_completion || (pathData?.estimated_duration ? `${pathData.estimated_duration} Year(s)` : "Apr 2025");
+  const targetRole = pathData?.target_role || pathData?.target || "Data Scientist @ Startup";
+
+  const rawSteps = pathData?.milestones || pathData?.roadmap || pathData?.steps || pathData?.path_items || pathData?.items;
+  
+  let firstIncompleteFound = false;
+  const roadmap = Array.isArray(rawSteps) && rawSteps.length > 0 
+    ? rawSteps.map((step: any) => {
+        const skillName = step.skill;
+        let status = "upcoming";
+        
+        // Find if this skill is matched
+        const isMatched = pathData?.matched_skills?.some((s: any) => 
+          (typeof s === 'string' ? s.toLowerCase() === skillName?.toLowerCase() : s?.skill?.toLowerCase() === skillName?.toLowerCase())
+        );
+
+        if (isMatched) {
+          status = "completed";
+        } else {
+          const isPartial = pathData?.partial_skills?.some((s: any) => 
+            (typeof s === 'string' ? s.toLowerCase() === skillName?.toLowerCase() : s?.skill?.toLowerCase() === skillName?.toLowerCase())
+          );
+          if (isPartial) {
+            status = "active";
+            firstIncompleteFound = true;
+          } else if (!firstIncompleteFound) {
+            status = "active";
+            firstIncompleteFound = true;
+          } else {
+            status = "upcoming";
+          }
+        }
+
+        return {
+          title: step.milestone_title || step.title || step.step_name || step.name || "Untitled Step",
+          skill: step.skill || "",
+          required_skill_level: step.required_skill_level || step.level || "Beginner",
+          category: step.category || "Fundamental",
+          topic: step.topic || "",
+          subtopic: step.subtopic || "",
+          is_mandatory: step.is_mandatory !== undefined ? step.is_mandatory : 1,
+          milestone_type: step.milestone_type || "Learn",
+          linked_resource_type: step.linked_resource_type || "Course",
+          date: step.date || step.due_date || step.target_date || step.estimated_date || (step.duration_days ? `${step.duration_days} Days` : ""),
+          status: step.status || status
+        };
+      })
+    : defaultRoadmap;
+
+  // Map Recommended / Alternate Paths
+  const alternatePaths = recommendedPaths.length > 0
+    ? recommendedPaths.map((path: any) => ({
+        title: path.title || path.career_path || path.name || "Career Path",
+        fitScore: path.fit_score || path.score || path.match_percentage || 80,
+        skills: Array.isArray(path.skills) 
+          ? path.skills 
+          : (typeof path.skills === 'string' 
+              ? path.skills.split(',').map((s: string) => s.trim()) 
+              : (path.tags || []))
+      }))
+    : defaultRecommended;
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-4">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+        <span className="text-sm font-medium italic tracking-widest uppercase opacity-70">Syncing Paths...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -26,32 +155,102 @@ export default function PathTabContent() {
           <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
             <Target className="w-5 h-5 text-blue-600" />
           </div>
-          <h3 className="text-base font-bold text-slate-800">Active Path: Data Scientist</h3>
+          <h3 className="text-base font-bold text-slate-800">Active Path: {activePathTitle}</h3>
         </div>
 
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm font-semibold text-slate-700">Progress</span>
-            <span className="text-xl font-bold text-orange-500">58%</span>
+            <span className="text-xl font-bold text-orange-500">{activePathProgress}%</span>
           </div>
           <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-3">
             <motion.div 
                initial={{ width: 0 }}
-               animate={{ width: "58%" }}
+               animate={{ width: `${activePathProgress}%` }}
                transition={{ duration: 1, ease: "easeOut" }}
                className="h-full bg-blue-600 rounded-full"
             />
           </div>
-          <p className="text-xs font-medium text-slate-500 flex items-center gap-1.5">
+
+          {pathData && (pathData.difficulty_level || pathData.average_salary || pathData.missing_count !== undefined) && (
+            <div className="flex flex-wrap gap-2 mb-4 mt-2">
+              {pathData.difficulty_level && (
+                <span className="px-2.5 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-md">
+                  Difficulty: {pathData.difficulty_level}
+                </span>
+              )}
+              {pathData.average_salary && (
+                <span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-md">
+                  Avg Salary: {pathData.average_salary} LPA
+                </span>
+              )}
+              {pathData.missing_count !== undefined && (
+                <span className="px-2.5 py-1 bg-amber-50 text-amber-700 text-xs font-semibold rounded-md">
+                  Missing Skills: {pathData.missing_count}
+                </span>
+              )}
+            </div>
+          )}
+
+          <p className="text-xs font-medium text-slate-500 flex items-center gap-1.5 flex-wrap">
             <TrendingUp className="w-3.5 h-3.5" /> 
-            Est. completion: Apr 2025 • Target: Data Scientist @ Startup
+            Est. completion: {estCompletion} • Target: {targetRole}
           </p>
         </div>
+
+        {/* Prerequisites and Missing Skills details */}
+        {pathData && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 pt-4 border-t border-slate-100">
+            {/* Prerequisites */}
+            <div className="bg-slate-50/60 rounded-xl p-4 border border-slate-100">
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                🔑 Prerequisite Skills
+              </h4>
+              {Array.isArray(pathData.prerequisite_skills) && pathData.prerequisite_skills.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {pathData.prerequisite_skills.map((prereq: any, idx: number) => {
+                    const skillName = prereq.prerequisite_skills || prereq.skill || prereq.name || "";
+                    const skillLevel = prereq.level || prereq.required_level || "Beginner";
+                    return (
+                      <span key={idx} className="inline-flex items-center px-2.5 py-1 bg-white text-slate-700 text-xs font-semibold rounded-md border border-slate-200 shadow-sm">
+                        {skillName} <span className="ml-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-1 rounded">{skillLevel}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs font-medium text-slate-400 italic">No prerequisites required</p>
+              )}
+            </div>
+
+            {/* Missing Skills */}
+            <div className="bg-amber-50/30 rounded-xl p-4 border border-amber-100/60">
+              <h4 className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                ⚠️ Missing Skills to Acquire
+              </h4>
+              {Array.isArray(pathData.missing_skills) && pathData.missing_skills.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {pathData.missing_skills.map((missing: any, idx: number) => {
+                    const skillName = missing.skill || missing.name || "";
+                    const skillLevel = missing.required_level || missing.level || "Beginner";
+                    return (
+                      <span key={idx} className="inline-flex items-center px-2.5 py-1 bg-white text-slate-700 text-xs font-semibold rounded-md border border-amber-200/60 shadow-sm">
+                        {skillName} <span className="ml-1 text-[10px] font-bold text-amber-600 bg-amber-50 px-1 rounded">{skillLevel}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs font-medium text-emerald-600 italic">🎉 All skills matched! You are fully qualified.</p>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="relative pl-3 space-y-6">
            <div className="absolute left-[15px] top-2 bottom-4 w-[2px] bg-slate-100 rounded-full z-0"></div>
 
-           {roadmap.map((step, idx) => (
+           {roadmap.map((step: any, idx: number) => (
              <div key={idx} className={`relative z-10 flex gap-4 ${step.status === 'upcoming' ? 'opacity-60 grayscale' : ''}`}>
                 <div className="flex-shrink-0 mt-0.5 relative z-10 bg-white group">
                   {step.status === 'completed' ? (
@@ -66,12 +265,46 @@ export default function PathTabContent() {
                 </div>
                 <div className="flex-1 pb-1">
                   <div className="flex justify-between items-start">
-                    <h4 className={`text-sm font-bold ${step.status === 'active' ? 'text-slate-900' : 'text-slate-700'}`}>
-                      {step.title}
-                    </h4>
-                    <span className="text-xs font-medium text-slate-400 mt-0.5">{step.date}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className={`text-sm font-bold ${step.status === 'active' ? 'text-slate-900' : 'text-slate-700'}`}>
+                        {step.title}
+                      </h4>
+                      {step.is_mandatory === 1 && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold bg-red-50 text-red-600 border border-red-200 rounded">
+                          Mandatory
+                        </span>
+                      )}
+                      {step.milestone_type && (
+                        <span className="px-1.5 py-0.5 text-[9px] font-bold bg-blue-50 text-blue-600 border border-blue-100 rounded">
+                          {step.milestone_type}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{step.date}</span>
                   </div>
-                  <p className="text-xs font-medium text-slate-500 mt-1">{step.subtitle}</p>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 text-xs font-medium text-slate-500 bg-slate-50/50 p-2.5 rounded-lg border border-slate-100/60">
+                    <div>
+                      <span className="font-bold text-slate-400">Skill: </span>
+                      <span className="text-slate-700">{step.skill} ({step.required_skill_level})</span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-slate-400">Category: </span>
+                      <span className="text-slate-700">{step.category}</span>
+                    </div>
+                    {(step.topic || step.subtopic) && (
+                      <div className="col-span-1 md:col-span-2">
+                        <span className="font-bold text-slate-400">Focus: </span>
+                        <span className="text-slate-700">{step.topic || "N/A"}{step.subtopic ? ` → ${step.subtopic}` : ""}</span>
+                      </div>
+                    )}
+                    {step.linked_resource_type && (
+                      <div className="col-span-1 md:col-span-2">
+                        <span className="font-bold text-slate-400">Resource: </span>
+                        <span className="text-slate-700">{step.linked_resource_type}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
              </div>
            ))}
@@ -121,55 +354,29 @@ export default function PathTabContent() {
           </div>
           
           <div className="space-y-4">
-            
-            <div className="group cursor-pointer">
-              <div className="flex justify-between items-start mb-2">
-                <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">ML Engineer</h4>
-                <div className="text-right">
-                  <div className="text-red-500 font-bold text-sm">88%</div>
-                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Fit Score</div>
+            {alternatePaths.map((path: any, idx: number) => (
+              <div key={`${path.title}-${idx}`} className="group cursor-pointer">
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{path.title}</h4>
+                  <div className="text-right">
+                    <div className={`${
+                      path.fitScore >= 85 ? 'text-red-500' : path.fitScore >= 75 ? 'text-blue-500' : 'text-purple-500'
+                    } font-bold text-sm`}>
+                      {path.fitScore}%
+                    </div>
+                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Fit Score</div>
+                  </div>
                 </div>
-              </div>
-              <div className="flex gap-2">
-                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded shrink-0">Python</span>
-                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded shrink-0">TF</span>
-                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded shrink-0">MLOps</span>
-              </div>
-              <div className="w-full h-[1px] bg-slate-100 mt-4 group-last:hidden"></div>
-            </div>
-
-            <div className="group cursor-pointer">
-              <div className="flex justify-between items-start mb-2">
-                <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">Data Analyst</h4>
-                <div className="text-right">
-                  <div className="text-blue-500 font-bold text-sm">82%</div>
-                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Fit Score</div>
+                <div className="flex flex-wrap gap-2">
+                  {path.skills.map((skill: string, skillIdx: number) => (
+                    <span key={skillIdx} className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded shrink-0">
+                      {skill}
+                    </span>
+                  ))}
                 </div>
+                <div className="w-full h-[1px] bg-slate-100 mt-4 group-last:hidden"></div>
               </div>
-              <div className="flex gap-2">
-                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded shrink-0">SQL</span>
-                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded shrink-0">Excel</span>
-                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded shrink-0">Tableau</span>
-              </div>
-              <div className="w-full h-[1px] bg-slate-100 mt-4 group-last:hidden"></div>
-            </div>
-
-            <div className="group cursor-pointer">
-              <div className="flex justify-between items-start mb-2">
-                <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">AI Researcher</h4>
-                <div className="text-right">
-                  <div className="text-purple-500 font-bold text-sm">71%</div>
-                  <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Fit Score</div>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded shrink-0">ML</span>
-                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded shrink-0">Maths</span>
-                <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded shrink-0">Papers</span>
-              </div>
-              <div className="w-full h-[1px] bg-slate-100 mt-4 group-last:hidden"></div>
-            </div>
-
+            ))}
           </div>
         </motion.div>
 
