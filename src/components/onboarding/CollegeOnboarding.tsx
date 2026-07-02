@@ -120,7 +120,7 @@ export default function CollegeOnboarding({
     mobileNo: "",
     mobileVerified: false,
     gst_number: "",
-    address_line1: "",
+    address_line_1: "",
     address_line2: "",
     pincode: ""
   });
@@ -324,8 +324,8 @@ export default function CollegeOnboarding({
           isActive: resData.is_active === 1 || resData.isActive === true || prev.isActive,
           approvedStatus: resData.approved_status || resData.approvedStatus || prev.approvedStatus,
           gst_number: resData.gst_number || prev.gst_number || "",
-          address_line1: resData.address_line1 || prev.address_line1 || "",
-          address_line2: resData.address_line2 || prev.address_line2 || "",
+          address_line_1: resData.address_line_1 || resData.address_line_1 || prev.address_line_1 || "",
+          address_line2: resData.address_line_2 || resData.address_line2 || prev.address_line2 || "",
           pincode: resData.pincode || prev.pincode || ""
         }));
 
@@ -536,8 +536,8 @@ export default function CollegeOnboarding({
     if (!formData.city) errors.city = "City is required";
     if (!formData.university) errors.university = "University is required";
     if (!formData.college_type) errors.college_type = "College type is required";
-    if (!formData.address_line1?.trim()) {
-      errors.address_line1 = "Address Line 1 is required";
+    if (!formData.address_line_1?.trim()) {
+      errors.address_line_1 = "Address Line 1 is required";
     }
     if (!formData.pincode) {
       errors.pincode = "Pincode is required";
@@ -593,6 +593,9 @@ export default function CollegeOnboarding({
       university: formData.university || undefined,
       college_type: formData.college_type || undefined,
       website: formData.website || undefined,
+      address_line_1: formData.address_line_1 || undefined,
+      address_line_2: formData.address_line2 || undefined,
+      pincode: formData.pincode || undefined,
       is_active: formData.isActive ? 1 : 0,
       approved_status: formData.approvedStatus || "Pending",
       contact_details: formattedContactPersons,
@@ -623,8 +626,8 @@ export default function CollegeOnboarding({
       if (hasCreatedRecord) {
         const userEmail = localStorage.getItem("userEmail") || formData.email || "";
         const url = `${BASE_URL}method/stridenex_app.api_stridenex_app.college.college.update_college?email=${encodeURIComponent(userEmail)}`;
-        const payload = buildUpdatePayload();
-        response = await axios.put(url, payload, { headers: { 'Content-Type': 'application/json' } });
+        const updateData = buildUpdatePayload();
+        response = await axios.put(url, { payload: updateData }, { headers: { 'Content-Type': 'application/json' } });
       } else {
         const payload = {
           college_name: formData.college_name,
@@ -632,7 +635,9 @@ export default function CollegeOnboarding({
           college_code: formData.college_code || undefined,
           year_of_establishment: formData.year_of_establishment ? parseInt(formData.year_of_establishment) : undefined,
           trust__governing_body: formData.trust__governing_body,
-          intake_capacity: formData.intake_capacity ? parseInt(formData.intake_capacity) : undefined
+          intake_capacity: formData.intake_capacity ? parseInt(formData.intake_capacity) : undefined,
+          address_line_1: undefined,
+          address_line_2: undefined
         };
         response = await axios.post(
           `${BASE_URL}method/stridenex_app.api_stridenex_app.college.college.create_college`,
@@ -719,9 +724,9 @@ export default function CollegeOnboarding({
     try {
       const userEmail = localStorage.getItem("userEmail") || formData.email || "";
       const url = `${BASE_URL}method/stridenex_app.api_stridenex_app.college.college.update_college?email=${encodeURIComponent(userEmail)}`;
-      const payload = buildUpdatePayload();
+      const updateData = buildUpdatePayload();
 
-      const response = await axios.put(url, payload, { headers: { 'Content-Type': 'application/json' } });
+      const response = await axios.put(url, { payload: updateData }, { headers: { 'Content-Type': 'application/json' } });
 
       const internalStatus = response.data?.message?.status;
       const isSuccess = response.status === 200 && (
@@ -818,9 +823,9 @@ export default function CollegeOnboarding({
     try {
       const userEmail = localStorage.getItem("userEmail") || formData.email || "";
       const url = `${BASE_URL}method/stridenex_app.api_stridenex_app.college.college.update_college?email=${encodeURIComponent(userEmail)}`;
-      const payload = buildUpdatePayload();
+      const updateData = buildUpdatePayload();
 
-      const response = await axios.put(url, payload, { headers: { 'Content-Type': 'application/json' } });
+      const response = await axios.put(url, { payload: updateData }, { headers: { 'Content-Type': 'application/json' } });
 
       const internalStatus = response.data?.message?.status;
       const isSuccess = response.status === 200 && (
@@ -849,8 +854,8 @@ export default function CollegeOnboarding({
               country: formData.country || "India",
               state: formData.state,
               city: formData.city,
-              address_line1: formData.address_line1 || "Not Provided",
-              address_line2: formData.address_line2 || "",
+              address_line_1: formData.address_line_1 || "Not Provided",
+              address_line_2: formData.address_line2 || "",
               pincode: formData.pincode || "",
               billing_details: [{ title: "Stridenex App" }]
             }
@@ -1304,7 +1309,7 @@ export default function CollegeOnboarding({
         inputClassName: "font-mono text-sm"
       },
       {
-        fieldname: "address_line1",
+        fieldname: "address_line_1",
         label: "Address Line 1",
         fieldtype: "Data",
         required: true,

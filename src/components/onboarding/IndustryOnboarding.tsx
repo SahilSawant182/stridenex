@@ -114,7 +114,7 @@ export default function IndustryOnboarding({
         emailVerified: false,
         mobileNo: "",
         mobileVerified: false,
-        address_line1: "",
+        address_line_1: "",
         address_line2: "",
         pincode: ""
     });
@@ -210,6 +210,9 @@ export default function IndustryOnboarding({
                         city: data.city || "",
                         turn_over_in_cr: data.turn_over_in_cr?.toString() || "",
                         company_website: data.company_website || "",
+                        address_line_1: data.address_line_1 || data.address_line_1 || "",
+                        address_line2: data.address_line_2 || data.address_line2 || "",
+                        pincode: data.pincode || "",
                         job_function: (data.job_functions || data.job_function || []).map((jf: any) => jf.job_function) // Key is singular job_function
                     }));
 
@@ -395,8 +398,8 @@ export default function IndustryOnboarding({
         if (!formData.district) errors.district = "District is required";
         if (!formData.tahsil) errors.tahsil = "Taluka is required";
         if (!formData.city) errors.city = "City is required";
-        if (!formData.address_line1?.trim())
-            errors.address_line1 = "Address Line 1 is required";
+        if (!formData.address_line_1?.trim())
+            errors.address_line_1 = "Address Line 1 is required";
         if (!formData.pincode) {
             errors.pincode = "Pincode is required";
         } else if (!/^\d{6}$/.test(formData.pincode)) {
@@ -466,7 +469,10 @@ export default function IndustryOnboarding({
                 city: "",
                 turn_over_in_cr: 0,
                 company_website: "",
-                average_fresher_recruited_per_year: 0
+                average_fresher_recruited_per_year: 0,
+                address_line_1: "",
+                address_line_2: "",
+                pincode: ""
             };
 
             let endpoint = `${BASE_URL}method/stridenex_app.api_stridenex_app.industry.industry.create_industry`;
@@ -511,6 +517,9 @@ export default function IndustryOnboarding({
                     payload.city = formData.city;
                     payload.turn_over_in_cr = formData.turn_over_in_cr ? parseFloat(formData.turn_over_in_cr) : 0;
                     payload.company_website = formData.company_website || "";
+                    payload.address_line_1 = formData.address_line_1 || "";
+                    payload.address_line_2 = formData.address_line2 || "";
+                    payload.pincode = formData.pincode || "";
                 }
 
                 // Include Step 4 data
@@ -561,8 +570,8 @@ export default function IndustryOnboarding({
                                 country: formData.country || "India",
                                 state: formData.state,
                                 city: formData.city,
-                                address_line1: formData.address_line1 || "Not Provided",
-                                address_line2: formData.address_line2 || "",
+                                address_line_1: formData.address_line_1 || "Not Provided",
+                                address_line_2: formData.address_line2 || "",
                                 pincode: formData.pincode || "",
                                 billing_details: [{ title: "Stridenex App" }]
                             }
@@ -1154,7 +1163,7 @@ export default function IndustryOnboarding({
                 inputClassName: "font-mono text-sm"
             },
             {
-                fieldname: "address_line1",
+                fieldname: "address_line_1",
                 label: "Address Line 1",
                 fieldtype: "Data",
                 required: true,

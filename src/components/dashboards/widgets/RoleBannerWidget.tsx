@@ -540,6 +540,8 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
           taluka: formData.taluka,
           tahsil: formData.taluka,
           city: formData.city,
+          address_line_1: collegeData?.address_line_1 || collegeData?.address_line1,
+          address_line_2: collegeData?.address_line_2 || collegeData?.address_line2,
         };
         await updateCollegeDetails(currentUser, payload);
         await fetchCollegeData();

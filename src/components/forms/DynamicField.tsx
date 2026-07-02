@@ -1,7 +1,7 @@
 "use client";
 
 import { FormField } from "@/types/doctypes.types";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { ChevronDown, X, Check, Eye, EyeOff, Search, Plus, Loader2 } from "lucide-react";
 import axios from "axios";
 import { parseBackendError } from "@/utils/error.utils";
@@ -52,6 +52,16 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState<string>("");
 
+  // Memoized lookup map to avoid O(N) arrays scans on every render
+  const optionsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (let i = 0; i < options.length; i++) {
+      const opt = options[i];
+      map.set(opt.value, opt.label);
+    }
+    return map;
+  }, [options]);
+
   // Check if this field should have "Others" option based on the allowCustom prop
   const hasOthersOption = field.allowCustom === true;
 
@@ -93,12 +103,20 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
     }
   }, [isOpen, showCustomInput]);
 
-  // Filter options based on search term
+  // Filter options based on search term and limit to 100 items to prevent UI lag
   useEffect(() => {
     if (options.length > 0) {
-      const filtered = options.filter(option =>
-        option.label && option.label.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      const searchLower = searchTerm.toLowerCase();
+      const filtered: Array<{ value: string; label: string }> = [];
+      for (let i = 0; i < options.length; i++) {
+        const option = options[i];
+        if (option.label && option.label.toLowerCase().includes(searchLower)) {
+          filtered.push(option);
+          if (filtered.length >= 100) {
+            break;
+          }
+        }
+      }
       setFilteredOptions(filtered);
     } else {
       setFilteredOptions([]);
@@ -268,7 +286,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
       };
       
       // Check if this custom value already exists in options
-      const exists = options.some(opt => opt.value === customOptionValue);
+      const exists = optionsMap.has(customOptionValue);
       if (!exists) {
         setOptions(prev => [...prev, newOption]);
         setFilteredOptions(prev => [...prev, newOption]);
@@ -315,15 +333,17 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
 
   const getSelectedLabels = () => {
     if (!Array.isArray(value) || value.length === 0) return null;
-    return options.filter(opt => value.includes(opt.value));
+    return value.map(val => ({
+      value: val,
+      label: optionsMap.get(val) || val
+    }));
   };
 
   const getSelectedLabel = () => {
     if (!value) return field.placeholder || `Select ${field.label}`;
-    const selected = options.find(opt => opt.value === value);
     // If we have a value but options aren't loaded yet, show the value itself
     // This allows pre-filled data to be visible without triggering an API call
-    return selected ? selected.label : value;
+    return optionsMap.get(value) || value;
   };
 
   const highlightMatch = (text: string, search: string) => {
