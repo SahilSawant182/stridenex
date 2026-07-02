@@ -1,4 +1,5 @@
 import { api, apiService } from "./api.services";
+import type { SubscriptionDashboardResponse } from "@/types/subscription";
 
 
 
@@ -65,5 +66,20 @@ export const fetchBackgroundImage = async () => {
   } catch (error) {
     console.error("Error fetching background image:", error);
     throw new Error("Failed to fetch background image");
+  }
+};
+
+export const getUserSubscriptionDashboard = async (
+  email: string
+): Promise<SubscriptionDashboardResponse> => {
+  try {
+    const response = await apiService.get(
+      `method/quantbit_billing_platform.quantbit_billing_platform.api.get_user_subscription_dashboard?user=${encodeURIComponent(email)}`
+    );
+    const data: SubscriptionDashboardResponse = response?.message ?? response;
+    return data;
+  } catch (error) {
+    console.error("Error fetching user subscription dashboard:", error);
+    throw error;
   }
 };
