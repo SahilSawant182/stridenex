@@ -5,47 +5,66 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, Circle, TrendingUp, Target, Loader2 } from "lucide-react";
-import { getStudentCareerPath, getRecommendedPaths } from "@/services/student.services";
+import { getStudentCareerPath, getRecommendedPaths, enrollStudentPath } from "@/services/student.services";
 
 export default function PathTabContent() {
   const [loading, setLoading] = useState(true);
   const [activePath, setActivePath] = useState<any>(null);
   const [recommendedPaths, setRecommendedPaths] = useState<any[]>([]);
+  const [enrollingPath, setEnrollingPath] = useState<string | null>(null);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const studentEmail = localStorage.getItem("currentUser") || "ac1@gmail.com";
+      
+      // Fetch active career path and recommended paths in parallel
+      const [careerPathRes, recommendedRes] = await Promise.all([
+        getStudentCareerPath(studentEmail).catch(err => {
+          console.warn("getStudentCareerPath API failed or not whitelisted, using fallback data:", err);
+          return null;
+        }),
+        getRecommendedPaths(studentEmail).catch(err => {
+          console.warn("getRecommendedPaths API failed or not whitelisted, using fallback data:", err);
+          return null;
+        })
+      ]);
+
+      if (careerPathRes?.message) {
+        setActivePath(careerPathRes.message);
+      }
+      
+      if (recommendedRes?.message) {
+        const message = recommendedRes.message;
+        setRecommendedPaths(Array.isArray(message) ? message : []);
+      }
+    } catch (error) {
+      console.error("Error loading path tab content:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const studentEmail = localStorage.getItem("currentUser") || "ac1@gmail.com";
-        
-        // Fetch active career path and recommended paths in parallel
-        const [careerPathRes, recommendedRes] = await Promise.all([
-          getStudentCareerPath(studentEmail).catch(err => {
-            console.warn("getStudentCareerPath API failed or not whitelisted, using fallback data:", err);
-            return null;
-          }),
-          getRecommendedPaths(studentEmail).catch(err => {
-            console.warn("getRecommendedPaths API failed or not whitelisted, using fallback data:", err);
-            return null;
-          })
-        ]);
-
-        if (careerPathRes?.message) {
-          setActivePath(careerPathRes.message);
-        }
-        
-        if (recommendedRes?.message) {
-          const message = recommendedRes.message;
-          setRecommendedPaths(Array.isArray(message) ? message : []);
-        }
-      } catch (error) {
-        console.error("Error loading path tab content:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
     fetchData();
   }, []);
+
+  const handleEnrollPath = async (careerPathName: string) => {
+    const studentEmail = localStorage.getItem("currentUser") || "ac1@gmail.com";
+    try {
+      setEnrollingPath(careerPathName);
+      const res = await enrollStudentPath(studentEmail, careerPathName);
+      if (res) {
+        alert(`Successfully enrolled in path: ${careerPathName}`);
+        await fetchData();
+      }
+    } catch (err: any) {
+      console.error("Enrollment failed:", err);
+      alert(err?.response?.data?.message || err?.message || "Failed to switch career path. Please try again.");
+    } finally {
+      setEnrollingPath(null);
+    }
+  };
 
   // Default roadmaps / fallback values
   const defaultRoadmap = [
@@ -58,9 +77,45 @@ export default function PathTabContent() {
   ];
 
   const defaultRecommended = [
-    { title: "ML Engineer", fitScore: 88, skills: ["Python", "TF", "MLOps"] },
-    { title: "Data Analyst", fitScore: 82, skills: ["SQL", "Excel", "Tableau"] },
-    { title: "AI Researcher", fitScore: 71, skills: ["ML", "Maths", "Papers"] }
+    {
+      career_path: "ML Engineer",
+      path_name: "ML Engineer",
+      target_role: "Developer",
+      difficulty_level: "Beginner-Friendly",
+      fit_score: 0.0,
+      matched_count: 0,
+      partial_count: 0,
+      missing_count: 3,
+      total_skills: 3,
+      estimated_duration: 1,
+      average_salary: 6.0
+    },
+    {
+      career_path: "Data Science",
+      path_name: "Data Science",
+      target_role: "Data Scientist",
+      difficulty_level: "Beginner-Friendly",
+      fit_score: 0.0,
+      matched_count: 0,
+      partial_count: 0,
+      missing_count: 3,
+      total_skills: 3,
+      estimated_duration: 1,
+      average_salary: 6.0
+    },
+    {
+      career_path: "Data Analyst",
+      path_name: "Data Analyst",
+      target_role: "Data analyst",
+      difficulty_level: "Beginner-Friendly",
+      fit_score: 0.0,
+      matched_count: 0,
+      partial_count: 0,
+      missing_count: 3,
+      total_skills: 3,
+      estimated_duration: 1,
+      average_salary: 5.0
+    }
   ];
 
   // Map Active Path
@@ -121,17 +176,23 @@ export default function PathTabContent() {
     : defaultRoadmap;
 
   // Map Recommended / Alternate Paths
-  const alternatePaths = recommendedPaths.length > 0
-    ? recommendedPaths.map((path: any) => ({
-        title: path.title || path.career_path || path.name || "Career Path",
-        fitScore: path.fit_score || path.score || path.match_percentage || 80,
-        skills: Array.isArray(path.skills) 
-          ? path.skills 
-          : (typeof path.skills === 'string' 
-              ? path.skills.split(',').map((s: string) => s.trim()) 
-              : (path.tags || []))
-      }))
-    : defaultRecommended;
+  const rawAlternatePaths = recommendedPaths.length > 0 ? recommendedPaths : defaultRecommended;
+  const alternatePaths = rawAlternatePaths.map((path: any) => ({
+    title: path.career_path || path.path_name || path.title || "Career Path",
+    fitScore: typeof path.fit_score === 'number' ? path.fit_score : (typeof path.score === 'number' ? path.score : (typeof path.match_percentage === 'number' ? path.match_percentage : 80)),
+    targetRole: path.target_role || "N/A",
+    difficulty: path.difficulty_level || "Beginner",
+    matchedCount: path.matched_count !== undefined ? path.matched_count : 0,
+    missingCount: path.missing_count !== undefined ? path.missing_count : 0,
+    totalSkills: path.total_skills !== undefined ? path.total_skills : 0,
+    duration: path.estimated_duration !== undefined ? path.estimated_duration : 1,
+    salary: path.average_salary !== undefined ? path.average_salary : 0,
+    skills: Array.isArray(path.skills) 
+      ? path.skills 
+      : (typeof path.skills === 'string' 
+          ? path.skills.split(',').map((s: string) => s.trim()) 
+          : (path.tags || []))
+  }));
 
   if (loading) {
     return (
@@ -356,8 +417,13 @@ export default function PathTabContent() {
           <div className="space-y-4">
             {alternatePaths.map((path: any, idx: number) => (
               <div key={`${path.title}-${idx}`} className="group cursor-pointer">
-                <div className="flex justify-between items-start mb-2">
-                  <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{path.title}</h4>
+                <div className="flex justify-between items-start mb-1">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{path.title}</h4>
+                    {path.targetRole && (
+                      <p className="text-xs text-slate-500 mt-0.5">Target: {path.targetRole}</p>
+                    )}
+                  </div>
                   <div className="text-right">
                     <div className={`${
                       path.fitScore >= 85 ? 'text-red-500' : path.fitScore >= 75 ? 'text-blue-500' : 'text-purple-500'
@@ -367,12 +433,65 @@ export default function PathTabContent() {
                     <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Fit Score</div>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {path.skills.map((skill: string, skillIdx: number) => (
-                    <span key={skillIdx} className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded shrink-0">
-                      {skill}
+
+                {/* Additional Path Badges */}
+                <div className="flex flex-wrap gap-1.5 my-2">
+                  {path.difficulty && (
+                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded border border-slate-200/40">
+                      {path.difficulty}
                     </span>
-                  ))}
+                  )}
+                  {path.salary > 0 && (
+                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-semibold rounded border border-emerald-100/40">
+                      {path.salary} LPA
+                    </span>
+                  )}
+                  {path.duration > 0 && (
+                    <span className="px-2 py-0.5 bg-blue-50/50 text-blue-700 text-[10px] font-semibold rounded border border-blue-100/40">
+                      {path.duration} Year(s)
+                    </span>
+                  )}
+                  {path.totalSkills > 0 && (
+                    <span className="px-2 py-0.5 bg-amber-50/70 text-amber-700 text-[10px] font-semibold rounded border border-amber-100/40">
+                      Skills: {path.matchedCount}/{path.totalSkills}
+                    </span>
+                  )}
+                </div>
+
+                {path.skills && path.skills.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {path.skills.map((skill: string, skillIdx: number) => (
+                      <span key={skillIdx} className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-semibold rounded shrink-0">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between mt-3">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEnrollPath(path.title);
+                    }}
+                    disabled={enrollingPath !== null || activePathTitle?.toLowerCase() === path.title?.toLowerCase()}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all duration-200 flex items-center gap-1.5 ${
+                      activePathTitle?.toLowerCase() === path.title?.toLowerCase()
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-default font-semibold'
+                        : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow active:scale-95'
+                    }`}
+                  >
+                    {enrollingPath === path.title ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
+                        <span>Enrolling...</span>
+                      </>
+                    ) : activePathTitle?.toLowerCase() === path.title?.toLowerCase() ? (
+                      "Active"
+                    ) : (
+                      "Set Active"
+                    )}
+                  </button>
                 </div>
                 <div className="w-full h-[1px] bg-slate-100 mt-4 group-last:hidden"></div>
               </div>

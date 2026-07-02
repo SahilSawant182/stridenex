@@ -698,3 +698,22 @@ export const getRecommendedPaths = async (studentEmail: string) => {
     throw error;
   }
 };
+
+/**
+ * Enroll student in a career path.
+ */
+export const enrollStudentPath = async (studentEmail: string, careerPath: string) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.path_finder.api.path_enrollment.enroll_student",
+      {
+        student: studentEmail,
+        career_path: careerPath
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error enrolling student path:", error);
+    throw error;
+  }
+};
