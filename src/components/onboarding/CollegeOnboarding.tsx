@@ -627,7 +627,7 @@ export default function CollegeOnboarding({
         const userEmail = localStorage.getItem("userEmail") || formData.email || "";
         const url = `${BASE_URL}method/stridenex_app.api_stridenex_app.college.college.update_college?email=${encodeURIComponent(userEmail)}`;
         const updateData = buildUpdatePayload();
-        response = await axios.put(url, { payload: updateData }, { headers: { 'Content-Type': 'application/json' } });
+        response = await axios.put(url, updateData, { headers: { 'Content-Type': 'application/json' } });
       } else {
         const payload = {
           college_name: formData.college_name,
@@ -726,7 +726,7 @@ export default function CollegeOnboarding({
       const url = `${BASE_URL}method/stridenex_app.api_stridenex_app.college.college.update_college?email=${encodeURIComponent(userEmail)}`;
       const updateData = buildUpdatePayload();
 
-      const response = await axios.put(url, { payload: updateData }, { headers: { 'Content-Type': 'application/json' } });
+      const response = await axios.put(url, updateData, { headers: { 'Content-Type': 'application/json' } });
 
       const internalStatus = response.data?.message?.status;
       const isSuccess = response.status === 200 && (
@@ -825,7 +825,7 @@ export default function CollegeOnboarding({
       const url = `${BASE_URL}method/stridenex_app.api_stridenex_app.college.college.update_college?email=${encodeURIComponent(userEmail)}`;
       const updateData = buildUpdatePayload();
 
-      const response = await axios.put(url, { payload: updateData }, { headers: { 'Content-Type': 'application/json' } });
+      const response = await axios.put(url, updateData, { headers: { 'Content-Type': 'application/json' } });
 
       const internalStatus = response.data?.message?.status;
       const isSuccess = response.status === 200 && (
