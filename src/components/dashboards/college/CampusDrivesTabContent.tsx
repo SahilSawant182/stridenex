@@ -230,6 +230,7 @@ export default function CampusDrivesTabContent() {
 
   // Per-drive placement state (Manage panel)
   const [drivePlacementCounts, setDrivePlacementCounts] = useState<{ placed: number; shortlisted: number; applied_to_drives: number; not_applied_yet: number } | null>(null);
+  const [drivePlacementLoading, setDrivePlacementLoading] = useState(false);
   const [drivePlacementList, setDrivePlacementList] = useState<any[]>([]);
   const [driveEligibleStudents, setDriveEligibleStudents] = useState<any | null>(null);
   const [driveEligibleLoading, setDriveEligibleLoading] = useState(false);
@@ -565,10 +566,11 @@ export default function CampusDrivesTabContent() {
     setDrivePlacementList([]);
     setDriveEligibleStudents(null);
     setEligiblePage(1);
-    setDriveEligibleLoading(false);
+    setDrivePlacementLoading(false);
     const collegeName = collegeDetails?.name;
     if (!collegeName) return;
     try {
+      setDrivePlacementLoading(true);
       const [countsRes, listRes, eligibleRes] = await Promise.allSettled([
         getPlacementCounts(collegeName, drive.name),
         getPlacementList(collegeName, drive.name, "Applied"),
@@ -604,6 +606,8 @@ export default function CampusDrivesTabContent() {
       }
     } catch (err) {
       console.error("Failed to fetch drive placement data:", err);
+    } finally {
+      setDrivePlacementLoading(false);
     }
   };
 
@@ -1624,7 +1628,13 @@ export default function CampusDrivesTabContent() {
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Eligible</span>
                   <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
                 </div>
-                <p className="text-2xl font-bold text-slate-800 leading-tight">{eligibleStudentsCount}</p>
+                <p className="text-2xl font-bold text-slate-800 leading-tight">
+                  {drivePlacementLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-orange-500 inline-block" />
+                  ) : (
+                    eligibleStudentsCount
+                  )}
+                </p>
                 <p className="text-[10px] text-slate-400 font-semibold">Students</p>
               </div>
 
@@ -1646,7 +1656,11 @@ export default function CampusDrivesTabContent() {
                   <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span>
                 </div>
                 <p className="text-2xl font-bold text-slate-800 leading-tight">
-                  {drivePlacementCounts !== null ? drivePlacementCounts.applied_to_drives : selectedDrive.stats.registered}
+                  {drivePlacementLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-orange-500 inline-block" />
+                  ) : (
+                    drivePlacementCounts !== null ? drivePlacementCounts.applied_to_drives : selectedDrive.stats.registered
+                  )}
                 </p>
                 <p className="text-[10px] text-slate-400 font-semibold">Students</p>
               </div>
@@ -1669,7 +1683,11 @@ export default function CampusDrivesTabContent() {
                   <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0"></span>
                 </div>
                 <p className="text-2xl font-bold text-slate-800 leading-tight">
-                  {drivePlacementCounts !== null ? drivePlacementCounts.shortlisted : selectedDrive.stats.shortlisted}
+                  {drivePlacementLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-orange-500 inline-block" />
+                  ) : (
+                    drivePlacementCounts !== null ? drivePlacementCounts.shortlisted : selectedDrive.stats.shortlisted
+                  )}
                 </p>
                 <p className="text-[10px] text-slate-400 font-semibold">Students</p>
               </div>
@@ -1692,7 +1710,11 @@ export default function CampusDrivesTabContent() {
                   <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
                 </div>
                 <p className="text-2xl font-bold text-slate-800 leading-tight">
-                  {drivePlacementCounts !== null ? drivePlacementCounts.placed : selectedDrive.stats.selected}
+                  {drivePlacementLoading ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-orange-500 inline-block" />
+                  ) : (
+                    drivePlacementCounts !== null ? drivePlacementCounts.placed : selectedDrive.stats.selected
+                  )}
                 </p>
                 <p className="text-[10px] text-slate-400 font-semibold">Students</p>
               </div>
@@ -1707,7 +1729,9 @@ export default function CampusDrivesTabContent() {
                   <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/40">
                     <h3 className="text-sm font-bold text-slate-800 tracking-wide">
                       {selectedStudentStatusFilter} Students ({
-                        selectedStudentStatusFilter === "Registered"
+                        drivePlacementLoading ? (
+                          "..."
+                        ) : selectedStudentStatusFilter === "Registered"
                           ? drivePlacementList.length
                           : selectedStudentStatusFilter === "Shortlisted"
                             ? (drivePlacementCounts?.shortlisted ?? selectedDrive.stats.shortlisted)
@@ -1881,7 +1905,14 @@ export default function CampusDrivesTabContent() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
-                          {drivePlacementList.length === 0 ? (
+                          {drivePlacementLoading ? (
+                            <tr>
+                              <td colSpan={5} className="py-12 text-center text-slate-400 font-semibold">
+                                <Loader2 className="w-6 h-6 animate-spin text-orange-500 mx-auto mb-2" />
+                                Loading registered candidates...
+                              </td>
+                            </tr>
+                          ) : drivePlacementList.length === 0 ? (
                             <tr><td colSpan={5} className="py-10 text-center">
                               <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                               <p className="text-xs text-slate-400 font-semibold">No registered students</p>
@@ -1928,7 +1959,14 @@ export default function CampusDrivesTabContent() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
-                          {drivePlacementList.filter((r: any) => r.status === "Shortlisted").length === 0 ? (
+                          {drivePlacementLoading ? (
+                            <tr>
+                              <td colSpan={5} className="py-12 text-center text-slate-400 font-semibold">
+                                <Loader2 className="w-6 h-6 animate-spin text-orange-500 mx-auto mb-2" />
+                                Loading shortlisted candidates...
+                              </td>
+                            </tr>
+                          ) : drivePlacementList.filter((r: any) => r.status === "Shortlisted").length === 0 ? (
                             <tr><td colSpan={5} className="py-10 text-center">
                               <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                               <p className="text-xs text-slate-400 font-semibold">No shortlisted students</p>
@@ -1975,7 +2013,14 @@ export default function CampusDrivesTabContent() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
-                          {drivePlacementList.filter((r: any) => r.status === "Selected" || r.status === "Placed").length === 0 ? (
+                          {drivePlacementLoading ? (
+                            <tr>
+                              <td colSpan={7} className="py-12 text-center text-slate-400 font-semibold">
+                                <Loader2 className="w-6 h-6 animate-spin text-orange-500 mx-auto mb-2" />
+                                Loading selected candidates...
+                              </td>
+                            </tr>
+                          ) : drivePlacementList.filter((r: any) => r.status === "Selected" || r.status === "Placed").length === 0 ? (
                             <tr><td colSpan={7} className="py-10 text-center">
                               <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                               <p className="text-xs text-slate-400 font-semibold">No selected students</p>
@@ -2076,13 +2121,13 @@ export default function CampusDrivesTabContent() {
                       onClick={() => triggerNotification('eligible')}
                       className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl w-full text-[10px] uppercase tracking-wider shadow-sm transition-colors flex items-center justify-center gap-1.5"
                     >
-                      <Send className="w-3 h-3" /> Notify All Eligible ({selectedDrive.stats.eligible})
+                      <Send className="w-3 h-3" /> Notify All Eligible ({drivePlacementLoading ? "..." : eligibleStudentsCount})
                     </button>
                     <button
                       onClick={() => triggerNotification('remind')}
                       className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 rounded-xl w-full text-[10px] uppercase tracking-wider shadow-sm transition-colors flex items-center justify-center gap-1.5"
                     >
-                      <Clock className="w-3 h-3" /> Remind Registered ({drivePlacementCounts?.applied_to_drives ?? selectedDrive.stats.registered})
+                      <Clock className="w-3 h-3" /> Remind Registered ({drivePlacementLoading ? "..." : (drivePlacementCounts?.applied_to_drives ?? selectedDrive.stats.registered)})
                     </button>
                     <button
                       onClick={() => triggerNotification('notice')}
