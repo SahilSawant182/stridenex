@@ -127,28 +127,27 @@ export default function CollegeOnboarding({
 
   useEffect(() => {
     const fetchInitialData = async () => {
-      const userEmail = localStorage.getItem("userEmail") || currentUser || "";
-      if (!userEmail) return;
-
       const flag = parseInt(isOnboarded || "0", 10);
       if (flag === 1) {
         setCurrentStep(2);
-        setFormData(prev => ({ ...prev, email: userEmail, emailVerified: true, mobileVerified: true }));
       } else if (flag === 2) {
         setCurrentStep(3);
-        setFormData(prev => ({ ...prev, email: userEmail, emailVerified: true, mobileVerified: true }));
         setHasCreatedRecord(true);
       } else if (flag === 3) {
         setCurrentStep(4);
-        setFormData(prev => ({ ...prev, email: userEmail, emailVerified: true, mobileVerified: true }));
         setHasCreatedRecord(true);
       } else if (flag >= 4) {
         router.push("/college/dashboard");
         return;
-      } else {
+      }
+
+      const userEmail = localStorage.getItem("userEmail") || currentUser || "";
+      if (userEmail) {
         setFormData(prev => ({
           ...prev,
-          email: userEmail
+          email: userEmail,
+          emailVerified: flag >= 1 ? true : prev.emailVerified,
+          mobileVerified: flag >= 1 ? true : prev.mobileVerified
         }));
       }
     };
@@ -609,6 +608,7 @@ export default function CollegeOnboarding({
       if (typeof updateOnboardedFlag === "function") {
         updateOnboardedFlag("1");
       }
+      localStorage.setItem("isOnboarded", "1");
       setCurrentStep(2);
       setSuccess("");
     }
@@ -667,6 +667,7 @@ export default function CollegeOnboarding({
         if (typeof updateOnboardedFlag === "function") {
           updateOnboardedFlag("2");
         }
+        localStorage.setItem("isOnboarded", "2");
         setSuccess("Basic college information saved successfully!");
         setCurrentStep(3);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -741,6 +742,7 @@ export default function CollegeOnboarding({
         if (typeof updateOnboardedFlag === "function") {
           updateOnboardedFlag("3");
         }
+        localStorage.setItem("isOnboarded", "3");
         setSuccess("Location and affiliation details saved successfully!");
         setCurrentStep(4);
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -902,6 +904,10 @@ export default function CollegeOnboarding({
         // ─── BILLING INTEGRATION ENDS HERE ──────────────────────────────────
 
         setSuccess("College onboarding completed successfully!");
+        if (typeof updateOnboardedFlag === "function") {
+          updateOnboardedFlag("4");
+        }
+        localStorage.setItem("isOnboarded", "4");
 
         setTimeout(async () => {
           const redirectUrl = isMobileSource ? "https://testwebstridenex.quantcloud.in/login" : "/login";

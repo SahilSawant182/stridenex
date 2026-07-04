@@ -54,7 +54,7 @@ export default function IndustryOnboarding({
     const router = useRouter();
     const searchParams = useSearchParams();
     const isMobileSource = searchParams.get("source") === "mobile";
-    const { apiKey, apiSecret, isOnboarded, isInitialized, currentUser } = useAuth();
+    const { apiKey, apiSecret, isOnboarded, isInitialized, currentUser, updateOnboardedFlag } = useAuth();
     const [currentStep, setCurrentStep] = useState<Step>(1);
     const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
     const [loading, setLoading] = useState(false);
@@ -129,21 +129,23 @@ export default function IndustryOnboarding({
             if (flag === 1) {
                 setCurrentStep(2);
                 setCompletedSteps(new Set([1]));
+                // Mark email+mobile as already verified so step-level guards don't block
+                setFormData(prev => ({ ...prev, email: userEmail, emailVerified: true, mobileVerified: true }));
             } else if (flag === 2) {
                 setCurrentStep(3);
                 setCompletedSteps(new Set([1, 2]));
+                setFormData(prev => ({ ...prev, email: userEmail, emailVerified: true, mobileVerified: true }));
+                setHasCreatedRecord(true);
             } else if (flag >= 3) {
                 router.push("/industry/dashboard");
                 return;
+            } else {
+                // Always set the email in formData
+                setFormData(prev => ({
+                    ...prev,
+                    email: userEmail
+                }));
             }
-
-            // Always set the email in formData
-            setFormData(prev => ({
-                ...prev,
-                email: userEmail
-            }));
-
-            // If we are at step 2 or 3, data will be fetched by the currentStep useEffect
         };
 
         if (isInitialized) {
@@ -549,6 +551,10 @@ export default function IndustryOnboarding({
                 }
 
                 if (step === 2) {
+                    // Update isOnboarded flag so reload lands on step 3 instead of step 2
+                    if (typeof updateOnboardedFlag === "function") {
+                        updateOnboardedFlag("2");
+                    }
                     setCurrentStep(3);
                     setSuccess("Step 2 saved successfully!");
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -769,6 +775,10 @@ export default function IndustryOnboarding({
 
     const handleContinueToStep2 = () => {
         if (validateStep1()) {
+            // Persist progress so page refresh returns to step 2, not back to OTP screen
+            if (typeof updateOnboardedFlag === "function") {
+                updateOnboardedFlag("1");
+            }
             setCurrentStep(2);
             setSuccess("");
             setError("");

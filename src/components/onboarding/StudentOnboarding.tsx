@@ -36,7 +36,8 @@ export default function StudentOnboarding({
   onSkip
 }: StudentOnboardingProps) {
   const router = useRouter();
-  const { apiKey, apiSecret, isOnboarded, currentUser, fullName } = useAuth();
+  const { apiKey, apiSecret, isOnboarded, currentUser, fullName, updateOnboardedFlag } = useAuth();
+  const [hasCreatedRecord, setHasCreatedRecord] = useState(false);
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [loading, setLoading] = useState(false);
   const [skills, setSkills] = useState<string[]>([]);
@@ -103,9 +104,16 @@ export default function StudentOnboarding({
   }, [currentUser, fullName]);
 
   useEffect(() => {
-    if (isOnboarded === "1") {
+    const flag = parseInt(isOnboarded || "0", 10);
+    if (flag >= 1) {
+      // Step 1 (verification) is already done — jump straight to profile form
       setCurrentStep(2);
       setFormData(prev => ({ ...prev, emailVerified: true, mobileVerified: true }));
+      // If the create API was already called (flag >= 2), mark as created so
+      // resubmit uses update instead of create.
+      if (flag >= 2) {
+        setHasCreatedRecord(true);
+      }
     } else {
       setCurrentStep(1);
     }
@@ -622,6 +630,10 @@ export default function StudentOnboarding({
 
   const handleContinueToStep2 = () => {
     if (validateStep1()) {
+      // Persist progress so page refresh returns to step 2, not back to OTP screen
+      if (typeof updateOnboardedFlag === "function") {
+        updateOnboardedFlag("1");
+      }
       setCurrentStep(2);
       setSuccess("");
       setFieldErrors({});
@@ -724,12 +736,16 @@ export default function StudentOnboarding({
       // Set field errors to show under each field
       setFieldErrors(validationErrors);
 
-      // Also show a general error message
-      // const firstError = Object.values(validationErrors)[0];
-      // setError(firstError);
-
       // Scroll to the top to show the error
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    // Guard: if student record was already created (detected on reload via isOnboarded >= 2),
+    // skip the create call and just redirect to login.
+    if (hasCreatedRecord) {
+      localStorage.clear();
+      window.location.href = "/login";
       return;
     }
 

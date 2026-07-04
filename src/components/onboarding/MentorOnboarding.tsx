@@ -163,10 +163,6 @@ export default function MentorOnboarding({
   useEffect(() => {
     if (!isInitialized) return;
 
-    const userEmail =
-      localStorage.getItem("userEmail") || currentUser || "";
-    if (!userEmail) return;
-
     const flag = parseInt(isOnboarded || "0", 10);
 
     /**
@@ -189,32 +185,25 @@ export default function MentorOnboarding({
     if (flag === 2) {
       setCurrentStep(3);
       setCompletedSteps(new Set([1, 2]));
-      setFormData(prev => ({
-        ...prev,
-        email: userEmail,
-        emailVerified: true,
-        mobileVerified: true,
-        address_line1: localStorage.getItem("userAddressLine1") || "",
-        address_line2: localStorage.getItem("userAddressLine2") || "",
-        pincode: localStorage.getItem("userPincode") || ""
-      }));
       setHasCreatedRecord(true);
     } else if (flag === 1) {
       setCurrentStep(2);
       setCompletedSteps(new Set([1]));
+      setHasCreatedRecord(true);
+    }
+
+    const userEmail =
+      localStorage.getItem("userEmail") || currentUser || "";
+    if (userEmail) {
       setFormData(prev => ({
         ...prev,
         email: userEmail,
-        emailVerified: true,
-        mobileVerified: true,
-        address_line1: localStorage.getItem("userAddressLine1") || "",
-        address_line2: localStorage.getItem("userAddressLine2") || "",
-        pincode: localStorage.getItem("userPincode") || ""
+        emailVerified: flag >= 1 ? true : prev.emailVerified,
+        mobileVerified: flag >= 1 ? true : prev.mobileVerified,
+        address_line1: prev.address_line1 || localStorage.getItem("userAddressLine1") || "",
+        address_line2: prev.address_line2 || localStorage.getItem("userAddressLine2") || "",
+        pincode: prev.pincode || localStorage.getItem("userPincode") || ""
       }));
-      setHasCreatedRecord(true);
-    } else {
-      // flag === 0 — brand new user
-      setFormData(prev => ({ ...prev, email: userEmail }));
     }
   }, [isOnboarded, isInitialized, currentUser, router]);
 
@@ -783,6 +772,7 @@ export default function MentorOnboarding({
           if (typeof updateOnboardedFlag === "function") {
             updateOnboardedFlag("2");
           }
+          localStorage.setItem("isOnboarded", "2");
           setCurrentStep(3);
           setSuccess("Step 2 saved successfully!");
           window.scrollTo({ top: 0, behavior: "smooth" });
@@ -861,6 +851,7 @@ export default function MentorOnboarding({
           if (typeof updateOnboardedFlag === "function") {
             updateOnboardedFlag("3");
           }
+          localStorage.setItem("isOnboarded", "3");
 
           setSuccess(
             "Mentor onboarding completed successfully! You will be redirected to login page."
