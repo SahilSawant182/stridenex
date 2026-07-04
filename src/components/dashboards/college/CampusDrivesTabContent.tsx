@@ -777,6 +777,7 @@ export default function CampusDrivesTabContent() {
             branch: eligibilityBranchesStr,
             cgpa: eligibilityCgpa,
             backlog: eligibilityBacklog,
+            college: collegeName,
             academic_year: academicYearParam
           }),
           getNonEligibleStudents({
@@ -2213,7 +2214,7 @@ export default function CampusDrivesTabContent() {
                     <tr className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       <th className="py-3 px-5">Student</th>
                       <th className="py-3 px-4">Course</th>
-                      <th className="py-3 px-4">Academic Year</th>
+                      <th className="py-3 px-4">Current Year</th>
                       <th className="py-3 px-4">CGPA</th>
                       <th className="py-3 px-4">Drive</th>
                       <th className="py-3 px-4">Company</th>
@@ -2250,7 +2251,7 @@ export default function CampusDrivesTabContent() {
                               {record.course || "—"}
                             </td>
                             <td className="py-3.5 px-4 text-xs font-semibold text-slate-600">
-                              {record.academic_year || "—"}
+                              {record.current_year || record.academic_year || "—"}
                             </td>
                             <td className="py-3.5 px-4 text-xs font-bold text-emerald-600">
                               {record.cgpa || "—"}
@@ -2478,7 +2479,7 @@ export default function CampusDrivesTabContent() {
                               <tr className="bg-slate-50/50 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                                 <th className="py-2.5 px-4">Student</th>
                                 <th className="py-2.5 px-4">Branch</th>
-                                <th className="py-2.5 px-4">Academic Year</th>
+                                <th className="py-2.5 px-4">Current Year</th>
                                 <th className="py-2.5 px-4">CGPA</th>
                                 <th className="py-2.5 px-4">Backlogs</th>
                                 <th className="py-2.5 px-4 text-right">Action</th>
@@ -2500,7 +2501,7 @@ export default function CampusDrivesTabContent() {
                                   <tr key={student.name || student.email_id || student.id || student.email || student.student_id} className="hover:bg-slate-50/50 transition-colors">
                                     <td className="py-3 px-4 font-bold text-slate-800">{fullName}</td>
                                     <td className="py-3 px-4"><span className="bg-slate-100 px-2 py-0.5 rounded font-bold">{branch}</span></td>
-                                    <td className="py-3 px-4 font-semibold text-slate-600">{student.academic_year || "—"}</td>
+                                    <td className="py-3 px-4 font-semibold text-slate-600">{student.current_year || student.academic_year || "—"}</td>
                                     <td className="py-3 px-4 font-bold text-emerald-600">{cgpa}</td>
                                     <td className="py-3 px-4">
                                       {backlogs === 0 ? <span className="text-emerald-600 font-bold">✓</span> : backlogs}
@@ -2544,7 +2545,7 @@ export default function CampusDrivesTabContent() {
                                 <th className="py-2.5 px-4">Student</th>
                                 <th className="py-2.5 px-4">CGPA</th>
                                 <th className="py-2.5 px-4">Branch</th>
-                                <th className="py-2.5 px-4">Academic Year</th>
+                                <th className="py-2.5 px-4">Current Year</th>
                                 <th className="py-2.5 px-4">Reason</th>
                               </tr>
                             </thead>
@@ -2567,7 +2568,7 @@ export default function CampusDrivesTabContent() {
                                     <td className="py-3 px-4 font-bold text-slate-800">{fullName}</td>
                                     <td className="py-3 px-4 font-bold text-slate-500">{cgpa}</td>
                                     <td className="py-3 px-4"><span className="bg-slate-100 px-2 py-0.5 rounded font-bold">{branch}</span></td>
-                                    <td className="py-3 px-4 font-semibold text-slate-600">{student.academic_year || "—"}</td>
+                                    <td className="py-3 px-4 font-semibold text-slate-600">{student.current_year || student.academic_year || "—"}</td>
                                     <td className="py-3 px-4">
                                       <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2.5 py-0.5 rounded-full border border-red-100">
                                         {reason}
