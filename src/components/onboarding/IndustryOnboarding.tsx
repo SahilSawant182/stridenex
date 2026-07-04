@@ -497,6 +497,7 @@ export default function IndustryOnboarding({
                 // Step 3, Step 4, OR Step 2 update: Use PUT to update_industry
                 endpoint = `${BASE_URL}method/stridenex_app.api_stridenex_app.industry.industry.update_industry?company_name=${encodeURIComponent(formData.company_name)}`;
                 method = 'put';
+                payload.email = userEmail;
 
                 // Always include Step 2 data for cumulative/update payload
                 payload.business_type = isCustomBusinessType ? "" : (formData.business_type || "");

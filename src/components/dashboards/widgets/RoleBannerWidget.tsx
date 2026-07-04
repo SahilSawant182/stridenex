@@ -520,7 +520,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
         };
 
 
-        await updateIndustry(formData.company_name, transformedPayload);
+        await updateIndustry(currentUser, formData.company_name, transformedPayload);
         if (customData?.onUpdateSuccess) {
           await customData.onUpdateSuccess();
         }

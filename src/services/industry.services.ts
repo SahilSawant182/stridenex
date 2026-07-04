@@ -37,11 +37,14 @@ export const getIndustryByEmail = async (email: string) => {
   }
 };
 
-export const updateIndustry = async (companyName: string, data: any) => {
+export const updateIndustry = async (email: string, companyName: string, data: any) => {
   try {
     const response = await apiService.post(
       `method/stridenex_app.api_stridenex_app.industry.industry.update_industry?company_name=${encodeURIComponent(companyName)}`,
-      data
+      {
+        ...data,
+        email: email
+      }
     );
     return response;
   } catch (error) {
