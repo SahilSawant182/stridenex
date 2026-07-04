@@ -38,7 +38,7 @@ export default function StudentsTabContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBranches, setSelectedBranches] = useState<string[]>([]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
-  const [selectedYear, setSelectedYear] = useState("All");
+  const [selectedYears, setSelectedYears] = useState<string[]>([]);
   const [selectedRisk, setSelectedRisk] = useState("All");
   const [availableBranches, setAvailableBranches] = useState<string[]>(["CS", "CSE", "ECE", "IT", "ME", "MBA", "Civil", "EE"]);
   const [availableSkills, setAvailableSkills] = useState<string[]>([]);
@@ -138,7 +138,7 @@ export default function StudentsTabContent() {
         college: collegeName || "",
         department: branchesStr,
         skill: skillsStr,
-        current_year: selectedYear === "All" ? undefined : selectedYear,
+        current_year: selectedYears.length === 1 ? selectedYears[0] : undefined,
         page: currentPage,
         page_size: pageSize
       });
@@ -173,16 +173,18 @@ export default function StudentsTabContent() {
     }
   };
 
+  const yearsStr = selectedYears.join(",");
+
   // Reset page to 1 on filters or search queries change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, branchesStr, skillsStr, selectedYear, selectedRisk]);
+  }, [searchQuery, branchesStr, skillsStr, yearsStr, selectedRisk]);
 
   useEffect(() => {
     if (collegeDetails) {
       fetchStudents();
     }
-  }, [collegeDetails, searchQuery, branchesStr, skillsStr, selectedYear, currentPage, pageSize]);
+  }, [collegeDetails, searchQuery, branchesStr, skillsStr, yearsStr, currentPage, pageSize]);
 
   // CSV download notification
   const handleExportCSV = () => {
@@ -218,12 +220,13 @@ export default function StudentsTabContent() {
     const year = student.current_year || student.year || student.academic_year || "—";
     const risk = student.risk_level || student.risk || "low";
     
-    const matchesYear = selectedYear === "All" || 
+    const matchesYear = selectedYears.length === 0 || selectedYears.some(selectedYear => 
       String(year).toLowerCase().includes(selectedYear.toLowerCase()) ||
       (selectedYear === "First Year" && String(year).toLowerCase().includes("1st")) ||
       (selectedYear === "Second Year" && String(year).toLowerCase().includes("2nd")) ||
       (selectedYear === "Third Year" && String(year).toLowerCase().includes("3rd")) ||
-      (selectedYear === "Final Year" && String(year).toLowerCase().includes("4th"));
+      (selectedYear === "Final Year" && String(year).toLowerCase().includes("4th"))
+    );
       
     const matchesRisk = selectedRisk === "All" || String(risk).toLowerCase() === selectedRisk.toLowerCase();
     
@@ -282,17 +285,15 @@ export default function StudentsTabContent() {
             multiSelect={true}
             searchable={true}
           />
-          <select 
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 font-medium focus:outline-none"
-          >
-            <option value="All">All Years</option>
-            <option value="First Year">First Year</option>
-            <option value="Second Year">Second Year</option>
-            <option value="Third Year">Third Year</option>
-            <option value="Final Year">Final Year</option>
-          </select>
+          <Dropdown
+            id="years-filter"
+            placeholder="All Years"
+            options={["First Year", "Second Year", "Third Year", "Final Year"]}
+            value={selectedYears}
+            onChange={setSelectedYears}
+            multiSelect={true}
+            searchable={false}
+          />
           <select 
             value={selectedRisk}
             onChange={(e) => setSelectedRisk(e.target.value)}
@@ -303,13 +304,13 @@ export default function StudentsTabContent() {
             <option value="medium">Medium Risk</option>
             <option value="high">High Risk</option>
           </select>
-          {(searchQuery || selectedBranches.length > 0 || selectedSkills.length > 0 || selectedYear !== "All" || selectedRisk !== "All") && (
+          {(searchQuery || selectedBranches.length > 0 || selectedSkills.length > 0 || selectedYears.length > 0 || selectedRisk !== "All") && (
             <button
               onClick={() => {
                 setSearchQuery("");
                 setSelectedBranches([]);
                 setSelectedSkills([]);
-                setSelectedYear("All");
+                setSelectedYears([]);
                 setSelectedRisk("All");
               }}
               className="px-3 py-2 text-slate-500 hover:text-slate-700 hover:bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold transition-colors shrink-0 flex items-center gap-1 bg-white"

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiService } from "@/services/api.services";
 import { parseBackendError } from "@/utils/error.utils";
+import { disableToDateBeforeFromDate } from "@/utils/date.utils";
 
 export interface DynamicField {
   name: string;
@@ -115,6 +116,19 @@ export default function DashboardDynamicModal({
 
     // Calculate new state first to handle side effects cleanly
     const updated = { ...formData, [name]: newValue };
+
+    // Automatically adjust end_date if start_date becomes later
+    if (name === "start_date" && updated.end_date) {
+      if (new Date(updated.end_date) < new Date(String(newValue))) {
+        updated.end_date = newValue;
+      }
+    }
+    if (name === "from_date" && updated.to_date) {
+      if (new Date(updated.to_date) < new Date(String(newValue))) {
+        updated.to_date = newValue;
+      }
+    }
+
     let finalData = updated;
 
     if (onValuesChange) {
@@ -697,7 +711,11 @@ function DynamicFieldItem({
             placeholder={field.placeholder}
             required={field.required}
             disabled={field.disabled}
-            min={field.min}
+            min={
+              field.type === "date" && (field.name === "end_date" || field.name === "to_date")
+                ? disableToDateBeforeFromDate(formData.start_date || formData.from_date)
+                : field.min
+            }
             max={field.max}
             style={field.textTransform ? { textTransform: field.textTransform } : {}}
             className={`${field.icon ? 'pl-12' : 'px-4'} h-12 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-slate-900 ${field.textTransform === 'uppercase' ? 'placeholder:uppercase' : ''} disabled:bg-slate-50 disabled:text-slate-500`}

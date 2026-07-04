@@ -28,3 +28,24 @@ export const calculateEndDate = (startDate: string, durationDays: number | strin
     return "";
   }
 };
+
+/**
+ * Common function to disable to_date calendar picker options before the selected from_date
+ * @param fromDate - Selected start date
+ * @returns YYYY-MM-DD string for min attribute in input
+ */
+export const disableToDateBeforeFromDate = (fromDate: string | Date | null | undefined): string => {
+  if (!fromDate) return "";
+  try {
+    const d = new Date(fromDate);
+    if (isNaN(d.getTime())) return "";
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  } catch (error) {
+    console.error("Error formatting min date attribute:", error);
+    return "";
+  }
+};
+
