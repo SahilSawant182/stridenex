@@ -41,8 +41,12 @@ const upcomingBookings = [
   { id: "SES-2412", initials: "TG", name: "Tanya Gupta", color: "bg-emerald-500", topic: "Data Science Roadmap", date: "Mar 1 • 2:00 PM", duration: "60 min", type: "Career", typeColor: "text-orange-600 bg-orange-50", fee: "₹1,200" },
 ];
 
+const getMentorEmail = (currentUser: string | null) => {
+  return currentUser || (typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail")) : null) || "";
+};
+
 export default function ScheduleTabContent() {
-  const { currentUser } = useAuth();
+  const { currentUser, isInitialized } = useAuth();
   const { showToast } = useToast();
   const [upcoming, setUpcoming] = useState<any[]>([]);
   const [slotCalendar, setSlotCalendar] = useState<Record<string, any[]>>({});
@@ -205,7 +209,7 @@ export default function ScheduleTabContent() {
       });
       showToast("Session rescheduled successfully.", "success");
       setRescheduleModalOpen(false);
-      const email = currentUser || localStorage.getItem("userEmail") || "";
+      const email = getMentorEmail(currentUser);
       if (email) {
         const upcomingRes = await getUpcomingSessions(email);
         if (upcomingRes?.message && Array.isArray(upcomingRes.message)) {
@@ -246,7 +250,7 @@ export default function ScheduleTabContent() {
   };
 
   const reloadSlotCalendar = async () => {
-    const email = currentUser || localStorage.getItem("userEmail") || "";
+    const email = getMentorEmail(currentUser);
     if (!email) return;
     try {
       const calendarRes = await getSlotCalendar(email);
@@ -261,7 +265,7 @@ export default function ScheduleTabContent() {
   };
 
   const handleClearAvailability = async () => {
-    const email = currentUser || localStorage.getItem("userEmail") || "";
+    const email = getMentorEmail(currentUser);
     if (!email) return;
 
     if (!confirm("Are you sure you want to clear all your availability slots? This cannot be undone.")) {
@@ -282,7 +286,7 @@ export default function ScheduleTabContent() {
   };
 
   const handleSaveAvailability = async () => {
-    const email = currentUser || localStorage.getItem("userEmail") || "";
+    const email = getMentorEmail(currentUser);
     if (!email) return;
 
     try {
@@ -360,16 +364,27 @@ export default function ScheduleTabContent() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const email = currentUser || localStorage.getItem("userEmail") || "";
+      const email = getMentorEmail(currentUser);
       if (!email) {
-        setLoading(false);
+        if (isInitialized) {
+          setLoading(false);
+        }
         return;
       }
       try {
         const [upcomingRes, calendarRes, weeklyRes] = await Promise.all([
-          getUpcomingSessions(email),
-          getSlotCalendar(email),
-          getWeeklyBookedSessions(email)
+          getUpcomingSessions(email).catch(err => {
+            console.error("Failed to fetch upcoming sessions", err);
+            return null;
+          }),
+          getSlotCalendar(email).catch(err => {
+            console.error("Failed to fetch slot calendar", err);
+            return null;
+          }),
+          getWeeklyBookedSessions(email).catch(err => {
+            console.error("Failed to fetch weekly booked sessions", err);
+            return null;
+          })
         ]);
         if (upcomingRes?.message && Array.isArray(upcomingRes.message)) {
           setUpcoming(upcomingRes.message);
@@ -394,10 +409,10 @@ export default function ScheduleTabContent() {
     };
 
     fetchData();
-  }, [currentUser]);
+  }, [currentUser, isInitialized]);
 
   const fetchMonthlyData = async () => {
-    const email = currentUser || localStorage.getItem("userEmail") || "";
+    const email = getMentorEmail(currentUser);
     if (!email) return;
     try {
       setLoadingMonthly(true);
@@ -415,7 +430,7 @@ export default function ScheduleTabContent() {
   };
 
   const fetchWeeklyData = async () => {
-    const email = currentUser || localStorage.getItem("userEmail") || "";
+    const email = getMentorEmail(currentUser);
     if (!email) return;
     try {
       setLoadingWeekly(true);
@@ -443,7 +458,7 @@ export default function ScheduleTabContent() {
   };
 
   const handleBlockTime = async () => {
-    const email = currentUser || localStorage.getItem("userEmail") || "";
+    const email = getMentorEmail(currentUser);
     if (!email || !blockDate || !blockFromTime || !blockToTime) return;
     try {
       setSubmittingBlock(true);
