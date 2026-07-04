@@ -24,6 +24,7 @@ import { getBillingPackagesByType, getBillingUrl, getUserSubscriptionDashboard }
 import type {
   SubscriptionDashboardResponse,
   ActiveSubscription,
+  CurrentPlan,
   SubscriptionHistoryItem,
 } from "@/types/subscription";
 import { BASE_DOMAIN } from "@/services/api.services";
@@ -165,13 +166,36 @@ function SummaryCards({ dashboard }: SummaryCardsProps) {
   );
 }
 
+type DisplayPlan =
+  | { kind: "paid"; data: ActiveSubscription }
+  | { kind: "free"; data: CurrentPlan };
+
 interface ActivePlanSectionProps {
-  active: ActiveSubscription;
+  plan: DisplayPlan;
 }
 
-function ActivePlanSection({ active }: ActivePlanSectionProps) {
-  const remaining = calcRemainingDays(active.expiry_date);
-  const isExpired = remaining === 0;
+function ActivePlanSection({ plan }: ActivePlanSectionProps) {
+  const isPaid = plan.kind === "paid";
+  const isTokenBased =
+    plan.kind === "free" && plan.data.package_type === "Token Based";
+
+  // Determine expiry/remaining days
+  const expiryDateStr =
+    isPaid
+      ? (plan.data as ActiveSubscription).expiry_date
+      : (plan.data as CurrentPlan).to_date ?? "";
+  const remaining = expiryDateStr ? calcRemainingDays(expiryDateStr) : null;
+  const isExpired = remaining === 0 && !isTokenBased;
+
+  const packageName = isPaid
+    ? (plan.data as ActiveSubscription).package_name
+    : (plan.data as CurrentPlan).package_name;
+  const packageType = isPaid
+    ? (plan.data as ActiveSubscription).package_type
+    : (plan.data as CurrentPlan).package_type;
+  const isFree =
+    plan.kind === "free" &&
+    (plan.data as CurrentPlan).source === "active_package";
 
   if (isExpired) {
     return (
@@ -187,7 +211,7 @@ function ActivePlanSection({ active }: ActivePlanSectionProps) {
                 <span className="text-[10px] font-bold text-red-700 bg-red-100/80 border border-red-200/60 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> Expired
                 </span>
-                <span className="text-sm font-extrabold text-slate-800">{active.package_name}</span>
+                <span className="text-sm font-extrabold text-slate-800">{packageName}</span>
               </div>
               <p className="text-xs text-slate-500">Your package has expired. Please renew or choose a new plan below.</p>
             </div>
@@ -217,37 +241,47 @@ function ActivePlanSection({ active }: ActivePlanSectionProps) {
               <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 border border-emerald-200/60 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Current Active Plan
               </span>
-              <span className="text-sm font-extrabold text-slate-800">{active.package_name}</span>
+              <span className="text-sm font-extrabold text-slate-800">{packageName}</span>
+              {isFree && (
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                  Free Plan
+                </span>
+              )}
             </div>
             {/* Row 2: meta chips */}
             <div className="flex flex-wrap items-center gap-2">
-              {active.package_type && (
+              {packageType && (
                 <span className="text-[10px] text-slate-500 font-semibold px-2 py-0.5 bg-white/70 rounded-full border border-slate-200">
-                  {active.package_type}
+                  {packageType}
                 </span>
               )}
-              {/* {active.app_name && (
-                <span className="text-[10px] text-indigo-500 font-semibold px-2 py-0.5 bg-indigo-50/80 rounded-full border border-indigo-100">
-                  {active.app_name}
+              {/* Token-based: show token usage */}
+              {isTokenBased ? (
+                <span className="flex items-center gap-1 text-xs text-emerald-700 font-semibold">
+                  <Zap className="w-3.5 h-3.5 text-emerald-500" />
+                  {(plan.data as CurrentPlan).remaining_tokens ?? 0} /{" "}
+                  {(plan.data as CurrentPlan).total_tokens ?? 0} tokens
                 </span>
-              )} */}
-              <span className="flex items-center gap-1 text-xs text-emerald-700 font-semibold">
-                <Clock className="w-3.5 h-3.5 text-emerald-500" /> {remaining} days remaining
-              </span>
-              <span className="text-xs text-slate-500">
-                Expires On:{" "}
-                <span className="font-semibold text-slate-600">{formatDate(active.expiry_date)}</span>
-              </span>
-              {/* {active.sales_invoice_no && (
-                <span className="text-xs text-slate-400">#{active.sales_invoice_no}</span>
-              )} */}
+              ) : (
+                remaining !== null && (
+                  <span className="flex items-center gap-1 text-xs text-emerald-700 font-semibold">
+                    <Clock className="w-3.5 h-3.5 text-emerald-500" /> {remaining} days remaining
+                  </span>
+                )
+              )}
+              {expiryDateStr && !isTokenBased && (
+                <span className="text-xs text-slate-500">
+                  Expires On:{" "}
+                  <span className="font-semibold text-slate-600">{formatDate(expiryDateStr)}</span>
+                </span>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Right: Subscription Active badge — vertically centered */}
+        {/* Right: badge */}
         <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-0 py-1.5 px-3 rounded-lg flex items-center gap-1.5 text-xs font-semibold shadow-sm shadow-emerald-200 flex-shrink-0">
-          <CheckCircle className="w-4 h-4" /> Subscription Active
+          <CheckCircle className="w-4 h-4" /> {isFree ? "Free Plan" : "Subscription Active"}
         </Badge>
       </div>
     </div>
@@ -303,14 +337,8 @@ function PurchaseHistory({ history }: PurchaseHistoryProps) {
                   </div>
 
                   <div className="space-y-1 min-w-0">
-                    {/* Name + status badges inline */}
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-sm font-bold text-slate-800">{entry.package_name}</p>
-                      {entry.is_active && (
-                        <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white border-0 text-[10px] px-2 py-0.5 font-bold">
-                          Active
-                        </Badge>
-                      )}
                       <Badge
                         className={`border-0 text-[10px] px-2 py-0.5 font-bold ${entry.payment_status === "Paid"
                           ? "bg-blue-100 text-blue-700"
@@ -418,9 +446,7 @@ export default function PlansTabContent() {
       try {
         const [packagesRes, dashboardRes] = await Promise.allSettled([
           getBillingPackagesByType(accountType),
-          customerEmail
-            ? getUserSubscriptionDashboard(customerEmail)
-            : Promise.reject("No user email"),
+          getUserSubscriptionDashboard(),
         ]);
 
         if (packagesRes.status === "fulfilled") {
@@ -497,17 +523,22 @@ export default function PlansTabContent() {
   }
 
   const maxAmount = Math.max(...packages.map((p) => p.amount));
-  const activeSub = dashboard?.active_subscription ?? null;
+  const displayPlan: DisplayPlan | null = dashboard?.active_subscription
+    ? { kind: "paid", data: dashboard.active_subscription }
+    : dashboard?.current_plan
+    ? { kind: "free", data: dashboard.current_plan }
+    : null;
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
 
       {/* 1. Active / Expired Plan Banner */}
-      {activeSub && (
+      {displayPlan && (
         <motion.div variants={item}>
-          <ActivePlanSection active={activeSub} />
+          <ActivePlanSection plan={displayPlan} />
         </motion.div>
       )}
+
 
       {/* 2. Choose Your Plan header */}
       <motion.div variants={item}>

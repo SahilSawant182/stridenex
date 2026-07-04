@@ -23,6 +23,19 @@ export interface ActiveSubscription {
   sales_invoice_no: string;
 }
 
+export interface CurrentPlan {
+  billing_package: string;
+  package_name: string;
+  package_type: string;
+  app_name: string;
+  from_date: string;
+  to_date: string | null;
+  package_id: string;
+  remaining_tokens: number | null;
+  total_tokens: number | null;
+  source: "active_package" | string;
+}
+
 export interface SubscriptionHistoryItem {
   name: string;
   package_name: string;
@@ -42,5 +55,6 @@ export interface SubscriptionDashboardResponse {
   status: "success" | "error";
   summary: SubscriptionSummary;
   active_subscription: ActiveSubscription | null;
+  current_plan: CurrentPlan | null;
   history: SubscriptionHistoryItem[];
 }

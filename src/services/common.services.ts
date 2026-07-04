@@ -69,17 +69,16 @@ export const fetchBackgroundImage = async () => {
   }
 };
 
-export const getUserSubscriptionDashboard = async (
-  email: string
-): Promise<SubscriptionDashboardResponse> => {
-  try {
-    const response = await apiService.get(
-      `method/quantbit_billing_platform.quantbit_billing_platform.api.get_user_subscription_dashboard?user=${encodeURIComponent(email)}`
-    );
-    const data: SubscriptionDashboardResponse = response?.message ?? response;
-    return data;
-  } catch (error) {
-    console.error("Error fetching user subscription dashboard:", error);
-    throw error;
-  }
-};
+export const getUserSubscriptionDashboard =
+  async (): Promise<SubscriptionDashboardResponse> => {
+    try {
+      const response = await apiService.get(
+        `method/quantbit_billing_platform.quantbit_billing_platform.api.get_user_subscription_dashboard`
+      );
+      const data: SubscriptionDashboardResponse = response?.message ?? response;
+      return data;
+    } catch (error) {
+      console.error("Error fetching user subscription dashboard:", error);
+      throw error;
+    }
+  };
