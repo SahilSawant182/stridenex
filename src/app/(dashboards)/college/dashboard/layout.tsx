@@ -16,15 +16,7 @@ export default function CollegeDashboardSubLayout({
     return (
         <div className="max-w-7xl mx-auto space-y-6 pb-12">
             {/* Banner */}
-            {isOverview && (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ type: "spring", stiffness: 100, damping: 15 }}
-                >
-                    <RoleBannerWidget role="college" />
-                </motion.div>
-            )}
+            <RoleBannerWidget role="college" onlyModal={!isOverview} />
 
             {/* Tabs */}
             <motion.div

@@ -55,6 +55,7 @@ interface RoleBannerWidgetProps {
     onUpdateSuccess?: () => Promise<void>;
     fields?: DynamicField[];
   };
+  onlyModal?: boolean;
 }
 
 const roleConfig = {
@@ -132,7 +133,7 @@ const roleConfig = {
   }
 };
 
-export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetProps) {
+export default function RoleBannerWidget({ role, customData, onlyModal = false }: RoleBannerWidgetProps) {
   const { fullName, currentUser } = useAuth();
   const config = roleConfig[role];
 
@@ -839,6 +840,7 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
   }, [role, collegeData, studentData, mentorData, loading]);
 
   if (isWidgetLoading) {
+    if (onlyModal) return null;
     return (
       <div className={`bg-gradient-to-r ${config.gradient} rounded-2xl p-4 md:p-6 text-white relative overflow-hidden animate-pulse min-h-[180px] flex items-center`}>
         {/* Background shapes for aesthetics */}
@@ -861,6 +863,46 @@ export default function RoleBannerWidget({ role, customData }: RoleBannerWidgetP
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (onlyModal) {
+    return (
+      <>
+        {(role === "student" || role === "industry" || role === "college") && (
+          <DashboardDynamicModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            title={role === "student" ? "Update Profile" : role === "college" ? "Edit College Details" : "Edit Company Profile"}
+            subtitle={role === "student" ? "Keep your academic details up to date" : role === "college" ? "Update your college onboarding information" : (customData?.title || "Manage your company's presence")}
+            headerIcon={role === "student" ? Pen : role === "college" ? Building2 : Building2}
+            iconBgColor={role === "student" ? "bg-orange-500" : role === "college" ? "bg-emerald-600" : "bg-blue-600"}
+            fields={role === "student" ? studentFields : role === "college" ? collegeFields : (customData?.fields || industryFields)}
+            initialValues={computedInitialValues}
+            onSubmit={handleUpdateProfile}
+            loading={modalLoading}
+            error={modalError}
+            onValuesChange={(updatedValues, changedFieldName) => {
+              if (role === "college") {
+                const sideEffects: any = {};
+                if (changedFieldName === "state") {
+                  sideEffects.district = "";
+                  sideEffects.taluka = "";
+                  sideEffects.city = "";
+                } else if (changedFieldName === "district") {
+                  sideEffects.taluka = "";
+                  sideEffects.city = "";
+                } else if (changedFieldName === "taluka") {
+                  sideEffects.city = "";
+                }
+                const newFormState = { ...updatedValues, ...sideEffects };
+                setCollegeFormState(newFormState);
+                return sideEffects;
+              }
+            }}
+          />
+        )}
+      </>
     );
   }
 

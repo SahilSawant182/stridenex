@@ -113,6 +113,7 @@ export default function MentorsTabContent() {
   const [searchVal, setSearchVal] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const handleSearchChange = (val: string) => {
     setSearchVal(val);
@@ -122,7 +123,7 @@ export default function MentorsTabContent() {
     debounceTimeoutRef.current = setTimeout(() => {
       setSearchQuery(val);
       setCurrentPage(1);
-    }, 500);
+    }, 1000);
   };
 
   const handleSearchSubmit = () => {
@@ -140,6 +141,12 @@ export default function MentorsTabContent() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!loading && searchVal && document.activeElement !== searchInputRef.current) {
+      searchInputRef.current?.focus();
+    }
+  }, [loading, searchVal]);
 
   // Booking Modal States
   const [selectedMentorForBooking, setSelectedMentorForBooking] = useState<Mentor | null>(null);
@@ -392,24 +399,7 @@ export default function MentorsTabContent() {
     }
   }, [mentors.length]);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-20 text-slate-500">
-        <div className="animate-pulse flex items-center gap-2">
-          <BookOpen className="animate-spin w-5 h-5" />
-          <span>Loading mentors...</span>
-        </div>
-      </div>
-    );
-  }
 
-  if (error) {
-    return (
-      <div className="text-center py-20 text-red-500">
-        {error}
-      </div>
-    );
-  }
 
   return (
     <motion.div
@@ -428,6 +418,7 @@ export default function MentorsTabContent() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
+              ref={searchInputRef}
               placeholder="search for email"
               className="pl-9 pr-4 py-2 w-full md:w-64 bg-white border-slate-200 text-sm"
               value={searchVal}
@@ -445,14 +436,35 @@ export default function MentorsTabContent() {
         </div>
       </motion.div>
 
-      {mentors.length === 0 ? (
-        <motion.div variants={item} className="text-center py-20 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
+      {loading ? (
+        <div className="flex justify-center items-center py-20 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
+          <div className="animate-pulse flex items-center gap-2">
+            <Loader2 className="animate-spin w-5 h-5 text-orange-500" />
+            <span>Loading mentors...</span>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="text-center py-20 text-red-500 bg-white rounded-xl border border-slate-200 border-dashed">
+          {error}
+        </div>
+      ) : mentors.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="text-center py-20 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed"
+        >
           {searchQuery ? "No mentors found matching your search." : "No mentors available at the moment."}
         </motion.div>
       ) : (
         <>
           {/* Mentors Grid */}
-          <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
+          >
             {mentors.map((mentor) => (
               <BaseCard key={mentor.id} className="overflow-hidden hover:shadow-lg transition-all group">
                 <div className="p-5 flex flex-col h-full">
@@ -550,13 +562,13 @@ export default function MentorsTabContent() {
             ))}
           </motion.div>
           {pagination.total_pages > 1 && (
-            <motion.div variants={item} className="mt-4">
+            <div className="mt-4">
               <Pagination
                 currentPage={currentPage}
                 totalPages={pagination.total_pages}
                 onPageChange={setCurrentPage}
               />
-            </motion.div>
+            </div>
           )}
         </>
       )}
