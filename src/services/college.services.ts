@@ -1,12 +1,28 @@
 import { apiService } from "./api.services";
 
-export const getMasterData = async (doctype: string) => {
+export const getMasterData = async (doctype: string, additionalPayload: any = {}) => {
   try {
+    const payload = {
+      doctype,
+      page: additionalPayload.page !== undefined ? additionalPayload.page : 1,
+      search: additionalPayload.search !== undefined ? additionalPayload.search : "",
+      ...additionalPayload
+    };
     const response = await apiService.post(
       `method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-      { doctype }
+      payload
     );
-    return response;
+    let arr = [];
+    if (response?.data && response?.data?.data && Array.isArray(response?.data?.data)) {
+      arr = response.data.data;
+    } else if (response?.data && Array.isArray(response?.data)) {
+      arr = response.data;
+    } else if (response?.message && Array.isArray(response?.message)) {
+      arr = response.message;
+    } else if (response?.message && response?.message?.data && Array.isArray(response?.message?.data)) {
+      arr = response.message.data;
+    }
+    return { data: arr, message: arr, pagination: response?.data?.pagination || response?.message?.pagination };
   } catch (error) {
     console.error(`Error fetching master data for ${doctype}:`, error);
     throw error;

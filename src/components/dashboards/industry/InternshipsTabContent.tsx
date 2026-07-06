@@ -153,7 +153,8 @@ export default function InternshipsTabContent() {
       label: "Required Skills",
       type: "select",
       icon: Award,
-      options: skillOptions,
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: { doctype: "Skill" },
       required: true,
       colSpan: 2,
       placeholder: "Select Required Skills",
@@ -163,7 +164,6 @@ export default function InternshipsTabContent() {
       onCreateCustomValue: async (val: string) => {
         try {
           await createSkill(val);
-          fetchOptions("Skill", setSkillOptions);
         } catch (err) {
           console.error("Failed to create skill record:", err);
           throw err;
@@ -171,7 +171,7 @@ export default function InternshipsTabContent() {
       }
     },
     { name: "description", label: "Description", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Describe the roles and responsibilities..." },
-  ], [skillOptions, categoryOptions, courseOptions, departmentOptions, modalValues.payment_mode, modalValues.start_date, modalValues.course]);
+  ], [categoryOptions, courseOptions, departmentOptions, modalValues.payment_mode, modalValues.start_date, modalValues.course]);
 
   const fetchInternships = async (industry: string) => {
     try {

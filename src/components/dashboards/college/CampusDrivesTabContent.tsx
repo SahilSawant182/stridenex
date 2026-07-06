@@ -56,6 +56,7 @@ import {
 } from "@/services/college.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { FaRupeeSign } from 'react-icons/fa';
+import { BASE_URL } from "@/services/api.services";
 import Dropdown from "@/components/ui/Dropdown";
 
 
@@ -2356,7 +2357,12 @@ export default function CampusDrivesTabContent() {
                         id="eligibility-branches-filter"
                         label="Branch"
                         placeholder="All Branches"
-                        options={availableBranches}
+                        endpoint={`${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`}
+                        params={{ doctype: "College Department" }}
+                        mapOptions={(data) => data.map((item: any) => ({
+                          value: item.branch_name || item.branch || item.name,
+                          label: item.branch_name || item.branch || item.name
+                        }))}
                         value={eligibilityBranches}
                         onChange={setEligibilityBranches}
                         multiSelect={true}

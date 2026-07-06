@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Label } from "@/components/ui/label";
-import { ChevronDown, X, Check, Search } from "lucide-react";
+import { ChevronDown, X, Check, Search, Loader2 } from "lucide-react";
 import axios from "axios";
 
 interface DropdownProps {
@@ -46,6 +46,11 @@ export default function Dropdown({
   const [searchTerm, setSearchTerm] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -71,31 +76,87 @@ export default function Dropdown({
     }
   }, [optionsProp]);
 
-  const fetchOptions = async () => {
+  const fetchOptions = async (pageNum = 1, searchTxt = "") => {
     if (!endpoint) return;
     setLoading(true);
     setFetchError("");
     try {
-      const response = await axios.get(endpoint, { params });
-      
-      let data = response.data;
-      if (data.message && Array.isArray(data.message)) {
-        data = data.message;
-      } else if (data.data && Array.isArray(data.data)) {
-        data = data.data;
-      }
-      
-      if (Array.isArray(data)) {
-        const mappedOptions = mapOptions ? mapOptions(data) : data.map((item: any) => ({
-          value: item.name || item.value || String(item),
-          label: item.label || item.name || item.value || String(item)
-        }));
-        setOptions(mappedOptions);
-        setFetched(true);
+      let responseData;
+      if (endpoint.includes('master.get_master_data')) {
+        const body = {
+          ...(params || {}),
+          search: searchTxt,
+          page: pageNum
+        };
+        const response = await axios.post(endpoint, body, {
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          }
+        });
+        responseData = response.data;
       } else {
-        setOptions([]);
-        setFetchError("No data available");
+        const response = await axios.get(endpoint, {
+          params: {
+            ...(params || {}),
+            page: pageNum,
+            search: searchTxt
+          }
+        });
+        responseData = response.data;
       }
+
+      let data = [];
+      let nextFlag = false;
+      let prevFlag = false;
+      let totalPgs = 1;
+
+      if (responseData) {
+        if (responseData.pagination) {
+          data = responseData.data || [];
+          nextFlag = responseData.pagination.has_next === true;
+          prevFlag = responseData.pagination.has_prev === true;
+          const totalCount = responseData.pagination.total_count || 0;
+          const pageSize = responseData.pagination.page_size || 20;
+          totalPgs = Math.ceil(totalCount / pageSize) || 1;
+        } else if (responseData.data && responseData.data.pagination) {
+          data = responseData.data.data || [];
+          const pag = responseData.data.pagination;
+          nextFlag = pag.has_next === true;
+          prevFlag = pag.has_prev === true;
+          const totalCount = pag.total_count || 0;
+          const pageSize = pag.page_size || 20;
+          totalPgs = Math.ceil(totalCount / pageSize) || 1;
+        } else if (responseData.message && responseData.message.pagination) {
+          data = responseData.message.data || [];
+          const pag = responseData.message.pagination;
+          nextFlag = pag.has_next === true;
+          prevFlag = pag.has_prev === true;
+          const totalCount = pag.total_count || 0;
+          const pageSize = pag.message.pagination.page_size || 20;
+          totalPgs = Math.ceil(totalCount / pageSize) || 1;
+        } else {
+          if (Array.isArray(responseData)) {
+            data = responseData;
+          } else if (responseData.data && Array.isArray(responseData.data)) {
+            data = responseData.data;
+          } else if (responseData.message && Array.isArray(responseData.message)) {
+            data = responseData.message;
+          }
+        }
+      }
+
+      const mappedOptions = mapOptions ? mapOptions(data) : data.map((item: any) => ({
+        value: item.name || item.value || String(item),
+        label: item.label || item.name || item.value || String(item)
+      }));
+
+      setOptions(mappedOptions);
+      setHasNext(nextFlag || data.length === 20);
+      setHasPrev(prevFlag || pageNum > 1);
+      setTotalPages(totalPgs);
+      setPage(pageNum);
+      setFetched(true);
     } catch (err: any) {
       console.error(`Error fetching ${label || id}:`, err);
       setFetchError(err?.response?.data?.message || `Failed to load ${label || id}`);
@@ -105,10 +166,18 @@ export default function Dropdown({
     }
   };
 
+  useEffect(() => {
+    if (!endpoint || !isOpen) return;
+    const delayDebounce = setTimeout(() => {
+      fetchOptions(1, searchTerm);
+    }, 400);
+    return () => clearTimeout(delayDebounce);
+  }, [searchTerm, endpoint, isOpen]);
+
   const handleClick = () => {
     if (disabled) return;
     if (!fetched && !loading && !fetchError && endpoint) {
-      fetchOptions();
+      fetchOptions(1, "");
     }
     setIsOpen(!isOpen);
     if (!isOpen) {
@@ -118,7 +187,7 @@ export default function Dropdown({
 
   const handleRetry = () => {
     setFetchError("");
-    fetchOptions();
+    fetchOptions(page, searchTerm);
   };
 
   // For single select
@@ -224,60 +293,146 @@ export default function Dropdown({
       </div>
 
       {/* Dropdown menu */}
-      {isOpen && !loading && !fetchError && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg overflow-hidden flex flex-col max-h-60">
-          {searchable && (
-            <div className="p-2 border-b border-slate-200 bg-white sticky top-0 z-10" onClick={(e) => e.stopPropagation()}>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search..."
-                  className="w-full pl-9 pr-3 py-1.5 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
-                />
-              </div>
+      {isOpen && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={() => { setIsOpen(false); setSearchTerm(""); }}>
+          <div 
+            className="w-full max-w-md bg-white rounded-3xl border border-slate-100 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in-0 zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{placeholder || "Select option"}</span>
+              <button
+                onClick={() => { setIsOpen(false); setSearchTerm(""); }}
+                className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-          )}
-          <div className="overflow-y-auto flex-1 max-h-48 py-1">
-            {filteredOptions.length === 0 ? (
-              <div className="p-3 text-sm text-slate-400 text-center">No options available</div>
-            ) : (
-              filteredOptions.map((option) => (
-                <div
-                  key={option.value}
-                  onClick={(e) => multiSelect ? handleMultiSelect(option.value, e) : handleSingleSelect(option.value)}
-                  className={`px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors ${
-                    isSelected(option.value) 
-                      ? "bg-accent/5 text-accent font-medium" 
-                      : "text-slate-700"
+
+            {/* Search Input */}
+            {searchable && (
+              <div className="p-3 border-b border-slate-100 bg-white">
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search..."
+                    className="w-full pl-10 pr-4 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent font-medium bg-slate-50/50"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Options List */}
+            <div className="overflow-y-auto flex-1 p-2 space-y-1 max-h-[50vh] relative min-h-[200px]">
+              {loading && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
+                  <Loader2 className="w-8 h-8 text-accent animate-spin" />
+                </div>
+              )}
+              {fetchError ? (
+                <div className="py-8 text-center">
+                  <p className="text-xs text-red-500 font-semibold mb-2">{fetchError}</p>
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    className="px-4 py-2 bg-accent text-white rounded-xl text-xs font-bold uppercase tracking-wider shadow-md hover:bg-accent/90"
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : filteredOptions.length === 0 && !loading ? (
+                <div className="py-8 text-center">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No options available</p>
+                </div>
+              ) : (
+                filteredOptions.map((option) => (
+                  <div
+                    key={option.value}
+                    onClick={(e) => multiSelect ? handleMultiSelect(option.value, e) : handleSingleSelect(option.value)}
+                    className={`flex items-center justify-between px-4 py-3 rounded-2xl cursor-pointer transition-all mb-0.5 ${
+                      isSelected(option.value) 
+                        ? 'bg-accent/5 text-accent font-semibold' 
+                        : 'hover:bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {multiSelect ? (
+                        <div className={`w-4.5 h-4.5 rounded-lg border flex items-center justify-center ${
+                          isSelected(option.value) 
+                            ? "bg-accent border-accent" 
+                            : "border-slate-300"
+                        }`}>
+                          {isSelected(option.value) && (
+                            <Check className="w-3 h-3 text-white" />
+                          )}
+                        </div>
+                      ) : (
+                        <div className={`w-4.5 h-4.5 rounded-full border flex items-center justify-center ${
+                          isSelected(option.value) 
+                            ? "border-accent" 
+                            : "border-slate-300"
+                        }`}>
+                          {isSelected(option.value) && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-accent" />
+                          )}
+                        </div>
+                      )}
+                      <span className="text-sm font-bold leading-tight">{option.label}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Pagination Controls */}
+            {endpoint && !fetchError && (hasNext || hasPrev || totalPages > 1) && (
+              <div className="flex items-center justify-between p-3 border-t border-slate-100 bg-slate-50/50 text-[10px] font-bold text-slate-500 uppercase tracking-wider" onClick={(e) => e.stopPropagation()}>
+                <button
+                  type="button"
+                  disabled={!hasPrev || loading}
+                  onClick={() => fetchOptions(page - 1, searchTerm)}
+                  className={`px-3 py-1.5 rounded-xl border transition-all ${
+                    hasPrev 
+                      ? "bg-white border-slate-200 hover:bg-slate-100 text-slate-700 font-bold" 
+                      : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
                   }`}
                 >
-                  {multiSelect ? (
-                    <div className={`w-4 h-4 rounded border flex items-center justify-center ${
-                      isSelected(option.value) 
-                        ? "bg-accent border-accent" 
-                        : "border-slate-300"
-                    }`}>
-                      {isSelected(option.value) && (
-                        <Check className="w-3 h-3 text-white" />
-                      )}
-                    </div>
-                  ) : (
-                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
-                      isSelected(option.value) 
-                        ? "border-accent" 
-                        : "border-slate-300"
-                    }`}>
-                      {isSelected(option.value) && (
-                        <div className="w-2 h-2 rounded-full bg-accent" />
-                      )}
-                    </div>
-                  )}
-                  <span className="flex-1">{option.label}</span>
-                </div>
-              ))
+                  Previous
+                </button>
+                
+                <span className="font-bold text-slate-700">
+                  Page {page} of {totalPages}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={!hasNext || loading}
+                  onClick={() => fetchOptions(page + 1, searchTerm)}
+                  className={`px-3 py-1.5 rounded-xl border transition-all ${
+                    hasNext 
+                      ? "bg-white border-slate-200 hover:bg-slate-100 text-slate-700 font-bold" 
+                      : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                  }`}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+
+            {/* Modal Footer */}
+            {multiSelect && (
+              <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex gap-2">
+                <button
+                  onClick={() => { setIsOpen(false); setSearchTerm(""); }}
+                  className="flex-1 py-2.5 rounded-xl bg-accent text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-accent/20 hover:bg-accent-foreground transition-all"
+                >
+                  Apply Filters
+                </button>
+              </div>
             )}
           </div>
         </div>

@@ -7,6 +7,7 @@ import { Download, Search, Settings2, MoreHorizontal, Loader2, Users } from "luc
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { getCollegeDetails, getMasterData, getStudentAnalyticsList } from "@/services/college.services";
+import { BASE_URL } from "@/services/api.services";
 import Dropdown from "@/components/ui/Dropdown";
 
 const containerVariants: Variants = {
@@ -270,7 +271,12 @@ export default function StudentsTabContent() {
           <Dropdown
             id="branches-filter"
             placeholder="All Branches"
-            options={availableBranches}
+            endpoint={`${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`}
+            params={{ doctype: "College Department" }}
+            mapOptions={(data) => data.map((item: any) => ({
+              value: item.branch_name || item.branch || item.name,
+              label: item.branch_name || item.branch || item.name
+            }))}
             value={selectedBranches}
             onChange={setSelectedBranches}
             multiSelect={true}
@@ -279,7 +285,12 @@ export default function StudentsTabContent() {
           <Dropdown
             id="skills-filter"
             placeholder="All Skills"
-            options={availableSkills}
+            endpoint={`${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`}
+            params={{ doctype: "Skill" }}
+            mapOptions={(data) => data.map((item: any) => ({
+              value: item.name,
+              label: item.name
+            }))}
             value={selectedSkills}
             onChange={setSelectedSkills}
             multiSelect={true}

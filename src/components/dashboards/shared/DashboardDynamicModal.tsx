@@ -389,6 +389,10 @@ function DynamicFieldItem({
   const [apiOptions, setApiOptions] = useState<{ value: string; label: string }[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const [customLoading, setCustomLoading] = useState(false);
@@ -407,12 +411,26 @@ function DynamicFieldItem({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [activeSelect, field.name, setActiveSelect, setSearchTerm]);
 
+  const serializedParams = JSON.stringify(field.apiParams);
   useEffect(() => {
-    if (field.apiEndpoint && !field.disabled) {
-      fetchApiOptions();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [field.apiEndpoint, field.disabled, JSON.stringify(field.apiParams)]);
+    setApiOptions([]);
+    setPage(1);
+    setTotalPages(1);
+    setHasNext(false);
+    setHasPrev(false);
+  }, [serializedParams, field.apiEndpoint]);
+
+  useEffect(() => {
+    if (!field.apiEndpoint) return;
+
+    const delayDebounce = setTimeout(() => {
+      if (activeSelect === field.name) {
+        fetchApiOptions(1, searchTerm);
+      }
+    }, 400);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchTerm, activeSelect, field.name, field.apiEndpoint]);
 
   useEffect(() => {
     if (showCustomInput && customInputRef.current) {
@@ -422,14 +440,74 @@ function DynamicFieldItem({
     }
   }, [showCustomInput]);
 
-  const fetchApiOptions = async () => {
-    if (!field.apiEndpoint || apiLoading) return;
+  const fetchApiOptions = async (pageNum = 1, searchTxt = "") => {
+    if (!field.apiEndpoint) return;
     setApiLoading(true);
     setApiError(null);
     try {
-      const response = await apiService.post(field.apiEndpoint, field.apiParams || {});
-      const data = response?.data || response?.message?.data || response?.message || [];
-      let mapped;
+      let responseData;
+
+      if (field.apiEndpoint.includes('master.get_master_data')) {
+        const body = {
+          ...(field.apiParams || {}),
+          search: searchTxt,
+          page: pageNum
+        };
+        responseData = await apiService.post(field.apiEndpoint, body);
+      } else {
+        responseData = await apiService.post(field.apiEndpoint, {
+          ...(field.apiParams || {}),
+          page: pageNum,
+          page_size: 20,
+          search: searchTxt
+        });
+      }
+
+      let data = [];
+      let nextFlag = false;
+      let prevFlag = false;
+      let totalPgs = 1;
+
+      if (responseData) {
+        if (responseData.pagination) {
+          data = responseData.data || [];
+          nextFlag = responseData.pagination.has_next === true;
+          prevFlag = responseData.pagination.has_prev === true;
+          const totalCount = responseData.pagination.total_count || 0;
+          const pageSize = responseData.pagination.page_size || 20;
+          totalPgs = Math.ceil(totalCount / pageSize) || 1;
+        } else if (responseData.data && responseData.data.pagination) {
+          data = responseData.data.data || [];
+          const pag = responseData.data.pagination;
+          nextFlag = pag.has_next === true;
+          prevFlag = pag.has_prev === true;
+          const totalCount = pag.total_count || 0;
+          const pageSize = pag.page_size || 20;
+          totalPgs = Math.ceil(totalCount / pageSize) || 1;
+        } else if (responseData.message && responseData.message.pagination) {
+          data = responseData.message.data || [];
+          const pag = responseData.message.pagination;
+          nextFlag = pag.has_next === true;
+          prevFlag = pag.has_prev === true;
+          const totalCount = pag.total_count || 0;
+          const pageSize = pag.page_size || 20;
+          totalPgs = Math.ceil(totalCount / pageSize) || 1;
+        } else {
+          if (Array.isArray(responseData)) {
+            data = responseData;
+          } else if (responseData.data && Array.isArray(responseData.data)) {
+            data = responseData.data;
+          } else if (responseData.message && Array.isArray(responseData.message)) {
+            data = responseData.message;
+          } else if (responseData.message?.data && Array.isArray(responseData.message.data)) {
+            data = responseData.message.data;
+          } else if (responseData.message?.message && Array.isArray(responseData.message.message)) {
+            data = responseData.message.message;
+          }
+        }
+      }
+
+      let mapped = [];
       if (field.mapOptions) {
         mapped = field.mapOptions(data);
       } else {
@@ -438,7 +516,13 @@ function DynamicFieldItem({
           label: item.label || item.name || item.value || item
         })) : [];
       }
+
       setApiOptions(mapped);
+
+      setHasNext(nextFlag || data.length === 20);
+      setHasPrev(prevFlag || pageNum > 1);
+      setTotalPages(totalPgs);
+      setPage(pageNum);
     } catch (err: any) {
       console.error(`Error fetching options for ${field.name}:`, err);
       setApiError(err?.message || "Failed to load options");
@@ -711,6 +795,41 @@ function DynamicFieldItem({
                         </>
                       )}
                     </div>
+
+                    {/* Pagination Controls */}
+                    {field.apiEndpoint && !apiLoading && !apiError && (hasNext || hasPrev || totalPages > 1) && (
+                      <div className="flex items-center justify-between p-2 border-t border-slate-50 bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider rounded-b-2xl mt-1" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          disabled={!hasPrev || apiLoading}
+                          onClick={() => fetchApiOptions(page - 1, searchTerm)}
+                          className={`px-3 py-1.5 rounded-xl border transition-all ${
+                            hasPrev 
+                              ? "bg-white border-slate-200 hover:bg-slate-100 text-slate-700 font-bold" 
+                              : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                          }`}
+                        >
+                          Previous
+                        </button>
+                        
+                        <span className="font-bold text-slate-700">
+                          Page {page} of {totalPages}
+                        </span>
+
+                        <button
+                          type="button"
+                          disabled={!hasNext || apiLoading}
+                          onClick={() => fetchApiOptions(page + 1, searchTerm)}
+                          className={`px-3 py-1.5 rounded-xl border transition-all ${
+                            hasNext 
+                              ? "bg-white border-slate-200 hover:bg-slate-100 text-slate-700 font-bold" 
+                              : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                          }`}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    )}
                   </motion.div>
                 </>
               )}

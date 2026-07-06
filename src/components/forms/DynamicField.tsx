@@ -43,6 +43,10 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
   const [customValue, setCustomValue] = useState("");
   const [customError, setCustomError] = useState<string | null>(null);
   const [initialFetchDone, setInitialFetchDone] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const customInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -103,29 +107,41 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
     }
   }, [isOpen, showCustomInput]);
 
-  // Filter options based on search term and limit to 100 items to prevent UI lag
+  // Filter options based on search term or fetch paginated results from API
   useEffect(() => {
-    if (options.length > 0) {
-      const searchLower = searchTerm.toLowerCase();
-      const filtered: Array<{ value: string; label: string }> = [];
-      for (let i = 0; i < options.length; i++) {
-        const option = options[i];
-        if (option.label && option.label.toLowerCase().includes(searchLower)) {
-          filtered.push(option);
-          if (filtered.length >= 100) {
-            break;
-          }
-        }
+    if (!field.apiEndpoint) {
+      if (options.length > 0) {
+        const searchLower = searchTerm.toLowerCase();
+        const filtered = options.filter(option =>
+          option.label && option.label.toLowerCase().includes(searchLower)
+        ).slice(0, 100);
+        setFilteredOptions(filtered);
       }
-      setFilteredOptions(filtered);
-    } else {
-      setFilteredOptions([]);
+      return;
     }
-  }, [searchTerm, options]);
+
+    const delayDebounce = setTimeout(() => {
+      if (isOpen) {
+        fetchOptions(1, searchTerm);
+      }
+    }, 400);
+
+    return () => clearTimeout(delayDebounce);
+  }, [searchTerm, isOpen, field.apiEndpoint]);
+
+  const serializedParams = JSON.stringify(field.apiParams);
+  useEffect(() => {
+    setOptions([]);
+    setFilteredOptions([]);
+    setPage(1);
+    setTotalPages(1);
+    setHasNext(false);
+    setHasPrev(false);
+  }, [serializedParams, field.apiEndpoint]);
 
   // Removed initial country fetch
 
-  const fetchOptions = async () => {
+  const fetchOptions = async (pageNum = 1, searchTxt = "") => {
     if (!field.apiEndpoint) return;
 
     setLoading(true);
@@ -136,7 +152,12 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
 
       if (field.apiEndpoint.includes('frappe.client.get_list')) {
         response = await axios.get(field.apiEndpoint, {
-          params: field.apiParams || {},
+          params: {
+            ...(field.apiParams || {}),
+            page: pageNum,
+            page_size: 20,
+            search: searchTxt
+          },
           headers: {
             "Content-Type": "application/json",
             "Accept": "application/json"
@@ -145,7 +166,12 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
         responseData = response.data;
       }
       else if (field.apiEndpoint.includes('master.get_master_data')) {
-        response = await axios.post(field.apiEndpoint, field.apiParams || {}, {
+        const body = {
+          ...(field.apiParams || {}),
+          search: searchTxt,
+          page: pageNum
+        };
+        response = await axios.post(field.apiEndpoint, body, {
           headers: {
             "Content-Type": "application/json",
             "Accept": "application/json"
@@ -154,56 +180,89 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
         responseData = response.data;
       }
       else {
-        response = await axios.get(field.apiEndpoint, { params: field.apiParams });
+        response = await axios.get(field.apiEndpoint, {
+          params: {
+            ...(field.apiParams || {}),
+            page: pageNum,
+            page_size: 20,
+            search: searchTxt
+          }
+        });
         responseData = response.data;
       }
 
       console.log(`API Response for ${field.fieldname}:`, responseData);
 
       let data = [];
+      let nextFlag = false;
+      let prevFlag = false;
+      let totalPgs = 1;
 
-      if (Array.isArray(responseData)) {
-        data = responseData;
-      } else if (responseData.data && Array.isArray(responseData.data)) {
-        data = responseData.data;
-      } else if (responseData.message && Array.isArray(responseData.message)) {
-        data = responseData.message;
-      } else {
-        console.warn("Unexpected API response structure:", responseData);
-        setOptions([]);
-        setFilteredOptions([]);
-        setFetchError("No data available");
-        setLoading(false);
-        return;
+      if (responseData) {
+        if (responseData.pagination) {
+          data = responseData.data || [];
+          nextFlag = responseData.pagination.has_next === true;
+          prevFlag = responseData.pagination.has_prev === true;
+          const totalCount = responseData.pagination.total_count || 0;
+          const pageSize = responseData.pagination.page_size || 20;
+          totalPgs = Math.ceil(totalCount / pageSize) || 1;
+        } else if (responseData.data && responseData.data.pagination) {
+          data = responseData.data.data || [];
+          const pag = responseData.data.pagination;
+          nextFlag = pag.has_next === true;
+          prevFlag = pag.has_prev === true;
+          const totalCount = pag.total_count || 0;
+          const pageSize = pag.page_size || 20;
+          totalPgs = Math.ceil(totalCount / pageSize) || 1;
+        } else if (responseData.message && responseData.message.pagination) {
+          data = responseData.message.data || [];
+          const pag = responseData.message.pagination;
+          nextFlag = pag.has_next === true;
+          prevFlag = pag.has_prev === true;
+          const totalCount = pag.total_count || 0;
+          const pageSize = pag.message.pagination.page_size || 20;
+          totalPgs = Math.ceil(totalCount / pageSize) || 1;
+        } else {
+          if (Array.isArray(responseData)) {
+            data = responseData;
+          } else if (responseData.data && Array.isArray(responseData.data)) {
+            data = responseData.data;
+          } else if (responseData.message && Array.isArray(responseData.message)) {
+            data = responseData.message;
+          } else if (responseData.message?.data && Array.isArray(responseData.message.data)) {
+            data = responseData.message.data;
+          } else if (responseData.message?.message && Array.isArray(responseData.message.message)) {
+            data = responseData.message.message;
+          }
+        }
       }
 
+      let mappedOptions = [];
       if (data.length > 0) {
-        let mappedOptions;
-
         if (field.mapOptions) {
           mappedOptions = field.mapOptions(data);
         } else {
           mappedOptions = data.map((item: any) => ({
-            value: item.name || item.value,
-            label: item.label || item.name || item.district_name
+            value: item.name || item.value || item,
+            label: item.label || item.name || item.value || item
           }));
         }
+      }
 
-        console.log(`Mapped options for ${field.fieldname}:`, mappedOptions);
-        setOptions(mappedOptions);
-        setFilteredOptions(mappedOptions);
-      } else {
-        console.log(`No data found for ${field.fieldname}`);
-        setOptions([]);
-        setFilteredOptions([]);
+      setOptions(mappedOptions);
+      setFilteredOptions(mappedOptions);
+      if (mappedOptions.length === 0) {
         setFetchError("No options available");
       }
+
+      setHasNext(nextFlag || data.length === 20);
+      setHasPrev(prevFlag || pageNum > 1);
+      setTotalPages(totalPgs);
+      setPage(pageNum);
     } catch (err: any) {
       console.error(`Error fetching ${field.label}:`, err);
       const msg = err?.response?.data?.message || err?.message || `Failed to load ${field.fieldname}`;
       setFetchError(typeof msg === 'string' ? msg : JSON.stringify(msg));
-      setOptions([]);
-      setFilteredOptions([]);
     } finally {
       setLoading(false);
     }
@@ -212,15 +271,11 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
   const handleDropdownClick = () => {
     if (field.read_only || field.disabled) return;
 
-    // For all dropdowns EXCEPT country, fetch on every click
-    // For country, if options are already loaded, don't fetch again
     if (field.fieldname !== "country") {
-      // For dependent dropdowns (state, district, etc.), always fetch fresh data
-      fetchOptions();
+      fetchOptions(1, '');
     } else {
-      // For country, only fetch if options are empty
       if (options.length === 0 && !loading && !fetchError) {
-        fetchOptions();
+        fetchOptions(1, '');
       }
     }
 
@@ -234,7 +289,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
 
   const handleRetry = () => {
     setFetchError("");
-    fetchOptions();
+    fetchOptions(1, searchTerm);
   };
 
   const handleSingleSelect = (selectedValue: string) => {
@@ -464,18 +519,53 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
                         ))}
                       </div>
                     )}
-
-                    {/* "Others" option for fields that allow custom values */}
-                    {hasOthersOption && (
-                      <div
-                        onClick={() => setShowCustomInput(true)}
-                        className="px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors border-t border-slate-200 text-accent font-medium"
-                      >
-                        <Plus className="w-4 h-4" />
-                        <span>Add Others (Custom Value)</span>
-                      </div>
-                    )}
                   </div>
+
+                  {/* Pagination Controls */}
+                  {field.apiEndpoint && !loading && !fetchError && (hasNext || hasPrev || totalPages > 1) && (
+                    <div className="flex items-center justify-between p-2 border-t border-slate-200 bg-slate-50 text-[11px] font-semibold text-slate-600" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        disabled={!hasPrev || loading}
+                        onClick={() => fetchOptions(page - 1, searchTerm)}
+                        className={`px-2 py-1 rounded border transition-colors ${
+                          hasPrev 
+                            ? "bg-white border-slate-200 hover:bg-slate-50 text-slate-700" 
+                            : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                        }`}
+                      >
+                        Previous
+                      </button>
+                      
+                      <span>
+                        Page {page} of {totalPages}
+                      </span>
+
+                      <button
+                        type="button"
+                        disabled={!hasNext || loading}
+                        onClick={() => fetchOptions(page + 1, searchTerm)}
+                        className={`px-2 py-1 rounded border transition-colors ${
+                          hasNext 
+                            ? "bg-white border-slate-200 hover:bg-slate-50 text-slate-700" 
+                            : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                        }`}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+
+                  {/* "Others" option for fields that allow custom values */}
+                  {hasOthersOption && (
+                    <div
+                      onClick={() => setShowCustomInput(true)}
+                      className="px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors border-t border-slate-200 text-accent font-medium"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Others (Custom Value)</span>
+                    </div>
+                  )}
                 </>
               ) : (
                 /* Custom input for "Others" */

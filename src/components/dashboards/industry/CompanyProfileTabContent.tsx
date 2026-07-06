@@ -285,7 +285,8 @@ export default function CompanyProfileTabContent() {
       label: "Skills We Audit", 
       type: "select", 
       icon: Zap, 
-      options: skillOptions, 
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: { doctype: "Skill" },
       required: true, 
       colSpan: 2, 
       placeholder: "Select Skills", 
@@ -295,7 +296,6 @@ export default function CompanyProfileTabContent() {
       onCreateCustomValue: async (val: string) => {
         try {
           await createSkill(val);
-          fetchMasterOptions("Skill", setSkillOptions);
         } catch (err) {
           console.error("Failed to create skill record:", err);
           throw err;
@@ -307,7 +307,8 @@ export default function CompanyProfileTabContent() {
       label: "Designations", 
       type: "select", 
       icon: Briefcase, 
-      options: designationOptions, 
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: { doctype: "Designation" },
       required: true, 
       colSpan: 2, 
       placeholder: "Select Designations", 
@@ -317,14 +318,13 @@ export default function CompanyProfileTabContent() {
       onCreateCustomValue: async (val: string) => {
         try {
           await createDesignation(val);
-          fetchMasterOptions("Designation", setDesignationOptions);
         } catch (err) {
           console.error("Failed to create designation record:", err);
           throw err;
         }
       }
     },
-  ], [skillOptions, designationOptions, modalValues.domain, domainOptions]);
+  ], [modalValues.domain, domainOptions]);
 
   const handleModalValuesChange = (values: Record<string, any>, changedField: string) => {
     setModalValues(values);
