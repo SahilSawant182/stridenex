@@ -10,6 +10,14 @@ import { apiService } from "@/services/api.services";
 import { parseBackendError } from "@/utils/error.utils";
 import { disableToDateBeforeFromDate } from "@/utils/date.utils";
 
+const getOneDayPrior = (dateStr: string): string => {
+  if (!dateStr) return "";
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "";
+  date.setDate(date.getDate() - 1);
+  return date.toISOString().split("T")[0];
+};
+
 export interface DynamicField {
   name: string;
   label: string;
@@ -126,6 +134,28 @@ export default function DashboardDynamicModal({
     if (name === "from_date" && updated.to_date) {
       if (new Date(updated.to_date) < new Date(String(newValue))) {
         updated.to_date = newValue;
+      }
+    }
+
+    // Automatically adjust regDeadline if driveDate becomes earlier than regDeadline + 1 day
+    if (name === "driveDate" && updated.regDeadline && newValue) {
+      const drive = new Date(String(newValue));
+      const reg = new Date(updated.regDeadline);
+      if (!isNaN(drive.getTime()) && !isNaN(reg.getTime())) {
+        drive.setDate(drive.getDate() - 1);
+        if (reg > drive) {
+          updated.regDeadline = drive.toISOString().split("T")[0];
+        }
+      }
+    }
+    if (name === "regDeadline" && updated.driveDate && newValue) {
+      const drive = new Date(updated.driveDate);
+      const reg = new Date(String(newValue));
+      if (!isNaN(drive.getTime()) && !isNaN(reg.getTime())) {
+        drive.setDate(drive.getDate() - 1);
+        if (reg > drive) {
+          updated.regDeadline = drive.toISOString().split("T")[0];
+        }
       }
     }
 
@@ -716,7 +746,11 @@ function DynamicFieldItem({
                 ? disableToDateBeforeFromDate(formData.start_date || formData.from_date)
                 : field.min
             }
-            max={field.max}
+            max={
+              field.type === "date" && field.name === "regDeadline"
+                ? getOneDayPrior(formData.driveDate)
+                : field.max
+            }
             style={field.textTransform ? { textTransform: field.textTransform } : {}}
             className={`${field.icon ? 'pl-12' : 'px-4'} h-12 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-slate-900 ${field.textTransform === 'uppercase' ? 'placeholder:uppercase' : ''} disabled:bg-slate-50 disabled:text-slate-500`}
           />

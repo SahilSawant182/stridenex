@@ -1073,7 +1073,8 @@ export default function MentorOnboarding({
         fieldtype: "Data",
         required: true,
         placeholder: "Enter your email address",
-        layout: "full"
+        layout: "full",
+        read_only: true
       }
     ];
     const mobileFields: FormField[] = [

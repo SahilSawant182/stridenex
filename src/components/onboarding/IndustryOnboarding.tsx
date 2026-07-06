@@ -867,7 +867,7 @@ export default function IndustryOnboarding({
 
     const renderStep1 = () => {
         const emailField: FormField[] = [
-            { fieldname: "email", label: "Email Address", fieldtype: "Data", required: true, placeholder: "Enter your email address", layout: "full" }
+            { fieldname: "email", label: "Email Address", fieldtype: "Data", required: true, placeholder: "Enter your email address", layout: "full", read_only: true }
         ];
         const mobileField: FormField[] = [
             { fieldname: "mobileNo", label: "Mobile Number", fieldtype: "Data", required: true, placeholder: "Enter 10-digit mobile number", layout: "full", maxLength: 10 }
