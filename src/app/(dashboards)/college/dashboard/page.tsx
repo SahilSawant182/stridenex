@@ -69,7 +69,7 @@ const collegeStats = [
     id: 1,
     title: "ACTIVE STUDENTS",
     value: "2,847",
-    change: 124,
+    change: 0,
     changeLabel: "this sem",
     icon: Users,
     iconBg: "bg-slate-100",
@@ -81,7 +81,7 @@ const collegeStats = [
     title: "AVG EMPLOYABILITY",
     value: "78",
     max: 100,
-    change: 6,
+    change: 0,
     changeLabel: "vs last sem",
     icon: TrendingUp,
     iconBg: "bg-slate-100",
@@ -92,7 +92,7 @@ const collegeStats = [
     id: 3,
     title: "AT-RISK STUDENTS",
     value: "143",
-    change: 12,
+    change: 0,
     changeLabel: "need action",
     icon: AlertTriangle,
     iconBg: "bg-amber-50",
@@ -103,7 +103,7 @@ const collegeStats = [
     id: 4,
     title: "INDUSTRY PARTNERS",
     value: "38",
-    change: 5,
+    change: 0,
     changeLabel: "this month",
     icon: Building2,
     iconBg: "bg-slate-100",
@@ -114,39 +114,39 @@ const collegeStats = [
 
 // Employability data with neutral colors
 const employabilityData = [
-  { 
-    label: "Excellent (85–100)", 
-    value: 620, 
-    percentage: 22, 
-    color: "slate", 
-    subtitle: "620 (22%)",
+  {
+    label: "Excellent (85–100)",
+    value: 620,
+    percentage: 22,
+    color: "slate",
+    subtitle: "0 (0%)",
     bgColor: "bg-slate-100",
     progressColor: "bg-slate-500"
   },
-  { 
-    label: "Good (70–84)", 
-    value: 1140, 
-    percentage: 40, 
-    color: "slate", 
-    subtitle: "1140 (40%)",
+  {
+    label: "Good (70–84)",
+    value: 1140,
+    percentage: 40,
+    color: "slate",
+    subtitle: "0 (0%)",
     bgColor: "bg-slate-100",
     progressColor: "bg-slate-500"
   },
-  { 
-    label: "Average (55–69)", 
-    value: 740, 
-    percentage: 26, 
-    color: "slate", 
-    subtitle: "740 (26%)",
+  {
+    label: "Average (55–69)",
+    value: 740,
+    percentage: 26,
+    color: "slate",
+    subtitle: "0 (0%)",
     bgColor: "bg-slate-100",
     progressColor: "bg-slate-500"
   },
-  { 
-    label: "At-Risk (<55)", 
-    value: 347, 
-    percentage: 12, 
-    color: "amber", 
-    subtitle: "347 (12%)",
+  {
+    label: "At-Risk (<55)",
+    value: 347,
+    percentage: 12,
+    color: "amber",
+    subtitle: "0 (0%)",
     bgColor: "bg-amber-50",
     progressColor: "bg-amber-500"
   }
@@ -225,7 +225,7 @@ export default function CollegeDashboardPage() {
   const [collegeDetails, setCollegeDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [placementStats, setPlacementStats] = useState<any>(null);
-  const [branchPerformance, setBranchPerformance] = useState<any[]>([]);
+  const [branchPerformance, setBranchPerformance] = useState<any[] | null>(null);
   const [driveCounts, setDriveCounts] = useState<any>(null);
   const [upcomingDrivesList, setUpcomingDrivesList] = useState<any[]>([]);
   const [dashboardSummary, setDashboardSummary] = useState<any>(null);
@@ -318,8 +318,11 @@ export default function CollegeDashboardPage() {
           const raw = branchRes.value?.message ?? branchRes.value;
           if (raw && raw.data) {
             setBranchPerformance(raw.data);
+          } else {
+            setBranchPerformance([]);
           }
         } else {
+          setBranchPerformance([]);
           errors.branchPerformance = "Failed to load branch performance";
         }
 
@@ -398,16 +401,8 @@ export default function CollegeDashboardPage() {
 
   // Format branch data for progress bars
   const displayBranchData = useMemo(() => {
-    if (!branchPerformance || branchPerformance.length === 0) {
-      return branchData.map((b: any) => {
-        const rateNum = b.percentage || 0;
-        const placed = Math.round(b.value * rateNum / 100);
-        return {
-          label: b.label,
-          percentage: rateNum,
-          placedTotalText: `(${placed}/${b.value})`
-        };
-      });
+    if (branchPerformance === null) {
+      return null;
     }
     return branchPerformance.map((b: any) => {
       const branchName = b.department || "—";
@@ -482,7 +477,7 @@ export default function CollegeDashboardPage() {
   // Compute next drive details
   const nextDriveInfo = useMemo(() => {
     if (!upcomingDrivesList || upcomingDrivesList.length === 0) return "Next: TCS - Mar 15";
-    
+
     const futureDrives = upcomingDrivesList
       .map((d: any) => {
         const company = d.industry || d.industry_name || (d.name && d.name.includes("-") ? d.name.split("-")[0] : d.name) || "";
@@ -500,7 +495,7 @@ export default function CollegeDashboardPage() {
         if (next.parsedDate) {
           formattedDate = next.parsedDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
         }
-      } catch (_) {}
+      } catch (_) { }
       return `Next: ${next.company} - ${formattedDate}`;
     }
 
@@ -515,7 +510,7 @@ export default function CollegeDashboardPage() {
     return topSkillGaps.skill_gaps.map((item: any, idx: number): SkillGapItem => {
       const name = item.skill_name || item.skill || item.name || "Unknown Skill";
       const percentage = item.percentage !== undefined ? Number(item.percentage) : (item.gap_percentage !== undefined ? Number(item.gap_percentage) : (item.percent !== undefined ? Number(item.percent) : 0));
-      
+
       // Map icon dynamically based on name
       let icon = Code;
       const lowerName = name.toLowerCase();
@@ -547,12 +542,19 @@ export default function CollegeDashboardPage() {
   }, [displaySkillGaps]);
   // Dynamically constructed stats widgets using API dashboardSummary
   const dynamicStats = useMemo(() => {
+    const formatApiValue = (val: any) => {
+      if (val === undefined || val === null) {
+        return "0";
+      }
+      return String(val);
+    };
+
     return [
       {
         id: 1,
         title: "ACTIVE STUDENTS",
-        value: dashboardSummary !== null ? String(dashboardSummary.active_students) : "2,847",
-        change: 124,
+        value: dashboardSummary !== null && dashboardSummary !== undefined ? formatApiValue(dashboardSummary.active_students) : "0",
+        change: 0,
         changeLabel: "this sem",
         icon: Users,
         iconBg: "bg-slate-100",
@@ -562,9 +564,9 @@ export default function CollegeDashboardPage() {
       {
         id: 2,
         title: "AVG EMPLOYABILITY",
-        value: dashboardSummary !== null ? String(dashboardSummary.avg_employability) : "78",
+        value: dashboardSummary !== null && dashboardSummary !== undefined ? formatApiValue(dashboardSummary.avg_employability) : "0",
         max: 100,
-        change: 6,
+        change: 0,
         changeLabel: "vs last sem",
         icon: TrendingUp,
         iconBg: "bg-slate-100",
@@ -574,8 +576,8 @@ export default function CollegeDashboardPage() {
       {
         id: 3,
         title: "AT-RISK STUDENTS",
-        value: dashboardSummary !== null ? String(dashboardSummary.at_risk_students) : "143",
-        change: 12,
+        value: dashboardSummary !== null && dashboardSummary !== undefined ? formatApiValue(dashboardSummary.at_risk_students) : "0",
+        change: 0,
         changeLabel: "need action",
         icon: AlertTriangle,
         iconBg: "bg-amber-50",
@@ -585,8 +587,8 @@ export default function CollegeDashboardPage() {
       {
         id: 4,
         title: "NEW THIS SEMESTER",
-        value: dashboardSummary !== null ? String(dashboardSummary.new_this_semester) : "38",
-        change: 5,
+        value: dashboardSummary !== null && dashboardSummary !== undefined ? formatApiValue(dashboardSummary.new_this_semester) : "0",
+        change: 0,
         changeLabel: "this month",
         icon: GraduationCap,
         iconBg: "bg-slate-100",
@@ -634,8 +636,15 @@ export default function CollegeDashboardPage() {
 
                   if (branchRes.status === "fulfilled") {
                     const raw = branchRes.value?.message ?? branchRes.value;
-                    if (raw && raw.data) setBranchPerformance(raw.data);
-                  } else errors.branchPerformance = "Failed to load branch";
+                    if (raw && raw.data) {
+                      setBranchPerformance(raw.data);
+                    } else {
+                      setBranchPerformance([]);
+                    }
+                  } else {
+                    setBranchPerformance([]);
+                    errors.branchPerformance = "Failed to load branch";
+                  }
 
                   if (driveCountRes.status === "fulfilled") {
                     const raw = driveCountRes.value?.message ?? driveCountRes.value;
@@ -727,9 +736,13 @@ export default function CollegeDashboardPage() {
                   onClick: () => router.push("/college/dashboard/campus-drives?subtab=stats")
                 }}
               />
-              
+
               <div className="space-y-3.5 mt-4">
-                {displayBranchData.length === 0 ? (
+                {displayBranchData === null ? (
+                  <div className="flex items-center justify-center py-10">
+                    <div className="w-5 h-5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin"></div>
+                  </div>
+                ) : displayBranchData.length === 0 ? (
                   <p className="text-xs text-slate-400 font-semibold text-center py-4">No branch performance data found</p>
                 ) : (
                   displayBranchData.map((item: any, idx: number) => {
@@ -774,8 +787,8 @@ export default function CollegeDashboardPage() {
         {/* Student Onboarding Growth - Takes 2 columns */}
         <motion.div variants={item} className="lg:col-span-2">
           <BaseCard className="border-slate-200 p-5 h-full">
-            <CardHeader 
-              title="Student Onboarding Growth" 
+            <CardHeader
+              title="Student Onboarding Growth"
               icon={<TrendingUp className="w-4 h-4 text-slate-600" />}
               action={{ label: "View Details" }}
             />
@@ -810,8 +823,8 @@ export default function CollegeDashboardPage() {
         {/* Top Skill Gaps - Takes 1 column */}
         <motion.div variants={item}>
           <BaseCard className="border-slate-200 p-5 h-full">
-            <CardHeader 
-              title="Top Skill Gaps" 
+            <CardHeader
+              title="Top Skill Gaps"
               icon={<Target className="w-4 h-4 text-slate-600" />}
               action={{ label: "View All" }}
             />
@@ -874,8 +887,8 @@ export default function CollegeDashboardPage() {
             <div>
               <p className="text-sm text-slate-500">Placement Rate</p>
               <p className="text-2xl font-bold text-slate-800">
-                {placementStats?.placement_rate !== undefined 
-                  ? `${Number(placementStats.placement_rate).toFixed(1)}%` 
+                {placementStats?.placement_rate !== undefined
+                  ? `${Number(placementStats.placement_rate).toFixed(1)}%`
                   : "86%"}
               </p>
               <div className="flex items-center gap-1 mt-1">
@@ -896,8 +909,8 @@ export default function CollegeDashboardPage() {
             <div>
               <p className="text-sm text-slate-500">Upcoming Drives</p>
               <p className="text-2xl font-bold text-slate-800">
-                {driveCounts?.upcoming_drives !== undefined 
-                  ? driveCounts.upcoming_drives 
+                {driveCounts?.upcoming_drives !== undefined
+                  ? driveCounts.upcoming_drives
                   : upcomingDrivesList.filter((d: any) => d.status === "Registrations Open").length || "12"}
               </p>
               <p className="text-xs text-slate-600 mt-1">{nextDriveInfo}</p>

@@ -88,8 +88,8 @@ const roleConfig = {
     progressBorder: "border-emerald-800/50",
     metrics: [
       { key: "students", default: "2,847", label: "Active Students", icon: Users },
-      { key: "placements", default: "94%", label: "Placement Rate", icon: Briefcase }, // Updated default value based on new screenshot
-      { key: "partners", default: "78%", label: "Avg Employability", icon: TrendingUp } // Updated generic metric based on new screenshot
+      { key: "placements", default: "0%", label: "Placement Rate", icon: Briefcase }, // Updated default value based on new screenshot
+      { key: "partners", default: "0%", label: "Avg Employability", icon: TrendingUp } // Updated generic metric based on new screenshot
     ],
     defaultTitle: "Veermata Jijabai Technological Institute",
     defaultSubtitle: "Mumbai University Affiliate • NAAC A++ • Estd. 1887",
@@ -125,7 +125,7 @@ const roleConfig = {
     metrics: [
       { key: "positions", default: 8, label: "Open Roles", icon: Briefcase },
       { key: "applications", default: 247, label: "Applications", icon: Users },
-      { key: "match", default: "94%", label: "Match Quality", icon: Target }
+      { key: "match", default: "00%", label: "Match Quality", icon: Target }
     ],
     defaultTitle: "Razorpay Technologies",
     defaultSubtitle: "Fintech • Bengaluru • 2000+ employees • Industry Pro Plan",
@@ -812,7 +812,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         key: "placements",
         value: placementStats?.placement_rate !== undefined
           ? `${Math.round(Number(placementStats.placement_rate))}%`
-          : "94%",
+          : "0%",
         label: "Placement Rate",
         icon: Briefcase
       },
@@ -820,7 +820,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         key: "partners",
         value: dashboardSummary?.avg_employability !== undefined
           ? `${Math.round(Number(dashboardSummary.avg_employability))}%`
-          : "78%",
+          : "0%",
         label: "Avg Employability",
         icon: TrendingUp
       }
