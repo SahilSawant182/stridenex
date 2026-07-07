@@ -42,6 +42,7 @@ export default function ProjectsTabContent() {
   const { currentUser } = useAuth();
   // const { toast } = useToast();
   const [projects, setProjects] = useState<any[]>([]);
+  const [statistics, setStatistics] = useState({ total_projects: 0, total_applied: 0, total_completed: 0, total_awarded: 0 });
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState<string | null>(null);
   const [successfullyEnrolled, setSuccessfullyEnrolled] = useState<string[]>([]);
@@ -78,8 +79,16 @@ export default function ProjectsTabContent() {
       }
 
       const response = await getStudentProjectList(studentEmail, course, department, academicYear, search);
-      const projectData = response?.message?.data?.projects || response?.data?.projects || response?.message?.data || response?.data || response || [];
+      const rawResp = response?.message ?? response;
+      const projectData = rawResp?.data?.projects || rawResp?.projects || [];
+      const stats = rawResp?.data?.statistics || rawResp?.statistics || {};
       setProjects(Array.isArray(projectData) ? projectData : []);
+      setStatistics({
+        total_projects: stats.total_projects ?? projectData.length,
+        total_applied: stats.total_applied ?? 0,
+        total_completed: stats.total_completed ?? 0,
+        total_awarded: stats.total_awarded ?? 0,
+      });
     } catch (err) {
       console.error("Error fetching projects:", err);
     } finally {
@@ -204,11 +213,11 @@ export default function ProjectsTabContent() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {[
-          { label: "AVAILABLE PROJECTS", value: projects.length.toString(), icon: Briefcase, color: "orange" },
-          { label: "APPLIED PROJECTS", value: projects.filter(p => p.applied_status && p.applied_status !== "Not Applied").length.toString(), icon: Target, color: "blue" },
-          { label: "COMPLETED", value: projects.filter(p => p.status === "Completed").length.toString(), icon: CheckCircle2, color: "emerald" },
-          { label: "CERTIFICATIONS", value: "0", icon: Trophy, color: "purple" },
+      {[
+          { label: "AVAILABLE PROJECTS", value: (statistics.total_projects || projects.length).toString(), icon: Briefcase, color: "orange" },
+          { label: "APPLIED PROJECTS", value: statistics.total_applied.toString(), icon: Target, color: "blue" },
+          { label: "COMPLETED", value: statistics.total_completed.toString(), icon: CheckCircle2, color: "emerald" },
+          { label: "AWARDED", value: statistics.total_awarded.toString(), icon: Trophy, color: "purple" },
         ].map((stat, idx) => (
           <motion.div
             key={idx}
@@ -250,16 +259,21 @@ export default function ProjectsTabContent() {
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap justify-end">
-                    <Badge className={`${project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
-                      ? "bg-red-50 text-red-600 border-red-100"
-                      : project.status === "Active" || project.status === "active" || !project.status
-                        ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                        : "bg-indigo-50 text-indigo-600 border-indigo-100"
+                    <Badge className={`${
+                      project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
+                        ? "bg-red-50 text-red-600 border-red-100"
+                        : project.status === "Active" || project.status === "active" || !project.status
+                          ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                          : "bg-indigo-50 text-indigo-600 border-indigo-100"
                       } rounded-full text-[10px] px-3 py-1 font-bold`}>
                       {project.status || "Active"}
                     </Badge>
                     {project.applied_status && project.applied_status !== "Not Applied" && (
-                      <Badge className="bg-blue-50 text-blue-600 border-blue-100 rounded-full text-[10px] px-3 py-1 font-bold shadow-sm whitespace-nowrap">
+                      <Badge className={`rounded-full text-[10px] px-3 py-1 font-bold shadow-sm whitespace-nowrap ${
+                        project.applied_status === 'Shortlisted'
+                          ? 'bg-purple-50 text-purple-700 border-purple-200'
+                          : 'bg-blue-50 text-blue-600 border-blue-100'
+                      }`}>
                         {project.applied_status}
                       </Badge>
                     )}
@@ -280,10 +294,25 @@ export default function ProjectsTabContent() {
 
 
 
-                <p className="text-xs text-slate-900 leading-relaxed font-medium mb-5 line-clamp-2 h-9 opacity-80">
-
+                <p className="text-xs text-slate-900 leading-relaxed font-medium mb-3 line-clamp-2 h-9 opacity-80">
                   {project.description || "Contribute to real-world industrial projects and build your portfolio with top industry mentors."}
                 </p>
+
+                {/* Skills Tags */}
+                {project.skills && project.skills.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {project.skills.slice(0, 4).map((s: any, si: number) => (
+                      <span key={si} className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md">
+                        {s.skill}
+                      </span>
+                    ))}
+                    {project.skills.length > 4 && (
+                      <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                        +{project.skills.length - 4}
+                      </span>
+                    )}
+                  </div>
+                )}
 
                 <div className="space-y-3 mb-6">
                   <div className="grid grid-cols-2 gap-3">

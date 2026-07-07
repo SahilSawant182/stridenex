@@ -52,6 +52,7 @@ export default function InternshipTabContent() {
   const { currentUser } = useAuth();
   // const { toast } = useToast();
   const [internships, setInternships] = useState<any[]>([]);
+  const [statistics, setStatistics] = useState({ total_internships: 0, scheduled_interview_count: 0 });
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState<string | null>(null);
   const [successfullyApplied, setSuccessfullyApplied] = useState<string[]>([]);
@@ -88,8 +89,14 @@ export default function InternshipTabContent() {
       }
 
       const response = await getStudentInternshipList(currentUser || undefined, course, department, academicYear, search);
-      const internshipData = response?.message?.data || response?.data || response || [];
+      const rawResp = response?.message ?? response;
+      const internshipData = rawResp?.data?.internships || rawResp?.internships || [];
+      const stats = rawResp?.data?.statistics || rawResp?.statistics || {};
       setInternships(Array.isArray(internshipData) ? internshipData : []);
+      setStatistics({
+        total_internships: stats.total_internships ?? internshipData.length,
+        scheduled_interview_count: stats.scheduled_interview_count ?? 0,
+      });
     } catch (err) {
       console.error("Error fetching internships:", err);
     } finally {
@@ -158,6 +165,8 @@ export default function InternshipTabContent() {
         return { bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-100", label: "Shortlisted" };
       case 'interview scheduled':
         return { bg: "bg-purple-50", text: "text-purple-600", border: "border-purple-100", label: "Interview Scheduled" };
+      case 'tech interview':
+        return { bg: "bg-violet-50", text: "text-violet-700", border: "border-violet-200", label: "Tech Interview" };
       case 'rejected':
         return { bg: "bg-red-50", text: "text-red-600", border: "border-red-100", label: "Rejected" };
       case 'selected':
@@ -167,7 +176,7 @@ export default function InternshipTabContent() {
     }
   };
 
-  // Stats data - Computed dynamically
+  // Stats data - from API statistics
   const statsData = [
     {
       id: 1,
@@ -187,8 +196,8 @@ export default function InternshipTabContent() {
     },
     {
       id: 3,
-      title: "INTERVIEW SCHEDULED",
-      value: internships.filter(i => i.applied_status === "Interview Scheduled").length.toString(),
+      title: "INTERVIEWS",
+      value: statistics.scheduled_interview_count.toString(),
       icon: Calendar,
       iconBg: "bg-purple-50",
       iconColor: "text-purple-600"
@@ -196,7 +205,7 @@ export default function InternshipTabContent() {
     {
       id: 4,
       title: "MATCHING OPENINGS",
-      value: internships.length.toString(),
+      value: (statistics.total_internships || internships.length).toString(),
       icon: Briefcase,
       iconBg: "bg-orange-50",
       iconColor: "text-orange-600"
@@ -308,21 +317,42 @@ export default function InternshipTabContent() {
               </div>
 
 
-              {/* Details */}
-              <div className="flex flex-wrap gap-2 mb-6">
+              {/* Details Row */}
+              <div className="flex flex-wrap gap-2 mb-3">
                 <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1 text-[10px] font-bold">
                   <MapPin className="w-3 h-3 text-slate-400" />
-                  {internship.location || "Remote"}
+                  {internship.work_mode || internship.location || "Remote"}
                 </Badge>
                 <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1 text-[10px] font-bold">
                   <Clock className="w-3 h-3 text-slate-400" />
-                  {internship.duration || "3 Months"}
+                  {internship.duration ? `${internship.duration} Days` : "3 Months"}
                 </Badge>
                 <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 text-[10px] font-bold">
                   <IndianRupee className="w-3 h-3" />
-                  {internship.stipend || "Best in Industry"}
+                  {internship.stipend ? `₹${internship.stipend.toLocaleString('en-IN')}` : "Best in Industry"}
                 </Badge>
+                {internship.openings && (
+                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1 text-[10px] font-bold">
+                    {internship.openings} Opening{internship.openings !== 1 ? 's' : ''}
+                  </Badge>
+                )}
               </div>
+
+              {/* Skills Tags */}
+              {internship.skills && internship.skills.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-4">
+                  {internship.skills.slice(0, 4).map((s: any, si: number) => (
+                    <span key={si} className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md">
+                      {s.skill}
+                    </span>
+                  ))}
+                  {internship.skills.length > 4 && (
+                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                      +{internship.skills.length - 4}
+                    </span>
+                  )}
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="flex items-center gap-2">
