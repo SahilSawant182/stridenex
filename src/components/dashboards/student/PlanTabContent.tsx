@@ -454,8 +454,8 @@ export default function PlansTabContent() {
           const data = res?.message?.data || res?.data || [];
           setPackages(data);
         } else {
-          console.error("Failed to fetch packages", packagesRes.reason);
-          throw new Error("Failed to load plans.");
+          console.warn("Failed to fetch packages", packagesRes.reason);
+          setPackages([]);
         }
 
         if (dashboardRes.status === "fulfilled") {
@@ -508,8 +508,19 @@ export default function PlansTabContent() {
     );
   }
 
-  // ---------- Empty ----------
-  if (packages.length === 0) {
+
+  const displayPlan: DisplayPlan | null = dashboard?.active_subscription
+    ? { kind: "paid", data: dashboard.active_subscription }
+    : dashboard?.current_plan
+      ? { kind: "free", data: dashboard.current_plan }
+      : null;
+
+  const hasActiveOrHistory =
+    !!displayPlan ||
+    !!dashboard?.summary?.current_package ||
+    (!!dashboard?.history && dashboard.history.length > 0);
+
+  if (packages.length === 0 && !hasActiveOrHistory) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
         <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center">
@@ -522,12 +533,7 @@ export default function PlansTabContent() {
     );
   }
 
-  const maxAmount = Math.max(...packages.map((p) => p.amount));
-  const displayPlan: DisplayPlan | null = dashboard?.active_subscription
-    ? { kind: "paid", data: dashboard.active_subscription }
-    : dashboard?.current_plan
-    ? { kind: "free", data: dashboard.current_plan }
-    : null;
+  const maxAmount = packages.length > 0 ? Math.max(...packages.map((p) => p.amount)) : 0;
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
@@ -540,119 +546,123 @@ export default function PlansTabContent() {
       )}
 
 
-      {/* 2. Choose Your Plan header */}
-      <motion.div variants={item}>
-        <h2 className="text-lg font-bold text-slate-800 tracking-tight">Choose Your Plan</h2>
-        <p className="text-sm text-slate-500 mt-1">
-          Select a plan that best suits you. All plans include access to the {accountType}{" "}
-          dashboard.
-        </p>
-      </motion.div>
+      {/* Choose Your Plan header & Grid */}
+      {packages.length > 0 && (
+        <>
+          <motion.div variants={item}>
+            <h2 className="text-lg font-bold text-slate-800 tracking-tight">Choose Your Plan</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Select a plan that best suits you. All plans include access to the {accountType}{" "}
+              dashboard.
+            </p>
+          </motion.div>
 
-      {/* 3. Plans Grid */}
-      <motion.div
-        variants={item}
-        className={`grid grid-cols-1 ${packages.length === 1
-            ? "md:grid-cols-1 max-w-md"
-            : packages.length === 2
-              ? "md:grid-cols-2"
-              : "md:grid-cols-3"
-          } gap-5`}
-      >
-        {packages.map((plan) => {
-          const isPopular = plan.amount === maxAmount && packages.length > 1;
-          return (
-            <motion.div
-              key={plan.package_name}
-              variants={item}
-              whileHover={{ y: -4, transition: { duration: 0.2 } }}
-              className="h-full"
-            >
-              <BaseCard
-                className={`border h-full flex flex-col transition-shadow duration-300 ${isPopular
-                    ? "border-orange-300 shadow-lg shadow-orange-100/50 ring-1 ring-orange-200/50"
-                    : "border-slate-200 hover:shadow-md"
-                  }`}
-              >
-                <div className="p-6 flex flex-col h-full">
-                  <div className="flex items-center justify-between mb-3 min-h-[28px]">
-                    {isPopular ? (
-                      <Badge className="bg-orange-500 text-white border-0 text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider">
-                        <Sparkles className="w-3 h-3 mr-1" /> Best Value
-                      </Badge>
-                    ) : (
-                      <div />
-                    )}
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-800 mb-4">{plan.package_name}</h3>
-                  <div className="flex items-baseline gap-1.5 mb-1">
-                    <span className={`text-3xl font-black ${isPopular ? "text-orange-500" : "text-slate-800"}`}>
-                      ₹{plan.amount.toLocaleString("en-IN")}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 mb-5 flex-wrap">
-                    {plan.no_of_days > 0 && (
-                      <span className="flex items-center gap-1 text-xs text-slate-500 font-medium">
-                        <Clock className="w-3.5 h-3.5" /> {plan.no_of_days} days
-                      </span>
-                    )}
-                    {plan.package_type && (
-                      <span className="text-[10px] text-slate-400 font-semibold px-2 py-0.5 bg-slate-50 rounded-full border border-slate-100">
-                        {plan.package_type}
-                      </span>
-                    )}
-                    {plan.app_name && (
-                      <span className="text-[10px] text-indigo-500 font-semibold px-2 py-0.5 bg-indigo-50 rounded-full border border-indigo-100">
-                        {plan.app_name}
-                      </span>
-                    )}
-                  </div>
-                  {plan.features && plan.features.length > 0 ? (
-                    <ul className="space-y-2.5 mb-6 flex-1">
-                      {plan.features.map((feature, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-sm text-slate-600">
-                          <CheckCircle className={`w-4 h-4 shrink-0 mt-0.5 ${isPopular ? "text-orange-500" : "text-emerald-500"}`} />
-                          <span className="leading-snug">{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="flex-1 flex items-center justify-center py-4 mb-6">
-                      <p className="text-xs text-slate-400 italic">No features listed</p>
-                    </div>
-                  )}
-                  <div className="mt-auto">
-                    <Button
-                      className={`w-full text-sm py-2.5 h-10 font-semibold transition-all duration-200 ${isPopular
-                          ? "bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-sm shadow-orange-200"
-                          : "border-slate-200 text-slate-700 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 bg-white"
-                        }`}
-                      variant={isPopular ? "primary" : "outline"}
-                      onClick={() => handleSelectPlan(plan)}
-                      disabled={redirectingPlan !== null}
-                    >
-                      {redirectingPlan === plan.package_name ? (
-                        <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Redirecting…</>
+          {/* Plans Grid */}
+          <motion.div
+            variants={item}
+            className={`grid grid-cols-1 ${packages.length === 1
+              ? "md:grid-cols-1 max-w-md"
+              : packages.length === 2
+                ? "md:grid-cols-2"
+                : "md:grid-cols-3"
+              } gap-5`}
+          >
+            {packages.map((plan) => {
+              const isPopular = plan.amount === maxAmount && packages.length > 1;
+              return (
+                <motion.div
+                  key={plan.package_name}
+                  variants={item}
+                  whileHover={{ y: -4, transition: { duration: 0.2 } }}
+                  className="h-full"
+                >
+                  <BaseCard
+                    className={`border h-full flex flex-col transition-shadow duration-300 ${isPopular
+                      ? "border-orange-300 shadow-lg shadow-orange-100/50 ring-1 ring-orange-200/50"
+                      : "border-slate-200 hover:shadow-md"
+                      }`}
+                  >
+                    <div className="p-6 flex flex-col h-full">
+                      <div className="flex items-center justify-between mb-3 min-h-[28px]">
+                        {isPopular ? (
+                          <Badge className="bg-orange-500 text-white border-0 text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider">
+                            <Sparkles className="w-3 h-3 mr-1" /> Best Value
+                          </Badge>
+                        ) : (
+                          <div />
+                        )}
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-800 mb-4">{plan.package_name}</h3>
+                      <div className="flex items-baseline gap-1.5 mb-1">
+                        <span className={`text-3xl font-black ${isPopular ? "text-orange-500" : "text-slate-800"}`}>
+                          ₹{plan.amount.toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mb-5 flex-wrap">
+                        {plan.no_of_days > 0 && (
+                          <span className="flex items-center gap-1 text-xs text-slate-500 font-medium">
+                            <Clock className="w-3.5 h-3.5" /> {plan.no_of_days} days
+                          </span>
+                        )}
+                        {plan.package_type && (
+                          <span className="text-[10px] text-slate-400 font-semibold px-2 py-0.5 bg-slate-50 rounded-full border border-slate-100">
+                            {plan.package_type}
+                          </span>
+                        )}
+                        {plan.app_name && (
+                          <span className="text-[10px] text-indigo-500 font-semibold px-2 py-0.5 bg-indigo-50 rounded-full border border-indigo-100">
+                            {plan.app_name}
+                          </span>
+                        )}
+                      </div>
+                      {plan.features && plan.features.length > 0 ? (
+                        <ul className="space-y-2.5 mb-6 flex-1">
+                          {plan.features.map((feature, idx) => (
+                            <li key={idx} className="flex items-start gap-2 text-sm text-slate-600">
+                              <CheckCircle className={`w-4 h-4 shrink-0 mt-0.5 ${isPopular ? "text-orange-500" : "text-emerald-500"}`} />
+                              <span className="leading-snug">{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
                       ) : (
-                        <><Zap className="w-4 h-4 mr-1.5" /> Get Started</>
+                        <div className="flex-1 flex items-center justify-center py-4 mb-6">
+                          <p className="text-xs text-slate-400 italic">No features listed</p>
+                        </div>
                       )}
-                    </Button>
-                  </div>
-                </div>
-              </BaseCard>
-            </motion.div>
-          );
-        })}
-      </motion.div>
+                      <div className="mt-auto">
+                        <Button
+                          className={`w-full text-sm py-2.5 h-10 font-semibold transition-all duration-200 ${isPopular
+                            ? "bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-sm shadow-orange-200"
+                            : "border-slate-200 text-slate-700 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 bg-white"
+                            }`}
+                          variant={isPopular ? "primary" : "outline"}
+                          onClick={() => handleSelectPlan(plan)}
+                          disabled={redirectingPlan !== null}
+                        >
+                          {redirectingPlan === plan.package_name ? (
+                            <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Redirecting…</>
+                          ) : (
+                            <><Zap className="w-4 h-4 mr-1.5" /> Get Started</>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </BaseCard>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </>
+      )}
 
-      {/* 4. Summary Cards */}
+      {/* Summary Cards */}
       {dashboard && (
         <motion.div variants={item}>
           <SummaryCards dashboard={dashboard} />
         </motion.div>
       )}
 
-      {/* 5. Purchase History */}
+      {/* Purchase History */}
       {dashboard && dashboard.history && dashboard.history.length > 0 && (
         <PurchaseHistory history={dashboard.history} />
       )}
