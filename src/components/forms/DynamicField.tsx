@@ -50,6 +50,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const customInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const justOpenedRef = useRef(false);
 
   // Lifted hooks to prevent Rules of Hooks violations
   const [showPassword, setShowPassword] = useState(false);
@@ -120,13 +121,18 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
       return;
     }
 
-    const delayDebounce = setTimeout(() => {
-      if (isOpen) {
-        fetchOptions(1, searchTerm);
+    if (isOpen) {
+      if (justOpenedRef.current) {
+        justOpenedRef.current = false;
+        return;
       }
-    }, 400);
 
-    return () => clearTimeout(delayDebounce);
+      const delayDebounce = setTimeout(() => {
+        fetchOptions(1, searchTerm);
+      }, 400);
+
+      return () => clearTimeout(delayDebounce);
+    }
   }, [searchTerm, isOpen, field.apiEndpoint]);
 
   const serializedParams = JSON.stringify(field.apiParams);
@@ -279,8 +285,11 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
       }
     }
 
-    setIsOpen(!isOpen);
-    if (!isOpen) {
+    const nextOpen = !isOpen;
+    setIsOpen(nextOpen);
+    if (nextOpen) {
+      justOpenedRef.current = true;
+    } else {
       setSearchTerm("");
       setShowCustomInput(false);
       setCustomValue("");
@@ -456,7 +465,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
           </div>
 
           {/* Dropdown menu with search and "Others" option */}
-          {isOpen && !loading && !fetchError && (
+          {isOpen && !fetchError && (
              <div className="absolute z-[100] mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg overflow-hidden">
               {!showCustomInput ? (
                 <>
@@ -478,7 +487,12 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
 
                   {/* Options list */}
                   <div className="max-h-60 overflow-y-auto">
-                    {filteredOptions.length === 0 ? (
+                    {loading ? (
+                      <div className="p-3 text-sm text-slate-400 text-center flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                        <span>Loading...</span>
+                      </div>
+                    ) : filteredOptions.length === 0 ? (
                       <div className="p-3 text-sm text-slate-400 text-center">
                         {searchTerm ? "No matching options" : "No options available"}
                       </div>
