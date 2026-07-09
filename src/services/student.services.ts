@@ -1,4 +1,4 @@
-import { apiService } from "./api.services";
+import { apiService, BASE_DOMAIN } from "./api.services";
 
 /**
  * Internship Application API
@@ -730,6 +730,72 @@ export const enrollStudentPath = async (studentEmail: string, careerPath: string
     return response;
   } catch (error) {
     console.error("Error enrolling student path:", error);
+    throw error;
+  }
+};
+
+
+export const initiateSessionBooking = async (payload: any): Promise<any> => {
+  try {
+    const response = await fetch(
+      `${BASE_DOMAIN}/api/method/quantbit_billing_platform.quantbit_billing_platform.api.initiate_session_booking`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+       
+        body: JSON.stringify({ payload: JSON.stringify(payload) }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+     
+      let errMsg = `Server error ${response.status}`;
+      try {
+        if (data?._server_messages) {
+          const msgs = typeof data._server_messages === "string"
+            ? JSON.parse(data._server_messages)
+            : data._server_messages;
+          if (Array.isArray(msgs) && msgs.length > 0) {
+            const msgObj = typeof msgs[0] === "string" ? JSON.parse(msgs[0]) : msgs[0];
+            errMsg = msgObj?.message ?? errMsg;
+          }
+        } else if (data?.message) {
+          errMsg = data.message;
+        } else if (data?.exception) {
+          const exc = String(data.exception);
+          const idx = exc.indexOf(":");
+          errMsg = idx !== -1 ? exc.slice(idx + 1).trim() : exc;
+        }
+      } catch (_) {
+      }
+      throw new Error(errMsg);
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error initiating session booking:", error);
+    throw error;
+  }
+};
+
+export const verifySessionPayment = async (payload: {
+  booking_id: string;
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+}): Promise<any> => {
+  try {
+    const response = await apiService.post(
+      "method/quantbit_billing_platform.quantbit_billing_platform.api.verify_session_payment",
+      payload
+    );
+    return response;
+  } catch (error) {
+    console.error("Error verifying session payment:", error);
     throw error;
   }
 };
