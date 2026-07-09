@@ -1824,11 +1824,10 @@ export default function CampusDrivesTabContent() {
                                   }
                                 }}
                                 disabled={!driveEligibleStudents.pagination.has_prev}
-                                className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm ${
-                                  driveEligibleStudents.pagination.has_prev
-                                    ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer"
-                                    : "bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed"
-                                }`}
+                                className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm ${driveEligibleStudents.pagination.has_prev
+                                  ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                                  : "bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed"
+                                  }`}
                               >
                                 Previous
                               </button>
@@ -1859,13 +1858,12 @@ export default function CampusDrivesTabContent() {
                                         fetchDriveEligibleStudents(selectedDrive.name, selectedDrive, p);
                                       }
                                     }}
-                                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${
-                                      p === "..."
-                                        ? "text-slate-400 cursor-default"
-                                        : eligiblePage === p
+                                    className={`w-7 h-7 rounded-lg text-xs font-bold transition-all ${p === "..."
+                                      ? "text-slate-400 cursor-default"
+                                      : eligiblePage === p
                                         ? "bg-orange-500 text-white shadow-sm cursor-pointer"
                                         : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 cursor-pointer"
-                                    }`}
+                                      }`}
                                   >
                                     {p}
                                   </button>
@@ -1880,11 +1878,10 @@ export default function CampusDrivesTabContent() {
                                   }
                                 }}
                                 disabled={!driveEligibleStudents.pagination.has_next}
-                                className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm ${
-                                  driveEligibleStudents.pagination.has_next
-                                    ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer"
-                                    : "bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed"
-                                }`}
+                                className={`px-3 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm ${driveEligibleStudents.pagination.has_next
+                                  ? "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                                  : "bg-slate-50 border-slate-100 text-slate-400 cursor-not-allowed"
+                                  }`}
                               >
                                 Next
                               </button>
@@ -3032,13 +3029,13 @@ export default function CampusDrivesTabContent() {
                     <div className="flex items-center justify-between md:justify-end gap-6 border-t md:border-t-0 pt-4 md:pt-0 shrink-0">
                       <div className="flex items-center gap-4 text-center">
                         <div>
-                          <p className="text-lg font-bold text-blue-600">{drive.stats.shortlisted}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Shortlisted</p>
+                          <p className="text-lg font-bold text-orange-600">{drive.stats.registered}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Registered</p>
                         </div>
                         <div className="h-6 w-px bg-slate-200"></div>
                         <div>
-                          <p className="text-lg font-bold text-orange-600">{drive.stats.registered}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Registered</p>
+                          <p className="text-lg font-bold text-blue-600">{drive.stats.shortlisted}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Shortlisted</p>
                         </div>
                         <div className="h-6 w-px bg-slate-200"></div>
                         <div>
