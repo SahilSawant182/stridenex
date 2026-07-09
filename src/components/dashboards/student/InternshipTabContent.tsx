@@ -89,9 +89,9 @@ export default function InternshipTabContent() {
       }
 
       const response = await getStudentInternshipList(currentUser || undefined, course, department, academicYear, search);
-      const rawResp = response?.message ?? response;
-      const internshipData = rawResp?.data?.internships || rawResp?.internships || [];
-      const stats = rawResp?.data?.statistics || rawResp?.statistics || {};
+      const dataContainer = (response?.data && typeof response.data === 'object' && !Array.isArray(response.data)) ? response : (response?.message && typeof response.message === 'object' ? response.message : response);
+      const internshipData = dataContainer?.data?.internships || dataContainer?.internships || [];
+      const stats = dataContainer?.data?.statistics || dataContainer?.statistics || {};
       setInternships(Array.isArray(internshipData) ? internshipData : []);
       setStatistics({
         total_internships: stats.total_internships ?? internshipData.length,
@@ -284,78 +284,83 @@ export default function InternshipTabContent() {
       {/* Internships Grid */}
       <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {internships.map((internship, idx) => (
-          <BaseCard key={internship.name || idx} padding="none" className="overflow-hidden border-slate-200 hover:shadow-lg transition-all group">
-            <div className="p-5">
-              {/* Header with Logo and Match */}
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-lg font-bold text-orange-600 group-hover:scale-105 transition-transform shadow-sm`}>
-                    {(internship.role_name || internship.title || "I")[0]}
+          <BaseCard key={internship.name || idx} padding="none" className="h-full flex flex-col justify-between overflow-hidden border-slate-200 hover:shadow-lg transition-all group">
+            <div className="p-5 flex-1 flex flex-col justify-between">
+              <div>
+                {/* Header with Logo and Match */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-lg font-bold text-orange-600 group-hover:scale-105 transition-transform shadow-sm`}>
+                      {(internship.role_name || internship.title || "I")[0]}
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-800 line-clamp-1">{internship.role_name || internship.title || "Internship Role"}</h3>
+                      <p className="text-xs text-slate-500 font-medium">{internship.industry || "Industry Partner"}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-slate-800 line-clamp-1">{internship.role_name || internship.title || "Internship Role"}</h3>
-                    <p className="text-xs text-slate-500 font-medium">{internship.industry || "Industry Partner"}</p>
+                  <div className="flex flex-col items-end gap-1.5 mt-1">
+                    <div className={`text-lg font-bold text-emerald-600`}>
+                      {internship.match_score || 100}%
+                    </div>
+                    <Badge className={`${
+                      internship.status?.toLowerCase() === "closed"
+                        ? "bg-red-50 text-red-600 border-red-100" 
+                        : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                    } rounded-full text-[9px] px-2 py-0.5 font-bold border`}>
+                      {internship.status || "Active"}
+                    </Badge>
+                    {internship.applied_status && internship.applied_status !== "Not Applied" && (
+                      <Badge className={`${getStatusConfig(internship.applied_status).bg} ${getStatusConfig(internship.applied_status).text} ${getStatusConfig(internship.applied_status).border} rounded-full text-[9px] px-2 py-0.5 font-bold border animate-pulse`}>
+                        {internship.applied_status}
+                      </Badge>
+                    )}
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1.5 mt-1">
-                  <div className={`text-lg font-bold text-emerald-600`}>
-                    {internship.match_score || 100}%
-                  </div>
-                  <Badge className={`${
-                    internship.status?.toLowerCase() === "closed"
-                      ? "bg-red-50 text-red-600 border-red-100" 
-                      : "bg-emerald-50 text-emerald-600 border-emerald-100"
-                  } rounded-full text-[9px] px-2 py-0.5 font-bold border`}>
-                    {internship.status || "Active"}
+
+                {/* Details Row */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1 text-[10px] font-bold">
+                    <MapPin className="w-3 h-3 text-slate-400" />
+                    {internship.work_mode || internship.location || "Remote"}
                   </Badge>
-                  {internship.applied_status && internship.applied_status !== "Not Applied" && (
-                    <Badge className={`${getStatusConfig(internship.applied_status).bg} ${getStatusConfig(internship.applied_status).text} ${getStatusConfig(internship.applied_status).border} rounded-full text-[9px] px-2 py-0.5 font-bold border animate-pulse`}>
-                      {internship.applied_status}
+                  <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1 text-[10px] font-bold">
+                    <Clock className="w-3 h-3 text-slate-400" />
+                    {internship.duration ? `${internship.duration} Days` : "3 Months"}
+                  </Badge>
+                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 text-[10px] font-bold">
+                    <IndianRupee className="w-3 h-3" />
+                    {internship.stipend ? `₹${internship.stipend.toLocaleString('en-IN')}` : "Best in Industry"}
+                  </Badge>
+                  {internship.openings && (
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1 text-[10px] font-bold">
+                      {internship.openings} Opening{internship.openings !== 1 ? 's' : ''}
                     </Badge>
                   )}
                 </div>
-              </div>
 
+                <p className="text-xs text-slate-600 leading-relaxed font-medium mb-3 line-clamp-2 h-9 opacity-85">
+                  {internship.description || "Explore exciting internship opportunities and grow your career with industry partners."}
+                </p>
 
-              {/* Details Row */}
-              <div className="flex flex-wrap gap-2 mb-3">
-                <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1 text-[10px] font-bold">
-                  <MapPin className="w-3 h-3 text-slate-400" />
-                  {internship.work_mode || internship.location || "Remote"}
-                </Badge>
-                <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1 text-[10px] font-bold">
-                  <Clock className="w-3 h-3 text-slate-400" />
-                  {internship.duration ? `${internship.duration} Days` : "3 Months"}
-                </Badge>
-                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 text-[10px] font-bold">
-                  <IndianRupee className="w-3 h-3" />
-                  {internship.stipend ? `₹${internship.stipend.toLocaleString('en-IN')}` : "Best in Industry"}
-                </Badge>
-                {internship.openings && (
-                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1 text-[10px] font-bold">
-                    {internship.openings} Opening{internship.openings !== 1 ? 's' : ''}
-                  </Badge>
+                {/* Skills Tags */}
+                {internship.skills && internship.skills.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-4">
+                    {internship.skills.slice(0, 4).map((s: any, si: number) => (
+                      <span key={si} className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md">
+                        {s.skill}
+                      </span>
+                    ))}
+                    {internship.skills.length > 4 && (
+                      <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                        +{internship.skills.length - 4}
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
 
-              {/* Skills Tags */}
-              {internship.skills && internship.skills.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  {internship.skills.slice(0, 4).map((s: any, si: number) => (
-                    <span key={si} className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md">
-                      {s.skill}
-                    </span>
-                  ))}
-                  {internship.skills.length > 4 && (
-                    <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
-                      +{internship.skills.length - 4}
-                    </span>
-                  )}
-                </div>
-              )}
-
               {/* Action Buttons */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mt-4">
                 <Button 
                   onClick={() => handleApply(internship)}
                   disabled={

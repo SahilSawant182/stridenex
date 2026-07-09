@@ -79,9 +79,9 @@ export default function ProjectsTabContent() {
       }
 
       const response = await getStudentProjectList(studentEmail, course, department, academicYear, search);
-      const rawResp = response?.message ?? response;
-      const projectData = rawResp?.data?.projects || rawResp?.projects || [];
-      const stats = rawResp?.data?.statistics || rawResp?.statistics || {};
+      const dataContainer = (response?.data && typeof response.data === 'object' && !Array.isArray(response.data)) ? response : (response?.message && typeof response.message === 'object' ? response.message : response);
+      const projectData = dataContainer?.data?.projects || dataContainer?.projects || [];
+      const stats = dataContainer?.data?.statistics || dataContainer?.statistics || {};
       setProjects(Array.isArray(projectData) ? projectData : []);
       setStatistics({
         total_projects: stats.total_projects ?? projectData.length,
@@ -251,98 +251,95 @@ export default function ProjectsTabContent() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {projects.map((project, idx) => (
           <motion.div key={project.name || idx} variants={item}>
-            <BaseCard padding="none" className="overflow-hidden group hover:border-orange-200 transition-all duration-300">
-              <div className="p-5">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 group-hover:scale-105 transition-transform duration-500 shadow-sm">
-                    <Briefcase className="w-6 h-6 text-orange-500" />
-                  </div>
+            <BaseCard padding="none" className="h-full flex flex-col justify-between overflow-hidden group hover:border-orange-200 transition-all duration-300">
+              <div className="p-5 flex-1 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 group-hover:scale-105 transition-transform duration-500 shadow-sm">
+                      <Briefcase className="w-6 h-6 text-orange-500" />
+                    </div>
 
-                  <div className="flex items-center gap-2 flex-wrap justify-end">
-                    <Badge className={`${
-                      project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
-                        ? "bg-red-50 text-red-600 border-red-100"
-                        : project.status === "Active" || project.status === "active" || !project.status
-                          ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                          : "bg-indigo-50 text-indigo-600 border-indigo-100"
-                      } rounded-full text-[10px] px-3 py-1 font-bold`}>
-                      {project.status || "Active"}
-                    </Badge>
-                    {project.applied_status && project.applied_status !== "Not Applied" && (
-                      <Badge className={`rounded-full text-[10px] px-3 py-1 font-bold shadow-sm whitespace-nowrap ${
-                        project.applied_status === 'Shortlisted'
-                          ? 'bg-purple-50 text-purple-700 border-purple-200'
-                          : 'bg-blue-50 text-blue-600 border-blue-100'
-                      }`}>
-                        {project.applied_status}
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                      <Badge className={`${
+                        project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
+                          ? "bg-red-50 text-red-600 border-red-100"
+                          : project.status === "Active" || project.status === "active" || !project.status
+                            ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                            : "bg-indigo-50 text-indigo-600 border-indigo-100"
+                        } rounded-full text-[10px] px-3 py-1 font-bold`}>
+                        {project.status || "Active"}
                       </Badge>
-                    )}
+                      {project.applied_status && project.applied_status !== "Not Applied" && (
+                        <Badge className={`rounded-full text-[10px] px-3 py-1 font-bold shadow-sm whitespace-nowrap ${
+                          project.applied_status === 'Shortlisted'
+                            ? 'bg-purple-50 text-purple-700 border-purple-200'
+                            : 'bg-blue-50 text-blue-600 border-blue-100'
+                        }`}>
+                          {project.applied_status}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
+                  <h3 className="text-base font-bold text-slate-900 mb-1.5 group-hover:text-orange-600 transition-colors line-clamp-1">
+                    {project.project_name.trim()}
+                  </h3>
 
+                  <p className="text-[11px] text-slate-900 font-bold uppercase tracking-widest mb-4 flex items-center gap-1.5 opacity-80">
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shadow-sm"></span>
+                    {project.industry}
+                  </p>
 
-                </div>
+                  <p className="text-xs text-slate-900 leading-relaxed font-medium mb-3 line-clamp-2 h-9 opacity-80">
+                    {project.description || "Contribute to real-world industrial projects and build your portfolio with top industry mentors."}
+                  </p>
 
-                <h3 className="text-base font-bold text-slate-900 mb-1.5 group-hover:text-orange-600 transition-colors line-clamp-1">
-                  {project.project_name.trim()}
-                </h3>
+                  {/* Skills Tags */}
+                  {project.skills && project.skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {project.skills.slice(0, 4).map((s: any, si: number) => (
+                        <span key={si} className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md">
+                          {s.skill}
+                        </span>
+                      ))}
+                      {project.skills.length > 4 && (
+                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                          +{project.skills.length - 4}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
-                <p className="text-[11px] text-slate-900 font-bold uppercase tracking-widest mb-4 flex items-center gap-1.5 opacity-80">
-                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shadow-sm"></span>
-                  {project.industry}
-                </p>
-
-
-
-                <p className="text-xs text-slate-900 leading-relaxed font-medium mb-3 line-clamp-2 h-9 opacity-80">
-                  {project.description || "Contribute to real-world industrial projects and build your portfolio with top industry mentors."}
-                </p>
-
-                {/* Skills Tags */}
-                {project.skills && project.skills.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    {project.skills.slice(0, 4).map((s: any, si: number) => (
-                      <span key={si} className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md">
-                        {s.skill}
-                      </span>
-                    ))}
-                    {project.skills.length > 4 && (
-                      <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
-                        +{project.skills.length - 4}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                <div className="space-y-3 mb-6">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="flex items-center gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100/50 group-hover:bg-white transition-colors">
-                      <Clock className="w-4 h-4 text-orange-500" />
-                      <div className="flex flex-col">
-                        <span className="text-[9px] text-slate-400 font-bold uppercase leading-none mb-1">Duration</span>
-                        <span className="text-xs font-bold text-slate-900">{project.duration} Days</span>
+                  <div className="space-y-3 mb-6">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="flex items-center gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100/50 group-hover:bg-white transition-colors">
+                        <Clock className="w-4 h-4 text-orange-500" />
+                        <div className="flex flex-col">
+                          <span className="text-[9px] text-slate-400 font-bold uppercase leading-none mb-1">Duration</span>
+                          <span className="text-xs font-bold text-slate-900">{project.duration} Days</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100/50 group-hover:bg-white transition-colors">
+                        <Calendar className="w-4 h-4 text-blue-500" />
+                        <div className="flex flex-col">
+                          <span className="text-[9px] text-slate-400 font-bold uppercase leading-none mb-1">App Deadline</span>
+                          <span className="text-xs font-bold text-slate-900">
+                            {project.application_deadline 
+                              ? project.application_deadline.split("-").reverse().join("/") 
+                              : "Open"}
+                          </span>
+                        </div>
                       </div>
                     </div>
+                    
                     <div className="flex items-center gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100/50 group-hover:bg-white transition-colors">
-                      <Calendar className="w-4 h-4 text-blue-500" />
+                      <Calendar className="w-4 h-4 text-emerald-500" />
                       <div className="flex flex-col">
-                        <span className="text-[9px] text-slate-400 font-bold uppercase leading-none mb-1">App Deadline</span>
+                        <span className="text-[9px] text-slate-400 font-bold uppercase leading-none mb-1">Project Period</span>
                         <span className="text-xs font-bold text-slate-900">
-                          {project.application_deadline 
-                            ? project.application_deadline.split("-").reverse().join("/") 
-                            : "Open"}
+                          {project.start_date?.split("-").reverse().join("/") || "TBA"} — {project.end_date?.split("-").reverse().join("/") || "TBA"}
                         </span>
                       </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2.5 bg-slate-50 p-2.5 rounded-xl border border-slate-100/50 group-hover:bg-white transition-colors">
-                    <Calendar className="w-4 h-4 text-emerald-500" />
-                    <div className="flex flex-col">
-                      <span className="text-[9px] text-slate-400 font-bold uppercase leading-none mb-1">Project Period</span>
-                      <span className="text-xs font-bold text-slate-900">
-                        {project.start_date?.split("-").reverse().join("/") || "TBA"} — {project.end_date?.split("-").reverse().join("/") || "TBA"}
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -377,8 +374,6 @@ export default function ProjectsTabContent() {
                         ? "Applied"
                         : "Apply Now"}
                   </Button>
-
-
 
                 </div>
               </div>
