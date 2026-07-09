@@ -32,7 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/Pagination";
-import { getMentorList, getMentorSlotCalendar, bookMentorSlot, getMentorNextAvailableSlot, getBookedSessions, getMentorOfferings } from "@/services/student.services";
+import { getMentorList, getMentorSlotCalendar, bookMentorSlot, getMentorNextAvailableSlot, getBookedSessions, getMentorOfferings, initiateSessionBooking, verifySessionPayment } from "@/services/student.services";
 
 // Types
 interface Mentor {
@@ -89,6 +89,32 @@ const item = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0 }
 };
+
+// Razorpay type declaration
+declare global {
+  interface Window {
+    Razorpay: new (options: Record<string, any>) => {
+      open: () => void;
+      on: (event: string, handler: (response: any) => void) => void;
+    };
+  }
+}
+
+// Loads the Razorpay checkout.js SDK dynamically (idempotent).
+function loadRazorpayScript(): Promise<boolean> {
+  return new Promise((resolve) => {
+    if (typeof window !== "undefined" && window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
 
 export default function MentorsTabContent() {
   const [mentors, setMentors] = useState<Mentor[]>([]);
@@ -212,58 +238,137 @@ export default function MentorsTabContent() {
 
   const handleConfirmBooking = async () => {
     if (!selectedMentorForBooking || !selectedOfferingForBooking) return;
-    
+    if (!selectedDate || !selectedSlotForBooking) return;
+
     setIsBooking(true);
+
     try {
       const studentEmail = localStorage.getItem("currentUser") || "";
 
-      // 1:1 Mentorship Logic
-      if (!selectedDate || !selectedSlotForBooking) return;
-
-      const payload = {
+      const sessionPayload = {
         mentor: selectedMentorForBooking.email,
         student: studentEmail,
         offering: selectedOfferingForBooking.name,
         session_date: selectedDate,
         from_time: selectedSlotForBooking.from_time,
         to_time: selectedSlotForBooking.to_time,
-        topic: bookingTopic || selectedOfferingForBooking.title || "General Mentorship"
+        topic: bookingTopic || selectedOfferingForBooking.title || "General Mentorship",
+        amount: selectedOfferingForBooking.price_per_session ?? 0,
       };
-      
-      const response = await bookMentorSlot(payload);
-      
-      if (response && response.exc_type) {
-        let errMsg = "Failed to book session. Please try again.";
-        if (response._server_messages) {
-          try {
-            const messages = JSON.parse(response._server_messages);
-            const msgObj = JSON.parse(messages[0]);
-            errMsg = msgObj.message || errMsg;
-          } catch (e) {
-            console.error("Error parsing server messages:", e);
-          }
-        }
-        alert(errMsg);
+
+      // Phase 1: Create booking / Razorpay order on the backend
+      const initResponse = await initiateSessionBooking(sessionPayload);
+      const initData = initResponse?.message ?? initResponse;
+
+      // Debug: log what the backend actually returned
+      console.log("[initiateSessionBooking] initData:", initData);
+
+      // Free-session fast path
+      if (initData?.payment_required === false) {
+        setSelectedMentorForBooking(null);
+        setSelectedOfferingForBooking(null);
+        setMentorOfferings([]);
+        setSelectedDate(null);
+        setSelectedSlotForBooking(null);
+        setBookingTopic("");
+        setSlotCalendarData({});
+        alert(`Session booked successfully! ID: ${initData?.booking_id ?? ""}`);
+        fetchMentors();
+        fetchBookedSessions();
         return;
       }
-      
-      // Close modal and reset
-      setSelectedMentorForBooking(null);
-      setSelectedOfferingForBooking(null);
-      setMentorOfferings([]);
-      setSelectedDate(null);
-      setSelectedSlotForBooking(null);
-      setBookingTopic("");
-      setSlotCalendarData({});
-      
-      // Show success and refresh
-      alert(`Session booked successfully! ID: ${response?.message?.session_name || ""}`);
-      fetchMentors();
-      fetchBookedSessions();
+
+      // Load Razorpay SDK
+      const sdkLoaded = await loadRazorpayScript();
+      if (!sdkLoaded) {
+        alert("Failed to load payment gateway. Please check your internet connection and try again.");
+        setIsBooking(false);
+        return;
+      }
+
+      const { order_id, api_key, booking_id } = initData as {
+        order_id: string;
+        api_key: string;
+        booking_id: string;
+      };
+
+      if (!api_key || !order_id || !booking_id) {
+        throw new Error(
+          `Backend did not return the required payment fields. ` +
+          `Received → api_key: "${api_key}", order_id: "${order_id}", booking_id: "${booking_id}". ` +
+          `Check the server logs for the 500 error details.`
+        );
+      }
+
+      // Phase 2: Open Razorpay checkout
+      const options: Record<string, any> = {
+        key: api_key,
+        order_id: order_id,
+        name: "StrideNex Mentorship",
+        description: sessionPayload.topic,
+        prefill: {
+          email: studentEmail,
+        },
+        theme: { color: "#f97316" },
+
+        // Payment success
+        handler: async (razorpayResponse: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) => {
+          try {
+            await verifySessionPayment({
+              booking_id,
+              razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+              razorpay_order_id: razorpayResponse.razorpay_order_id,
+              razorpay_signature: razorpayResponse.razorpay_signature,
+            });
+
+            // Reset UI and refresh lists
+            setSelectedMentorForBooking(null);
+            setSelectedOfferingForBooking(null);
+            setMentorOfferings([]);
+            setSelectedDate(null);
+            setSelectedSlotForBooking(null);
+            setBookingTopic("");
+            setSlotCalendarData({});
+            alert("Payment successful! Your session has been confirmed.");
+            fetchMentors();
+            fetchBookedSessions();
+          } catch (verifyErr) {
+            console.error("Payment verification failed:", verifyErr);
+            alert("Payment received but verification failed. Please contact support.");
+          } finally {
+            setIsBooking(false);
+          }
+        },
+
+        // Payment failure
+        modal: {
+          ondismiss: () => {
+            // User closed the popup without paying
+            setIsBooking(false);
+          },
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+
+      // Handle payment failure events
+      rzp.on("payment.failed", (failResponse: any) => {
+        console.error("Razorpay payment failed:", failResponse);
+        alert(
+          `Payment failed: ${failResponse?.error?.description ?? "Unknown error"}. Please try again.`
+        );
+        setIsBooking(false);
+      });
+
+      rzp.open();
+
     } catch (err) {
-      console.error("Error booking session:", err);
-      alert("Failed to book session. Please try again.");
-    } finally {
+      console.error("Error during booking flow:", err);
+      alert(err instanceof Error ? err.message : "Failed to initiate booking. Please try again.");
       setIsBooking(false);
     }
   };
@@ -283,7 +388,7 @@ export default function MentorsTabContent() {
       setLoadingSessions(true);
       const studentEmail = localStorage.getItem("currentUser") || "";
       const response = await getBookedSessions(studentEmail);
-      
+
       if (response && response.message && Array.isArray(response.message)) {
         setBookedSessions(response.message);
       } else {
@@ -299,8 +404,8 @@ export default function MentorsTabContent() {
 
   // Helper function to check if a session is already booked
   const isSessionAlreadyBooked = (mentor: Mentor) => {
-    return bookedSessions.some(session => 
-      session.mentor === mentor.email && 
+    return bookedSessions.some(session =>
+      session.mentor === mentor.email &&
       session.offering_type === mentor.offering_type &&
       (session.status === 'Scheduled' || session.status === 'Accepted')
     );
@@ -312,7 +417,7 @@ export default function MentorsTabContent() {
       setError(null);
       const response = await getMentorList(page, PAGE_SIZE, search);
       console.log(response, 'response');
-      
+
       const dataObj = response?.data || {};
       const mentorList = dataObj.Mentor || [];
       const paginationData = dataObj.pagination || {
@@ -334,7 +439,7 @@ export default function MentorsTabContent() {
             .slice(0, 2)
             .toUpperCase() || "M";
 
-          const expertise = m.domain 
+          const expertise = m.domain
             ? [m.domain, m.other_domain].filter(Boolean)
             : (m.type && m.type !== "RAW" ? [m.type] : []);
 
@@ -378,10 +483,10 @@ export default function MentorsTabContent() {
           try {
             const response = await getMentorNextAvailableSlot(mentorEmail);
             if (response && response.message) {
-              setMentors(currentMentors => 
-                currentMentors.map(m => 
-                  m.email === mentorEmail 
-                    ? { ...m, nextAvailableSlot: response.message } 
+              setMentors(currentMentors =>
+                currentMentors.map(m =>
+                  m.email === mentorEmail
+                    ? { ...m, nextAvailableSlot: response.message }
                     : m
                 )
               );
@@ -394,7 +499,7 @@ export default function MentorsTabContent() {
         // Fetch concurrently for all mentors
         await Promise.all(mentors.map(m => updateMentorSlot(m.email)));
       };
-      
+
       fetchSlots();
     }
   }, [mentors.length]);
@@ -490,13 +595,12 @@ export default function MentorsTabContent() {
                           </p>
                         </div>
                       </div>
-                      <Badge 
-                        variant="outline" 
-                        className={`${
-                          isSessionAlreadyBooked(mentor)
+                      <Badge
+                        variant="outline"
+                        className={`${isSessionAlreadyBooked(mentor)
                             ? 'bg-slate-50 text-slate-600 border-slate-200'
                             : 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                        } text-[10px] px-1.5 py-0 shrink-0 h-fit mt-0.5`}
+                          } text-[10px] px-1.5 py-0 shrink-0 h-fit mt-0.5`}
                       >
                         {isSessionAlreadyBooked(mentor) ? 'Booked' : 'Available'}
                       </Badge>
@@ -539,14 +643,14 @@ export default function MentorsTabContent() {
                   {/* Action Buttons */}
                   <div className="flex items-center gap-2 mt-auto">
                     {isSessionAlreadyBooked(mentor) ? (
-                      <Button 
+                      <Button
                         className="flex-1 bg-slate-400 text-white text-sm cursor-not-allowed"
                         disabled
                       >
                         Booked
                       </Button>
                     ) : (
-                      <Button 
+                      <Button
                         className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm"
                         onClick={() => handleBookSession(mentor)}
                       >
@@ -581,7 +685,7 @@ export default function MentorsTabContent() {
             {bookedSessions.length} Sessions
           </Badge>
         </div>
-        
+
         {loadingSessions ? (
           <div className="flex justify-center items-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200">
             <div className="animate-pulse flex items-center gap-2">
@@ -606,35 +710,33 @@ export default function MentorsTabContent() {
                       <div className="flex items-center gap-3 mb-3">
                         <div className="flex items-center gap-2">
                           <h3 className="font-semibold text-slate-800 truncate">{session.name}</h3>
-                          <Badge 
-                            variant="outline" 
-                            className={`${
-                              session.priority === 'High' 
-                                ? 'bg-red-50 text-red-600 border-red-200 font-medium' 
+                          <Badge
+                            variant="outline"
+                            className={`${session.priority === 'High'
+                                ? 'bg-red-50 text-red-600 border-red-200 font-medium'
                                 : session.priority === 'Medium'
-                                ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
-                                : 'bg-green-50 text-green-600 border-green-200'
-                            }`}
+                                  ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
+                                  : 'bg-green-50 text-green-600 border-green-200'
+                              }`}
                           >
                             {session.priority} Priority
                           </Badge>
                         </div>
-                        <Badge 
-                          variant="outline" 
-                          className={`${
-                            session.status === 'Scheduled' 
+                        <Badge
+                          variant="outline"
+                          className={`${session.status === 'Scheduled'
                               ? 'bg-blue-50 text-blue-600 border-blue-200'
                               : session.status === 'Completed'
-                              ? 'bg-green-50 text-green-600 border-green-200'
-                              : session.status === 'Cancelled'
-                              ? 'bg-red-50 text-red-600 border-red-200'
-                              : 'bg-gray-50 text-gray-600 border-gray-200'
-                          }`}
+                                ? 'bg-green-50 text-green-600 border-green-200'
+                                : session.status === 'Cancelled'
+                                  ? 'bg-red-50 text-red-600 border-red-200'
+                                  : 'bg-gray-50 text-gray-600 border-gray-200'
+                            }`}
                         >
                           {session.status}
                         </Badge>
                       </div>
-                      
+
                       {/* Session Details */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                         <div className="flex items-center gap-2 text-slate-600">
@@ -654,7 +756,7 @@ export default function MentorsTabContent() {
                           <span className="truncate">{session.topic}</span>
                         </div>
                       </div>
-                      
+
                       {/* Additional Info */}
                       <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500">
                         <span>Type: {session.session_type}</span>
@@ -803,11 +905,10 @@ export default function MentorsTabContent() {
                                 setSelectedDate(date);
                                 setSelectedSlotForBooking(null);
                               }}
-                              className={`snap-start shrink-0 px-4 py-3 rounded-xl border transition-all ${
-                                selectedDate === date
+                              className={`snap-start shrink-0 px-4 py-3 rounded-xl border transition-all ${selectedDate === date
                                   ? "bg-orange-50 border-orange-200 text-orange-700 shadow-sm"
                                   : "bg-white border-slate-200 text-slate-600 hover:border-orange-200 hover:bg-orange-50/50"
-                              }`}
+                                }`}
                             >
                               <div className="text-xs font-medium uppercase opacity-70 mb-1">
                                 {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}
@@ -836,13 +937,12 @@ export default function MentorsTabContent() {
                                   onClick={() => {
                                     if (isAvailable) setSelectedSlotForBooking(slot);
                                   }}
-                                  className={`p-3 rounded-xl border text-center transition-all ${
-                                    !isAvailable
+                                  className={`p-3 rounded-xl border text-center transition-all ${!isAvailable
                                       ? "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed"
                                       : selectedSlotForBooking === slot
-                                      ? "bg-emerald-50 border-emerald-500 shadow-md ring-2 ring-emerald-500/20 cursor-pointer"
-                                      : "bg-white border-emerald-200 hover:border-emerald-500 hover:shadow-md cursor-pointer group"
-                                  }`}
+                                        ? "bg-emerald-50 border-emerald-500 shadow-md ring-2 ring-emerald-500/20 cursor-pointer"
+                                        : "bg-white border-emerald-200 hover:border-emerald-500 hover:shadow-md cursor-pointer group"
+                                    }`}
                                 >
                                   <div className={`text-sm font-semibold ${isAvailable ? (selectedSlotForBooking === slot ? "text-emerald-800" : "text-slate-800 group-hover:text-emerald-700") : "text-slate-500"}`}>
                                     {slot.from_time.slice(0, 5)} - {slot.to_time.slice(0, 5)}
@@ -873,7 +973,7 @@ export default function MentorsTabContent() {
                               onChange={(e) => setBookingTopic(e.target.value)}
                             />
                           </div>
-                          <Button 
+                          <Button
                             className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-base font-bold shadow-xl shadow-emerald-500/10"
                             onClick={handleConfirmBooking}
                             disabled={isBooking}
