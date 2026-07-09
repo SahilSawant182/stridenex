@@ -140,6 +140,7 @@ export default function StudentsTabContent() {
         department: branchesStr,
         skill: skillsStr,
         current_year: selectedYears.length === 1 ? selectedYears[0] : undefined,
+        risk_level: selectedRisk !== "All" ? selectedRisk : undefined,
         page: currentPage,
         page_size: pageSize
       });
@@ -185,7 +186,7 @@ export default function StudentsTabContent() {
     if (collegeDetails) {
       fetchStudents();
     }
-  }, [collegeDetails, searchQuery, branchesStr, skillsStr, yearsStr, currentPage, pageSize]);
+  }, [collegeDetails, searchQuery, branchesStr, skillsStr, yearsStr, currentPage, pageSize, selectedRisk]);
 
   // CSV download notification
   const handleExportCSV = () => {
