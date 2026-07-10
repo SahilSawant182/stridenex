@@ -16,6 +16,11 @@ import {
   ShoppingBag,
   History,
   CalendarDays,
+  Server,
+  Video,
+  Users,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
@@ -288,125 +293,241 @@ function ActivePlanSection({ plan }: ActivePlanSectionProps) {
   );
 }
 
+const SESSION_TYPES = ["Session Booking", "1:1 Mentorship", "Group Session"];
+const isSession = (type?: string) => type ? SESSION_TYPES.includes(type) : false;
+
+function SubscriptionCard({ entry }: { entry: SubscriptionHistoryItem }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <BaseCard className="border border-indigo-100 hover:shadow-md transition-shadow duration-200 overflow-hidden">
+        <div className="flex">
+          <div className={`w-1.5 flex-shrink-0 ${entry.is_active ? "bg-indigo-400" : "bg-slate-200"}`} />
+          <div className="flex-1 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+
+            {/* Left */}
+            <div className="flex items-start gap-3">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                entry.is_active ? "bg-indigo-50 border border-indigo-100" : "bg-slate-50 border border-slate-100"
+              }`}>
+                <Server className={`w-5 h-5 ${entry.is_active ? "text-indigo-500" : "text-slate-400"}`} />
+              </div>
+              <div className="space-y-1 min-w-0">
+                {/* Name + status badges */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-bold text-slate-800">{entry.package_name}</p>
+                  {entry.is_active && (
+                    <Badge className="bg-indigo-500 hover:bg-indigo-600 text-white border-0 text-[10px] px-2 py-0.5 font-bold">
+                      Active
+                    </Badge>
+                  )}
+                  <Badge className={`border-0 text-[10px] px-2 py-0.5 font-bold ${
+                    entry.payment_status === "Paid" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
+                  }`}>
+                    {entry.payment_status}
+                  </Badge>
+                </div>
+                {/* Type pill */}
+                {entry.package_type && (
+                  <span className="text-[10px] text-slate-500 font-semibold px-2 py-0.5 bg-slate-50 rounded-full border border-slate-100">
+                    {entry.package_type}
+                  </span>
+                )}
+                {/* Dates */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 pt-0.5">
+                  <span className="flex items-center gap-1 text-xs text-slate-500">
+                    <CalendarDays className="w-3 h-3 text-slate-400" />
+                    Purchased: <span className="font-medium text-slate-600">{formatDate(entry.purchase_date)}</span>
+                  </span>
+                  {entry.expiry_date && (
+                    <span className="flex items-center gap-1 text-xs text-slate-500">
+                      <Clock className="w-3 h-3 text-slate-400" />
+                      Valid Until: <span className="font-medium text-slate-600">{formatDate(entry.expiry_date)}</span>
+                    </span>
+                  )}
+                  {entry.sales_invoice_no && (
+                    <span className="text-xs text-slate-400">#{entry.sales_invoice_no}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: amount */}
+            <div className="sm:text-right flex sm:flex-col items-center sm:items-end gap-1 shrink-0">
+              <p className="text-xl font-black text-slate-800">₹{(entry.amount ?? 0).toLocaleString("en-IN")}</p>
+              {entry.discount > 0 && (
+                <p className="text-[10px] text-slate-400">Discount: ₹{entry.discount.toLocaleString("en-IN")}</p>
+              )}
+            </div>
+
+          </div>
+        </div>
+      </BaseCard>
+    </motion.div>
+  );
+}
+
+function SessionCard({ entry }: { entry: SubscriptionHistoryItem }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+    >
+      <BaseCard className="border border-orange-100 hover:shadow-md transition-shadow duration-200 overflow-hidden">
+        <div className="flex">
+          <div className={`w-1.5 flex-shrink-0 ${entry.is_active ? "bg-orange-400" : "bg-amber-200"}`} />
+          <div className="flex-1 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+
+            {/* Left */}
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-orange-50 border border-orange-100">
+                <Video className="w-5 h-5 text-orange-500" />
+              </div>
+              <div className="space-y-1 min-w-0">
+                {/* Topic + status badges */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-bold text-slate-800">{entry.package_name}</p>
+                  <Badge className="bg-orange-100 text-orange-700 border-0 text-[10px] px-2 py-0.5 font-bold">
+                    {entry.package_type === "Group Session" ? "Group Session" : "1:1 Session"}
+                  </Badge>
+                  <Badge className={`border-0 text-[10px] px-2 py-0.5 font-bold ${
+                    entry.payment_status === "Paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                  }`}>
+                    {entry.payment_status}
+                  </Badge>
+                </div>
+                {/* Mentor chip */}
+                {entry.app_name && (
+                  <div className="flex items-center gap-1">
+                    <Users className="w-3 h-3 text-orange-400" />
+                    <span className="text-[10px] text-orange-600 font-semibold">{entry.app_name}</span>
+                  </div>
+                )}
+                {/* Dates — "Scheduled For" instead of "Expires" */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 pt-0.5">
+                  <span className="flex items-center gap-1 text-xs text-slate-500">
+                    <CalendarDays className="w-3 h-3 text-slate-400" />
+                    Booked On: <span className="font-medium text-slate-600">{formatDate(entry.purchase_date)}</span>
+                  </span>
+                  {entry.expiry_date && (
+                    <span className="flex items-center gap-1 text-xs text-orange-600 font-semibold">
+                      <Video className="w-3 h-3 text-orange-400" />
+                      Scheduled For: <span className="font-medium">{formatDate(entry.expiry_date)}</span>
+                    </span>
+                  )}
+                  {entry.sales_invoice_no && (
+                    <span className="text-xs text-slate-400">#{entry.sales_invoice_no}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: amount */}
+            <div className="sm:text-right flex sm:flex-col items-center sm:items-end gap-1 shrink-0">
+              <p className="text-xl font-black text-orange-600">₹{(entry.amount ?? 0).toLocaleString("en-IN")}</p>
+              {entry.discount > 0 && (
+                <p className="text-[10px] text-slate-400">Discount: ₹{entry.discount.toLocaleString("en-IN")}</p>
+              )}
+            </div>
+
+          </div>
+        </div>
+      </BaseCard>
+    </motion.div>
+  );
+}
+
 interface PurchaseHistoryProps {
   history: SubscriptionHistoryItem[];
 }
 
+const PREVIEW_COUNT = 3;
+
 function PurchaseHistory({ history }: PurchaseHistoryProps) {
+  const [showAllSubs, setShowAllSubs] = useState(false);
+
   if (!history || history.length === 0) return null;
 
-  // newest first
-  const sorted = [...history].sort(
-    (a, b) => new Date(b.purchase_date).getTime() - new Date(a.purchase_date).getTime()
-  );
+  const sorted = [...history].sort((a, b) => {
+    const dateDiff =
+      new Date(b.purchase_date).getTime() - new Date(a.purchase_date).getTime();
+    if (dateDiff !== 0) return dateDiff;
+    // Tiebreaker: higher sales_invoice_no = fresher purchase (e.g. SINV-26-00142 > SINV-26-00139)
+    return (b.sales_invoice_no ?? "").localeCompare(
+      a.sales_invoice_no ?? "",
+      undefined,
+      { numeric: true, sensitivity: "base" }
+    );
+  });
+
+  const subscriptions = sorted.filter((e) => !isSession(e.package_type));
+  const sessions = sorted.filter((e) => isSession(e.package_type));
+
+  const visibleSubs = showAllSubs ? subscriptions : subscriptions.slice(0, PREVIEW_COUNT);
+  const hasMore = subscriptions.length > PREVIEW_COUNT;
 
   return (
-    <motion.div variants={item} className="mt-2">
-      <div className="flex items-center gap-2 mb-4">
-        <History className="w-5 h-5 text-slate-500" />
-        <h2 className="text-lg font-bold text-slate-800 tracking-tight">Purchase History</h2>
-      </div>
-      <div className="space-y-3">
-        {sorted.map((entry) => (
-          <BaseCard
-            key={entry.name}
-            className="border border-slate-200 hover:shadow-md transition-shadow duration-200 overflow-hidden"
-          >
-            <div className="flex">
-              {/* Colour accent strip */}
-              <div
-                className={`w-1.5 flex-shrink-0 rounded-l ${entry.is_active ? "bg-emerald-400" : "bg-slate-200"
-                  }`}
-              />
+    <motion.div variants={item} className="mt-2 space-y-8">
 
-              {/* Card body */}
-              <div className="flex-1 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-
-                {/* Left: icon + info */}
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${entry.is_active
-                      ? "bg-emerald-50 border border-emerald-100"
-                      : "bg-slate-50 border border-slate-100"
-                      }`}
-                  >
-                    <ShoppingBag
-                      className={`w-5 h-5 ${entry.is_active ? "text-emerald-500" : "text-slate-400"
-                        }`}
-                    />
-                  </div>
-
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-bold text-slate-800">{entry.package_name}</p>
-                      <Badge
-                        className={`border-0 text-[10px] px-2 py-0.5 font-bold ${entry.payment_status === "Paid"
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-amber-100 text-amber-700"
-                          }`}
-                      >
-                        {entry.payment_status}
-                      </Badge>
-                    </div>
-
-                    {/* Type + App pills */}
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {entry.package_type && (
-                        <span className="text-[10px] text-slate-500 font-semibold px-2 py-0.5 bg-slate-50 rounded-full border border-slate-100">
-                          {entry.package_type}
-                        </span>
-                      )}
-                      {entry.app_name && (
-                        <span className="text-[10px] text-indigo-500 font-semibold px-2 py-0.5 bg-indigo-50 rounded-full border border-indigo-100">
-                          {entry.app_name}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Dates + invoice */}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5 pt-0.5">
-                      <span className="flex items-center gap-1 text-xs text-slate-500">
-                        <CalendarDays className="w-3 h-3 text-slate-400" />
-                        Purchased:{" "}
-                        <span className="font-medium text-slate-600">
-                          {formatDate(entry.purchase_date)}
-                        </span>
-                      </span>
-                      {entry.expiry_date && (
-                        <span className="flex items-center gap-1 text-xs text-slate-500">
-                          <Clock className="w-3 h-3 text-slate-400" />
-                          Expires:{" "}
-                          <span className="font-medium text-slate-600">
-                            {formatDate(entry.expiry_date)}
-                          </span>
-                        </span>
-                      )}
-                      {entry.sales_invoice_no && (
-                        <span className="text-xs text-slate-400">
-                          #{entry.sales_invoice_no}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right: amount */}
-                <div className="sm:text-right flex sm:flex-col items-center sm:items-end gap-2 shrink-0">
-                  <p className="text-xl font-black text-slate-800">
-                    ₹{(entry.amount ?? 0).toLocaleString("en-IN")}
-                  </p>
-                  {entry.discount > 0 && (
-                    <p className="text-[10px] text-slate-400">
-                      Discount: ₹{entry.discount.toLocaleString("en-IN")}
-                    </p>
-                  )}
-                </div>
-
-              </div>
+      {/* ── Software Subscriptions ── */}
+      {subscriptions.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+              <Server className="w-4 h-4 text-indigo-500" />
             </div>
-          </BaseCard>
-        ))}
-      </div>
+            <h2 className="text-base font-bold text-slate-800 tracking-tight">Software Subscriptions</h2>
+            <span className="ml-1 text-[10px] font-bold text-indigo-500 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
+              {subscriptions.length}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {visibleSubs.map((entry) => (
+              <SubscriptionCard key={entry.name} entry={entry} />
+            ))}
+          </div>
+
+          {/* Show more / Show less toggle */}
+          {hasMore && (
+            <button
+              onClick={() => setShowAllSubs((v) => !v)}
+              className="mt-3 w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-xl py-2.5 transition-colors duration-150"
+            >
+              {showAllSubs ? (
+                <><ChevronUp className="w-4 h-4" /> Show less</>
+              ) : (
+                <><ChevronDown className="w-4 h-4" /> Show all {subscriptions.length} subscriptions</>
+              )}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Mentorship Sessions ── */}
+      {sessions.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center">
+              <Video className="w-4 h-4 text-orange-500" />
+            </div>
+            <h2 className="text-base font-bold text-slate-800 tracking-tight">Mentorship Sessions</h2>
+            <span className="ml-1 text-[10px] font-bold text-orange-500 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full">
+              {sessions.length}
+            </span>
+          </div>
+          <div className="space-y-3">
+            {sessions.map((entry) => (
+              <SessionCard key={entry.name} entry={entry} />
+            ))}
+          </div>
+        </div>
+      )}
+
     </motion.div>
   );
 }

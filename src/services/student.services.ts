@@ -177,11 +177,11 @@ export const getMentorList = async (page: number = 1, page_size: number = 20, se
 /**
  * Fetch mentor slot calendar.
  */
-export const getMentorSlotCalendar = async (mentorEmail: string) => {
+export const getMentorSlotCalendar = async (mentorEmail: string, offeringName: string) => {
   try {
-    const response = await apiService.get(
+    const response = await apiService.post(
       "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.get_slot_calendar",
-      { params: { mentor: mentorEmail } }
+      { mentor: mentorEmail, offering: offeringName }
     );
     return response;
   } catch (error) {

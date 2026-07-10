@@ -180,6 +180,7 @@ export default function MentorsTabContent() {
   const [isLoadingOfferings, setIsLoadingOfferings] = useState(false);
   const [selectedOfferingForBooking, setSelectedOfferingForBooking] = useState<any | null>(null);
   const [slotCalendarData, setSlotCalendarData] = useState<{ [date: string]: any[] }>({});
+  const [groupSessionData, setGroupSessionData] = useState<any | null>(null);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlotForBooking, setSelectedSlotForBooking] = useState<any | null>(null);
@@ -213,24 +214,34 @@ export default function MentorsTabContent() {
     setSelectedSlotForBooking(null);
     setSelectedDate(null);
     setBookingTopic("");
+    setSlotCalendarData({});
+    setGroupSessionData(null);
     try {
-      const response = await getMentorSlotCalendar(selectedMentorForBooking.email);
-      if (response && response.message) {
-        setSlotCalendarData(response.message);
-        const dates = Object.keys(response.message);
-        if (dates.length > 0) {
-          dates.sort();
-          setSelectedDate(dates[0]);
-        } else {
-          setSelectedDate(null);
-        }
-      } else {
+      const response = await getMentorSlotCalendar(
+        selectedMentorForBooking.email,
+        offering.name
+      );
+      const msg = response?.message;
+      if (!msg) {
         setSlotCalendarData({});
         setSelectedDate(null);
+        return;
+      }
+      // Detect Group Session response (has offering_type field at top level)
+      if (msg.offering_type === "Group Session") {
+        setGroupSessionData(msg);
+        setSlotCalendarData({});
+      } else {
+        // 1:1 Mentorship — message is { "YYYY-MM-DD": [...slots] }
+        setGroupSessionData(null);
+        setSlotCalendarData(msg);
+        const dates = Object.keys(msg).sort();
+        setSelectedDate(dates.length > 0 ? dates[0] : null);
       }
     } catch (err) {
       console.error("Error loading slot calendar:", err);
       setSlotCalendarData({});
+      setGroupSessionData(null);
     } finally {
       setIsLoadingSlots(false);
     }
@@ -369,6 +380,104 @@ export default function MentorsTabContent() {
     } catch (err) {
       console.error("Error during booking flow:", err);
       alert(err instanceof Error ? err.message : "Failed to initiate booking. Please try again.");
+      setIsBooking(false);
+    }
+  };
+
+  const handleConfirmGroupBooking = async () => {
+    if (!selectedMentorForBooking || !selectedOfferingForBooking || !groupSessionData) return;
+    setIsBooking(true);
+    try {
+      const studentEmail = localStorage.getItem("currentUser") || "";
+      const sessionPayload = {
+        mentor: selectedMentorForBooking.email,
+        student: studentEmail,
+        offering: selectedOfferingForBooking.name,
+        session_date: groupSessionData.start_date,
+        from_time: groupSessionData.start_time,
+        to_time: groupSessionData.end_time,
+        topic: bookingTopic || groupSessionData.title || "Group Session",
+        amount: groupSessionData.price_per_session ?? 0,
+      };
+
+      const initResponse = await initiateSessionBooking(sessionPayload);
+      const initData = initResponse?.message ?? initResponse;
+
+      if (initData?.payment_required === false) {
+        setSelectedMentorForBooking(null);
+        setSelectedOfferingForBooking(null);
+        setMentorOfferings([]);
+        setGroupSessionData(null);
+        setBookingTopic("");
+        setSlotCalendarData({});
+        alert(`Group session joined! ID: ${initData?.booking_id ?? ""}`);
+        fetchMentors();
+        fetchBookedSessions();
+        return;
+      }
+
+      const sdkLoaded = await loadRazorpayScript();
+      if (!sdkLoaded) {
+        alert("Failed to load payment gateway. Check your internet connection.");
+        setIsBooking(false);
+        return;
+      }
+
+      const { order_id, api_key, booking_id } = initData as {
+        order_id: string; api_key: string; booking_id: string;
+      };
+
+      if (!api_key || !order_id || !booking_id) {
+        throw new Error("Backend did not return required payment fields.");
+      }
+
+      const options: Record<string, any> = {
+        key: api_key,
+        order_id,
+        name: "StrideNex Mentorship",
+        description: groupSessionData.title,
+        prefill: { email: studentEmail },
+        theme: { color: "#6366f1" },
+        handler: async (razorpayResponse: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) => {
+          try {
+            await verifySessionPayment({
+              booking_id,
+              razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+              razorpay_order_id: razorpayResponse.razorpay_order_id,
+              razorpay_signature: razorpayResponse.razorpay_signature,
+            });
+            setSelectedMentorForBooking(null);
+            setSelectedOfferingForBooking(null);
+            setMentorOfferings([]);
+            setGroupSessionData(null);
+            setBookingTopic("");
+            setSlotCalendarData({});
+            alert("Payment successful! You have joined the group session.");
+            fetchMentors();
+            fetchBookedSessions();
+          } catch (verifyErr) {
+            console.error("Payment verification failed:", verifyErr);
+            alert("Payment received but verification failed. Please contact support.");
+          } finally {
+            setIsBooking(false);
+          }
+        },
+        modal: { ondismiss: () => setIsBooking(false) },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", (failResponse: any) => {
+        alert(`Payment failed: ${failResponse?.error?.description ?? "Unknown error"}`);
+        setIsBooking(false);
+      });
+      rzp.open();
+    } catch (err) {
+      console.error("Error during group booking:", err);
+      alert(err instanceof Error ? err.message : "Failed to initiate booking.");
       setIsBooking(false);
     }
   };
@@ -789,7 +898,7 @@ export default function MentorsTabContent() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => {
+                              onClick={() => {
                   setSelectedMentorForBooking(null);
                   setSelectedOfferingForBooking(null);
                   setMentorOfferings([]);
@@ -797,6 +906,7 @@ export default function MentorsTabContent() {
                   setSelectedSlotForBooking(null);
                   setBookingTopic("");
                   setSlotCalendarData({});
+                  setGroupSessionData(null);
                 }}
                 className="text-slate-400 hover:text-slate-600"
               >
@@ -867,12 +977,13 @@ export default function MentorsTabContent() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => {
+                                        onClick={() => {
                         setSelectedOfferingForBooking(null);
                         setSelectedSlotForBooking(null);
                         setSelectedDate(null);
                         setBookingTopic("");
                         setSlotCalendarData({});
+                        setGroupSessionData(null);
                       }}
                       className="border-slate-200 text-xs font-semibold hover:bg-slate-50 shrink-0"
                     >
@@ -885,11 +996,91 @@ export default function MentorsTabContent() {
                       <Loader2 className="animate-spin w-8 h-8 mb-4 text-orange-500" />
                       <span>Loading available slots...</span>
                     </div>
+
+                  ) : groupSessionData ? (
+                    /* ── Group Session: fixed schedule info card ── */
+                    <div className="space-y-4">
+                      {/* Session info banner */}
+                      <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-transparent rounded-2xl border border-indigo-100 p-5">
+                        <div className="flex items-start gap-3 mb-4">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center shrink-0">
+                            <Users className="w-5 h-5 text-indigo-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-slate-800 text-sm">{groupSessionData.title}</h3>
+                            <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{groupSessionData.description}</p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <div className="text-base font-extrabold text-indigo-700">
+                              {groupSessionData.price_per_session ? `₹${groupSessionData.price_per_session}` : "Free"}
+                            </div>
+                            <div className="text-[10px] text-slate-400">Per Session</div>
+                          </div>
+                        </div>
+
+                        {/* Schedule row */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-white/80 rounded-xl p-3 border border-indigo-100">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">📅 Date</div>
+                            <div className="text-sm font-semibold text-slate-800">
+                              {new Date(groupSessionData.start_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {groupSessionData.end_date && groupSessionData.end_date !== groupSessionData.start_date && (
+                                <span className="text-slate-400"> – {new Date(groupSessionData.end_date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="bg-white/80 rounded-xl p-3 border border-indigo-100">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">🕐 Time</div>
+                            <div className="text-sm font-semibold text-slate-800">
+                              {groupSessionData.start_time?.slice(0, 5)} – {groupSessionData.end_time?.slice(0, 5)}
+                            </div>
+                            <div className="text-[10px] text-slate-400">{groupSessionData.duration_minutes} mins</div>
+                          </div>
+                          <div className="bg-white/80 rounded-xl p-3 border border-indigo-100">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">👥 Seats</div>
+                            <div className="text-sm font-semibold text-slate-800">
+                              {groupSessionData.seats_left} / {groupSessionData.max_group_size} left
+                            </div>
+                            <div className={`text-[10px] font-semibold ${
+                              groupSessionData.seat_status === 'open' ? 'text-emerald-600' : 'text-red-500'
+                            }`}>
+                              {groupSessionData.seat_status === 'open' ? '● Open' : '● Full'}
+                            </div>
+                          </div>
+                          <div className="bg-white/80 rounded-xl p-3 border border-indigo-100">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">📂 Category</div>
+                            <div className="text-sm font-semibold text-slate-800">{groupSessionData.category}</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Topic input + confirm */}
+                      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 mb-1.5">Message / Question for the Mentor (Optional)</label>
+                          <Input
+                            placeholder="e.g. I want to learn about Docker in this session"
+                            className="bg-white border-slate-200 text-sm"
+                            value={bookingTopic}
+                            onChange={(e) => setBookingTopic(e.target.value)}
+                          />
+                        </div>
+                        <Button
+                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-12 text-base font-bold shadow-xl shadow-indigo-500/10"
+                          onClick={handleConfirmGroupBooking}
+                          disabled={isBooking || groupSessionData.seat_status !== 'open'}
+                        >
+                          {isBooking ? "Booking..." : groupSessionData.seat_status !== 'open' ? "Session Full" : "Join Group Session"}
+                        </Button>
+                      </div>
+                    </div>
+
                   ) : Object.keys(slotCalendarData).length === 0 ? (
                     <div className="text-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
-                      No slots available for this mentor.
+                      No slots available for this offering.
                     </div>
                   ) : (
+                    /* ── 1:1 Mentorship: date + time slot picker ── */
                     <div className="space-y-6">
                       {/* Date Selector */}
                       <div>
@@ -898,23 +1089,27 @@ export default function MentorsTabContent() {
                           Select Date
                         </h3>
                         <div className="flex gap-2 overflow-x-auto pb-2 -mx-2 px-2 snap-x">
-                          {Object.keys(slotCalendarData).map((date) => (
+                          {Object.keys(slotCalendarData).sort().map((date) => (
                             <button
                               key={date}
                               onClick={() => {
                                 setSelectedDate(date);
                                 setSelectedSlotForBooking(null);
                               }}
-                              className={`snap-start shrink-0 px-4 py-3 rounded-xl border transition-all ${selectedDate === date
+                              className={`snap-start shrink-0 px-4 py-3 rounded-xl border transition-all ${
+                                selectedDate === date
                                   ? "bg-orange-50 border-orange-200 text-orange-700 shadow-sm"
                                   : "bg-white border-slate-200 text-slate-600 hover:border-orange-200 hover:bg-orange-50/50"
-                                }`}
+                              }`}
                             >
                               <div className="text-xs font-medium uppercase opacity-70 mb-1">
                                 {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}
                               </div>
                               <div className="font-semibold whitespace-nowrap">
                                 {new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}
+                              </div>
+                              <div className="text-[10px] text-slate-400 mt-0.5">
+                                {slotCalendarData[date].filter((s: any) => s.status === 'available').length} open
                               </div>
                             </button>
                           ))}
@@ -928,26 +1123,30 @@ export default function MentorsTabContent() {
                             <Clock className="w-4 h-4 text-orange-500" />
                             Available Slots
                           </h3>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             {slotCalendarData[selectedDate].map((slot: any, idx: number) => {
                               const isAvailable = slot.status === "available";
+                              const isSelected = selectedSlotForBooking === slot;
                               return (
                                 <div
                                   key={idx}
-                                  onClick={() => {
-                                    if (isAvailable) setSelectedSlotForBooking(slot);
-                                  }}
-                                  className={`p-3 rounded-xl border text-center transition-all ${!isAvailable
+                                  onClick={() => { if (isAvailable) setSelectedSlotForBooking(slot); }}
+                                  className={`p-3 rounded-xl border text-center transition-all ${
+                                    !isAvailable
                                       ? "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed"
-                                      : selectedSlotForBooking === slot
+                                      : isSelected
                                         ? "bg-emerald-50 border-emerald-500 shadow-md ring-2 ring-emerald-500/20 cursor-pointer"
                                         : "bg-white border-emerald-200 hover:border-emerald-500 hover:shadow-md cursor-pointer group"
-                                    }`}
+                                  }`}
                                 >
-                                  <div className={`text-sm font-semibold ${isAvailable ? (selectedSlotForBooking === slot ? "text-emerald-800" : "text-slate-800 group-hover:text-emerald-700") : "text-slate-500"}`}>
-                                    {slot.from_time.slice(0, 5)} - {slot.to_time.slice(0, 5)}
+                                  <div className={`text-sm font-semibold ${
+                                    isAvailable ? (isSelected ? "text-emerald-800" : "text-slate-800 group-hover:text-emerald-700") : "text-slate-500"
+                                  }`}>
+                                    {slot.from_time.slice(0, 5)} – {slot.to_time.slice(0, 5)}
                                   </div>
-                                  <div className={`text-[10px] mt-1 font-medium ${isAvailable ? "text-emerald-600" : "text-slate-400"}`}>
+                                  <div className={`text-[10px] mt-1 font-medium ${
+                                    isAvailable ? "text-emerald-600" : "text-slate-400"
+                                  }`}>
                                     {isAvailable ? "Available" : "Booked"}
                                   </div>
                                 </div>
