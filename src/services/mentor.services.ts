@@ -385,4 +385,16 @@ export const rejectSkillEvidence = async (evidenceName: string) => {
   }
 };
 
+export const getMentorDashboardData = async (mentorEmail: string) => {
+  try {
+    const response = await apiService.get(
+      `method/quantbit_billing_platform.quantbit_billing_platform.api.get_mentor_dashboard_data?mentor_email=${encodeURIComponent(mentorEmail)}`
+    );
+    return response?.message ?? response;
+  } catch (error) {
+    console.error("Error fetching mentor dashboard data:", error);
+    throw error;
+  }
+};
+
 

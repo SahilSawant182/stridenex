@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { getUpcomingSessions, getPendingRequests, rescheduleSession, getMentorDashboardStats, getMentorPendingVerifications } from "@/services/mentor.services";
+import { getUpcomingSessions, getPendingRequests, rescheduleSession, getMentorDashboardStats, getMentorPendingVerifications, getMentorDashboardData } from "@/services/mentor.services";
 import { useToast } from "@/context/ToastContext";
 
 import { motion } from "framer-motion";
@@ -39,11 +39,6 @@ const upcomingSessions = [
   { id: "RV", initials: "RV", name: "Rohan Verma", topic: "DSA: Trees & Graphs", date: "Mar 2 5:00 PM", duration: "90 min", type: "Technical", color: "bg-purple-500" }
 ];
 
-const earningDetails = [
-  { label: "Gross Earned", value: "₹0.00" },
-  { label: "Platform Commission (15%)", value: "-₹0.00", valueColor: "text-red-500" },
-  { label: "Net to Bank", value: "₹0.00", valueColor: "text-emerald-600", bold: true }
-];
 
 const pendingRequests = [
   { initials: "AK", name: "Aisha Khan", topic: "Product Management Intro", priority: "high", color: "bg-pink-100 text-pink-700" },
@@ -72,6 +67,7 @@ export default function OverviewTabContent() {
   const [verifyQueue, setVerifyQueue] = useState<any[]>([]);
   const [totalPendingCount, setTotalPendingCount] = useState<number>(0);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [payoutData, setPayoutData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
   const [selectedSessionId, setSelectedSessionId] = useState("");
@@ -161,11 +157,12 @@ export default function OverviewTabContent() {
         return;
       }
       try {
-        const [upcomingRes, pendingRes, statsRes, verifyQueueRes] = await Promise.all([
-          getUpcomingSessions(email),
-          getPendingRequests(email, 3),
-          getMentorDashboardStats(email),
-          getMentorPendingVerifications(email, 3)
+        const [upcomingRes, pendingRes, statsRes, verifyQueueRes, payoutDataRes] = await Promise.all([
+          getUpcomingSessions(email).catch(e => { console.error(e); return null; }),
+          getPendingRequests(email, 3).catch(e => { console.error(e); return null; }),
+          getMentorDashboardStats(email).catch(e => { console.error(e); return null; }),
+          getMentorPendingVerifications(email, 3).catch(e => { console.error(e); return null; }),
+          getMentorDashboardData(email).catch(e => { console.error(e); return null; })
         ]);
         if (upcomingRes?.message && Array.isArray(upcomingRes.message)) {
           setUpcoming(upcomingRes.message);
@@ -188,6 +185,9 @@ export default function OverviewTabContent() {
         } else {
           setVerifyQueue([]);
           setTotalPendingCount(0);
+        }
+        if (payoutDataRes) {
+          setPayoutData(payoutDataRes);
         }
       } catch (err) {
         console.error("Failed to fetch dashboard data", err);
@@ -278,6 +278,21 @@ export default function OverviewTabContent() {
     };
   });
 
+  const parseINR = (str: string) => {
+    if (!str) return 0;
+    const numStr = str.replace(/[₹,]/g, "");
+    const val = parseFloat(numStr);
+    return isNaN(val) ? 0 : val;
+  };
+
+  const latestHistory = payoutData?.history?.[0];
+  const currentMonthLive = payoutData?.summary?.current_month_live || "₹0";
+  const liveNetVal = parseINR(currentMonthLive);
+  const liveGrossVal = Math.round(liveNetVal / 0.85);
+  const liveCommissionVal = liveGrossVal - liveNetVal;
+
+  const currentMonthName = new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
   const dynamicOverviewStats = [
     {
       label: "TOTAL STUDENTS MENTORED",
@@ -309,7 +324,20 @@ export default function OverviewTabContent() {
       iconColor: "text-yellow-600",
       borderStyle: "border-t-4 border-t-amber-400"
     },
-    defaultOverviewStats[3]
+    {
+      label: latestHistory?.month
+        ? `PENDING PAYOUT (${latestHistory.month.split(" ")[0].toUpperCase()})`
+        : "PENDING PAYOUT",
+      value: payoutData?.summary?.pending_payout || "₹0.00",
+      trend: latestHistory?.date && latestHistory?.date !== "TBD"
+        ? `Releases ${latestHistory.date}`
+        : "Processing",
+      trendUp: true,
+      icon: IndianRupee,
+      iconBg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      borderStyle: "border-t-4 border-t-emerald-500"
+    }
   ];
 
   const dynamicThisMonthStats = [
@@ -547,15 +575,28 @@ export default function OverviewTabContent() {
           >
             <div className="px-5 py-4 border-b border-slate-100">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                <IndianRupee className="w-4 h-4 text-emerald-600 bg-emerald-50 rounded" /> Feb 2025 Earnings
+                <IndianRupee className="w-4 h-4 text-emerald-600 bg-emerald-50 rounded" /> {currentMonthName} Earnings
               </h3>
             </div>
             <div className="p-6 text-center">
-              <h2 className="text-4xl font-extrabold text-emerald-500 mb-1">₹0.00</h2>
-              <p className="text-xs text-slate-500 mb-6">Net payout • Processing Mar 1</p>
+              <h2 className="text-4xl font-extrabold text-emerald-500 mb-1">{currentMonthLive}</h2>
+              <p className="text-xs text-slate-500 mb-6">Net payout • Live estimate</p>
 
               <div className="space-y-3 mb-6">
-                {earningDetails.map((detail, i) => (
+                {[
+                  { label: "Gross Earned", value: "₹" + liveGrossVal.toLocaleString("en-IN") },
+                  {
+                    label: "Platform Commission (15%)",
+                    value: liveCommissionVal > 0 ? "-₹" + liveCommissionVal.toLocaleString("en-IN") : "-₹0",
+                    valueColor: "text-red-500"
+                  },
+                  {
+                    label: "Net to Bank",
+                    value: currentMonthLive,
+                    valueColor: "text-emerald-600",
+                    bold: true
+                  }
+                ].map((detail, i) => (
                   <div key={i} className={`flex justify-between items-center text-sm ${detail.bold ? 'font-bold pt-3 border-t border-slate-100' : 'text-slate-600'}`}>
                     <span>{detail.label}</span>
                     <span className={detail.valueColor || 'text-slate-800 font-medium'}>{detail.value}</span>
