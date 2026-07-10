@@ -2654,7 +2654,7 @@ export default function CampusDrivesTabContent() {
                       <Send className="w-5 h-5 text-slate-400" />
                     </div>
                   </BaseCard>
-                  <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between border-b-4 border-b-orange-500">
+                  <BaseCard className="p-5 border-slate-200/60 bg-white shadow-sm flex items-center justify-between">
                     <div>
                       <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Shortlisted</p>
                       <h4 className="text-2xl font-bold text-slate-800">
