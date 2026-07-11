@@ -799,3 +799,34 @@ export const verifySessionPayment = async (payload: {
     throw error;
   }
 };
+
+/**
+ * Fetch all success stories.
+ */
+export const getSuccessStories = async (): Promise<any> => {
+  try {
+    const response = await apiService.get(
+      "method/stridenex_app.stridenex_app.doctype.success_story.success_story.get_success_stories"
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching success stories:", error);
+    throw error;
+  }
+};
+
+/**
+ * Create a new success story.
+ */
+export const createSuccessStory = async (data: any): Promise<any> => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.success_story.success_story.create_success_story",
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating success story:", error);
+    throw error;
+  }
+};
