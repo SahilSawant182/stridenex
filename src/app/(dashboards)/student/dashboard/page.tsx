@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion, Variants } from "framer-motion";
 import StudentBannerWidget from "@/components/dashboards/widgets/RoleBannerWidget";
 import HorizontalTabs from "@/components/dashboards/shared/HorizontalTabs";
@@ -9,6 +10,8 @@ import CoachWidget from "@/components/dashboards/widgets/CoachWidget";
 import SkillsWidget from "@/components/dashboards/widgets/SkillsWidget";
 import AlertsWidget from "@/components/dashboards/widgets/AlertsWidget";
 import InternshipsWidget from "@/components/dashboards/widgets/InternshipsWidget";
+import { useAuth } from "@/context/AuthContext";
+import { getStudentSkills, getDashboardStats } from "@/services/student.services";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -34,6 +37,77 @@ const item: Variants = {
 };
 
 export default function StudentDashboardPage() {
+  const { currentUser } = useAuth();
+  const [skillsData, setSkillsData] = useState<any[]>([]);
+  const [statsData, setStatsData] = useState<any>(null);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchStats = async () => {
+      try {
+        const res = await getDashboardStats(currentUser);
+        console.log("Student stats API response:", res);
+        const data = res?.data || res?.message;
+        if (data) {
+          setStatsData(data);
+        }
+      } catch (error) {
+        console.error("Error fetching dashboard stats:", error);
+      }
+    };
+    fetchStats();
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchSkills = async () => {
+      try {
+        const res = await getStudentSkills(currentUser);
+        console.log("Student skills API response:", res);
+        
+        let rawSkills = [];
+        if (res && res.message && Array.isArray(res.message.skills)) {
+          rawSkills = res.message.skills;
+        } else if (res && Array.isArray(res.message)) {
+          rawSkills = res.message;
+        }
+
+        const mapLevelToPercentage = (level?: string): number => {
+          if (!level) return 0;
+          switch (level.toLowerCase()) {
+            case "beginner": return 35;
+            case "intermediate": return 65;
+            case "advanced": return 85;
+            case "expert": return 100;
+            default: return 50;
+          }
+        };
+
+        const mapped = rawSkills.map((item: any) => ({
+          name: item.skill,
+          level: item.level || "Beginner",
+          percentage: mapLevelToPercentage(item.level)
+        }));
+        
+        setSkillsData(mapped);
+      } catch (error) {
+        console.error("Error fetching skills snapshot:", error);
+      }
+    };
+    fetchSkills();
+  }, [currentUser]);
+
+  const fallbackSkills = [
+    { name: "Python", percentage: 78 },
+    { name: "Machine Learning", percentage: 61 },
+    { name: "SQL", percentage: 85 },
+    { name: "Data Viz", percentage: 55 },
+    { name: "Communication", percentage: 72 },
+    { name: "Problem Solving", percentage: 80 }
+  ];
+  
+  const displayedSkills = skillsData.length > 0 ? skillsData : fallbackSkills;
+
   return (
     <motion.div
       variants={container}
@@ -45,19 +119,35 @@ export default function StudentDashboardPage() {
       <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <StatsWidget
           title="Employability Score"
-          data={{ value: 73, max: 100, change: 8, changeLabel: "this month" }}
+          data={{ 
+            value: statsData?.employability_score !== undefined ? statsData.employability_score : 73, 
+            max: 100, 
+            change: 8, 
+            changeLabel: "this month" 
+          }}
         />
         <StatsWidget
-          title="Path Completion"
-          data={{ value: "58%", change: 12, changeLabel: "this week" }}
+          title="Profile Completeness"
+          data={{ 
+            value: statsData?.profile_completeness !== undefined ? `${statsData.profile_completeness}%` : "78%", 
+            change: 12, 
+            changeLabel: "this week" 
+          }}
         />
         <StatsWidget
-          title="Applications Sent"
-          data={{ value: "3", sent: 3, shortlisted: 1 }}
+          title="Total Skills"
+          data={{ 
+            value: statsData?.total_skills !== undefined ? statsData.total_skills : 3 
+          }}
         />
         <StatsWidget
-          title="AI Sessions / Month"
-          data={{ value: 12, change: 4, changeLabel: "assessments" }}
+          title="CGPA"
+          data={{ 
+            value: statsData?.cgpa !== undefined ? statsData.cgpa : 0, 
+            change: statsData?.backlog !== undefined ? statsData.backlog : 0, 
+            changeLabel: "Backlogs", 
+            trend: statsData?.backlog > 0 ? "down" : "up" 
+          }}
         />
       </motion.div>
 
@@ -88,14 +178,7 @@ export default function StudentDashboardPage() {
       {/* Bottom Row */}
       <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         <SkillsWidget
-          data={[
-            { name: "Python", percentage: 78 },
-            { name: "Machine Learning", percentage: 61 },
-            { name: "SQL", percentage: 85 },
-            { name: "Data Viz", percentage: 55 },
-            { name: "Communication", percentage: 72 },
-            { name: "Problem Solving", percentage: 80 }
-          ]}
+          data={displayedSkills}
         />
 
         <AlertsWidget

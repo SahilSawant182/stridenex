@@ -1,8 +1,12 @@
 // components/dashboards/student/ShortsTabContent.tsx
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
+import { getShortsFeed, saveShort, getSavedShorts } from "@/services/student.services";
+import { BASE_DOMAIN } from "@/services/api.services";
+import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 import ReactPlayer from "react-player";
 import { 
   Play,
@@ -27,7 +31,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 // Types
 interface ShortVideo {
-  id: number;
+  id: any;
   title: string;
   category: string;
   duration: string;
@@ -235,7 +239,62 @@ function VideoPlayer({ video, isActive }: { video: ShortVideo; isActive: boolean
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const [played, setPlayed] = useState(0);
+  const [videoSrc, setVideoSrc] = useState<string>("");
+  const [loadingVideo, setLoadingVideo] = useState(false);
   const playerRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!video.videoUrl) return;
+
+    let active = true;
+    let objectUrl = "";
+
+    const loadVideo = async () => {
+      try {
+        setLoadingVideo(true);
+        const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+        const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+        
+        const headers: Record<string, string> = {};
+        if (apiKey && apiSecret) {
+          headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+        }
+        
+        const response = await fetch(video.videoUrl, { headers });
+        if (!response.ok) {
+          console.warn(`Secure video fetch returned status ${response.status}, falling back to direct URL.`);
+          if (active) {
+            setVideoSrc(video.videoUrl);
+          }
+          return;
+        }
+        
+        const blob = await response.blob();
+        if (active) {
+          objectUrl = URL.createObjectURL(blob);
+          setVideoSrc(objectUrl);
+        }
+      } catch (err) {
+        console.warn("Error fetching video blob, falling back to direct url:", err);
+        if (active) {
+          setVideoSrc(video.videoUrl);
+        }
+      } finally {
+        if (active) {
+          setLoadingVideo(false);
+        }
+      }
+    };
+
+    loadVideo();
+
+    return () => {
+      active = false;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [video.videoUrl]);
 
   const handlePlayPause = () => {
     setPlaying(!playing);
@@ -246,27 +305,34 @@ function VideoPlayer({ video, isActive }: { video: ShortVideo; isActive: boolean
   };
 
   return (
-    <div className="relative aspect-[9/16] bg-black rounded-lg overflow-hidden group">
-      <ReactPlayer
-        ref={playerRef}
-        url={video.videoUrl}
-        width="100%"
-        height="100%"
-        playing={playing && isActive}
-        muted={muted}
-        loop={true}
-        playsinline={true}
-        onProgress={handleProgress}
-        style={{ objectFit: 'cover' }}
-        config={{
-          file: {
-            attributes: {
-              controlsList: 'nodownload',
-              disablePictureInPicture: true,
+    <div className="relative aspect-[9/16] bg-black rounded-lg overflow-hidden group flex items-center justify-center">
+      {loadingVideo && !videoSrc && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
+          <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
+      {videoSrc ? (
+        <ReactPlayer
+          ref={playerRef}
+          url={videoSrc}
+          width="100%"
+          height="100%"
+          playing={playing && isActive}
+          muted={muted}
+          loop={true}
+          playsinline={true}
+          onProgress={handleProgress}
+          style={{ objectFit: 'cover' }}
+          config={{
+            file: {
+              attributes: {
+                controlsList: 'nodownload',
+                disablePictureInPicture: true,
+              }
             }
-          }
-        }}
-      />
+          }}
+        />
+      ) : null}
       
       {/* Video Overlay Controls */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
@@ -362,16 +428,159 @@ const item = {
 };
 
 export default function ShortsTabContent() {
-  const [activeVideoId, setActiveVideoId] = useState<number | null>(null);
-  const [savedItems, setSavedItems] = useState<number[]>(
-    trendingShorts.filter(s => s.isSaved).map(s => s.id)
-  );
+  const { currentUser } = useAuth();
+  const { showToast } = useToast();
+  const [activeVideoId, setActiveVideoId] = useState<any>(null);
+  const [savedItems, setSavedItems] = useState<any[]>([]);
+  const [shortsList, setShortsList] = useState<ShortVideo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingSaved, setLoadingSaved] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState<"all" | "saved">("all");
 
-  const toggleSave = (id: number) => {
-    setSavedItems(prev =>
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
+  const fetchSaved = async () => {
+    if (!currentUser) return;
+    try {
+      setLoadingSaved(true);
+      const res = await getSavedShorts(currentUser);
+      console.log("Saved shorts response:", res);
+      let rawSaved = [];
+      if (res && Array.isArray(res.message)) {
+        rawSaved = res.message;
+      } else if (res && Array.isArray(res.data)) {
+        rawSaved = res.data;
+      }
+      
+      // Match the correct property "short" from the Frappe response
+      const savedIds = rawSaved.map((item: any) => String(item.short));
+      setSavedItems(savedIds);
+    } catch (err) {
+      console.error("Error loading saved shorts:", err);
+    } finally {
+      setLoadingSaved(false);
+    }
   };
+
+  useEffect(() => {
+    const fetchShorts = async () => {
+      try {
+        setLoading(true);
+        const res = await getShortsFeed(currentUser || undefined);
+        console.log("Shorts API response:", res);
+        
+        let rawShorts = [];
+        if (res && Array.isArray(res.message)) {
+          rawShorts = res.message;
+        } else if (res && Array.isArray(res.data)) {
+          rawShorts = res.data;
+        } else if (res && res.message && Array.isArray(res.message.data)) {
+          rawShorts = res.message.data;
+        }
+
+        const savedIdsFromFeed: string[] = [];
+        const mapped = rawShorts.map((item: any): ShortVideo => {
+          const videoUrl = item.video ? (item.video.startsWith('http') ? item.video : `${BASE_DOMAIN}${item.video}`) : '';
+          const thumbnail = item.thumbnail ? (item.thumbnail.startsWith('http') ? item.thumbnail : `${BASE_DOMAIN}${item.thumbnail}`) : undefined;
+          
+          const skill = item.skill || "Skill";
+          const authorAvatar = skill.substring(0, 2).toUpperCase();
+
+          if (item.is_saved) {
+            savedIdsFromFeed.push(String(item.name));
+          }
+
+          return {
+            id: item.name,
+            title: item.title || "Untitled Short",
+            category: skill,
+            duration: item.duration_display || `${item.duration_seconds || 30} sec`,
+            views: item.views_display || `${item.view_count || 0}`,
+            author: "StrideNex",
+            authorHandle: "@stridenex",
+            authorAvatar: authorAvatar,
+            tags: [skill],
+            isSaved: Boolean(item.is_saved),
+            videoUrl: videoUrl,
+            thumbnail: thumbnail,
+            color: "orange"
+          };
+        });
+        setShortsList(mapped);
+        if (savedIdsFromFeed.length > 0) {
+          setSavedItems(prev => {
+            const combined = new Set([...prev, ...savedIdsFromFeed]);
+            return Array.from(combined);
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching shorts:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchShorts();
+    fetchSaved(); // Sync checks on mount
+  }, [currentUser]);
+
+  const toggleSave = async (id: any) => {
+    if (!currentUser) {
+      showToast("Authentication required to save shorts.", "warning");
+      return;
+    }
+
+    const isAlreadySaved = savedItems.includes(String(id));
+
+    try {
+      // Opt-in UI update
+      setSavedItems(prev =>
+        prev.includes(String(id)) ? prev.filter(item => item !== String(id)) : [...prev, String(id)]
+      );
+
+      // Call API
+      const res = await saveShort({
+        user: currentUser,
+        short_name: String(id)
+      });
+      console.log("Save short API response:", res);
+
+      // Refresh list to keep in sync
+      fetchSaved();
+      
+      if (!isAlreadySaved) {
+        showToast("Short saved successfully!", "success");
+      } else {
+        showToast("Short unsaved.", "info");
+      }
+    } catch (err: any) {
+      console.error("Error saving short via API:", err);
+      showToast(err.message || "Failed to save short", "error");
+      
+      // Rollback UI update
+      setSavedItems(prev =>
+        isAlreadySaved ? [...prev, String(id)] : prev.filter(item => item !== String(id))
+      );
+    }
+  };
+
+  // Derive saved shorts list details on-the-fly to prevent sync issues
+  const savedShortsList: SavedShort[] = shortsList
+    .filter(short => savedItems.map(String).includes(String(short.id)))
+    .map((short: ShortVideo): SavedShort => {
+      const icon = short.category.toLowerCase().includes("python") ? "🐍" : short.category.toLowerCase().includes("pandas") ? "🐼" : "🗄️";
+      return {
+        id: short.id,
+        title: short.title,
+        category: short.category,
+        savedDate: "Saved",
+        icon: icon,
+        color: "blue"
+      };
+    });
+
+  // Calculate displayed list based on active sub tab
+  const displayedShorts = activeSubTab === "saved"
+    ? shortsList.filter(short => savedItems.map(String).includes(String(short.id)))
+    : shortsList;
 
   return (
     <motion.div
@@ -386,67 +595,115 @@ export default function ShortsTabContent() {
         <p className="text-slate-500 mt-1">30-second skill videos — swipe, learn, level up every day</p>
       </motion.div>
 
+      {/* Sub Tab Bar */}
+      <motion.div variants={item} className="flex gap-4 border-b border-slate-200">
+        <button
+          onClick={() => setActiveSubTab("all")}
+          className={`pb-3 px-2 text-sm font-semibold transition-all relative ${
+            activeSubTab === "all"
+              ? "text-orange-500 font-bold"
+              : "text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          All Shorts
+          {activeSubTab === "all" && (
+            <motion.div layoutId="activeWebSubTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
+          )}
+        </button>
+        <button
+          onClick={() => {
+            setActiveSubTab("saved");
+            fetchSaved(); // Call API ONLY when user goes to this section
+          }}
+          className={`pb-3 px-2 text-sm font-semibold transition-all relative ${
+            activeSubTab === "saved"
+              ? "text-orange-500 font-bold"
+              : "text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          Saved Shorts
+          {activeSubTab === "saved" && (
+            <motion.div layoutId="activeWebSubTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
+          )}
+        </button>
+      </motion.div>
+
       {/* Trending Videos - Horizontal Scroll */}
       <motion.div variants={item}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-orange-500" />
-            <h2 className="text-lg font-semibold text-slate-800">Trending</h2>
+            <h2 className="text-lg font-semibold text-slate-800">
+              {activeSubTab === "all" ? "Trending" : "Saved Shorts"}
+            </h2>
           </div>
           <Button variant="ghost" size="sm" className="text-slate-500 hover:text-orange-600">
             View All
           </Button>
         </div>
 
-        <HorizontalScroll>
-          {trendingShorts.map((short) => (
-            <div
-              key={short.id}
-              className="w-[280px] flex-shrink-0"
-              onMouseEnter={() => setActiveVideoId(short.id)}
-              onMouseLeave={() => setActiveVideoId(null)}
-            >
-              <div className="space-y-3">
-                <VideoPlayer video={short} isActive={activeVideoId === short.id} />
-                
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-slate-800 text-sm line-clamp-1">{short.title}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Avatar className="w-5 h-5">
-                        <AvatarFallback className="text-[8px] bg-slate-200 text-slate-600">
-                          {short.authorAvatar}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs text-slate-500">{short.authorHandle}</span>
-                      <span className="text-xs text-slate-300">•</span>
-                      <Eye className="w-3 h-3 text-slate-400" />
-                      <span className="text-xs text-slate-500">{short.views}</span>
+        {loading || (activeSubTab === "saved" && loadingSaved) ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : displayedShorts.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col items-center justify-center">
+            <Sparkles className="w-10 h-10 text-slate-300 mb-2" />
+            <p className="text-slate-400 font-medium">
+              {activeSubTab === "all" ? "No study shorts available yet." : "No saved shorts yet."}
+            </p>
+          </div>
+        ) : (
+          <HorizontalScroll>
+            {displayedShorts.map((short) => (
+              <div
+                key={short.id}
+                className="w-[280px] flex-shrink-0"
+                onMouseEnter={() => setActiveVideoId(short.id)}
+                onMouseLeave={() => setActiveVideoId(null)}
+              >
+                <div className="space-y-3">
+                  <VideoPlayer video={short} isActive={activeVideoId === short.id} />
+                  
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-slate-800 text-sm line-clamp-1">{short.title}</h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Avatar className="w-5 h-5">
+                          <AvatarFallback className="text-[8px] bg-slate-200 text-slate-600">
+                            {short.authorAvatar}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-slate-500">{short.authorHandle}</span>
+                        <span className="text-xs text-slate-300">•</span>
+                        <Eye className="w-3 h-3 text-slate-400" />
+                        <span className="text-xs text-slate-500">{short.views}</span>
+                      </div>
                     </div>
+                    <button
+                      onClick={() => toggleSave(short.id)}
+                      className="text-slate-400 hover:text-orange-500"
+                    >
+                      {savedItems.includes(short.id) ? (
+                        <BookmarkCheck className="w-4 h-4 fill-orange-500 text-orange-500" />
+                      ) : (
+                        <Bookmark className="w-4 h-4" />
+                      )}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => toggleSave(short.id)}
-                    className="text-slate-400 hover:text-orange-500"
-                  >
-                    {savedItems.includes(short.id) ? (
-                      <BookmarkCheck className="w-4 h-4 fill-orange-500 text-orange-500" />
-                    ) : (
-                      <Bookmark className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
 
-                <div className="flex gap-1">
-                  {short.tags.map((tag) => (
-                    <Badge key={tag} variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-[10px]">
-                      {tag}
-                    </Badge>
-                  ))}
+                  <div className="flex gap-1">
+                    {short.tags.map((tag) => (
+                      <Badge key={tag} variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-[10px]">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </HorizontalScroll>
+            ))}
+          </HorizontalScroll>
+        )}
       </motion.div>
 
       {/* Two Column Layout - Saved & Recommended */}
@@ -460,19 +717,23 @@ export default function ShortsTabContent() {
                 Saved Shorts
               </h3>
               <div className="space-y-4">
-                {savedShorts.map((saved) => (
-                  <div key={saved.id} className="flex items-start gap-3 group cursor-pointer">
-                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-lg shrink-0">
-                      {saved.icon}
+                {savedShortsList.length === 0 ? (
+                  <p className="text-xs text-slate-400 font-medium">No saved shorts yet.</p>
+                ) : (
+                  savedShortsList.map((saved) => (
+                    <div key={saved.id} className="flex items-start gap-3 group cursor-pointer">
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-lg shrink-0">
+                        {saved.icon}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-slate-800 group-hover:text-orange-600 transition-colors">
+                          {saved.title}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">{saved.savedDate}</p>
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-slate-800 group-hover:text-orange-600 transition-colors">
-                        {saved.title}
-                      </p>
-                      <p className="text-xs text-slate-400 mt-1">{saved.savedDate}</p>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
               <Button variant="ghost" size="sm" className="w-full mt-4 text-xs text-slate-500 hover:text-orange-600">
                 View All Saved

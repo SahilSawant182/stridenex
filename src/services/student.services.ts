@@ -830,3 +830,146 @@ export const createSuccessStory = async (data: any): Promise<any> => {
     throw error;
   }
 };
+
+/**
+ * Fetch educational shorts feed.
+ */
+export const getShortsFeed = async (userEmail?: string): Promise<any> => {
+  try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret) {
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    }
+
+    const response = await apiService.get(
+      "method/stridenex_app.stridenex_app.doctype.educational_short.educational_short.get_shorts_feed",
+      {
+        params: userEmail ? { user: userEmail } : {},
+        headers
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching shorts feed:", error);
+    throw error;
+  }
+};
+
+/**
+ * Save an educational short.
+ */
+export const saveShort = async (payload: { user: string; short_name: string }): Promise<any> => {
+  try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret) {
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    }
+
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.educational_short.educational_short.save_short",
+      payload,
+      { headers }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error saving short:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch saved educational shorts.
+ */
+export const getSavedShorts = async (userEmail: string): Promise<any> => {
+  try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret) {
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    }
+
+    const response = await apiService.get(
+      "method/stridenex_app.stridenex_app.doctype.educational_short.educational_short.get_saved_shorts",
+      {
+        params: { user: userEmail },
+        headers
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching saved shorts:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch student skills snapshot.
+ */
+export const getStudentSkills = async (studentEmail: string): Promise<any> => {
+  try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret) {
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    }
+
+    const response = await apiService.get(
+      "method/stridenex_app.stridenex_app.doctype.student.student.get_student_skills",
+      {
+        params: { student: studentEmail },
+        headers
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching student skills:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch student dashboard metrics / stats.
+ */
+export const getDashboardStats = async (studentEmail: string): Promise<any> => {
+  try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret) {
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    }
+
+    const response = await apiService.get(
+      "method/stridenex_app.stridenex_app.doctype.student.student.get_dashboard_stats",
+      {
+        params: { student: studentEmail },
+        headers
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching dashboard stats:", error);
+    throw error;
+  }
+};

@@ -64,7 +64,9 @@ export default function SkillsWidget({ data }: SkillsWidgetProps) {
             <div key={skill.name || index}>
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[13px] font-bold text-slate-800">{skill.name || 'Unknown'}</span>
-                <span className={`text-[13px] font-semibold ${getSkillTextColor(index)}`}>{skill.percentage || 0}%</span>
+                <span className={`text-[13px] font-semibold ${getSkillTextColor(index)}`}>
+                  {skill.level || 'Beginner'} • {skill.percentage || 0}%
+                </span>
               </div>
               <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden w-full">
                 <div 
