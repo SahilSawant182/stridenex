@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { getShortsFeed, saveShort, getSavedShorts } from "@/services/student.services";
+import { getShortsFeed, saveShort, unsaveShort, getSavedShorts, toggleLikeShort } from "@/services/student.services";
 import { BASE_DOMAIN } from "@/services/api.services";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -21,7 +21,8 @@ import {
   Clock,
   TrendingUp,
   Sparkles,
-  ChevronRight as ChevronRightIcon
+  ChevronRight as ChevronRightIcon,
+  Heart
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
@@ -432,6 +433,7 @@ export default function ShortsTabContent() {
   const { showToast } = useToast();
   const [activeVideoId, setActiveVideoId] = useState<any>(null);
   const [savedItems, setSavedItems] = useState<any[]>([]);
+  const [likedItems, setLikedItems] = useState<any[]>([]);
   const [shortsList, setShortsList] = useState<ShortVideo[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingSaved, setLoadingSaved] = useState(false);
@@ -477,6 +479,7 @@ export default function ShortsTabContent() {
         }
 
         const savedIdsFromFeed: string[] = [];
+        const likedIdsFromFeed: string[] = [];
         const mapped = rawShorts.map((item: any): ShortVideo => {
           const videoUrl = item.video ? (item.video.startsWith('http') ? item.video : `${BASE_DOMAIN}${item.video}`) : '';
           const thumbnail = item.thumbnail ? (item.thumbnail.startsWith('http') ? item.thumbnail : `${BASE_DOMAIN}${item.thumbnail}`) : undefined;
@@ -486,6 +489,9 @@ export default function ShortsTabContent() {
 
           if (item.is_saved) {
             savedIdsFromFeed.push(String(item.name));
+          }
+          if (item.is_liked) {
+            likedIdsFromFeed.push(String(item.name));
           }
 
           return {
@@ -508,6 +514,12 @@ export default function ShortsTabContent() {
         if (savedIdsFromFeed.length > 0) {
           setSavedItems(prev => {
             const combined = new Set([...prev, ...savedIdsFromFeed]);
+            return Array.from(combined);
+          });
+        }
+        if (likedIdsFromFeed.length > 0) {
+          setLikedItems(prev => {
+            const combined = new Set([...prev, ...likedIdsFromFeed]);
             return Array.from(combined);
           });
         }
@@ -537,11 +549,19 @@ export default function ShortsTabContent() {
       );
 
       // Call API
-      const res = await saveShort({
-        user: currentUser,
-        short_name: String(id)
-      });
-      console.log("Save short API response:", res);
+      if (isAlreadySaved) {
+        const res = await unsaveShort({
+          user: currentUser,
+          short_name: String(id)
+        });
+        console.log("Unsave short API response:", res);
+      } else {
+        const res = await saveShort({
+          user: currentUser,
+          short_name: String(id)
+        });
+        console.log("Save short API response:", res);
+      }
 
       // Refresh list to keep in sync
       fetchSaved();
@@ -558,6 +578,42 @@ export default function ShortsTabContent() {
       // Rollback UI update
       setSavedItems(prev =>
         isAlreadySaved ? [...prev, String(id)] : prev.filter(item => item !== String(id))
+      );
+    }
+  };
+
+  const toggleLike = async (id: any) => {
+    if (!currentUser) {
+      showToast("Authentication required to like shorts.", "warning");
+      return;
+    }
+
+    const isAlreadyLiked = likedItems.includes(String(id));
+
+    try {
+      // Opt-in UI update
+      setLikedItems(prev =>
+        prev.includes(String(id)) ? prev.filter(item => item !== String(id)) : [...prev, String(id)]
+      );
+
+      // Call API
+      const res = await toggleLikeShort({
+        short: String(id)
+      });
+      console.log("Toggle like API response:", res);
+
+      if (!isAlreadyLiked) {
+        showToast("Short liked!", "success");
+      } else {
+        showToast("Short unliked.", "info");
+      }
+    } catch (err: any) {
+      console.error("Error liking short via API:", err);
+      showToast(err.message || "Failed to toggle like", "error");
+
+      // Rollback UI update
+      setLikedItems(prev =>
+        isAlreadyLiked ? [...prev, String(id)] : prev.filter(item => item !== String(id))
       );
     }
   };
@@ -680,16 +736,26 @@ export default function ShortsTabContent() {
                         <span className="text-xs text-slate-500">{short.views}</span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => toggleSave(short.id)}
-                      className="text-slate-400 hover:text-orange-500"
-                    >
-                      {savedItems.includes(short.id) ? (
-                        <BookmarkCheck className="w-4 h-4 fill-orange-500 text-orange-500" />
-                      ) : (
-                        <Bookmark className="w-4 h-4" />
-                      )}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => toggleLike(short.id)}
+                        className="text-slate-400 hover:text-red-500 transition-colors"
+                      >
+                        <Heart 
+                          className={`w-4 h-4 transition-all ${likedItems.includes(String(short.id)) ? 'fill-red-500 text-red-500' : 'text-slate-400'}`} 
+                        />
+                      </button>
+                      <button
+                        onClick={() => toggleSave(short.id)}
+                        className="text-slate-400 hover:text-orange-500 transition-colors"
+                      >
+                        {savedItems.includes(String(short.id)) ? (
+                          <BookmarkCheck className="w-4 h-4 fill-orange-500 text-orange-500" />
+                        ) : (
+                          <Bookmark className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex gap-1">
