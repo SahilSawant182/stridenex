@@ -565,11 +565,14 @@ export const createSkill = async (skill_name: string) => {
   }
 };
 
-
-
-
-
-
-
-
-
+export const getCollegeEmployabilitySummary = async (college: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.api_stridenex_app.college.college.get_college_employability_summary?college=${encodeURIComponent(college)}`
+    );
+    return response;
+  } catch (error) {
+    console.error(`Error fetching college employability summary for ${college}:`, error);
+    throw error;
+  }
+};

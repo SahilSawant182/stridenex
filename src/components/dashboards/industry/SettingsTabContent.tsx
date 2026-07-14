@@ -10,39 +10,62 @@ import {
   FileText, 
   Sparkles, 
   ShieldCheck,
-  Zap
+  Zap,
+  Loader2
 } from "lucide-react";
 import { useIndustry } from "@/context/IndustryContext";
+import { generateEmailTemplate, getInvitationTemplate } from "@/services/industry.services";
 
 export default function SettingsTabContent() {
   const { industryData } = useIndustry();
   const [activeTemplate, setActiveTemplate] = useState<{type: string, content: string} | null>(null);
   const [copied, setCopied] = useState(false);
+  const [loadingType, setLoadingType] = useState<string | null>(null);
 
-  const templates = {
-    email: `Subject: Opportunity: Internship with ${industryData?.company_name || 'Our Company'}
+  const handleGenerateEmail = async () => {
+    const companyName = industryData?.company_name;
+    if (!companyName) {
+      alert("Company name not found. Please complete your profile first.");
+      return;
+    }
+    try {
+      setLoadingType("email");
+      const res = await generateEmailTemplate(companyName);
+      const data = res?.message || res?.data || res;
+      if (data) {
+        const subject = data.subject || "";
+        const body = data.body || "";
+        const content = subject ? `Subject: ${subject}\n\n${body}` : body;
+        setActiveTemplate({ type: 'Email Template', content });
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to generate email template");
+    } finally {
+      setLoadingType(null);
+    }
+  };
 
-Dear Student,
-
-We've been impressed by your profile on Stridenex. Your skills and achievements align perfectly with our current initiatives.
-
-We would love to discuss a potential partnership or internship opportunity with you. 
-
-Best regards,
-Recruitment Team
-${industryData?.company_name || 'StrideNex Partner'}`,
-
-    invitation: `Hi there! 👋
-
-${industryData?.company_name || 'We'} are currently looking for talented students to join our upcoming projects. 
-
-Check out our latest internship postings on Stridenex and apply today:
-[Link to Stridenex Dashboard]
-
-We look forward to seeing your application!
-
-Best,
-The ${industryData?.company_name || 'Team'}`
+  const handleGenerateInvitation = async () => {
+    const companyName = industryData?.company_name;
+    if (!companyName) {
+      alert("Company name not found. Please complete your profile first.");
+      return;
+    }
+    try {
+      setLoadingType("invitation");
+      const res = await getInvitationTemplate(companyName);
+      const data = res?.message || res?.data || res;
+      if (data) {
+        const body = data.body || "";
+        setActiveTemplate({ type: 'Invitation Template', content: body });
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to generate invitation template");
+    } finally {
+      setLoadingType(null);
+    }
   };
 
   const handleCopy = () => {
@@ -74,11 +97,16 @@ The ${industryData?.company_name || 'Team'}`
             Generate a high-conversion follow-up email template personalized for your company outreach.
           </p>
           <button 
-            onClick={() => setActiveTemplate({ type: 'Email Template', content: templates.email })}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10 active:scale-95"
+            onClick={handleGenerateEmail}
+            disabled={loadingType !== null}
+            className="w-full bg-slate-900 hover:bg-slate-800 disabled:opacity-75 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10 active:scale-95 cursor-pointer disabled:cursor-not-allowed"
           >
-            <Sparkles className="w-4 h-4" />
-            Generate Email Template
+            {loadingType === "email" ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+            {loadingType === "email" ? "Generating..." : "Generate Email Template"}
           </button>
         </motion.div>
 
@@ -95,11 +123,16 @@ The ${industryData?.company_name || 'Team'}`
             Get a concise, friendly invitation template perfect for quick platform-based student invites.
           </p>
           <button 
-            onClick={() => setActiveTemplate({ type: 'Invitation Template', content: templates.invitation })}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/10 active:scale-95"
+            onClick={handleGenerateInvitation}
+            disabled={loadingType !== null}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-75 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-600/10 active:scale-95 cursor-pointer disabled:cursor-not-allowed"
           >
-            <Zap className="w-4 h-4" />
-            Get Invitation Template
+            {loadingType === "invitation" ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Zap className="w-4 h-4" />
+            )}
+            {loadingType === "invitation" ? "Generating..." : "Get Invitation Template"}
           </button>
         </motion.div>
       </div>

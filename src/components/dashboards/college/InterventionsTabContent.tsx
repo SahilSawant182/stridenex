@@ -10,7 +10,8 @@ import {
   getCollegeDetails,
   getLowEmployabilityStudents,
   assignStudentMentor,
-  getMasterData
+  getMasterData,
+  getCollegeEmployabilitySummary
 } from "@/services/college.services";
 
 const containerVariants: Variants = {
@@ -59,6 +60,7 @@ export default function InterventionsTabContent() {
   const [collegeDetails, setCollegeDetails] = useState<any>(null);
   const [studentsList, setStudentsList] = useState<any[]>([]);
   const [mentorsList, setMentorsList] = useState<any[]>([]);
+  const [summaryData, setSummaryData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedMentors, setSelectedMentors] = useState<Record<string, string>>({});
   const [assigningMap, setAssigningMap] = useState<Record<string, boolean>>({});
@@ -96,17 +98,22 @@ export default function InterventionsTabContent() {
     }
   }, [currentUser]);
 
-  // Load low employability students and mentors
+  // Load low employability students, mentors and summary
   useEffect(() => {
     const fetchStudentsAndMentors = async () => {
-      const collegeEmail = collegeDetails?.email || currentUser || "sanjay9975@gmail.com";
-      if (!collegeEmail) return;
+      if (!collegeDetails) return;
+
+      const collegeName = collegeDetails.college_name || collegeDetails.name;
+      if (!collegeName) return;
+
+      const collegeEmail = collegeDetails.email || currentUser || "sanjay9975@gmail.com";
 
       try {
         setLoading(true);
-        const [studentsRes, mentorsRes] = await Promise.allSettled([
-          getLowEmployabilityStudents(collegeEmail),
-          getMasterData("Mentor")
+        const [studentsRes, mentorsRes, summaryRes] = await Promise.allSettled([
+          getLowEmployabilityStudents(collegeName),
+          getMasterData("Mentor"),
+          getCollegeEmployabilitySummary(collegeName)
         ]);
 
         if (studentsRes.status === "fulfilled") {
@@ -123,6 +130,13 @@ export default function InterventionsTabContent() {
           setMentorsList(arr);
         } else {
           console.error("Failed to load mentors:", mentorsRes.reason);
+        }
+
+        if (summaryRes.status === "fulfilled") {
+          const raw = summaryRes.value?.data ?? summaryRes.value?.message?.data ?? summaryRes.value?.message ?? summaryRes.value;
+          setSummaryData(raw);
+        } else {
+          console.error("Failed to load employability summary:", summaryRes.reason);
         }
       } catch (err) {
         console.error("Error fetching interventions data:", err);
@@ -167,7 +181,7 @@ export default function InterventionsTabContent() {
         <motion.div variants={itemVariants}>
           <MetricCard 
              title="Critical Risk <40" 
-             value={loading ? "..." : studentsList.length} 
+             value={loading ? "..." : (summaryData?.critical !== undefined ? summaryData.critical : 0)} 
              icon={<svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L2 22h20L12 2zm0 18a2 2 0 110-4 2 2 0 010 4zm1-6h-2v-6h2v6z"/></svg>} 
              iconColor="text-red-500" 
              borderColor="border-t-red-500" 
@@ -176,7 +190,7 @@ export default function InterventionsTabContent() {
         <motion.div variants={itemVariants}>
           <MetricCard 
              title="High Risk 40-55" 
-             value="0" 
+             value={loading ? "..." : (summaryData?.high_risk !== undefined ? summaryData.high_risk : 0)} 
              icon={<AlertTriangle className="w-4 h-4" />} 
              iconColor="text-amber-500" 
              borderColor="border-t-amber-500" 
@@ -185,7 +199,7 @@ export default function InterventionsTabContent() {
         <motion.div variants={itemVariants}>
           <MetricCard 
              title="Declining Progress" 
-             value="0" 
+             value={loading ? "..." : (summaryData?.declining_progress !== undefined ? summaryData.declining_progress : 0)} 
              icon={<TrendingDown className="w-4 h-4" />} 
              iconColor="text-blue-400" 
              borderColor="border-t-blue-500" 
@@ -194,7 +208,7 @@ export default function InterventionsTabContent() {
         <motion.div variants={itemVariants}>
           <MetricCard 
              title="Placement-Ready" 
-             value="0" 
+             value={loading ? "..." : (summaryData?.placement_ready !== undefined ? summaryData.placement_ready : 0)} 
              icon={<Target className="w-4 h-4" />} 
              iconColor="text-emerald-500" 
              borderColor="border-t-emerald-500" 
