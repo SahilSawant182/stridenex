@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { CommunityCard } from "@/components/dashboards/shared/CommunityCard";
 import { FeedCard } from "@/components/dashboards/shared/FeedCard";
@@ -51,7 +52,7 @@ const getFallbackIcon = (name: string, type: string) => {
   if (lower.includes("research") || lower.includes("ml") || lower.includes("ai")) return "🧠";
   if (lower.includes("placement") || lower.includes("job") || lower.includes("career")) return "💼";
   if (lower.includes("general")) return "💬";
-  
+
   if (type === "Private") return "🔒";
   return "🌐";
 };
@@ -130,6 +131,7 @@ const CommunityCardSkeleton = () => (
 );
 
 export default function CommunityTabContent() {
+  const router = useRouter();
   const [communities, setCommunities] = useState<any[]>([]);
   const [joinedCommunities, setJoinedCommunities] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -176,13 +178,51 @@ export default function CommunityTabContent() {
     fetchChannels();
   }, []);
 
-  const handleJoinCommunity = (communityId: string) => {
+  const handleJoinCommunity = async (communityId: string) => {
     if (joinedCommunities.includes(communityId)) {
-      setJoinedCommunities((prev) => prev.filter((id) => id !== communityId));
-      showToast("Left community successfully", "info");
-    } else {
+      router.push(`/student/community/${communityId}`);
+      return;
+    }
+
+    try {
+      const apiKey =
+        typeof window !== "undefined"
+          ? localStorage.getItem("apiKey")
+          : null;
+
+      const apiSecret =
+        typeof window !== "undefined"
+          ? localStorage.getItem("apiSecret")
+          : null;
+
+      const response = await fetch(
+        "https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.raven.join_channel",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `token ${apiKey}:${apiSecret}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            channel_id: communityId,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      console.log("Status:", response.status);
+      console.log("Response:", data);
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed");
+      }
+
       setJoinedCommunities((prev) => [...prev, communityId]);
-      showToast("Successfully joined the community!", "success");
+      showToast("Successfully joined!", "success");
+      router.push(`/student/community/${communityId}`);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -220,14 +260,14 @@ export default function CommunityTabContent() {
 
       {/* Communities Grid */}
       <motion.div variants={item}>
-        <CardHeader 
-          title="Popular Communities" 
+        <CardHeader
+          title="Popular Communities"
           icon={<span className="text-xl">🌟</span>}
           action={{ label: "Browse All" }}
           border={false}
           className="pb-2"
         />
-        
+
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mt-4">
             <CommunityCardSkeleton />
@@ -269,8 +309,8 @@ export default function CommunityTabContent() {
 
       {/* Community Feed Section */}
       <motion.div variants={item} className="mt-8">
-        <CardHeader 
-          title="Community Feed" 
+        <CardHeader
+          title="Community Feed"
           icon={<span className="text-xl">📰</span>}
           action={{ label: "View All" }}
           border={false}
