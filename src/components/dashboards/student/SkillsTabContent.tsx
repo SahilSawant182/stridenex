@@ -135,6 +135,44 @@ export default function SkillsTabContent() {
     }
   };
 
+  const handleVerifySkillDirect = async (skillName: string, level: string) => {
+    if (isSubmitting) return;
+    try {
+      setIsSubmitting(true);
+      const studentEmail = localStorage.getItem("currentUser") || "";
+      if (!studentEmail) {
+        showToast("Session expired, please login again", "error");
+        return;
+      }
+
+      const response = await getSkillTestQuestions(studentEmail, skillName, level);
+      const data = response?.message || response?.data || response;
+
+      if (data && data.questions && data.questions.length > 0) {
+        setTestQuestions(data.questions);
+        setTestSessionId(data.session_id);
+        setTestSkill(skillName);
+        setTestLevel(level);
+        setUserAnswers({});
+        setCurrentQuestionIndex(0);
+        setTestResult(null);
+
+        // Close Add New Skill modal if open
+        setIsModalOpen(false);
+        // Open Test modal
+        setIsTestModalOpen(true);
+        showToast("Skill test questions loaded successfully!", "success");
+      } else {
+        showToast("No test questions available for this skill and level.", "error");
+      }
+    } catch (err: any) {
+      console.error("Error fetching skill questions:", err);
+      showToast(err?.message || "Failed to load skill test questions", "error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleCreateSkill = async (formData: any) => {
     if (isSubmitting) return;
     try {
@@ -394,7 +432,16 @@ export default function SkillsTabContent() {
                           <span className="text-[11px] font-bold">Verified</span>
                         </div>
                       ) : (
-                        <span className="text-slate-400 font-medium text-[11px] px-2 py-1">Pending</span>
+                        <Button
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleVerifySkillDirect(row.name, row.level);
+                          }}
+                          className="bg-orange-500 hover:bg-orange-600 text-white h-7 px-3 rounded-lg text-[10px] font-bold shadow-sm shadow-orange-500/20 active:scale-95 transition-all"
+                        >
+                          Verify Skill
+                        </Button>
                       )}
                     </td>
                     <td className="py-4 px-6 text-slate-500 text-xs font-medium">{row.lastDemo}</td>

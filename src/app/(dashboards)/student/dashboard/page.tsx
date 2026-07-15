@@ -11,7 +11,7 @@ import SkillsWidget from "@/components/dashboards/widgets/SkillsWidget";
 import AlertsWidget from "@/components/dashboards/widgets/AlertsWidget";
 import InternshipsWidget from "@/components/dashboards/widgets/InternshipsWidget";
 import { useAuth } from "@/context/AuthContext";
-import { getStudentSkills, getDashboardStats } from "@/services/student.services";
+import { getStudentSkills, getDashboardStats, getStudentByEmail, getStudentInternshipList } from "@/services/student.services";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -40,6 +40,7 @@ export default function StudentDashboardPage() {
   const { currentUser } = useAuth();
   const [skillsData, setSkillsData] = useState<any[]>([]);
   const [statsData, setStatsData] = useState<any>(null);
+  const [internshipsData, setInternshipsData] = useState<any[]>([]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -95,6 +96,87 @@ export default function StudentDashboardPage() {
       }
     };
     fetchSkills();
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchInternships = async () => {
+      try {
+        let course = null;
+        let department = null;
+        let academicYear = null;
+        try {
+          const studentRes = await getStudentByEmail(currentUser);
+          const profile = studentRes?.message?.data || studentRes?.data || {};
+          course = profile.course || null;
+          department = profile.department || null;
+          academicYear = profile.current_year || profile.academic_year || null;
+        } catch (err) {
+          console.error("Error fetching student profile for dashboard internships:", err);
+        }
+
+        const res = await getStudentInternshipList(currentUser, course, department, academicYear);
+        const dataContainer = (res?.data && typeof res.data === 'object' && !Array.isArray(res.data)) ? res : (res?.message && typeof res.message === 'object' ? res.message : res);
+        const internshipData = dataContainer?.data?.internships || dataContainer?.internships || [];
+        
+        // Match mapping function
+        const mapped = internshipData.slice(0, 3).map((item: any, index: number) => {
+          const matches = [91, 84, 76];
+          const match = matches[index % matches.length];
+          
+          let ringColor = "border-emerald-500";
+          let matchColor = "text-emerald-600";
+          let bgColor = "bg-emerald-50";
+          
+          if (match < 80) {
+            ringColor = "border-orange-500";
+            matchColor = "text-orange-600";
+            bgColor = "bg-orange-50";
+          } else if (match < 90) {
+            ringColor = "border-sky-500";
+            matchColor = "text-sky-600";
+            bgColor = "bg-sky-50";
+          }
+
+          let stipendStr = "Unpaid";
+          if (item.stipend) {
+            const amount = Number(item.stipend);
+            if (amount >= 1000) {
+              stipendStr = `₹${(amount / 1000).toFixed(0)}k/mo`;
+            } else {
+              stipendStr = `₹${amount}/mo`;
+            }
+          }
+
+          let durationStr = "N/A";
+          if (item.duration) {
+            const days = Number(item.duration);
+            if (days >= 30) {
+              durationStr = `${Math.round(days / 30)} mo`;
+            } else {
+              durationStr = `${days} days`;
+            }
+          }
+
+          return {
+            role: item.title || "Internship Role",
+            company: item.industry || "Company Name",
+            match,
+            location: item.location || "Remote",
+            duration: durationStr,
+            stipend: stipendStr,
+            matchColor,
+            ringColor,
+            bgColor
+          };
+        });
+
+        setInternshipsData(mapped);
+      } catch (error) {
+        console.error("Error fetching matching internships:", error);
+      }
+    };
+    fetchInternships();
   }, [currentUser]);
 
   const fallbackSkills = [
@@ -199,7 +281,7 @@ export default function StudentDashboardPage() {
 
       {/* Internships Row */}
       <motion.div variants={item}>
-        <InternshipsWidget />
+        <InternshipsWidget data={internshipsData.length > 0 ? internshipsData : undefined} />
       </motion.div>
     </motion.div>
   );
