@@ -41,6 +41,7 @@ interface ShortVideo {
   authorAvatar: string;
   authorHandle: string;
   tags: string[];
+  description?: string;
   isSaved: boolean;
   videoUrl: string;
   thumbnail?: string;
@@ -494,6 +495,14 @@ export default function ShortsTabContent() {
             likedIdsFromFeed.push(String(item.name));
           }
 
+          let tagsArray: string[] = [];
+          if (Array.isArray(item.tags)) {
+            tagsArray = item.tags;
+          } else if (typeof item.tags === "string" && item.tags.trim() !== "") {
+            tagsArray = item.tags.split(",").map((t: string) => t.trim()).filter(Boolean);
+          }
+          tagsArray = tagsArray.map((t: string) => t.startsWith('#') ? t : `#${t}`);
+
           return {
             id: item.name,
             title: item.title || "Untitled Short",
@@ -503,7 +512,8 @@ export default function ShortsTabContent() {
             author: "StrideNex",
             authorHandle: "@stridenex",
             authorAvatar: authorAvatar,
-            tags: [skill],
+            tags: tagsArray,
+            description: item.description || "",
             isSaved: Boolean(item.is_saved),
             videoUrl: videoUrl,
             thumbnail: thumbnail,
@@ -724,6 +734,11 @@ export default function ShortsTabContent() {
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="font-semibold text-slate-800 text-sm line-clamp-1">{short.title}</h3>
+                      {short.description ? (
+                        <p className="text-xs text-slate-500 line-clamp-2 mt-1" title={short.description}>
+                          {short.description}
+                        </p>
+                      ) : null}
                       <div className="flex items-center gap-2 mt-1">
                         <Avatar className="w-5 h-5">
                           <AvatarFallback className="text-[8px] bg-slate-200 text-slate-600">
@@ -758,13 +773,15 @@ export default function ShortsTabContent() {
                     </div>
                   </div>
 
-                  <div className="flex gap-1">
-                    {short.tags.map((tag) => (
-                      <Badge key={tag} variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-[10px]">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
+                  {short.tags && short.tags.length > 0 && (
+                    <div className="flex gap-1 flex-wrap">
+                      {short.tags.map((tag) => (
+                        <Badge key={tag} variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-[10px]">
+                          {tag.startsWith('#') ? tag : `#${tag}`}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

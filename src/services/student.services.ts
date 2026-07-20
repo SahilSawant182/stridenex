@@ -1027,3 +1027,56 @@ export const getDashboardStats = async (studentEmail: string): Promise<any> => {
     throw error;
   }
 };
+
+/**
+ * Fetch all educational tags.
+ */
+export const getTags = async (): Promise<any> => {
+  try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret) {
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    }
+
+    const response = await apiService.get(
+      "method/stridenex_app.stridenex_app.doctype.educational_short.educational_short.get_tags",
+      { headers }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching tags:", error);
+    throw error;
+  }
+};
+
+/**
+ * Create an educational tag.
+ */
+export const createTag = async (title: string): Promise<any> => {
+  try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret) {
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    }
+
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.educational_short.educational_short.create_tag",
+      { title },
+      { headers }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating tag:", error);
+    throw error;
+  }
+};

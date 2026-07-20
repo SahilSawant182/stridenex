@@ -25,6 +25,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { apiService, BASE_DOMAIN } from "@/services/api.services";
+import { getTags, createTag } from "@/services/student.services";
+import { useToast } from "@/context/ToastContext";
+
 
 interface Post {
   id: string;
@@ -239,6 +242,7 @@ const stripHtml = (html: string) => {
 };
 
 export default function CommunityDiscussionView({ community, onBack }: CommunityDiscussionViewProps) {
+  const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<"categories" | "discussions">("categories");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -248,6 +252,47 @@ export default function CommunityDiscussionView({ community, onBack }: Community
   const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
   const [newPostCategory, setNewPostCategory] = useState("Community");
+
+  const [tagsList, setTagsList] = useState<any[]>([]);
+  const [tagsLoading, setTagsLoading] = useState(true);
+  const [showCreateTagModal, setShowCreateTagModal] = useState(false);
+  const [newTagTitle, setNewTagTitle] = useState("");
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
+
+  const fetchTags = async () => {
+    try {
+      setTagsLoading(true);
+      const res = await getTags();
+      const list = res?.message || res?.data || [];
+      setTagsList(Array.isArray(list) ? list : []);
+    } catch (err) {
+      console.error("Error loading tags list:", err);
+    } finally {
+      setTagsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTags();
+  }, [community?.id]);
+
+  const handleCreateTag = async () => {
+    if (!newTagTitle.trim()) return;
+    try {
+      setIsCreatingTag(true);
+      await createTag(newTagTitle.trim());
+      showToast("Tag created successfully!", "success");
+      setShowCreateTagModal(false);
+      setNewTagTitle("");
+      fetchTags();
+    } catch (err: any) {
+      console.error("Error creating tag:", err);
+      showToast(err?.message || "Failed to create tag", "error");
+    } finally {
+      setIsCreatingTag(false);
+    }
+  };
+
 
   // Initial mockup categories structured like the Open edX screenshot but customized for this community
   const [categoriesData, setCategoriesData] = useState<Record<string, CategoryData>>({
@@ -1007,32 +1052,56 @@ export default function CommunityDiscussionView({ community, onBack }: Community
 
           {/* Tags list (Accordion) */}
           <div className="bg-[#121315] rounded-xl border border-[#1F2023] p-4">
-            <button 
-              onClick={() => setIsTagsExpanded(!isTagsExpanded)}
-              className="flex items-center justify-between w-full text-left"
-            >
+            <div className="flex items-center justify-between w-full">
               <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Tags</h3>
-              <span className="text-xs text-slate-500">{isTagsExpanded ? "▼" : "▶"}</span>
-            </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowCreateTagModal(true);
+                  }}
+                  className="p-1 hover:bg-[#1E2024] rounded text-slate-400 hover:text-white transition-colors"
+                  title="Create Tag"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setIsTagsExpanded(!isTagsExpanded)}
+                  className="text-xs text-slate-500 hover:text-white"
+                >
+                  {isTagsExpanded ? "▼" : "▶"}
+                </button>
+              </div>
+            </div>
             
             {isTagsExpanded && (
               <div className="flex flex-wrap gap-2 mt-3">
-                {["frappe", "erpnext", "erp", "learning", "discussion"].map((tag) => {
-                  const isSelected = selectedTag === tag;
-                  return (
-                    <button
-                      key={tag}
-                      onClick={() => setSelectedTag(isSelected ? null : tag)}
-                      className={`text-[11px] font-bold px-2 py-1 rounded transition-colors ${
-                        isSelected 
-                          ? "bg-[#FF6B00] text-white" 
-                          : "bg-[#1E2024] hover:bg-[#25282E] text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      #{tag}
-                    </button>
-                  );
-                })}
+                {tagsLoading ? (
+                  <span className="text-xs text-slate-500 flex items-center gap-1.5">
+                    <Loader2 className="w-3 h-3 animate-spin text-accent" />
+                    Loading...
+                  </span>
+                ) : tagsList.length === 0 ? (
+                  <span className="text-xs text-slate-500">No tags found.</span>
+                ) : (
+                  tagsList.map((tag) => {
+                    const tagVal = tag.title || tag.name;
+                    const isSelected = selectedTag === tagVal;
+                    return (
+                      <button
+                        key={tag.name}
+                        onClick={() => setSelectedTag(isSelected ? null : tagVal)}
+                        className={`text-[11px] font-bold px-2 py-1 rounded transition-colors ${
+                          isSelected 
+                            ? "bg-[#FF6B00] text-white" 
+                            : "bg-[#1E2024] hover:bg-[#25282E] text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        #{tagVal}
+                      </button>
+                    );
+                  })
+                )}
               </div>
             )}
           </div>
@@ -1102,7 +1171,7 @@ export default function CommunityDiscussionView({ community, onBack }: Community
                         >
                           All Tags
                         </span>
-                        {(categoriesData[selectedCategory]?.subtags || ["frappe", "erpnext", "erp", "learning", "discussion"]).map(tag => (
+                        {(tagsList.length > 0 ? tagsList.map(t => t.title || t.name) : (categoriesData[selectedCategory]?.subtags || ["frappe", "erpnext", "erp", "learning", "discussion"])).map(tag => (
                           <span 
                             key={tag}
                             onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
@@ -1626,6 +1695,53 @@ export default function CommunityDiscussionView({ community, onBack }: Community
                 className="bg-accent hover:bg-accent/90 text-white font-bold"
               >
                 Publish Topic
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Create Tag Modal */}
+      {showCreateTagModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-[#121315] border border-[#28292E] rounded-2xl max-w-sm w-full overflow-hidden shadow-2xl"
+          >
+            <div className="p-6 border-b border-[#1F2023]">
+              <h2 className="font-extrabold text-white text-base">Create New Tag</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tag Title</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. general, help, react"
+                  value={newTagTitle}
+                  onChange={(e) => setNewTagTitle(e.target.value)}
+                  className="w-full bg-[#0E0F10] border border-[#28292E] rounded-xl py-2 px-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-accent transition-colors"
+                />
+              </div>
+            </div>
+            <div className="p-6 bg-[#0E0F10]/50 border-t border-[#1F2023] flex items-center justify-end gap-3">
+              <Button 
+                onClick={() => {
+                  setShowCreateTagModal(false);
+                  setNewTagTitle("");
+                }}
+                variant="ghost"
+                className="text-slate-400 hover:text-white hover:bg-[#1E2024] text-xs"
+                disabled={isCreatingTag}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateTag}
+                className="bg-accent hover:bg-accent/90 text-white font-bold text-xs"
+                disabled={isCreatingTag}
+              >
+                {isCreatingTag ? "Creating..." : "Create Tag"}
               </Button>
             </div>
           </motion.div>
