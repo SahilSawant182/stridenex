@@ -12,6 +12,11 @@ export default function StudentDashboardSubLayout({
 }) {
   const pathname = usePathname();
   const isOverview = pathname === "/student/dashboard" || pathname === "/student/dashboard/";
+  const isShortsPage = pathname.endsWith("/shorts");
+
+  if (isShortsPage) {
+    return <div className="w-full h-full">{children}</div>;
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-12">

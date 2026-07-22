@@ -469,12 +469,14 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { dashboardConfig, type DashboardRole } from "@/config/dashboardNavigation";
+import { usePathname } from "next/navigation";
 
 interface NavbarProps {
   role: DashboardRole;
 }
 
 export default function Navbar({ role }: NavbarProps) {
+  const pathname = usePathname();
   const { currentUser, fullName, logout } = useAuth();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showProfileBox, setShowProfileBox] = useState(false);
@@ -513,18 +515,32 @@ export default function Navbar({ role }: NavbarProps) {
     }
   };
 
+  const isShortsPage = pathname.endsWith("/shorts");
+
   return (
-    <nav className="h-16 bg-white border-b border-slate-200 sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between shadow-sm">
+    <nav className={`h-16 sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between transition-colors duration-300 ${
+      isShortsPage 
+        ? 'bg-[#0f0f0f] border-b border-zinc-800 text-white' 
+        : 'bg-white border-b border-slate-200 text-slate-800 shadow-sm'
+    }`}>
       <div className="flex items-center gap-4">
-        <button className="lg:hidden p-2 text-slate-600 hover:bg-slate-50 rounded-lg">
+        <button className={`lg:hidden p-2 rounded-lg transition-colors ${
+          isShortsPage ? 'text-zinc-400 hover:bg-zinc-800' : 'text-slate-600 hover:bg-slate-50'
+        }`}>
           <Menu className="w-5 h-5" />
         </button>
         <div className="hidden sm:flex relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${
+            isShortsPage ? 'text-zinc-500' : 'text-slate-400'
+          }`} />
           <input
             type="text"
             placeholder={config.searchPlaceholder}
-            className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-full text-sm w-64 focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all"
+            className={`pl-9 pr-4 py-2 rounded-full text-sm w-64 transition-all focus:outline-none focus:ring-1 ${
+              isShortsPage 
+                ? 'bg-zinc-900 border border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-700 focus:ring-zinc-700' 
+                : 'bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:ring-slate-400'
+            }`}
           />
         </div>
       </div>
@@ -535,7 +551,11 @@ export default function Navbar({ role }: NavbarProps) {
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setUserMenuOpen(!userMenuOpen)}
-            className="flex items-center gap-2 p-1 pl-2 pr-3 bg-slate-50 hover:bg-slate-100 rounded-full border border-slate-200 transition-colors"
+            className={`flex items-center gap-2 p-1 pl-2 pr-3 rounded-full border transition-colors ${
+              isShortsPage 
+                ? 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-200' 
+                : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
+            }`}
           >
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm ${role === 'student' ? 'bg-gradient-to-tr from-accent to-orange-500' :
               role === 'college' ? 'bg-green-600' :
@@ -544,7 +564,7 @@ export default function Navbar({ role }: NavbarProps) {
               }`}>
               {displayName.charAt(0).toUpperCase()}
             </div>
-            <span className="text-sm font-medium text-slate-700 hidden sm:block">
+            <span className={`text-sm font-medium hidden sm:block transition-colors ${isShortsPage ? 'text-zinc-200' : 'text-slate-700'}`}>
               {displayName}
             </span>
           </button>

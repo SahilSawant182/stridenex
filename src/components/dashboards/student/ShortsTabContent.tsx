@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { getShortsFeed, saveShort, unsaveShort, getSavedShorts, toggleLikeShort, addShortComment, getShortComments } from "@/services/student.services";
 import { BASE_DOMAIN } from "@/services/api.services";
 import { useAuth } from "@/context/AuthContext";
@@ -25,7 +25,22 @@ import {
   Heart,
   MessageSquare,
   X,
-  Send
+  Send,
+  ThumbsUp,
+  ThumbsDown,
+  Share2,
+  ChevronUp,
+  ChevronDown,
+  MoreVertical,
+  Maximize2,
+  ListPlus,
+  Ban,
+  Flag,
+  FileText,
+  Sliders,
+  Plus,
+  Compass,
+  Repeat
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
@@ -49,6 +64,8 @@ interface ShortVideo {
   videoUrl: string;
   thumbnail?: string;
   color: string;
+  likes?: string;
+  commentCount?: number;
 }
 
 interface SavedShort {
@@ -240,13 +257,31 @@ const recommendedShorts: RecommendedShort[] = [
 ];
 
 // Video Player Component
-function VideoPlayer({ video, isActive }: { video: ShortVideo; isActive: boolean }) {
-  const [playing, setPlaying] = useState(false);
-  const [muted, setMuted] = useState(true);
+function VideoPlayer({ 
+  video, 
+  isActive, 
+  isMuted, 
+  setIsMuted,
+  playing,
+  setPlaying
+}: { 
+  video: ShortVideo; 
+  isActive: boolean; 
+  isMuted: boolean; 
+  setIsMuted: (m: boolean) => void;
+  playing: boolean;
+  setPlaying: (p: boolean) => void;
+}) {
   const [played, setPlayed] = useState(0);
   const [videoSrc, setVideoSrc] = useState<string>("");
   const [loadingVideo, setLoadingVideo] = useState(false);
   const playerRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (isActive) {
+      setPlaying(true);
+    }
+  }, [isActive]);
 
   useEffect(() => {
     if (!video.videoUrl) return;
@@ -301,7 +336,8 @@ function VideoPlayer({ video, isActive }: { video: ShortVideo; isActive: boolean
     };
   }, [video.videoUrl]);
 
-  const handlePlayPause = () => {
+  const handlePlayPause = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setPlaying(!playing);
   };
 
@@ -310,7 +346,10 @@ function VideoPlayer({ video, isActive }: { video: ShortVideo; isActive: boolean
   };
 
   return (
-    <div className="relative aspect-[9/16] bg-black rounded-lg overflow-hidden group flex items-center justify-center">
+    <div 
+      className="w-full h-full relative flex items-center justify-center cursor-pointer select-none"
+      onClick={handlePlayPause}
+    >
       {loadingVideo && !videoSrc && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
           <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
@@ -323,96 +362,41 @@ function VideoPlayer({ video, isActive }: { video: ShortVideo; isActive: boolean
           width="100%"
           height="100%"
           playing={playing && isActive}
-          muted={muted}
+          muted={isMuted}
           loop={true}
-          playsinline={true}
+          playsInline={true}
           onProgress={handleProgress}
-          style={{ objectFit: 'cover' }}
           config={{
             file: {
               attributes: {
                 controlsList: 'nodownload',
                 disablePictureInPicture: true,
+                style: { objectFit: 'cover', width: '100%', height: '100%', pointerEvents: 'none' },
+                autoPlay: true,
+                muted: true,
+                playsInline: true
               }
             }
           }}
         />
       ) : null}
       
-      {/* Video Overlay Controls */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
-          onClick={handlePlayPause}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/20 backdrop-blur flex items-center justify-center hover:bg-white/30 transition-all"
-        >
-          {playing ? (
-            <Pause className="w-6 h-6 text-white" />
-          ) : (
-            <Play className="w-6 h-6 text-white ml-1" />
-          )}
-        </button>
-
-        <button
-          onClick={() => setMuted(!muted)}
-          className="absolute bottom-4 right-4 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center hover:bg-black/60 transition-all"
-        >
-          {muted ? (
-            <VolumeX className="w-4 h-4 text-white" />
-          ) : (
-            <Volume2 className="w-4 h-4 text-white" />
-          )}
-        </button>
-
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
-          <div
-            className="h-full bg-orange-500 transition-all"
-            style={{ width: `${played * 100}%` }}
-          />
+      {/* Transient Play/Pause Overlay indicator */}
+      {!playing && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/35 z-10 transition-all pointer-events-none">
+          <div className="w-14 h-14 rounded-full bg-black/60 flex items-center justify-center text-white scale-110 transition-transform shadow-lg">
+            <Play className="w-6 h-6 text-white fill-white ml-0.5" />
+          </div>
         </div>
+      )}
+
+      {/* Progress Bar at the very bottom edge of the player */}
+      <div className="absolute bottom-0 left-0 right-0 h-1 bg-zinc-800/80 z-20">
+        <div
+          className="h-full bg-orange-500 transition-all duration-100"
+          style={{ width: `${played * 100}%` }}
+        />
       </div>
-
-      <Badge className="absolute top-2 right-2 bg-black/70 text-white border-0 text-xs">
-        <Clock className="w-3 h-3 mr-1" />
-        {video.duration}
-      </Badge>
-    </div>
-  );
-}
-
-// Horizontal Scroll Component
-function HorizontalScroll({ children }: { children: React.ReactNode }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (scrollRef.current) {
-      const scrollAmount = direction === 'left' ? -400 : 400;
-      scrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
-  };
-
-  return (
-    <div className="relative group">
-      <button
-        onClick={() => scroll('left')}
-        className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity -ml-5"
-      >
-        <ChevronLeft className="w-5 h-5 text-slate-600" />
-      </button>
-      
-      <div
-        ref={scrollRef}
-        className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide scroll-smooth"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-      >
-        {children}
-      </div>
-      
-      <button
-        onClick={() => scroll('right')}
-        className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity -mr-5"
-      >
-        <ChevronRight className="w-5 h-5 text-slate-600" />
-      </button>
     </div>
   );
 }
@@ -442,13 +426,27 @@ export default function ShortsTabContent() {
   const [loading, setLoading] = useState(true);
   const [loadingSaved, setLoadingSaved] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<"all" | "saved">("all");
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
 
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [selectedShort, setSelectedShort] = useState<ShortVideo | null>(null);
   const [commentsList, setCommentsList] = useState<any[]>([]);
-  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsLoading, setCommentsLoading] = useState<boolean>(false);
   const [newCommentText, setNewCommentText] = useState("");
-  const [replyingTo, setReplyingTo] = useState<{ id: string; author: string } | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{ id: string; name?: string; author: string } | null>(null);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isRecommendationsOpen, setIsRecommendationsOpen] = useState(false);
+  const [isSavedListOpen, setIsSavedListOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // YouTube Overlay Menu States
+  const [openMenuShortId, setOpenMenuShortId] = useState<any>(null);
+  const [ambientMode, setAmbientMode] = useState(true);
+  const [showCaptionsShortId, setShowCaptionsShortId] = useState<any>(null);
+  const [showDescriptionShort, setShowDescriptionShort] = useState<ShortVideo | null>(null);
+  const [activePlaying, setActivePlaying] = useState(true);
+  const likedIdsFromFeedOnLoad = useRef<Set<string>>(new Set());
+  const [localCommentCounts, setLocalCommentCounts] = useState<Record<string, number>>({});
 
   const formatComments = (rawList: any[]): any[] => {
     if (!Array.isArray(rawList)) return [];
@@ -466,6 +464,7 @@ export default function ShortsTabContent() {
 
       return {
         id: commentId,
+        name: item.name || item.id || commentId,
         short: item.short,
         content: item.content || item.comment || item.text || "",
         author: authorName,
@@ -544,7 +543,7 @@ export default function ShortsTabContent() {
     if (!newCommentText.trim() || !selectedShort) return;
     const shortId = String(selectedShort.id);
     const contentText = newCommentText.trim();
-    const parentCommentId = replyingTo ? replyingTo.id : "";
+    const parentCommentId = replyingTo ? (replyingTo.name || replyingTo.id) : "";
 
     setNewCommentText("");
     setReplyingTo(null);
@@ -556,6 +555,10 @@ export default function ShortsTabContent() {
         parent_comment: parentCommentId
       });
       showToast("Comment posted!", "success");
+      setLocalCommentCounts(prev => ({
+        ...prev,
+        [shortId]: (prev[shortId] || 0) + 1
+      }));
       await fetchComments(shortId);
     } catch (err: any) {
       console.error("Error posting short comment:", err);
@@ -566,25 +569,25 @@ export default function ShortsTabContent() {
   const renderWebCommentItem = (comment: any, isReply = false) => (
     <div key={comment.id} className={`flex gap-3 ${isReply ? "ml-6 mt-3" : ""}`}>
       <Avatar className={isReply ? "w-6 h-6" : "w-8 h-8"}>
-        <AvatarFallback className="text-xs bg-slate-200 text-slate-700 font-medium">
+        <AvatarFallback className="text-xs bg-zinc-800 text-zinc-300 font-medium">
           {comment.avatar}
         </AvatarFallback>
       </Avatar>
       <div className="flex-1">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-slate-800">{comment.author}</span>
-          <span className="text-[10px] text-slate-400">{comment.time}</span>
+          <span className="text-xs font-bold text-zinc-200">{comment.author}</span>
+          <span className="text-[10px] text-zinc-500">{comment.time}</span>
         </div>
-        <p className="text-xs text-slate-600 mt-0.5">{comment.content}</p>
+        <p className="text-xs text-zinc-300 mt-0.5">{comment.content}</p>
         <button
-          onClick={() => setReplyingTo({ id: comment.id, author: comment.author })}
-          className="text-[11px] font-semibold text-slate-400 hover:text-orange-500 mt-1 flex items-center gap-1 transition-colors"
+          onClick={() => setReplyingTo({ id: comment.id, name: comment.name || comment.id, author: comment.author })}
+          className="text-[11px] font-semibold text-zinc-500 hover:text-orange-500 mt-1 flex items-center gap-1 transition-colors"
         >
           <MessageSquare className="w-3 h-3" />
           Reply
         </button>
         {comment.replies && comment.replies.length > 0 && (
-          <div className="space-y-3 mt-2 pl-2 border-l-2 border-slate-100">
+          <div className="space-y-3 mt-2 pl-2 border-l border-zinc-800">
             {comment.replies.map((reply: any) => renderWebCommentItem(reply, true))}
           </div>
         )}
@@ -661,6 +664,8 @@ export default function ShortsTabContent() {
             category: skill,
             duration: item.duration_display || `${item.duration_seconds || 30} sec`,
             views: item.views_display || `${item.view_count || 0}`,
+            likes: item.likes_count !== undefined ? String(item.likes_count) : (item.likes !== undefined ? String(item.likes) : "0"),
+            commentCount: item.comment_count !== undefined ? Number(item.comment_count) : (item.comments_count !== undefined ? Number(item.comments_count) : 0),
             author: "StrideNex",
             authorHandle: "@stridenex",
             authorAvatar: authorAvatar,
@@ -673,6 +678,21 @@ export default function ShortsTabContent() {
           };
         });
         setShortsList(mapped);
+
+        likedIdsFromFeedOnLoad.current = new Set(likedIdsFromFeed);
+        const counts: Record<string, number> = {};
+        const likesMap: Record<string, number> = {};
+        rawShorts.forEach((item: any) => {
+          const commentCountVal = item.comment_count !== undefined 
+            ? item.comment_count 
+            : (item.comments_count !== undefined 
+                ? item.comments_count 
+                : (item.comments !== undefined && Array.isArray(item.comments) ? item.comments.length : 0));
+          counts[String(item.name)] = Number(commentCountVal);
+          likesMap[String(item.name)] = item.likes_count !== undefined ? Number(item.likes_count) : (item.likes !== undefined ? Number(item.likes) : 0);
+        });
+        setLocalCommentCounts(counts);
+        setLikeCounts(likesMap);
         if (savedIdsFromFeed.length > 0) {
           setSavedItems(prev => {
             const combined = new Set([...prev, ...savedIdsFromFeed]);
@@ -764,6 +784,18 @@ export default function ShortsTabContent() {
       });
       console.log("Toggle like API response:", res);
 
+      const serverLikeCount = res?.message?.like_count !== undefined 
+        ? Number(res.message.like_count) 
+        : (res?.data?.message?.like_count !== undefined 
+            ? Number(res.data.message.like_count) 
+            : null);
+      if (serverLikeCount !== null) {
+        setLikeCounts(prev => ({
+          ...prev,
+          [String(id)]: serverLikeCount
+        }));
+      }
+
       if (!isAlreadyLiked) {
         showToast("Short liked!", "success");
       } else {
@@ -800,339 +832,746 @@ export default function ShortsTabContent() {
     ? shortsList.filter(short => savedItems.map(String).includes(String(short.id)))
     : shortsList;
 
+  // Set default active video on load/filter
+  useEffect(() => {
+    if (displayedShorts.length > 0 && !activeVideoId) {
+      setActiveVideoId(displayedShorts[0].id);
+    }
+  }, [displayedShorts, activeVideoId]);
+
+  useEffect(() => {
+    setActivePlaying(true);
+    setOpenMenuShortId(null);
+  }, [activeVideoId]);
+
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      setOpenMenuShortId(null);
+    };
+    if (openMenuShortId !== null) {
+      document.addEventListener("click", handleGlobalClick);
+    }
+    return () => {
+      document.removeEventListener("click", handleGlobalClick);
+    };
+  }, [openMenuShortId]);
+
+  // Set up intersection observer for vertical snapping scroll
+  useEffect(() => {
+    if (loading || (activeSubTab === "saved" && loadingSaved)) return;
+
+    const observerOptions = {
+      root: containerRef.current,
+      rootMargin: "0px",
+      threshold: 0.6,
+    };
+
+    let timeoutId: NodeJS.Timeout;
+
+    const observerCallback = (entries: IntersectionObserverEntry[]) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const id = entry.target.getAttribute("data-short-id");
+          if (id) {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+              setActiveVideoId(id);
+            }, 100);
+          }
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    // Give DOM a small moment to render
+    const t = setTimeout(() => {
+      displayedShorts.forEach((short) => {
+        const el = document.getElementById(`short-card-${short.id}`);
+        if (el) observer.observe(el);
+      });
+    }, 150);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(timeoutId);
+      clearTimeout(t);
+    };
+  }, [displayedShorts, loading, activeSubTab, loadingSaved]);
+
+  const handleFullscreen = (id: any) => {
+    const el = document.getElementById(`player-wrapper-${id}`);
+    if (el) {
+      if (!document.fullscreenElement) {
+        el.requestFullscreen().catch((err) => {
+          console.error("Error enabling fullscreen:", err);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+  };
+
+  const handleShare = async (videoUrl: string) => {
+    const shareUrl = videoUrl || window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'StrideNex Short',
+          url: shareUrl,
+        });
+        return;
+      } catch (err) {
+        console.log('Share error, falling back to copy:', err);
+      }
+    }
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        showToast("Link copied to clipboard!", "success");
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = shareUrl;
+        textarea.style.position = "fixed";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        showToast("Link copied to clipboard!", "success");
+      }
+    } catch (err) {
+      showToast("Failed to copy link.", "error");
+    }
+  };
+
+  const getLikesCount = (short: ShortVideo) => {
+    if (likeCounts[String(short.id)] !== undefined) {
+      return likeCounts[String(short.id)];
+    }
+    const originallyLiked = likedIdsFromFeedOnLoad.current.has(String(short.id));
+    const isCurrentlyLiked = likedItems.includes(String(short.id));
+    const baseLikes = parseInt(short.likes || "0") || 0;
+    
+    if (originallyLiked && !isCurrentlyLiked) {
+      return Math.max(0, baseLikes - 1);
+    } else if (!originallyLiked && isCurrentlyLiked) {
+      return baseLikes + 1;
+    }
+    return baseLikes;
+  };
+
   return (
-    <motion.div
-      variants={container}
-      initial="hidden"
-      animate="show"
-      className="space-y-8 pb-8"
-    >
-      {/* Header */}
-      <motion.div variants={item}>
-        <h1 className="text-2xl font-bold text-slate-800">Study Shorts</h1>
-        <p className="text-slate-500 mt-1">30-second skill videos — swipe, learn, level up every day</p>
-      </motion.div>
+    <div className="relative h-[calc(100vh-4rem)] overflow-hidden bg-[#0f0f0f] text-white flex flex-col font-sans select-none">
+      <style>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none !important;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
+        }
+      `}</style>
 
-      {/* Sub Tab Bar */}
-      <motion.div variants={item} className="flex gap-4 border-b border-slate-200">
+
+
+      {/* Top Right Floating Toolbar Actions */}
+      <div className="absolute top-4 right-6 flex items-center gap-3.5 z-30">
         <button
-          onClick={() => setActiveSubTab("all")}
-          className={`pb-3 px-2 text-sm font-semibold transition-all relative ${
-            activeSubTab === "all"
-              ? "text-orange-500 font-bold"
-              : "text-slate-500 hover:text-slate-800"
-          }`}
+          onClick={() => setIsRecommendationsOpen(true)}
+          className="flex items-center gap-1.5 px-4 py-2 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 rounded-full text-xs font-bold text-zinc-200 hover:text-white hover:scale-105 active:scale-95 transition-all shadow-xl backdrop-blur-md"
         >
-          All Shorts
-          {activeSubTab === "all" && (
-            <motion.div layoutId="activeWebSubTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
-          )}
+          <Sparkles className="w-3.5 h-3.5 text-orange-400" />
+          <span>Gaps & Recommendations</span>
         </button>
         <button
-          onClick={() => {
-            setActiveSubTab("saved");
-            fetchSaved(); // Call API ONLY when user goes to this section
-          }}
-          className={`pb-3 px-2 text-sm font-semibold transition-all relative ${
-            activeSubTab === "saved"
-              ? "text-orange-500 font-bold"
-              : "text-slate-500 hover:text-slate-800"
-          }`}
+          onClick={() => setIsSavedListOpen(true)}
+          className="flex items-center gap-1.5 px-4 py-2 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 rounded-full text-xs font-bold text-zinc-200 hover:text-white hover:scale-105 active:scale-95 transition-all shadow-xl backdrop-blur-md"
         >
-          Saved Shorts
-          {activeSubTab === "saved" && (
-            <motion.div layoutId="activeWebSubTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-orange-500" />
-          )}
+          <Bookmark className="w-3.5 h-3.5 text-orange-400" />
+          <span>Saved List</span>
         </button>
-      </motion.div>
+      </div>
 
-      {/* Trending Videos - Horizontal Scroll */}
-      <motion.div variants={item}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-orange-500" />
-            <h2 className="text-lg font-semibold text-slate-800">
-              {activeSubTab === "all" ? "Trending" : "Saved Shorts"}
-            </h2>
-          </div>
-          <Button variant="ghost" size="sm" className="text-slate-500 hover:text-orange-600">
-            View All
-          </Button>
+      {/* Vertical Snapping Feed Container */}
+      {loading || (activeSubTab === "saved" && loadingSaved) ? (
+        <div className="flex-1 flex flex-col justify-center items-center h-full bg-[#0f0f0f]">
+          <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-zinc-500 text-xs mt-4 font-semibold tracking-wider uppercase">Loading Shorts...</p>
         </div>
+      ) : displayedShorts.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center h-full p-8 text-center bg-[#0f0f0f]">
+          <Sparkles className="w-12 h-12 text-zinc-700 mb-4 animate-pulse" />
+          <p className="text-zinc-400 font-bold text-base">
+            {activeSubTab === "all" ? "No study shorts available yet." : "No saved shorts yet."}
+          </p>
+          <p className="text-zinc-650 text-zinc-500 text-xs mt-1.5">Check back later or save shorts from the home feed</p>
+        </div>
+      ) : (
+        <div 
+          ref={containerRef}
+          className="w-full flex-1 overflow-y-auto snap-y snap-mandatory scroll-smooth flex flex-col items-center hide-scrollbar select-none"
+          style={{ 
+            scrollbarWidth: 'none', 
+            msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch',
+            height: '100%'
+          }}
+        >
+          {displayedShorts.map((short) => {
+            const isActive = activeVideoId === short.id;
+            const isLiked = likedItems.includes(String(short.id));
+            const isSaved = savedItems.includes(String(short.id));
 
-        {loading || (activeSubTab === "saved" && loadingSaved) ? (
-          <div className="flex justify-center items-center py-20">
-            <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        ) : displayedShorts.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-xl border border-slate-100 shadow-sm flex flex-col items-center justify-center">
-            <Sparkles className="w-10 h-10 text-slate-300 mb-2" />
-            <p className="text-slate-400 font-medium">
-              {activeSubTab === "all" ? "No study shorts available yet." : "No saved shorts yet."}
-            </p>
-          </div>
-        ) : (
-          <HorizontalScroll>
-            {displayedShorts.map((short) => (
+            return (
               <div
                 key={short.id}
-                className="w-[280px] flex-shrink-0"
-                onMouseEnter={() => setActiveVideoId(short.id)}
-                onMouseLeave={() => setActiveVideoId(null)}
+                id={`short-card-${short.id}`}
+                data-short-id={short.id}
+                className="w-full h-full flex-shrink-0 flex items-center justify-center snap-start relative py-4 lg:py-6"
+                style={{ height: 'calc(100vh - 4rem)' }}
               >
-                <div className="space-y-3">
-                  <VideoPlayer video={short} isActive={activeVideoId === short.id} />
-                  
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-semibold text-slate-800 text-sm line-clamp-1">{short.title}</h3>
-                      {short.description ? (
-                        <p className="text-xs text-slate-500 line-clamp-2 mt-1" title={short.description}>
-                          {short.description}
-                        </p>
-                      ) : null}
-                      <div className="flex items-center gap-2 mt-1">
-                        <Avatar className="w-5 h-5">
-                          <AvatarFallback className="text-[8px] bg-slate-200 text-slate-600">
+                {/* Ambient Mode Backdrop Glow */}
+                {ambientMode && (
+                  <div className="absolute inset-0 w-full h-full flex items-center justify-center opacity-30 blur-[120px] pointer-events-none z-0">
+                    <div 
+                      className="w-[360px] aspect-[9/16] rounded-full transition-all duration-1000 bg-orange-500/80"
+                      style={{
+                        background: 'radial-gradient(circle, rgba(249,115,22,0.8) 0%, rgba(249,115,22,0) 70%)'
+                      }}
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center justify-center w-full max-w-4xl h-full px-4 relative z-10">
+                  {/* Relative container matching card size to align actions panel at the bottom right */}
+                  <div className="relative aspect-[9/16] h-full max-h-[720px] flex items-end">
+                    {/* Centered Video Player Card */}
+                    <div 
+                      id={`player-wrapper-${short.id}`}
+                      className="w-full h-full rounded-2xl overflow-hidden bg-black border border-zinc-800 shadow-2xl flex items-center justify-center group animate-fadeIn"
+                    >
+                    <VideoPlayer 
+                      video={short} 
+                      isActive={isActive} 
+                      isMuted={isMuted} 
+                      setIsMuted={setIsMuted}
+                      playing={activePlaying}
+                      setPlaying={setActivePlaying}
+                    />
+
+                    {/* Video Header Controls overlay */}
+                    <div className="absolute top-0 inset-x-0 h-20 bg-gradient-to-b from-black/70 to-transparent p-4 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity z-20 pointer-events-auto">
+                      {/* Top Left: Play/Pause and Volume controls */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActivePlaying(!activePlaying);
+                          }}
+                          className="w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition-all backdrop-blur-sm shadow-md"
+                          title={activePlaying ? "Pause" : "Play"}
+                        >
+                          {activePlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white ml-0.5" />}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsMuted(!isMuted);
+                          }}
+                          className="w-9 h-9 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition-all backdrop-blur-sm shadow-md"
+                          title={isMuted ? "Unmute" : "Mute"}
+                        >
+                          {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                        </button>
+                      </div>
+
+                      {/* Top Right: Three-dots and Floating Options Menu */}
+                      <div className="flex items-center gap-2 relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuShortId(openMenuShortId === short.id ? null : short.id);
+                          }}
+                          className={`w-9 h-9 rounded-full flex items-center justify-center transition-all backdrop-blur-sm shadow-md ${
+                            openMenuShortId === short.id 
+                              ? 'bg-orange-500 text-white' 
+                              : 'bg-black/40 hover:bg-black/60 text-white'
+                          }`}
+                          title="Options"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+
+                        {openMenuShortId === short.id && (
+                          <div 
+                            className="absolute right-0 top-11 bg-white rounded-xl py-1.5 shadow-2xl z-40 text-slate-800 pointer-events-auto border border-slate-200/85 w-44 animate-fadeIn"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {/* Options List */}
+                            <div className="flex flex-col">
+                              {/* Saved / Unsave item */}
+                              <button
+                                onClick={() => {
+                                  toggleSave(short.id);
+                                  setOpenMenuShortId(null);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 transition-colors text-xs font-semibold text-slate-700"
+                              >
+                                {isSaved ? (
+                                  <BookmarkCheck className="w-4 h-4 text-orange-500" />
+                                ) : (
+                                  <Bookmark className="w-4 h-4 text-slate-500" />
+                                )}
+                                <span>Saved</span>
+                              </button>
+
+                              {/* Add to Playlist */}
+                              <button
+                                onClick={() => {
+                                  toggleSave(short.id);
+                                  setOpenMenuShortId(null);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 transition-colors text-xs font-semibold text-slate-700"
+                              >
+                                <Plus className="w-4 h-4 text-slate-500" />
+                                <span>Add to Playlist</span>
+                              </button>
+
+                              {/* Not Interested */}
+                              <button
+                                onClick={() => {
+                                  showToast("We will recommend fewer videos like this.", "success");
+                                  setOpenMenuShortId(null);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 transition-colors text-xs font-semibold text-slate-700"
+                              >
+                                <Compass className="w-4 h-4 text-slate-500" />
+                                <span>Not Interested</span>
+                              </button>
+
+                              <div className="h-[1px] bg-slate-100 my-1" />
+
+                              {/* Report Video */}
+                              <button
+                                onClick={() => {
+                                  showToast("Thank you. Video has been flagged for review.", "info");
+                                  setOpenMenuShortId(null);
+                                }}
+                                className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 transition-colors text-xs font-semibold text-red-500"
+                              >
+                                <X className="w-4 h-4 text-red-500" />
+                                <span>Report Video</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bottom-left Details Overlay */}
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-6 pt-20 flex flex-col justify-end text-white z-20 pointer-events-none">
+                      {/* Author/Creator details */}
+                      <div className="flex items-center gap-2.5 mb-3 pointer-events-auto">
+                        <Avatar className="w-9 h-9 border border-white/20 shadow-md">
+                          <AvatarFallback className="text-xs bg-orange-500 text-white font-bold">
                             {short.authorAvatar}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-xs text-slate-500">{short.authorHandle}</span>
-                        <span className="text-xs text-slate-300">•</span>
-                        <Eye className="w-3 h-3 text-slate-400" />
-                        <span className="text-xs text-slate-500">{short.views}</span>
+                        <span className="text-sm font-bold tracking-wide text-zinc-100 drop-shadow-sm">{short.authorHandle}</span>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => toggleLike(short.id)}
-                        className="text-slate-400 hover:text-red-500 transition-colors"
-                      >
-                        <Heart 
-                          className={`w-4 h-4 transition-all ${likedItems.includes(String(short.id)) ? 'fill-red-500 text-red-500' : 'text-slate-400'}`} 
-                        />
-                      </button>
-                      <button
-                        onClick={() => handleOpenComments(short)}
-                        className="text-slate-400 hover:text-blue-500 transition-colors"
-                        title="Comments"
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => toggleSave(short.id)}
-                        className="text-slate-400 hover:text-orange-500 transition-colors"
-                      >
-                        {savedItems.includes(String(short.id)) ? (
-                          <BookmarkCheck className="w-4 h-4 fill-orange-500 text-orange-500" />
-                        ) : (
-                          <Bookmark className="w-4 h-4" />
-                        )}
-                      </button>
+ 
+                      {/* Video Title and Description */}
+                      <h3 className="font-semibold text-sm text-zinc-100 line-clamp-2 mb-2 leading-snug pointer-events-auto select-text drop-shadow">
+                        {short.title}
+                      </h3>
+                      {short.description && (
+                        <p className="text-xs text-zinc-300 line-clamp-2 mb-3.5 leading-relaxed pointer-events-auto select-text drop-shadow-sm">
+                          {short.description}
+                        </p>
+                      )}
+ 
+                      {/* Video Tags */}
+                      {short.tags && short.tags.length > 0 && (
+                        <div className="flex gap-1.5 flex-wrap pointer-events-auto">
+                          {short.tags.map((tag) => (
+                            <span key={tag} className="text-xs font-semibold text-orange-400 hover:text-orange-500 hover:underline cursor-pointer transition-all drop-shadow-sm">
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  {short.tags && short.tags.length > 0 && (
-                    <div className="flex gap-1 flex-wrap">
-                      {short.tags.map((tag) => (
-                        <Badge key={tag} variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-[10px]">
-                          {tag.startsWith('#') ? tag : `#${tag}`}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </HorizontalScroll>
-        )}
-      </motion.div>
-
-      {/* Two Column Layout - Saved & Recommended */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
-        {/* Left Column - Saved Shorts */}
-        <motion.div variants={item} className="lg:col-span-1">
-          <BaseCard className="border-slate-200 sticky top-24">
-            <div className="p-5">
-              <h3 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                <Bookmark className="w-4 h-4 text-orange-500" />
-                Saved Shorts
-              </h3>
-              <div className="space-y-4">
-                {savedShortsList.length === 0 ? (
-                  <p className="text-xs text-slate-400 font-medium">No saved shorts yet.</p>
-                ) : (
-                  savedShortsList.map((saved) => (
-                    <div key={saved.id} className="flex items-start gap-3 group cursor-pointer">
-                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-lg shrink-0">
-                        {saved.icon}
+ 
+                    {/* Right Side Vertical Action Panel (aligned to bottom right of video card) */}
+                    <div className="absolute left-full ml-4 bottom-0 flex flex-col items-center gap-2.5 pb-4 z-10 shrink-0 select-none">
+                      {/* Like Button */}
+                      <div className="flex flex-col items-center">
+                        <button
+                          onClick={() => toggleLike(short.id)}
+                          className="w-11 h-11 rounded-full bg-zinc-800/60 hover:bg-zinc-700/80 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl"
+                        >
+                          <Heart className={`w-5 h-5 ${isLiked ? 'fill-white text-white' : 'text-white'}`} />
+                        </button>
+                        <span className="text-[11px] font-bold mt-1 text-zinc-300 tracking-wide drop-shadow-sm">{getLikesCount(short)}</span>
                       </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-slate-800 group-hover:text-orange-600 transition-colors">
-                          {saved.title}
-                        </p>
-                        <p className="text-xs text-slate-400 mt-1">{saved.savedDate}</p>
+
+                      {/* Comments Button */}
+                      <div className="flex flex-col items-center">
+                        <button
+                          onClick={() => handleOpenComments(short)}
+                          className="w-11 h-11 rounded-full bg-zinc-800/60 hover:bg-zinc-700/80 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl"
+                        >
+                          <MessageSquare className="w-5 h-5 text-white" />
+                        </button>
+                        <span className="text-[11px] font-bold mt-1 text-zinc-300 tracking-wide drop-shadow-sm">
+                          {localCommentCounts[String(short.id)] !== undefined ? localCommentCounts[String(short.id)] : short.commentCount}
+                        </span>
+                      </div>
+
+                      {/* Share Button */}
+                      <div className="flex flex-col items-center">
+                        <button
+                          onClick={() => handleShare(short.videoUrl)}
+                          className="w-11 h-11 rounded-full bg-zinc-800/60 hover:bg-zinc-700/80 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl"
+                        >
+                          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z" />
+                          </svg>
+                        </button>
+                        <span className="text-[11px] font-bold mt-1 text-zinc-300 tracking-wide drop-shadow-sm">Share</span>
+                      </div>
+
+                      {/* Save Button */}
+                      <div className="flex flex-col items-center">
+                        <button
+                          onClick={() => toggleSave(short.id)}
+                          className="w-11 h-11 rounded-full bg-zinc-800/60 hover:bg-zinc-700/80 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl"
+                        >
+                          <Bookmark className={`w-5 h-5 ${isSaved ? 'fill-white text-white' : 'text-white'}`} />
+                        </button>
+                        <span className="text-[11px] font-bold mt-1 text-zinc-300 tracking-wide drop-shadow-sm">
+                          {isSaved ? 'Saved' : 'Save'}
+                        </span>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
-              <Button variant="ghost" size="sm" className="w-full mt-4 text-xs text-slate-500 hover:text-orange-600">
-                View All Saved
-              </Button>
-            </div>
-          </BaseCard>
-        </motion.div>
-
-        {/* Right Column - Recommended for Your Gaps - Table Style */}
-        <motion.div variants={item} className="lg:col-span-2">
-          <BaseCard className="border-slate-200 overflow-hidden">
-            <div className="p-5 border-b border-slate-100 bg-gradient-to-r from-orange-50 to-amber-50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-orange-500" />
-                  <h3 className="text-base font-bold text-slate-800">Recommended for Your Gaps</h3>
+                  </div>
                 </div>
-                <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-200">
-                  ML • Feature Engineering • Model Evaluation
-                </Badge>
               </div>
-            </div>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/50">
-                    <th className="py-3 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Short</th>
-                    <th className="py-3 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</th>
-                    <th className="py-3 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Duration</th>
-                    <th className="py-3 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Match</th>
-                    <th className="py-3 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Views</th>
-                    <th className="py-3 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest"></th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm divide-y divide-slate-100">
-                  {recommendedShorts.map((short) => (
-                    <tr key={short.id} className="hover:bg-slate-50/50 transition-colors group cursor-pointer">
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                            <Play className="w-4 h-4 text-orange-600" />
-                          </div>
-                          <span className="font-medium text-slate-800 group-hover:text-orange-600 transition-colors">
-                            {short.title}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">
-                          {short.category}
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-6 text-slate-600">{short.duration}</td>
-                      <td className="py-4 px-6">
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200">
-                          {short.match}
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-6 text-slate-600">{short.views}</td>
-                      <td className="py-4 px-6">
-                        <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-orange-600">
-                          <ChevronRightIcon className="w-4 h-4" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            <div className="p-4 border-t border-slate-100 bg-slate-50/50">
-              <Button variant="ghost" size="sm" className="text-xs text-slate-500 hover:text-orange-600 ml-auto flex items-center gap-1">
-                View All Recommendations
-                <ChevronRightIcon className="w-3 h-3" />
-              </Button>
-            </div>
-          </BaseCard>
-        </motion.div>
-      </div>
-
-      {/* Comments Drawer / Modal */}
-      {isCommentsOpen && selectedShort && (
-        <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/50 backdrop-blur-sm">
-          <motion.div 
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            className="w-full max-w-md h-full bg-white shadow-2xl flex flex-col"
-          >
-            {/* Header */}
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-bold text-slate-800">Comments</h2>
-                <p className="text-xs text-slate-400 line-clamp-1">{selectedShort.title}</p>
-              </div>
-              <button 
-                onClick={() => setIsCommentsOpen(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Comment List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {commentsLoading ? (
-                <div className="flex justify-center py-12">
-                  <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
-                </div>
-              ) : commentsList.length === 0 ? (
-                <div className="text-center py-12 text-slate-400 text-sm">
-                  No comments yet. Be the first to comment!
-                </div>
-              ) : (
-                commentsList.map((comment) => renderWebCommentItem(comment))
-              )}
-            </div>
-
-            {/* Replying Banner */}
-            {replyingTo && (
-              <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-xs text-slate-500">
-                  Replying to <span className="font-bold text-slate-700">@{replyingTo.author}</span>
-                </span>
-                <button onClick={() => setReplyingTo(null)} className="text-slate-400 hover:text-slate-600">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            )}
-
-            {/* Comment Input */}
-            <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-2">
-              <input
-                type="text"
-                placeholder={replyingTo ? `Reply to @${replyingTo.author}...` : "Add a comment..."}
-                value={newCommentText}
-                onChange={(e) => setNewCommentText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handlePostComment();
-                  }
-                }}
-                className="flex-1 text-sm bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-orange-500"
-              />
-              <Button
-                onClick={handlePostComment}
-                disabled={!newCommentText.trim()}
-                className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg px-3"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </div>
-          </motion.div>
+            );
+          })}
         </div>
       )}
-    </motion.div>
+
+      {/* Floating Scroll Snap Navigation Controls */}
+      {!loading && displayedShorts.length > 0 && (
+        <div className="absolute right-8 bottom-8 flex flex-col gap-3.5 z-30">
+          <button
+            onClick={() => {
+              if (containerRef.current) {
+                containerRef.current.scrollBy({
+                  top: -containerRef.current.clientHeight,
+                  behavior: "smooth",
+                });
+              }
+            }}
+            className="w-12 h-12 rounded-full bg-zinc-900/90 hover:bg-zinc-800 text-white flex items-center justify-center shadow-2xl border border-zinc-800 hover:scale-105 active:scale-95 transition-all backdrop-blur-sm"
+            title="Previous Video"
+          >
+            <ChevronUp className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => {
+              if (containerRef.current) {
+                containerRef.current.scrollBy({
+                  top: containerRef.current.clientHeight,
+                  behavior: "smooth",
+                });
+              }
+            }}
+            className="w-12 h-12 rounded-full bg-zinc-900/90 hover:bg-zinc-800 text-white flex items-center justify-center shadow-2xl border border-zinc-800 hover:scale-105 active:scale-95 transition-all backdrop-blur-sm"
+            title="Next Video"
+          >
+            <ChevronDown className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
+      {/* Recommendations Slide-out Drawer */}
+      <AnimatePresence>
+        {isRecommendationsOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "tween", duration: 0.3 }}
+              className="w-full max-w-xl h-full bg-zinc-900 border-l border-zinc-800 text-white shadow-2xl flex flex-col pointer-events-auto"
+            >
+              {/* Header */}
+              <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-orange-500 animate-pulse" />
+                  <h2 className="text-base font-bold">Recommended for Your Gaps</h2>
+                </div>
+                <button 
+                  onClick={() => setIsRecommendationsOpen(false)}
+                  className="p-2 text-zinc-400 hover:text-white rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                <div className="bg-zinc-800/50 rounded-xl p-4 border border-zinc-800 mb-2">
+                  <h4 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2.5">Top Focus Areas</h4>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="bg-orange-500/10 border border-orange-500/25 text-orange-400 text-xs px-2.5 py-1 rounded-md font-semibold">Machine Learning</span>
+                    <span className="bg-orange-500/10 border border-orange-500/25 text-orange-400 text-xs px-2.5 py-1 rounded-md font-semibold">Feature Engineering</span>
+                    <span className="bg-orange-500/10 border border-orange-500/25 text-orange-400 text-xs px-2.5 py-1 rounded-md font-semibold">Model Evaluation</span>
+                  </div>
+                </div>
+
+                <div className="overflow-hidden border border-zinc-800 rounded-xl">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-zinc-800 bg-zinc-900/50">
+                        <th className="py-3 px-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Short</th>
+                        <th className="py-3 px-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Category</th>
+                        <th className="py-3 px-4 text-[10px] font-bold text-zinc-400 uppercase tracking-widest text-right">Match</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-sm divide-y divide-zinc-800/85">
+                      {recommendedShorts.map((short) => (
+                        <tr 
+                          key={short.id} 
+                          className="hover:bg-zinc-800/30 transition-colors group cursor-pointer"
+                          onClick={() => {
+                            const found = shortsList.find(s => String(s.title).toLowerCase() === String(short.title).toLowerCase() || s.category === short.category);
+                            if (found) {
+                              const el = document.getElementById(`short-card-${found.id}`);
+                              if (el) {
+                                el.scrollIntoView({ behavior: 'smooth' });
+                                setActiveVideoId(found.id);
+                              }
+                            }
+                            setIsRecommendationsOpen(false);
+                          }}
+                        >
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-400 group-hover:bg-orange-500 group-hover:text-white transition-all shrink-0">
+                                <Play className="w-3 h-3 fill-current" />
+                              </div>
+                              <span className="font-semibold text-zinc-200 group-hover:text-orange-400 transition-colors line-clamp-1">
+                                {short.title}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span className="text-xs bg-zinc-800 border border-zinc-700 text-zinc-300 px-2 py-0.5 rounded-md font-semibold">
+                              {short.category}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <span className="text-xs text-emerald-400 font-bold">{short.match}</span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Saved List Slide-out Drawer */}
+      <AnimatePresence>
+        {isSavedListOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "tween", duration: 0.3 }}
+              className="w-full max-w-md h-full bg-zinc-900 border-l border-zinc-800 text-white shadow-2xl flex flex-col pointer-events-auto"
+            >
+              {/* Header */}
+              <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bookmark className="w-5 h-5 text-orange-500" />
+                  <h2 className="text-base font-bold">Saved Study Shorts</h2>
+                </div>
+                <button 
+                  onClick={() => setIsSavedListOpen(false)}
+                  className="p-2 text-zinc-400 hover:text-white rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-4">
+                {savedShortsList.length === 0 ? (
+                  <div className="text-center py-12 text-zinc-500 text-sm">
+                    No saved shorts yet.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {savedShortsList.map((saved) => (
+                      <div 
+                        key={saved.id} 
+                        className="flex items-center gap-3.5 p-3.5 bg-zinc-800/30 hover:bg-zinc-800/60 border border-zinc-800 hover:border-zinc-700 rounded-xl group cursor-pointer transition-all"
+                        onClick={() => {
+                          const el = document.getElementById(`short-card-${saved.id}`);
+                          if (el) {
+                            el.scrollIntoView({ behavior: 'smooth' });
+                            setActiveVideoId(saved.id);
+                          } else {
+                            setActiveSubTab("saved");
+                          }
+                          setIsSavedListOpen(false);
+                        }}
+                      >
+                        <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center text-lg shrink-0 group-hover:scale-105 transition-transform border border-zinc-700/50">
+                          {saved.icon}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-zinc-200 group-hover:text-orange-400 transition-colors truncate">
+                            {saved.title}
+                          </p>
+                          <p className="text-xs text-zinc-400 mt-0.5">{saved.category}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Redesigned Dark Comments Drawer */}
+      <AnimatePresence>
+        {isCommentsOpen && selectedShort && (
+          <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "tween", duration: 0.3 }}
+              className="w-full max-w-md h-full bg-zinc-900 border-l border-zinc-800 text-white shadow-2xl flex flex-col pointer-events-auto"
+            >
+              {/* Header */}
+              <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold">Comments</h2>
+                  <p className="text-xs text-zinc-400 line-clamp-1">{selectedShort.title}</p>
+                </div>
+                <button 
+                  onClick={() => setIsCommentsOpen(false)}
+                  className="p-2 text-zinc-400 hover:text-white rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Comment List */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-4.5">
+                {commentsLoading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : commentsList.length === 0 ? (
+                  <div className="text-center py-12 text-zinc-400 text-sm">
+                    No comments yet. Be the first to comment!
+                  </div>
+                ) : (
+                  commentsList.map((comment) => renderWebCommentItem(comment))
+                )}
+              </div>
+
+              {/* Replying Banner */}
+              {replyingTo && (
+                <div className="px-5 py-2.5 bg-zinc-800/80 border-t border-zinc-800 flex items-center justify-between">
+                  <span className="text-xs text-zinc-400">
+                    Replying to <span className="font-bold text-zinc-200">@{replyingTo.author}</span>
+                  </span>
+                  <button onClick={() => setReplyingTo(null)} className="text-zinc-400 hover:text-white">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {/* Comment Input */}
+              <div className="p-5 border-t border-zinc-800 bg-zinc-950 flex gap-2">
+                <input
+                  type="text"
+                  placeholder={replyingTo ? `Reply to @${replyingTo.author}...` : "Add a comment..."}
+                  value={newCommentText}
+                  onChange={(e) => setNewCommentText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handlePostComment();
+                    }
+                  }}
+                  className="flex-1 text-sm bg-zinc-800 border border-zinc-700 rounded-lg px-3.5 py-2 text-white placeholder:text-zinc-500 focus:outline-none focus:border-orange-500"
+                />
+                <Button
+                  onClick={handlePostComment}
+                  disabled={!newCommentText.trim()}
+                  className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg px-4"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Description Modal Overlay */}
+      <AnimatePresence>
+        {showDescriptionShort && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl max-w-md w-full text-zinc-100 shadow-2xl relative"
+            >
+              <button
+                onClick={() => setShowDescriptionShort(null)}
+                className="absolute top-4 right-4 text-zinc-400 hover:text-white p-1 rounded-full bg-zinc-800/80 hover:bg-zinc-800 transition-all pointer-events-auto"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <h3 className="text-base font-bold text-zinc-100 mb-2 mt-1 select-text">
+                {showDescriptionShort.title}
+              </h3>
+              <div className="flex items-center gap-2 mb-4">
+                <Avatar className="w-6 h-6">
+                  <AvatarFallback className="text-[10px] bg-orange-500 text-white font-bold">
+                    {showDescriptionShort.authorAvatar}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-xs font-semibold text-zinc-300 select-text">{showDescriptionShort.authorHandle}</span>
+                <span className="text-zinc-600 text-xs select-none">•</span>
+                <span className="text-zinc-500 text-xs font-medium select-text">{showDescriptionShort.views} views</span>
+              </div>
+              <div className="max-h-60 overflow-y-auto pr-2 text-sm text-zinc-300 leading-relaxed hide-scrollbar select-text whitespace-pre-line">
+                {showDescriptionShort.description || "No description available."}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
