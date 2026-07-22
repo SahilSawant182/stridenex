@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { getShortsFeed, saveShort, unsaveShort, getSavedShorts, toggleLikeShort } from "@/services/student.services";
+import { getShortsFeed, saveShort, unsaveShort, getSavedShorts, toggleLikeShort, addShortComment, getShortComments } from "@/services/student.services";
 import { BASE_DOMAIN } from "@/services/api.services";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -22,7 +22,10 @@ import {
   TrendingUp,
   Sparkles,
   ChevronRight as ChevronRightIcon,
-  Heart
+  Heart,
+  MessageSquare,
+  X,
+  Send
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
@@ -440,6 +443,155 @@ export default function ShortsTabContent() {
   const [loadingSaved, setLoadingSaved] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState<"all" | "saved">("all");
 
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const [selectedShort, setSelectedShort] = useState<ShortVideo | null>(null);
+  const [commentsList, setCommentsList] = useState<any[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [newCommentText, setNewCommentText] = useState("");
+  const [replyingTo, setReplyingTo] = useState<{ id: string; author: string } | null>(null);
+
+  const formatComments = (rawList: any[]): any[] => {
+    if (!Array.isArray(rawList)) return [];
+
+    const mapComment = (item: any): any => {
+      const commentId = String(item.name || item.id || Math.random());
+      const authorEmail = item.comment_by || item.owner || item.user || item.author || "Anonymous";
+      const authorName = authorEmail.includes("@") 
+        ? authorEmail.split("@")[0].split(/[._-]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+        : authorEmail;
+      const initials = authorName.substring(0, 2).toUpperCase() || "AN";
+      const timeStr = item.creation ? item.creation.substring(0, 16) : (item.time || "Just now");
+      
+      const nestedReplies = Array.isArray(item.replies) ? item.replies.map(mapComment) : [];
+
+      return {
+        id: commentId,
+        short: item.short,
+        content: item.content || item.comment || item.text || "",
+        author: authorName,
+        authorEmail: authorEmail,
+        avatar: initials,
+        time: timeStr,
+        parent_comment: item.parent_comment || "",
+        likes: item.like_count ?? item.likes ?? 0,
+        isPinned: Boolean(item.is_pinned),
+        replies: nestedReplies
+      };
+    };
+
+    const isAlreadyNested = rawList.some(item => Array.isArray(item.replies));
+    if (isAlreadyNested) {
+      return rawList.map(mapComment);
+    }
+
+    const map: Record<string, any> = {};
+    const rootComments: any[] = [];
+
+    rawList.forEach((item: any) => {
+      const formatted = mapComment(item);
+      map[formatted.id] = formatted;
+    });
+
+    rawList.forEach((item: any) => {
+      const commentId = String(item.name || item.id);
+      const parentId = item.parent_comment ? String(item.parent_comment) : "";
+      const commentObj = map[commentId];
+
+      if (parentId && map[parentId]) {
+        if (!map[parentId].replies.some((r: any) => r.id === commentId)) {
+          map[parentId].replies.push(commentObj);
+        }
+      } else if (!parentId || !map[parentId]) {
+        if (!rootComments.some((c: any) => c.id === commentId)) {
+          rootComments.push(commentObj);
+        }
+      }
+    });
+
+    return rootComments;
+  };
+
+  const fetchComments = async (shortId: string) => {
+    if (!shortId) return;
+    try {
+      setCommentsLoading(true);
+      const res = await getShortComments(String(shortId));
+      let rawList = [];
+      if (res && Array.isArray(res.message)) {
+        rawList = res.message;
+      } else if (res && Array.isArray(res.data)) {
+        rawList = res.data;
+      } else if (res && res.message && Array.isArray(res.message.data)) {
+        rawList = res.message.data;
+      }
+      const formatted = formatComments(rawList);
+      setCommentsList(formatted);
+    } catch (err) {
+      console.error("Error loading short comments:", err);
+    } finally {
+      setCommentsLoading(false);
+    }
+  };
+
+  const handleOpenComments = (short: ShortVideo) => {
+    setSelectedShort(short);
+    setReplyingTo(null);
+    setIsCommentsOpen(true);
+    fetchComments(String(short.id));
+  };
+
+  const handlePostComment = async () => {
+    if (!newCommentText.trim() || !selectedShort) return;
+    const shortId = String(selectedShort.id);
+    const contentText = newCommentText.trim();
+    const parentCommentId = replyingTo ? replyingTo.id : "";
+
+    setNewCommentText("");
+    setReplyingTo(null);
+
+    try {
+      await addShortComment({
+        short: shortId,
+        content: contentText,
+        parent_comment: parentCommentId
+      });
+      showToast("Comment posted!", "success");
+      await fetchComments(shortId);
+    } catch (err: any) {
+      console.error("Error posting short comment:", err);
+      showToast(err.message || "Failed to post comment", "error");
+    }
+  };
+
+  const renderWebCommentItem = (comment: any, isReply = false) => (
+    <div key={comment.id} className={`flex gap-3 ${isReply ? "ml-6 mt-3" : ""}`}>
+      <Avatar className={isReply ? "w-6 h-6" : "w-8 h-8"}>
+        <AvatarFallback className="text-xs bg-slate-200 text-slate-700 font-medium">
+          {comment.avatar}
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-slate-800">{comment.author}</span>
+          <span className="text-[10px] text-slate-400">{comment.time}</span>
+        </div>
+        <p className="text-xs text-slate-600 mt-0.5">{comment.content}</p>
+        <button
+          onClick={() => setReplyingTo({ id: comment.id, author: comment.author })}
+          className="text-[11px] font-semibold text-slate-400 hover:text-orange-500 mt-1 flex items-center gap-1 transition-colors"
+        >
+          <MessageSquare className="w-3 h-3" />
+          Reply
+        </button>
+        {comment.replies && comment.replies.length > 0 && (
+          <div className="space-y-3 mt-2 pl-2 border-l-2 border-slate-100">
+            {comment.replies.map((reply: any) => renderWebCommentItem(reply, true))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const fetchSaved = async () => {
     if (!currentUser) return;
     try {
@@ -761,6 +913,13 @@ export default function ShortsTabContent() {
                         />
                       </button>
                       <button
+                        onClick={() => handleOpenComments(short)}
+                        className="text-slate-400 hover:text-blue-500 transition-colors"
+                        title="Comments"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => toggleSave(short.id)}
                         className="text-slate-400 hover:text-orange-500 transition-colors"
                       >
@@ -897,6 +1056,83 @@ export default function ShortsTabContent() {
           </BaseCard>
         </motion.div>
       </div>
+
+      {/* Comments Drawer / Modal */}
+      {isCommentsOpen && selectedShort && (
+        <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/50 backdrop-blur-sm">
+          <motion.div 
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            className="w-full max-w-md h-full bg-white shadow-2xl flex flex-col"
+          >
+            {/* Header */}
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-slate-800">Comments</h2>
+                <p className="text-xs text-slate-400 line-clamp-1">{selectedShort.title}</p>
+              </div>
+              <button 
+                onClick={() => setIsCommentsOpen(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Comment List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {commentsLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : commentsList.length === 0 ? (
+                <div className="text-center py-12 text-slate-400 text-sm">
+                  No comments yet. Be the first to comment!
+                </div>
+              ) : (
+                commentsList.map((comment) => renderWebCommentItem(comment))
+              )}
+            </div>
+
+            {/* Replying Banner */}
+            {replyingTo && (
+              <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-xs text-slate-500">
+                  Replying to <span className="font-bold text-slate-700">@{replyingTo.author}</span>
+                </span>
+                <button onClick={() => setReplyingTo(null)} className="text-slate-400 hover:text-slate-600">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {/* Comment Input */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50 flex gap-2">
+              <input
+                type="text"
+                placeholder={replyingTo ? `Reply to @${replyingTo.author}...` : "Add a comment..."}
+                value={newCommentText}
+                onChange={(e) => setNewCommentText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handlePostComment();
+                  }
+                }}
+                className="flex-1 text-sm bg-white border border-slate-200 rounded-lg px-3 py-2 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-orange-500"
+              />
+              <Button
+                onClick={handlePostComment}
+                disabled={!newCommentText.trim()}
+                className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg px-3"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </motion.div>
   );
 }

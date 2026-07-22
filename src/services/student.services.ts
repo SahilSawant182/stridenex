@@ -971,6 +971,67 @@ export const getSavedShorts = async (userEmail: string): Promise<any> => {
 };
 
 /**
+ * Add a comment or reply on an educational short video.
+ * Endpoint: method/stridenex_app.stridenex_app.doctype.short_comment.short_comment.add_comment
+ */
+export const addShortComment = async (payload: { short: string; content: string; parent_comment?: string }): Promise<any> => {
+  try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret) {
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    }
+
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.short_comment.short_comment.add_comment",
+      {
+        short: payload.short,
+        content: payload.content,
+        parent_comment: payload.parent_comment || ""
+      },
+      { headers }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error adding short comment:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch comments for an educational short video.
+ * Endpoint: method/stridenex_app.stridenex_app.doctype.short_comment.short_comment.get_comments
+ */
+export const getShortComments = async (shortId: string): Promise<any> => {
+  try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret) {
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    }
+
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.short_comment.short_comment.get_comments",
+      { short: shortId },
+      { headers }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching short comments:", error);
+    throw error;
+  }
+};
+
+
+/**
  * Fetch student skills snapshot.
  */
 export const getStudentSkills = async (studentEmail: string): Promise<any> => {
