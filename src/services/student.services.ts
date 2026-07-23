@@ -1030,6 +1030,35 @@ export const getShortComments = async (shortId: string): Promise<any> => {
   }
 };
 
+/**
+ * Toggle like/unlike on a short comment.
+ * Endpoint: method/stridenex_app.stridenex_app.doctype.short_comment.short_comment.toggle_like
+ */
+export const toggleLikeComment = async (payload: { comment: string }): Promise<any> => {
+  try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret) {
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    }
+
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.short_comment.short_comment.toggle_like",
+      payload,
+      { headers }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error toggling short comment like:", error);
+    throw error;
+  }
+};
+
+
 
 /**
  * Fetch student skills snapshot.

@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getShortsFeed, saveShort, unsaveShort, getSavedShorts, toggleLikeShort, addShortComment, getShortComments } from "@/services/student.services";
+import { getShortsFeed, saveShort, unsaveShort, getSavedShorts, toggleLikeShort, addShortComment, getShortComments, toggleLikeComment } from "@/services/student.services";
 import { BASE_DOMAIN } from "@/services/api.services";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -473,6 +473,7 @@ export default function ShortsTabContent() {
         time: timeStr,
         parent_comment: item.parent_comment || "",
         likes: item.like_count ?? item.likes ?? 0,
+        isLiked: Boolean(item.is_liked),
         isPinned: Boolean(item.is_pinned),
         replies: nestedReplies
       };
@@ -566,6 +567,89 @@ export default function ShortsTabContent() {
     }
   };
 
+  const updateCommentInList = (list: any[], id: string, updater: (c: any) => any): any[] => {
+    return list.map(c => {
+      if (c.id === id) {
+        return updater(c);
+      }
+      if (c.replies && c.replies.length > 0) {
+        return {
+          ...c,
+          replies: updateCommentInList(c.replies, id, updater)
+        };
+      }
+      return c;
+    });
+  };
+
+  const handleToggleLikeComment = async (commentId: string) => {
+    if (!currentUser) {
+      showToast("Authentication required to like comments.", "warning");
+      return;
+    }
+
+    let currentComment: any = null;
+    const findComment = (list: any[]): boolean => {
+      for (const c of list) {
+        if (c.id === commentId) {
+          currentComment = c;
+          return true;
+        }
+        if (c.replies && c.replies.length > 0) {
+          if (findComment(c.replies)) return true;
+        }
+      }
+      return false;
+    };
+    findComment(commentsList);
+
+    if (!currentComment) return;
+
+    const isAlreadyLiked = currentComment.isLiked;
+
+    // Optimistic UI Update
+    setCommentsList(prev => updateCommentInList(prev, commentId, (c) => ({
+      ...c,
+      isLiked: !isAlreadyLiked,
+      likes: isAlreadyLiked ? Math.max(0, c.likes - 1) : c.likes + 1
+    })));
+
+    try {
+      const res = await toggleLikeComment({ comment: commentId });
+      console.log("Toggle comment like response:", res);
+
+      const serverLikeCount = res?.message?.like_count !== undefined 
+        ? Number(res.message.like_count) 
+        : (res?.data?.message?.like_count !== undefined 
+            ? Number(res.data.message.like_count) 
+            : null);
+
+      const serverIsLiked = res?.message?.is_liked !== undefined
+        ? Boolean(res.message.is_liked)
+        : (res?.data?.message?.is_liked !== undefined
+            ? Boolean(res.data.message.is_liked)
+            : !isAlreadyLiked);
+
+      if (serverLikeCount !== null) {
+        setCommentsList(prev => updateCommentInList(prev, commentId, (c) => ({
+          ...c,
+          likes: serverLikeCount,
+          isLiked: serverIsLiked
+        })));
+      }
+    } catch (err: any) {
+      console.error("Error toggling comment like:", err);
+      showToast(err.message || "Failed to toggle comment like", "error");
+
+      // Revert Optimistic UI Update on failure
+      setCommentsList(prev => updateCommentInList(prev, commentId, (c) => ({
+        ...c,
+        isLiked: isAlreadyLiked,
+        likes: isAlreadyLiked ? c.likes + 1 : Math.max(0, c.likes - 1)
+      })));
+    }
+  };
+
   const renderWebCommentItem = (comment: any, isReply = false) => (
     <div key={comment.id} className={`flex gap-3 ${isReply ? "ml-6 mt-3" : ""}`}>
       <Avatar className={isReply ? "w-6 h-6" : "w-8 h-8"}>
@@ -579,13 +663,24 @@ export default function ShortsTabContent() {
           <span className="text-[10px] text-zinc-500">{comment.time}</span>
         </div>
         <p className="text-xs text-zinc-300 mt-0.5">{comment.content}</p>
-        <button
-          onClick={() => setReplyingTo({ id: comment.id, name: comment.name || comment.id, author: comment.author })}
-          className="text-[11px] font-semibold text-zinc-500 hover:text-orange-500 mt-1 flex items-center gap-1 transition-colors"
-        >
-          <MessageSquare className="w-3 h-3" />
-          Reply
-        </button>
+        <div className="flex items-center gap-3.5 mt-1">
+          <button
+            onClick={() => handleToggleLikeComment(comment.id)}
+            className={`text-[11px] font-semibold flex items-center gap-1 transition-colors ${
+              comment.isLiked ? "text-orange-500" : "text-zinc-500 hover:text-orange-500"
+            }`}
+          >
+            <Heart className={`w-3 h-3 ${comment.isLiked ? "fill-orange-500 text-orange-500" : ""}`} />
+            <span>{comment.likes}</span>
+          </button>
+          <button
+            onClick={() => setReplyingTo({ id: comment.id, name: comment.name || comment.id, author: comment.author })}
+            className="text-[11px] font-semibold text-zinc-500 hover:text-orange-500 flex items-center gap-1 transition-colors"
+          >
+            <MessageSquare className="w-3 h-3" />
+            Reply
+          </button>
+        </div>
         {comment.replies && comment.replies.length > 0 && (
           <div className="space-y-3 mt-2 pl-2 border-l border-zinc-800">
             {comment.replies.map((reply: any) => renderWebCommentItem(reply, true))}
@@ -594,6 +689,7 @@ export default function ShortsTabContent() {
       </div>
     </div>
   );
+
 
   const fetchSaved = async () => {
     if (!currentUser) return;
