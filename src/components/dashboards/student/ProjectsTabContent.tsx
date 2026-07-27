@@ -82,9 +82,13 @@ export default function ProjectsTabContent() {
       const dataContainer = (response?.data && typeof response.data === 'object' && !Array.isArray(response.data)) ? response : (response?.message && typeof response.message === 'object' ? response.message : response);
       const projectData = dataContainer?.data?.projects || dataContainer?.projects || [];
       const stats = dataContainer?.data?.statistics || dataContainer?.statistics || {};
+      const activeProjectsCount = (Array.isArray(projectData) ? projectData : []).filter(
+        (p: any) => p.status === "Active" || p.status === "active" || !p.status
+      ).length;
+
       setProjects(Array.isArray(projectData) ? projectData : []);
       setStatistics({
-        total_projects: stats.total_projects ?? projectData.length,
+        total_projects: activeProjectsCount,
         total_applied: stats.total_applied ?? 0,
         total_completed: stats.total_completed ?? 0,
         total_awarded: stats.total_awarded ?? 0,
@@ -214,7 +218,7 @@ export default function ProjectsTabContent() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
       {[
-          { label: "AVAILABLE PROJECTS", value: (statistics.total_projects || projects.length).toString(), icon: Briefcase, color: "orange" },
+          { label: "AVAILABLE PROJECTS", value: statistics.total_projects.toString(), icon: Briefcase, color: "orange" },
           { label: "APPLIED PROJECTS", value: statistics.total_applied.toString(), icon: Target, color: "blue" },
           { label: "COMPLETED", value: statistics.total_completed.toString(), icon: CheckCircle2, color: "emerald" },
           { label: "AWARDED", value: statistics.total_awarded.toString(), icon: Trophy, color: "purple" },

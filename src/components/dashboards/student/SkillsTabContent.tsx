@@ -1,7 +1,7 @@
 // components/dashboards/student/SkillsTabContent.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { CheckCircle2, ShieldCheck, Award, FileText, Lock, Star, Loader2, Clock, Globe } from "lucide-react";
 import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { SkillRadar } from "@/components/dashboards/shared/RadarChart";
@@ -34,15 +34,6 @@ interface SkillRow {
   lastDemo: string;
 }
 
-// Fallback Mock Data for Radar and Table
-const mockRadarData: RadarData[] = [
-  { subject: 'Python', value: 90, fullMark: 100 },
-  { subject: 'ML', value: 70, fullMark: 100 },
-  { subject: 'SQL', value: 85, fullMark: 100 },
-  { subject: 'Comm', value: 65, fullMark: 100 },
-  { subject: 'Problem', value: 80, fullMark: 100 },
-  { subject: 'Data Viz', value: 75, fullMark: 100 },
-];
 
 const getCategoryStyle = (category: string) => {
   const styles: Record<string, string> = {
@@ -80,6 +71,32 @@ export default function SkillsTabContent() {
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [isSubmittingTest, setIsSubmittingTest] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
+
+  // Map skillRows to Radar data
+  const radarData = useMemo(() => {
+    const mapped = (skillRows || []).slice(0, 6).map(s => {
+      let val = 40;
+      if (s.level === 'Advanced') val = 90;
+      else if (s.level === 'Intermediate') val = 65;
+      else val = 40;
+      return {
+        subject: s.name.length > 8 ? s.name.slice(0, 8) + '..' : s.name,
+        value: val,
+        fullMark: 100
+      };
+    });
+
+    // Ensure at least 3 subjects for proper radar rendering
+    while (mapped.length < 3) {
+      mapped.push({
+        subject: `Skill ${mapped.length + 1}`,
+        value: 0,
+        fullMark: 100
+      });
+    }
+
+    return mapped;
+  }, [skillRows]);
 
   useEffect(() => {
     fetchSkillStats();
@@ -338,7 +355,7 @@ export default function SkillsTabContent() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Skill Radar */}
         <StatsCard title="Skill Radar" className="overflow-hidden">
-          <SkillRadar data={mockRadarData} />
+          <SkillRadar data={radarData} />
         </StatsCard>
 
         {/* Ledger Summary */}

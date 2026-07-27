@@ -446,6 +446,7 @@ export default function ShortsTabContent() {
   const [showDescriptionShort, setShowDescriptionShort] = useState<ShortVideo | null>(null);
   const [activePlaying, setActivePlaying] = useState(true);
   const likedIdsFromFeedOnLoad = useRef<Set<string>>(new Set());
+  const lastFetchedWebShortIdRef = useRef<string | null>(null);
   const [localCommentCounts, setLocalCommentCounts] = useState<Record<string, number>>({});
 
   const formatComments = (rawList: any[]): any[] => {
@@ -517,13 +518,27 @@ export default function ShortsTabContent() {
       setCommentsLoading(true);
       const res = await getShortComments(String(shortId));
       let rawList = [];
-      if (res && Array.isArray(res.message)) {
+      let commentCountVal = 0;
+
+      if (res && res.message && typeof res.message === 'object' && !Array.isArray(res.message)) {
+        rawList = res.message.comments || [];
+        commentCountVal = res.message.comment_count || 0;
+      } else if (res && Array.isArray(res.message)) {
         rawList = res.message;
+        commentCountVal = res.message.length;
       } else if (res && Array.isArray(res.data)) {
         rawList = res.data;
+        commentCountVal = res.data.length;
       } else if (res && res.message && Array.isArray(res.message.data)) {
         rawList = res.message.data;
+        commentCountVal = res.message.data.length;
       }
+
+      setLocalCommentCounts(prev => ({
+        ...prev,
+        [String(shortId)]: commentCountVal
+      }));
+
       const formatted = formatComments(rawList);
       setCommentsList(formatted);
     } catch (err) {
@@ -760,7 +775,11 @@ export default function ShortsTabContent() {
             category: skill,
             duration: item.duration_display || `${item.duration_seconds || 30} sec`,
             views: item.views_display || `${item.view_count || 0}`,
-            likes: item.likes_count !== undefined ? String(item.likes_count) : (item.likes !== undefined ? String(item.likes) : "0"),
+            likes: item.like_count !== undefined 
+              ? String(item.like_count) 
+              : (item.likes_count !== undefined 
+                  ? String(item.likes_count) 
+                  : (item.likes !== undefined ? String(item.likes) : "0")),
             commentCount: item.comment_count !== undefined ? Number(item.comment_count) : (item.comments_count !== undefined ? Number(item.comments_count) : 0),
             author: "StrideNex",
             authorHandle: "@stridenex",
@@ -785,7 +804,11 @@ export default function ShortsTabContent() {
                 ? item.comments_count 
                 : (item.comments !== undefined && Array.isArray(item.comments) ? item.comments.length : 0));
           counts[String(item.name)] = Number(commentCountVal);
-          likesMap[String(item.name)] = item.likes_count !== undefined ? Number(item.likes_count) : (item.likes !== undefined ? Number(item.likes) : 0);
+          likesMap[String(item.name)] = item.like_count !== undefined 
+            ? Number(item.like_count) 
+            : (item.likes_count !== undefined 
+                ? Number(item.likes_count) 
+                : (item.likes !== undefined ? Number(item.likes) : 0));
         });
         setLocalCommentCounts(counts);
         setLikeCounts(likesMap);
@@ -938,7 +961,15 @@ export default function ShortsTabContent() {
   useEffect(() => {
     setActivePlaying(true);
     setOpenMenuShortId(null);
-  }, [activeVideoId]);
+    if (activeVideoId && lastFetchedWebShortIdRef.current !== String(activeVideoId)) {
+      lastFetchedWebShortIdRef.current = String(activeVideoId);
+      const activeShort = displayedShorts.find(s => String(s.id) === String(activeVideoId));
+      if (activeShort) {
+        setSelectedShort(activeShort);
+      }
+      fetchComments(String(activeVideoId));
+    }
+  }, [activeVideoId, displayedShorts]);
 
   useEffect(() => {
     const handleGlobalClick = () => {
@@ -1566,7 +1597,7 @@ export default function ShortsTabContent() {
               {/* Header */}
               <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
                 <div>
-                  <h2 className="text-base font-bold">Comments</h2>
+                  <h2 className="text-base font-bold">Comments ({localCommentCounts[String(selectedShort.id)] !== undefined ? localCommentCounts[String(selectedShort.id)] : (selectedShort.commentCount ?? 0)})</h2>
                   <p className="text-xs text-zinc-400 line-clamp-1">{selectedShort.title}</p>
                 </div>
                 <button 
