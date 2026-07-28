@@ -1166,7 +1166,7 @@ export const createTag = async (title: string): Promise<any> => {
     );
     return response;
   } catch (error) {
-    console.error("Error creating tag:", error);
+    console.warn("Error creating tag:", error);
     throw error;
   }
 };

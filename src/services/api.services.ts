@@ -26,14 +26,24 @@ const apiRequest = async (config: AxiosRequestConfig) => {
     const response = await api({ ...config, headers });
     return response.data;
   } catch (error: any) {
-    console.error(`API Error (${config.method} ${config.url}):`, error);
+    if (error.response && error.response.status >= 400 && error.response.status < 500) {
+      console.warn(`API Warning (${config.method} ${config.url}):`, error.message || error);
+    } else {
+      console.error(`API Error (${config.method} ${config.url}):`, error);
+    }
     
     if (error.response && error.response.data) {
       const data = error.response.data;
       // Extract the most meaningful error message from Frappe/ERPNext response
       let serverMessage = null;
 
-      if (data._server_messages) {
+      if (data.exception && (data.exc_type === "ValidationError" || String(data.exception).includes("ValidationError"))) {
+        const excStr = String(data.exception);
+        const index = excStr.indexOf(":");
+        serverMessage = index !== -1 ? excStr.slice(index + 1).trim() : excStr;
+      }
+
+      if (!serverMessage && data._server_messages) {
         try {
           const messages = typeof data._server_messages === 'string' ? JSON.parse(data._server_messages) : data._server_messages;
           if (Array.isArray(messages)) {
@@ -55,6 +65,11 @@ const apiRequest = async (config: AxiosRequestConfig) => {
 
       if (!serverMessage) {
         serverMessage = data.message || (data.exc && typeof data.exc === 'string' && !data.exc.includes("Traceback") ? data.exc : null);
+      }
+
+      // Strip HTML tags from message
+      if (serverMessage && typeof serverMessage === 'string') {
+        serverMessage = serverMessage.replace(/<[^>]*>/g, '').trim();
       }
       
       // Cleanup common raw database errors

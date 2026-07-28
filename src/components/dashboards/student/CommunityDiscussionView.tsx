@@ -286,8 +286,12 @@ export default function CommunityDiscussionView({ community, onBack }: Community
       setNewTagTitle("");
       fetchTags();
     } catch (err: any) {
-      console.error("Error creating tag:", err);
-      showToast(err?.message || "Failed to create tag", "error");
+      console.warn("Error creating tag:", err);
+      const errMsg = err?.message || "Failed to create tag";
+      showToast(errMsg, "error");
+      if (typeof window !== "undefined") {
+        window.alert(errMsg);
+      }
     } finally {
       setIsCreatingTag(false);
     }
