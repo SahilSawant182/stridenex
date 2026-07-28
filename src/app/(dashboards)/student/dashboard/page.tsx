@@ -39,7 +39,17 @@ const item: Variants = {
 export default function StudentDashboardPage() {
   const { currentUser } = useAuth();
   const [skillsData, setSkillsData] = useState<any[]>([]);
-  const [statsData, setStatsData] = useState<any>(null);
+  const [statsData, setStatsData] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("studentStats");
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch (_) { }
+      }
+    }
+    return null;
+  });
   const [internshipsData, setInternshipsData] = useState<any[]>([]);
 
   useEffect(() => {
@@ -51,6 +61,10 @@ export default function StudentDashboardPage() {
         const data = res?.data || res?.message;
         if (data) {
           setStatsData(data);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("studentStats", JSON.stringify(data));
+            window.dispatchEvent(new Event("student-stats-updated"));
+          }
         }
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
@@ -58,6 +72,21 @@ export default function StudentDashboardPage() {
     };
     fetchStats();
   }, [currentUser]);
+
+  useEffect(() => {
+    const handleStatsUpdate = () => {
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("studentStats");
+        if (stored) {
+          try {
+            setStatsData(JSON.parse(stored));
+          } catch (_) { }
+        }
+      }
+    };
+    window.addEventListener("student-stats-updated", handleStatsUpdate);
+    return () => window.removeEventListener("student-stats-updated", handleStatsUpdate);
+  }, []);
 
   useEffect(() => {
     if (!currentUser) return;

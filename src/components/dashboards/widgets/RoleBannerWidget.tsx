@@ -27,7 +27,7 @@ import {
   Linkedin
 } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
-import { getStudentByEmail, updateStudent, mapYearToWord } from "@/services/student.services";
+import { getStudentByEmail, updateStudent, mapYearToWord, getDashboardStats } from "@/services/student.services";
 import { updateIndustry } from "@/services/industry.services";
 import { getMentorByEmail, getMentorDashboardStats } from "@/services/mentor.services";
 import { getCollegeDetails, updateCollegeDetails, getPlacementStats, getDashboardSummary } from "@/services/college.services";
@@ -149,6 +149,17 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
     }
     return null;
   });
+  const [statsData, setStatsData] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("studentStats");
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch (_) { }
+      }
+    }
+    return null;
+  });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
@@ -213,6 +224,17 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         setStudentData(data);
         if (typeof window !== 'undefined') {
           localStorage.setItem("studentDetails", JSON.stringify(data));
+        }
+      }
+      
+      // Fetch student stats
+      const statsRes = await getDashboardStats(email);
+      const stats = statsRes?.data || statsRes?.message;
+      if (stats) {
+        setStatsData(stats);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem("studentStats", JSON.stringify(stats));
+          window.dispatchEvent(new Event("student-stats-updated"));
         }
       }
     } catch (error) {
@@ -325,6 +347,21 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
     const handleOpenModal = () => setIsModalOpen(true);
     window.addEventListener("open-update-profile", handleOpenModal);
     return () => window.removeEventListener("open-update-profile", handleOpenModal);
+  }, []);
+
+  useEffect(() => {
+    const handleStatsUpdate = () => {
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("studentStats");
+        if (stored) {
+          try {
+            setStatsData(JSON.parse(stored));
+          } catch (_) { }
+        }
+      }
+    };
+    window.addEventListener("student-stats-updated", handleStatsUpdate);
+    return () => window.removeEventListener("student-stats-updated", handleStatsUpdate);
   }, []);
 
   const studentFields: DynamicField[] = useMemo(() => [
@@ -712,8 +749,13 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         return Math.round(Number(placementStats.placement_rate));
       }
     }
+    if (role === "student") {
+      if (statsData?.profile_completeness !== undefined && statsData?.profile_completeness !== null) {
+        return Math.round(Number(statsData.profile_completeness));
+      }
+    }
     return customData?.profileProgress ?? config.defaultProgress;
-  }, [role, placementStats, customData?.profileProgress, config.defaultProgress]);
+  }, [role, placementStats, statsData, customData?.profileProgress, config.defaultProgress]);
 
   // Get initials
   const getInitials = () => {
@@ -779,7 +821,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
   // Get metrics from customData or use defaults
   const metrics = customData?.metrics || (
     role === "student" && studentData ? [
-      { key: "employability", value: 73, label: "Employability", icon: TrendingUp },
+      { key: "employability", value: studentData.employability_score !== undefined && studentData.employability_score !== null ? studentData.employability_score : 73, label: "Employability", icon: TrendingUp },
       { key: "cgpa", value: studentData.cgpa || 0, label: "Current CGPA", icon: Award },
       { key: "semester", value: studentData.semester || "N/A", label: "Semester", icon: Calendar }
     ] : role === "mentor" && (mentorData || mentorStats) ? [
