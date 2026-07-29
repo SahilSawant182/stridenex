@@ -1,4 +1,57 @@
-import { apiService } from "./api.services";
+import { apiService as baseApiService } from "./api.services";
+
+const apiService = {
+  get: async (url: string, config?: any) => {
+    try {
+      return await baseApiService.get(url, config);
+    } catch (error: any) {
+      if (typeof window !== "undefined") {
+        window.alert(error?.message || "An unexpected error occurred");
+      }
+      throw error;
+    }
+  },
+  post: async (url: string, data?: any, config?: any) => {
+    try {
+      return await baseApiService.post(url, data, config);
+    } catch (error: any) {
+      if (typeof window !== "undefined") {
+        window.alert(error?.message || "An unexpected error occurred");
+      }
+      throw error;
+    }
+  },
+  put: async (url: string, data?: any, config?: any) => {
+    try {
+      return await baseApiService.put(url, data, config);
+    } catch (error: any) {
+      if (typeof window !== "undefined") {
+        window.alert(error?.message || "An unexpected error occurred");
+      }
+      throw error;
+    }
+  },
+  patch: async (url: string, data?: any, config?: any) => {
+    try {
+      return await baseApiService.patch(url, data, config);
+    } catch (error: any) {
+      if (typeof window !== "undefined") {
+        window.alert(error?.message || "An unexpected error occurred");
+      }
+      throw error;
+    }
+  },
+  delete: async (url: string, config?: any) => {
+    try {
+      return await baseApiService.delete(url, config);
+    } catch (error: any) {
+      if (typeof window !== "undefined") {
+        window.alert(error?.message || "An unexpected error occurred");
+      }
+      throw error;
+    }
+  },
+};
 
 export const getPendingRequests = async (mentor: string, limit?: number) => {
   try {
