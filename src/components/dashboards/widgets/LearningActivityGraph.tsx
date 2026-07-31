@@ -7,22 +7,50 @@ interface LearningActivityGraphProps {
   data: any;
 }
 
-const mockGraphData = [
-  { name: "Week 1", hours: 4, lessons: 1, problems: 2 },
-  { name: "Week 2", hours: 8, lessons: 2, problems: 5 },
-  { name: "Week 3", hours: 12, lessons: 4, problems: 10 },
-  { name: "Week 4", hours: 10, lessons: 3, problems: 7 },
-  { name: "Week 5", hours: 16, lessons: 5, problems: 15 },
-  { name: "Week 6", hours: 14, lessons: 4, problems: 12 },
-  { name: "Week 7", hours: 22, lessons: 6, problems: 18 },
-  { name: "Week 8", hours: 18, lessons: 5, problems: 14 },
-  { name: "Week 9", hours: 26, lessons: 8, problems: 22 },
-  { name: "Week 10", hours: 20, lessons: 6, problems: 16 },
-  { name: "Week 11", hours: 30, lessons: 9, problems: 28 },
-  { name: "Week 12", hours: 28, lessons: 8, problems: 24 }
+const zeroGraphData = [
+  { name: "Week 1", hours: 0, lessons: 0, problems: 0 },
+  { name: "Week 2", hours: 0, lessons: 0, problems: 0 },
+  { name: "Week 3", hours: 0, lessons: 0, problems: 0 },
+  { name: "Week 4", hours: 0, lessons: 0, problems: 0 },
+  { name: "Week 5", hours: 0, lessons: 0, problems: 0 },
+  { name: "Week 6", hours: 0, lessons: 0, problems: 0 },
+  { name: "Week 7", hours: 0, lessons: 0, problems: 0 },
+  { name: "Week 8", hours: 0, lessons: 0, problems: 0 },
+  { name: "Week 9", hours: 0, lessons: 0, problems: 0 },
+  { name: "Week 10", hours: 0, lessons: 0, problems: 0 }
 ];
 
 export default function LearningActivityGraph({ data }: LearningActivityGraphProps) {
+  // Parse dynamic data with fallbacks
+  const totals = data?.totals || data?.message?.totals;
+  const lessons = totals?.lessons ?? 0;
+  const problems = totals?.problems ?? 0;
+  const studyTime = totals?.study_hours ?? 0;
+  const streak = data?.streak ?? data?.streak_count ?? 0;
+
+  const weeksData = data?.weeks || data?.message?.weeks;
+  const chartData = Array.isArray(weeksData) && weeksData.length > 0
+    ? weeksData.map((weekObj: any, idx: number) => {
+        const weekName = weekObj.week_start ? `W${idx + 1} (${weekObj.week_start.slice(5)})` : `Week ${idx + 1}`;
+        let hours = 0;
+        let weekLessons = 0;
+        let weekProblems = 0;
+        if (weekObj.days && Array.isArray(weekObj.days)) {
+          weekObj.days.forEach((day: any) => {
+            hours += (day.study_minutes || 0) / 60;
+            weekLessons += day.lessons || 0;
+            weekProblems += day.problems || 0;
+          });
+        }
+        return {
+          name: weekName,
+          hours: Number(hours.toFixed(1)),
+          lessons: weekLessons,
+          problems: weekProblems
+        };
+      })
+    : zeroGraphData;
+
   // Custom styled tooltip for clean look
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -30,8 +58,8 @@ export default function LearningActivityGraph({ data }: LearningActivityGraphPro
         <div className="bg-slate-900 text-white p-3 rounded-lg shadow-lg border border-slate-800 text-xs">
           <p className="font-bold mb-1.5">{label}</p>
           <p className="text-orange-400 font-semibold">⚡ Study Time: {payload[0].value} hours</p>
-          <p className="text-emerald-400">📚 Lessons: {payload[0].payload.lessons}</p>
-          <p className="text-yellow-400">💻 Problems: {payload[0].payload.problems}</p>
+          <p className="text-emerald-400">📚 Lessons: {payload[0].payload.lessons ?? 0}</p>
+          <p className="text-yellow-400">💻 Problems: {payload[0].payload.problems ?? 0}</p>
         </div>
       );
     }
@@ -45,7 +73,7 @@ export default function LearningActivityGraph({ data }: LearningActivityGraphPro
           <span className="group-hover:animate-bounce">📊</span> Learning Activity Graph
         </h3>
         <span className="text-[11px] font-semibold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100/50">
-          🔥 12 Day Streak!
+          🔥 {streak} Day Streak!
         </span>
       </div>
 
@@ -53,7 +81,7 @@ export default function LearningActivityGraph({ data }: LearningActivityGraphPro
       <div className="flex-1 min-h-[220px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
-            data={mockGraphData}
+            data={chartData}
             margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
           >
             <defs>
@@ -97,21 +125,21 @@ export default function LearningActivityGraph({ data }: LearningActivityGraphPro
           <div className="p-2.5 rounded-xl bg-emerald-50 mb-3 group-hover/stat:bg-emerald-100 transition-colors">
             <BookOpen className="w-5 h-5 text-emerald-600 drop-shadow-sm group-hover/stat:scale-110 transition-transform" />
           </div>
-          <span className="text-2xl font-extrabold text-slate-800">{data?.lessons || 42}</span>
+          <span className="text-2xl font-extrabold text-slate-800">{lessons}</span>
           <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Lessons</p>
         </div>
         <div className="text-center flex flex-col items-center justify-center group/stat cursor-default">
           <div className="p-2.5 rounded-xl bg-yellow-50 mb-3 group-hover/stat:bg-yellow-100 transition-colors">
             <Code className="w-5 h-5 text-yellow-600 drop-shadow-sm group-hover/stat:scale-110 transition-transform" />
           </div>
-          <span className="text-2xl font-extrabold text-slate-800">{data?.problems || 87}</span>
+          <span className="text-2xl font-extrabold text-slate-800">{problems}</span>
           <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Problems</p>
         </div>
         <div className="text-center flex flex-col items-center justify-center group/stat cursor-default">
           <div className="p-2.5 rounded-xl bg-blue-50 mb-3 group-hover/stat:bg-blue-100 transition-colors">
             <Clock className="w-5 h-5 text-blue-600 drop-shadow-sm group-hover/stat:scale-110 transition-transform" />
           </div>
-          <span className="text-2xl font-extrabold text-slate-800">{data?.studyTime || 68}h</span>
+          <span className="text-2xl font-extrabold text-slate-800">{studyTime}h</span>
           <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Time (h)</p>
         </div>
       </div>

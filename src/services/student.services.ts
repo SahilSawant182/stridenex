@@ -1170,3 +1170,61 @@ export const createTag = async (title: string): Promise<any> => {
     throw error;
   }
 };
+
+/**
+ * Fetch learning activity.
+ */
+export const getLearningActivity = async (studentEmail: string): Promise<any> => {
+  try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret) {
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    }
+
+    const response = await apiService.get(
+      "method/stridenex_app.stridenex_app.doctype.student.student.get_learning_activity",
+      {
+        params: { student: studentEmail },
+        headers
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching learning activity:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch today's opportunity alerts.
+ */
+export const getTodaysOpportunityAlerts = async (studentEmail: string): Promise<any> => {
+  try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret) {
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    }
+
+    const response = await apiService.get(
+      "method/stridenex_app.stridenex_app.doctype.student.student.get_todays_opportunity_alerts",
+      {
+        params: { student: studentEmail },
+        headers
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching today's opportunity alerts:", error);
+    throw error;
+  }
+};

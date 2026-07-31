@@ -11,7 +11,7 @@ import SkillsWidget from "@/components/dashboards/widgets/SkillsWidget";
 import AlertsWidget from "@/components/dashboards/widgets/AlertsWidget";
 import InternshipsWidget from "@/components/dashboards/widgets/InternshipsWidget";
 import { useAuth } from "@/context/AuthContext";
-import { getStudentSkills, getDashboardStats, getStudentByEmail, getStudentInternshipList } from "@/services/student.services";
+import { getStudentSkills, getDashboardStats, getStudentByEmail, getStudentInternshipList, getLearningActivity, getTodaysOpportunityAlerts } from "@/services/student.services";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -51,6 +51,8 @@ export default function StudentDashboardPage() {
     return null;
   });
   const [internshipsData, setInternshipsData] = useState<any[]>([]);
+  const [learningActivityData, setLearningActivityData] = useState<any>(null);
+  const [opportunityAlerts, setOpportunityAlerts] = useState<any[]>([]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -71,6 +73,55 @@ export default function StudentDashboardPage() {
       }
     };
     fetchStats();
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchLearningActivity = async () => {
+      try {
+        const res = await getLearningActivity(currentUser);
+        console.log("Student learning activity API response:", res);
+        const data = res?.data || res?.message;
+        if (data) {
+          setLearningActivityData(data);
+        }
+      } catch (error) {
+        console.error("Error fetching learning activity:", error);
+      }
+    };
+    fetchLearningActivity();
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchAlerts = async () => {
+      try {
+        const res = await getTodaysOpportunityAlerts(currentUser);
+        console.log("Student opportunity alerts response:", res);
+        const data = res?.data || res?.message;
+        
+        let alertsArray: any[] = [];
+        if (Array.isArray(data)) {
+          alertsArray = data;
+        } else if (data && Array.isArray(data.alerts)) {
+          alertsArray = data.alerts;
+        }
+        
+        if (alertsArray.length > 0) {
+          const mapped = alertsArray.map((item: any) => ({
+            type: item.type || "warning",
+            message: item.message || item.title || item.opportunity_title || item.heading || "Opportunity Alert",
+            detail: item.detail || item.description || item.detail_text || item.text || ""
+          }));
+          setOpportunityAlerts(mapped);
+        } else {
+          setOpportunityAlerts([]);
+        }
+      } catch (error) {
+        console.error("Error fetching opportunity alerts:", error);
+      }
+    };
+    fetchAlerts();
   }, [currentUser]);
 
   useEffect(() => {
@@ -268,7 +319,7 @@ export default function StudentDashboardPage() {
         <div className="lg:col-span-2">
           {/* Learning Activity Heatmap */}
           <div className="h-full">
-            <LearningActivityGraph data={{ lessons: 42, problems: 87, studyTime: 68 }} />
+            <LearningActivityGraph data={learningActivityData} />
           </div>
         </div>
 
@@ -294,11 +345,7 @@ export default function StudentDashboardPage() {
 
         <AlertsWidget
           data={{
-            blocks: [
-              { type: "warning", message: "Razorpay deadline in 3 days", detail: "Your match: 76% — apply now" },
-              { type: "success", message: "Shortlisted at TCS iON!", detail: "Interview: Feb 28, 3:00 PM" },
-              { type: "danger", message: "Habit Risk: LinkedIn", detail: "2 consecutive misses — streak at risk!" }
-            ],
+            blocks: opportunityAlerts,
             agenda: [
               { icon: "education", text: "ML Module Ch.2 — due Feb 25" },
               { icon: "call", text: "Mentor: Kavya Reddy — Feb 27 4PM" },

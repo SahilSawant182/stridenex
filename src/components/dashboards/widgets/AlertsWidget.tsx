@@ -56,7 +56,7 @@ const bottomIcons: Record<string, any> = {
 
 export default function AlertsWidget({ data }: AlertsWidgetProps) {
   // Extract block alerts and simple agenda items if provided, or fallback
-  const blockAlerts = data?.blocks || [
+  const blockAlerts = data?.blocks !== undefined ? data.blocks : [
     { type: "warning", message: "Razorpay deadline in 3 days", detail: "Your match: 76% — apply now" },
     { type: "success", message: "Shortlisted at TCS iON!", detail: "Interview: Feb 28, 3:00 PM" },
     { type: "danger", message: "Habit Risk: LinkedIn", detail: "2 consecutive misses — streak at risk!" }
@@ -75,19 +75,25 @@ export default function AlertsWidget({ data }: AlertsWidgetProps) {
       </h3>
       
       <div className="space-y-3 mb-6">
-        {blockAlerts.map((alert: any, i: number) => {
-          const styles = getAlertStyles(alert.type);
-          const Icon = styles.icon;
-          return (
-            <div key={i} className={`${styles.bg} border ${styles.border} rounded-lg p-3.5 flex items-start gap-3`}>
-              <Icon className={`w-[18px] h-[18px] ${styles.iconText} shrink-0 mt-0.5`} />
-              <div>
-                <p className={`text-[13px] font-bold ${styles.titleText}`}>{alert.message}</p>
-                <p className={`text-[12px] font-medium leading-relaxed ${styles.descText}`}>{alert.detail}</p>
+        {blockAlerts.length > 0 ? (
+          blockAlerts.map((alert: any, i: number) => {
+            const styles = getAlertStyles(alert.type);
+            const Icon = styles.icon;
+            return (
+              <div key={i} className={`${styles.bg} border ${styles.border} rounded-lg p-3.5 flex items-start gap-3`}>
+                <Icon className={`w-[18px] h-[18px] ${styles.iconText} shrink-0 mt-0.5`} />
+                <div>
+                  <p className={`text-[13px] font-bold ${styles.titleText}`}>{alert.message}</p>
+                  <p className={`text-[12px] font-medium leading-relaxed ${styles.descText}`}>{alert.detail}</p>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })
+        ) : (
+          <div className="flex flex-col items-center justify-center p-6 border border-dashed border-slate-200 rounded-lg bg-slate-50/50">
+            <span className="text-slate-400 text-[13px] font-semibold">No new opportunity alerts today</span>
+          </div>
+        )}
       </div>
 
       <div className="space-y-4 pt-4 border-t border-slate-100 flex-1">

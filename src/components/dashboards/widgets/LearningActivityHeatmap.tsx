@@ -9,16 +9,34 @@ interface LearningActivityHeatmapProps {
 }
 
 export default function LearningActivityHeatmap({ data }: LearningActivityHeatmapProps) {
-  // Generate slightly longer horizontal blocks to match the design
-  const weeks = 22;
-  const days = 5;
   const [heatmapData, setHeatmapData] = useState<number[][]>([]);
 
   useEffect(() => {
-    setHeatmapData(Array.from({ length: days }).map(() => 
-      Array.from({ length: weeks }).map(() => Math.floor(Math.random() * 5))
-    ));
-  }, [days, weeks]);
+    const weeksData = data?.weeks || data?.message?.weeks;
+    if (weeksData && Array.isArray(weeksData) && weeksData.length > 0) {
+      const numWeeks = weeksData.length;
+      // Initialize a 7 x numWeeks grid (7 rows representing days of the week, numWeeks columns)
+      const grid = Array.from({ length: 7 }, () => Array(numWeeks).fill(0));
+      
+      weeksData.forEach((weekObj: any, weekIdx: number) => {
+        if (weekObj.days && Array.isArray(weekObj.days)) {
+          weekObj.days.forEach((dayObj: any, dayIdx: number) => {
+            if (dayIdx < 7) {
+              grid[dayIdx][weekIdx] = dayObj.level ?? 0;
+            }
+          });
+        }
+      });
+      setHeatmapData(grid);
+    } else {
+      // Generate slightly longer horizontal blocks to match the design (mock fallback)
+      const weeks = 22;
+      const days = 5;
+      setHeatmapData(Array.from({ length: days }).map(() => 
+        Array.from({ length: weeks }).map(() => Math.floor(Math.random() * 5))
+      ));
+    }
+  }, [data]);
 
   const getColor = (value: number) => {
     switch(value) {
@@ -46,6 +64,12 @@ export default function LearningActivityHeatmap({ data }: LearningActivityHeatma
     show: { opacity: 1, scale: 1 }
   };
 
+  const totals = data?.totals || data?.message?.totals;
+  const lessons = totals?.lessons ?? data?.lessons ?? 42;
+  const problems = totals?.problems ?? data?.problems ?? 87;
+  const studyHours = totals?.study_hours ?? data?.studyTime ?? data?.study_time ?? 68;
+  const streak = data?.streak || data?.message?.streak || 12;
+
   return (
     <div className="bg-white rounded-xl border border-slate-200/60 p-6 flex flex-col h-full shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300 group">
       <div className="flex items-center justify-between mb-6">
@@ -53,7 +77,7 @@ export default function LearningActivityHeatmap({ data }: LearningActivityHeatma
           <span className="group-hover:animate-bounce">📅</span> Learning Activity
         </h3>
         <span className="text-[11px] font-semibold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100/50">
-          🔥 12 Day Streak!
+          🔥 {streak} Day Streak!
         </span>
       </div>
       
@@ -81,7 +105,9 @@ export default function LearningActivityHeatmap({ data }: LearningActivityHeatma
       </div>
 
       <div className="flex justify-between items-center mt-2 max-w-full">
-         <div className="text-[11px] font-medium text-slate-400 hidden sm:block">Past 5 Months</div>
+         <div className="text-[11px] font-medium text-slate-400 hidden sm:block">
+           {Array.isArray(data?.weeks || data?.message?.weeks) ? `Past ${Math.round((data?.weeks || data?.message?.weeks).length)} Weeks` : "Past 5 Months"}
+         </div>
          <div className="flex justify-end items-center gap-[4px] text-[10px] text-slate-400 font-medium ml-auto">
           <span className="mr-1">Less</span>
           <div className="w-5 h-[10px] rounded-[2px] bg-orange-50/50 border border-orange-100/50" />
@@ -98,21 +124,21 @@ export default function LearningActivityHeatmap({ data }: LearningActivityHeatma
           <div className="p-2.5 rounded-xl bg-emerald-50 mb-3 group-hover/stat:bg-emerald-100 transition-colors">
             <BookOpen className="w-5 h-5 text-emerald-600 drop-shadow-sm group-hover/stat:scale-110 transition-transform" />
           </div>
-          <span className="text-2xl font-extrabold text-slate-800">{data.lessons || 42}</span>
+          <span className="text-2xl font-extrabold text-slate-800">{lessons}</span>
           <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Lessons</p>
         </div>
         <div className="text-center flex flex-col items-center justify-center group/stat cursor-default">
           <div className="p-2.5 rounded-xl bg-yellow-50 mb-3 group-hover/stat:bg-yellow-100 transition-colors">
             <Code className="w-5 h-5 text-yellow-600 drop-shadow-sm group-hover/stat:scale-110 transition-transform" />
           </div>
-          <span className="text-2xl font-extrabold text-slate-800">{data.problems || 87}</span>
+          <span className="text-2xl font-extrabold text-slate-800">{problems}</span>
           <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Problems</p>
         </div>
         <div className="text-center flex flex-col items-center justify-center group/stat cursor-default">
           <div className="p-2.5 rounded-xl bg-blue-50 mb-3 group-hover/stat:bg-blue-100 transition-colors">
             <Clock className="w-5 h-5 text-blue-600 drop-shadow-sm group-hover/stat:scale-110 transition-transform" />
           </div>
-          <span className="text-2xl font-extrabold text-slate-800">{data.studyTime || 68}h</span>
+          <span className="text-2xl font-extrabold text-slate-800">{studyHours}h</span>
           <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Time (h)</p>
         </div>
       </div>
