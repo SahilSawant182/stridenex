@@ -86,7 +86,9 @@ export default function StudentOnboarding({
     gender: "",
     resume: null,
     linkedinUrl: "",
-    githubUrl: ""
+    githubUrl: "",
+    hasReferral: false,
+    referal_code: ""
   });
 
   useEffect(() => {
@@ -487,7 +489,22 @@ export default function StudentOnboarding({
       placeholder: "https://github.com/username",
       layout: "half",
       inputClassName: "font-mono text-sm"
-    }
+    },
+    {
+      fieldname: "hasReferral",
+      label: "Are you using any referral code?",
+      fieldtype: "Check",
+      required: false,
+      layout: "full"
+    },
+    ...(formData.hasReferral ? [{
+      fieldname: "referal_code",
+      label: "Referral Code",
+      fieldtype: "Data",
+      required: true,
+      placeholder: "Enter referral code",
+      layout: "half" as const
+    }] : [])
   ];
 
   // ============ STEP 1: EMAIL VERIFICATION ============
@@ -723,6 +740,10 @@ export default function StudentOnboarding({
     if (formData.careerInterest.length === 0) {
       errors.careerInterest = "Please select at least one career interest";
     }
+
+    if (formData.hasReferral && !formData.referal_code) {
+      errors.referal_code = "Referral code is required when checkbox is checked";
+    }
     return errors;
   };
 
@@ -798,7 +819,8 @@ export default function StudentOnboarding({
         career_interest: careerInterestArray.length > 0 ? careerInterestArray : [{ career_interest: "Biotechnology / Genetics" }],
         github: formData.githubUrl || "",
         linkedin: formData.linkedinUrl || "",
-        resume: formData.resume || null
+        resume: formData.resume || null,
+        referal_code: formData.hasReferral ? (formData.referal_code || "") : ""
       };
 
       console.log("Submitting payload:", payload);
@@ -1175,7 +1197,9 @@ export default function StudentOnboarding({
           current_year: newData.current_year ?? prev.current_year,
           resume: newData.resume ?? prev.resume,
           linkedinUrl: newData.linkedinUrl ?? prev.linkedinUrl,
-          githubUrl: newData.githubUrl ?? prev.githubUrl
+          githubUrl: newData.githubUrl ?? prev.githubUrl,
+          hasReferral: newData.hasReferral ?? prev.hasReferral,
+          referal_code: newData.hasReferral === false ? "" : (newData.referal_code ?? prev.referal_code)
         };
 
         // Reset specific fields to empty strings
@@ -1216,7 +1240,9 @@ export default function StudentOnboarding({
             current_year: formData.current_year,
             resume: formData.resume,
             linkedinUrl: formData.linkedinUrl,
-            githubUrl: formData.githubUrl
+            githubUrl: formData.githubUrl,
+            hasReferral: formData.hasReferral,
+            referal_code: formData.referal_code
           }}
           errors={fieldErrors}
           onChange={(data) => {
