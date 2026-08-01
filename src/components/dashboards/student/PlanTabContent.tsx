@@ -45,6 +45,7 @@ interface BillingPackage {
   app?: string;
   app_name?: string;
   features: string[];
+  is_tax_inclusive?: number | boolean;
 }
 
 
@@ -105,6 +106,10 @@ async function redirectToPayment(
   }
   const billingUrl = await getBillingUrl(fromSite);
   if (!billingUrl) throw new Error("Billing URL not returned from server");
+
+  
+  // Explicitly opt-in: only true when backend sends 1 / true
+  const isInclusive = plan.is_tax_inclusive === 1 || plan.is_tax_inclusive === true;
   const paymentParams = new URLSearchParams({
     from_site: fromSite,
     frontend_url: window.location.origin,
@@ -116,6 +121,7 @@ async function redirectToPayment(
     pkg_amount: String(plan.amount ?? ""),
     account_type: accountType,
     customer_email: customerEmail,
+    is_tax_inclusive: isInclusive ? "1" : "0",
   });
   const proceedPaymentUrl = new URL("proceedpayment.html", billingUrl);
   window.location.href = `${proceedPaymentUrl.origin}${proceedPaymentUrl.pathname}?${paymentParams.toString()}`;
@@ -310,9 +316,8 @@ function SubscriptionCard({ entry }: { entry: SubscriptionHistoryItem }) {
 
             {/* Left */}
             <div className="flex items-start gap-3">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                entry.is_active ? "bg-indigo-50 border border-indigo-100" : "bg-slate-50 border border-slate-100"
-              }`}>
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${entry.is_active ? "bg-indigo-50 border border-indigo-100" : "bg-slate-50 border border-slate-100"
+                }`}>
                 <Server className={`w-5 h-5 ${entry.is_active ? "text-indigo-500" : "text-slate-400"}`} />
               </div>
               <div className="space-y-1 min-w-0">
@@ -324,9 +329,8 @@ function SubscriptionCard({ entry }: { entry: SubscriptionHistoryItem }) {
                       Active
                     </Badge>
                   )}
-                  <Badge className={`border-0 text-[10px] px-2 py-0.5 font-bold ${
-                    entry.payment_status === "Paid" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
-                  }`}>
+                  <Badge className={`border-0 text-[10px] px-2 py-0.5 font-bold ${entry.payment_status === "Paid" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
+                    }`}>
                     {entry.payment_status}
                   </Badge>
                 </div>
@@ -394,9 +398,8 @@ function SessionCard({ entry }: { entry: SubscriptionHistoryItem }) {
                   <Badge className="bg-orange-100 text-orange-700 border-0 text-[10px] px-2 py-0.5 font-bold">
                     {entry.package_type === "Group Session" ? "Group Session" : "1:1 Session"}
                   </Badge>
-                  <Badge className={`border-0 text-[10px] px-2 py-0.5 font-bold ${
-                    entry.payment_status === "Paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                  }`}>
+                  <Badge className={`border-0 text-[10px] px-2 py-0.5 font-bold ${entry.payment_status === "Paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                    }`}>
                     {entry.payment_status}
                   </Badge>
                 </div>
@@ -714,11 +717,27 @@ export default function PlansTabContent() {
                         )}
                       </div>
                       <h3 className="text-lg font-bold text-slate-800 mb-4">{plan.package_name}</h3>
-                      <div className="flex items-baseline gap-1.5 mb-1">
-                        <span className={`text-3xl font-black ${isPopular ? "text-orange-500" : "text-slate-800"}`}>
-                          ₹{plan.amount.toLocaleString("en-IN")}
-                        </span>
-                      </div>
+                      {(() => {
+                        // Explicitly opt-in: only true when API sends 1 / true
+                        const isInclusive = plan.is_tax_inclusive === 1 || plan.is_tax_inclusive === true;
+                        return (
+                          <div className="flex flex-col gap-1 mb-1.5">
+                            <div className="flex items-baseline gap-1.5">
+                              <span className={`text-3xl font-black ${isPopular ? "text-orange-500" : "text-slate-800"}`}>
+                                ₹{plan.amount.toLocaleString("en-IN")}
+                              </span>
+                              <span className="text-xs text-slate-400 font-normal">
+                                {isInclusive ? "inc. tax" : "+ 18% GST"}
+                              </span>
+                            </div>
+                            {!isInclusive && (
+                              <span className="text-xs text-slate-500 font-medium">
+                                Total: ₹{(plan.amount * 1.18).toLocaleString("en-IN")}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                       <div className="flex items-center gap-3 mb-5 flex-wrap">
                         {plan.no_of_days > 0 && (
                           <span className="flex items-center gap-1 text-xs text-slate-500 font-medium">
