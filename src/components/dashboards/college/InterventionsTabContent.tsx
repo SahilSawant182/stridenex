@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, Variants } from "framer-motion";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { AlertTriangle, Clock, TrendingDown, Target, Zap, Loader2, ChevronDown } from "lucide-react";
@@ -64,6 +64,62 @@ export default function InterventionsTabContent() {
   const [loading, setLoading] = useState(true);
   const [selectedMentors, setSelectedMentors] = useState<Record<string, string>>({});
   const [assigningMap, setAssigningMap] = useState<Record<string, boolean>>({});
+
+  const dynamicRecommendations = useMemo(() => {
+    const list = [];
+    const criticalCount = summaryData?.critical || 0;
+    const highRiskCount = summaryData?.high_risk || 0;
+    const decliningCount = summaryData?.declining_progress || 0;
+    const placementReadyCount = summaryData?.placement_ready || 0;
+
+    if (criticalCount > 0) {
+      list.push({
+        icon: "🤝",
+        text: "Peer mentors for critical at-risk students",
+        subject: `${criticalCount} students`,
+        impact: "Impact: Improve retention",
+        impactColor: "text-emerald-600"
+      });
+    }
+    if (highRiskCount > 0) {
+      list.push({
+        icon: "📚",
+        text: "Bulk-enroll high-risk students in employability bootcamps",
+        subject: `${highRiskCount} students`,
+        impact: "Impact: +15 avg score",
+        impactColor: "text-emerald-600"
+      });
+    }
+    if (decliningCount > 0) {
+      list.push({
+        icon: "🎤",
+        text: "AI mock-interview sessions to boost progress",
+        subject: `${decliningCount} students`,
+        impact: "Impact: +20% offer rate",
+        impactColor: "text-emerald-600"
+      });
+    }
+    if (placementReadyCount > 0) {
+      list.push({
+        icon: "🏢",
+        text: "Connect placement-ready students with industry partners",
+        subject: `${placementReadyCount} students`,
+        impact: "Impact: NEP compliance",
+        impactColor: "text-emerald-600"
+      });
+    }
+
+    if (list.length === 0) {
+      return [
+        { icon: "📚", text: "Bulk-enroll CSE 3rd Year in Data bootcamp", subject: "84 students", impact: "Impact: +15 avg score", impactColor: "text-emerald-600" },
+        { icon: "🤝", text: "Peer mentors for at-risk 4th year students", subject: "47 students", impact: "Impact: Improve retention", impactColor: "text-emerald-600" },
+        { icon: "🏢", text: "Partner with 3 more companies for mini-internships", subject: "120 students", impact: "Impact: NEP compliance", impactColor: "text-emerald-600" },
+        { icon: "🎤", text: "AI mock-interview sessions for Mech students", subject: "52 students", impact: "Impact: +20% offer rate", impactColor: "text-emerald-600" },
+      ];
+    }
+
+    return list;
+  }, [summaryData]);
 
   // Load college details from localStorage or API
   useEffect(() => {
@@ -307,7 +363,7 @@ export default function InterventionsTabContent() {
             </h3>
 
             <div className="space-y-3">
-               {recommendations.map((rec, idx) => (
+               {dynamicRecommendations.map((rec, idx) => (
                  <div key={idx} className="border border-orange-200/60 bg-gradient-to-r from-orange-50/50 to-white hover:bg-orange-50/80 rounded-xl p-3 flex justify-between items-center transition-colors">
                     <div className="flex items-start gap-3">
                        <div className="text-xl shrink-0 mt-0.5 bg-white p-1 rounded-lg border border-orange-100 shadow-sm">{rec.icon}</div>

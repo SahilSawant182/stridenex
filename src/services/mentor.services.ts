@@ -1,13 +1,12 @@
 import { apiService as baseApiService } from "./api.services";
+import { customAlert } from "@/utils/alert";
 
 const apiService = {
   get: async (url: string, config?: any) => {
     try {
       return await baseApiService.get(url, config);
     } catch (error: any) {
-      if (typeof window !== "undefined") {
-        window.alert(error?.message || "An unexpected error occurred");
-      }
+      customAlert(error?.message || "An unexpected error occurred");
       throw error;
     }
   },
@@ -15,9 +14,7 @@ const apiService = {
     try {
       return await baseApiService.post(url, data, config);
     } catch (error: any) {
-      if (typeof window !== "undefined") {
-        window.alert(error?.message || "An unexpected error occurred");
-      }
+      customAlert(error?.message || "An unexpected error occurred");
       throw error;
     }
   },
@@ -25,9 +22,7 @@ const apiService = {
     try {
       return await baseApiService.put(url, data, config);
     } catch (error: any) {
-      if (typeof window !== "undefined") {
-        window.alert(error?.message || "An unexpected error occurred");
-      }
+      customAlert(error?.message || "An unexpected error occurred");
       throw error;
     }
   },
@@ -35,9 +30,7 @@ const apiService = {
     try {
       return await baseApiService.patch(url, data, config);
     } catch (error: any) {
-      if (typeof window !== "undefined") {
-        window.alert(error?.message || "An unexpected error occurred");
-      }
+      customAlert(error?.message || "An unexpected error occurred");
       throw error;
     }
   },
@@ -45,9 +38,7 @@ const apiService = {
     try {
       return await baseApiService.delete(url, config);
     } catch (error: any) {
-      if (typeof window !== "undefined") {
-        window.alert(error?.message || "An unexpected error occurred");
-      }
+      customAlert(error?.message || "An unexpected error occurred");
       throw error;
     }
   },
