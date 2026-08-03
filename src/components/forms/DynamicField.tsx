@@ -298,7 +298,8 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
 
   const handleRetry = () => {
     setFetchError("");
-    fetchOptions(1, searchTerm);
+    setIsOpen(true);
+    justOpenedRef.current = false;
   };
 
   const handleSingleSelect = (selectedValue: string) => {

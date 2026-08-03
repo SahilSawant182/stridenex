@@ -528,6 +528,10 @@ function DynamicFieldItem({
       setHasPrev(prevFlag || pageNum > 1);
       setTotalPages(totalPgs);
       setPage(pageNum);
+      
+      if (mapped.length === 0) {
+        setApiError("No options available");
+      }
     } catch (err: any) {
       console.error(`Error fetching options for ${field.name}:`, err);
       setApiError(err?.message || "Failed to load options");

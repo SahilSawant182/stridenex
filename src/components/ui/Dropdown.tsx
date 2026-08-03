@@ -168,6 +168,10 @@ export default function Dropdown({
       setTotalPages(totalPgs);
       setPage(pageNum);
       setFetched(true);
+      
+      if (mappedOptions.length === 0) {
+        setFetchError("No options available");
+      }
     } catch (err: any) {
       console.error(`Error fetching ${label || id}:`, err);
       setFetchError(err?.response?.data?.message || `Failed to load ${label || id}`);
@@ -198,7 +202,7 @@ export default function Dropdown({
 
   const handleRetry = () => {
     setFetchError("");
-    fetchOptions(page, searchTerm);
+    setIsOpen(true);
   };
 
   // For single select

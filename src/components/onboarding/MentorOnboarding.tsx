@@ -15,7 +15,7 @@ import {
 } from "@/services/onboarding.services";
 import DynamicForm from "@/components/forms/DynamicForm";
 import { FormField } from "@/types/doctypes.types";
-import { BASE_URL } from "@/services/api.services";
+import { apiService, BASE_URL } from "@/services/api.services";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronDown, Plus, X } from "lucide-react";
@@ -1542,6 +1542,22 @@ export default function MentorOnboarding({
         customPlaceholder: "Enter custom domain name",
         apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: { doctype: "Domain" },
+        onCreateCustomValue: async (val: string) => {
+          try {
+            const userEmail = formData.email || localStorage.getItem("userEmail") || currentUser || "";
+            const response = await apiService.post(
+              `method/stridenex_app.api_stridenex_app.mentor.mentor.request_new_domain?domain_name=${encodeURIComponent(JSON.stringify(val))}`,
+              {
+                domain_name: val,
+                mentor_email: userEmail
+              }
+            );
+            return response;
+          } catch (err) {
+            console.error("Failed to request new domain:", err);
+            throw err;
+          }
+        },
         mapOptions: data => {
           const items = data.data || data || [];
           return items.map((item: any) => ({
