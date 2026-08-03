@@ -7,6 +7,8 @@ import { Search, ChevronDown, Download, Sparkles, Bookmark, Loader2, UserX, Targ
 import { useIndustry } from "@/context/IndustryContext";
 import { getFindTalentList, getMasterData } from "@/services/industry.services";
 import { Pagination } from "@/components/ui/Pagination";
+import Dropdown from "@/components/ui/Dropdown";
+import { BASE_URL } from "@/services/api.services";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -34,10 +36,9 @@ export default function FindTalentTabContent() {
   const [isCollegeDropdownOpen, setIsCollegeDropdownOpen] = useState(false);
   const [collegeSearchTerm, setCollegeSearchTerm] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const skillDropdownRef = useRef<HTMLDivElement>(null);
   const [searchVal, setSearchVal] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSkill, setSelectedSkill] = useState<string>("");
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [currentYear, setCurrentYear] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("");
 
@@ -57,16 +58,6 @@ export default function FindTalentTabContent() {
   const [collegeTotalPages, setCollegeTotalPages] = useState(1);
   const [collegeHasNext, setCollegeHasNext] = useState(false);
   const [collegeHasPrev, setCollegeHasPrev] = useState(false);
-
-  // Skill Dropdown States
-  const [skills, setSkills] = useState<string[]>([]);
-  const [isFetchingSkills, setIsFetchingSkills] = useState(false);
-  const [isSkillDropdownOpen, setIsSkillDropdownOpen] = useState(false);
-  const [skillSearchTerm, setSkillSearchTerm] = useState("");
-  const [skillPage, setSkillPage] = useState(1);
-  const [skillTotalPages, setSkillTotalPages] = useState(1);
-  const [skillHasNext, setSkillHasNext] = useState(false);
-  const [skillHasPrev, setSkillHasPrev] = useState(false);
 
   const fetchColleges = async (pageNum = 1, searchTxt = "") => {
     try {
@@ -94,39 +85,10 @@ export default function FindTalentTabContent() {
     }
   };
 
-  const fetchSkills = async (pageNum = 1, searchTxt = "") => {
-    try {
-      setIsFetchingSkills(true);
-      const response = await getMasterData("Skill", { page: pageNum, search: searchTxt });
-      const apiData = response.data || response.message || [];
-      const options = Array.isArray(apiData) ? apiData.map((item: any) => item.name) : [];
-      setSkills(options);
-
-      const pag = response.pagination || response.message?.pagination || {};
-      const nextFlag = pag.has_next === true;
-      const prevFlag = pag.has_prev === true;
-      const totalCount = pag.total_count || 0;
-      const pageSize = pag.page_size || 20;
-      const totalPgs = Math.ceil(totalCount / pageSize) || 1;
-
-      setSkillHasNext(nextFlag || options.length === 20);
-      setSkillHasPrev(prevFlag || pageNum > 1);
-      setSkillTotalPages(totalPgs);
-      setSkillPage(pageNum);
-    } catch (err) {
-      console.error("Error fetching skills:", err);
-    } finally {
-      setIsFetchingSkills(false);
-    }
-  };
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsCollegeDropdownOpen(false);
-      }
-      if (skillDropdownRef.current && !skillDropdownRef.current.contains(event.target as Node)) {
-        setIsSkillDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -142,14 +104,6 @@ export default function FindTalentTabContent() {
   }, [collegeSearchTerm, isCollegeDropdownOpen]);
 
   useEffect(() => {
-    if (!isSkillDropdownOpen) return;
-    const delayDebounce = setTimeout(() => {
-      fetchSkills(1, skillSearchTerm);
-    }, 400);
-    return () => clearTimeout(delayDebounce);
-  }, [skillSearchTerm, isSkillDropdownOpen]);
-
-  useEffect(() => {
     const delayDebounce = setTimeout(() => {
       setSearchQuery(searchVal);
     }, 450);
@@ -161,13 +115,13 @@ export default function FindTalentTabContent() {
     setSearchQuery("");
     setSelectedCollege("");
     setCurrentYear("");
-    setSelectedSkill("");
+    setSelectedSkills([]);
     setSortBy("");
   };
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedCollege, searchQuery, currentYear, selectedSkill, sortBy]);
+  }, [selectedCollege, searchQuery, currentYear, selectedSkills, sortBy]);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -177,7 +131,7 @@ export default function FindTalentTabContent() {
           search: searchQuery || undefined,
           College: selectedCollege || undefined,
           current_year: currentYear || undefined,
-          skill: selectedSkill || undefined,
+          skill: selectedSkills.length > 0 ? selectedSkills.join(",") : undefined,
           sort_by: sortBy || undefined,
           page: currentPage,
           page_size: PAGE_SIZE
@@ -209,7 +163,7 @@ export default function FindTalentTabContent() {
     };
 
     fetchStudents();
-  }, [selectedCollege, currentPage, searchQuery, currentYear, selectedSkill, sortBy]);
+  }, [selectedCollege, currentPage, searchQuery, currentYear, selectedSkills, sortBy]);
 
 
   const transformStudent = (student: any) => {
@@ -301,15 +255,15 @@ export default function FindTalentTabContent() {
             />
           </div>
 
-          <div className="relative" ref={dropdownRef}>
+          <div className="relative w-full md:flex-[1.5] min-w-[280px]" ref={dropdownRef}>
             <div 
               onClick={() => {
                 setIsCollegeDropdownOpen(!isCollegeDropdownOpen);
                 if (!isCollegeDropdownOpen) fetchColleges(1, "");
               }}
-              className={`flex items-center justify-between min-w-[200px] px-4 py-2.5 rounded-xl border ${isCollegeDropdownOpen ? 'border-orange-500 ring-2 ring-orange-500/20' : 'border-slate-300'} bg-white text-sm text-slate-700 cursor-pointer hover:border-slate-400 transition-all`}
+              className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl border ${isCollegeDropdownOpen ? 'border-orange-500 ring-2 ring-orange-500/20' : 'border-slate-300'} bg-white text-sm text-slate-700 cursor-pointer hover:border-slate-400 transition-all`}
             >
-              <span className="truncate max-w-[150px]">
+              <span className="truncate max-w-[240px] flex-1">
                 {selectedCollege || (isFetchingColleges ? "Loading..." : "Select College")}
               </span>
               <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${isCollegeDropdownOpen ? 'rotate-180' : ''}`} />
@@ -437,137 +391,21 @@ export default function FindTalentTabContent() {
 
 
           {/* Skill Select Dropdown */}
-          <div className="relative" ref={skillDropdownRef}>
-            <div 
-              onClick={() => {
-                setIsSkillDropdownOpen(!isSkillDropdownOpen);
-                if (!isSkillDropdownOpen) fetchSkills(1, "");
-              }}
-              className={`flex items-center justify-between min-w-[200px] px-4 py-2.5 rounded-xl border ${isSkillDropdownOpen ? 'border-orange-500 ring-2 ring-orange-500/20' : 'border-slate-300'} bg-white text-sm text-slate-700 cursor-pointer hover:border-slate-400 transition-all`}
-            >
-              <span className="truncate max-w-[150px]">
-                {selectedSkill || (isFetchingSkills ? "Loading..." : "Select Skill")}
-              </span>
-              <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${isSkillDropdownOpen ? 'rotate-180' : ''}`} />
-            </div>
-
-            <AnimatePresence>
-              {isSkillDropdownOpen && (
-                <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={() => { setIsSkillDropdownOpen(false); setSkillSearchTerm(""); }}>
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="w-full max-w-md bg-white rounded-3xl border border-slate-100 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {/* Modal Header */}
-                    <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Select Skill</span>
-                      <button
-                        onClick={() => { setIsSkillDropdownOpen(false); setSkillSearchTerm(""); }}
-                        className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    {/* Search Input */}
-                    <div className="p-3 border-b border-slate-100 bg-white">
-                      <div className="relative">
-                        <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                        <input 
-                          type="text"
-                          placeholder="Search skills..."
-                          value={skillSearchTerm}
-                          onChange={(e) => setSkillSearchTerm(e.target.value)}
-                          className="w-full pl-10 pr-4 py-2 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium bg-slate-50/50"
-                          autoFocus
-                        />
-                      </div>
-                    </div>
-
-                    {/* Skills List */}
-                    <div className="overflow-y-auto flex-1 p-2 space-y-1 max-h-[50vh] relative min-h-[200px]">
-                      {isFetchingSkills && (
-                        <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
-                          <Loader2 className="w-8 h-8 text-orange-500 animate-spin" />
-                        </div>
-                      )}
-                      <div
-                        onClick={() => {
-                          setSelectedSkill("");
-                          setIsSkillDropdownOpen(false);
-                          setSkillSearchTerm("");
-                        }}
-                        className="flex items-center justify-between px-4 py-3 rounded-2xl cursor-pointer hover:bg-slate-50 text-slate-600 text-sm font-semibold transition-all mb-0.5"
-                      >
-                        All Skills
-                      </div>
-                      {skills.map((skill) => {
-                          const isSelected = selectedSkill === skill;
-                          return (
-                            <div
-                              key={skill}
-                              onClick={() => {
-                                setSelectedSkill(skill);
-                                setIsSkillDropdownOpen(false);
-                                setSkillSearchTerm("");
-                              }}
-                              className={`flex items-center justify-between px-4 py-3 rounded-2xl cursor-pointer transition-all mb-0.5 ${
-                                isSelected ? 'bg-orange-50 text-orange-600 font-semibold' : 'hover:bg-slate-50 text-slate-600'
-                              }`}
-                            >
-                              <span className="text-sm font-bold leading-tight">{skill}</span>
-                              {isSelected && <Check className="w-4 h-4 text-orange-600 shrink-0" />}
-                            </div>
-                          );
-                        })}
-                      {skills.length === 0 && !isFetchingSkills && (
-                        <div className="py-8 text-center">
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No skills found</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Pagination Controls */}
-                    {(skillHasNext || skillHasPrev || skillTotalPages > 1) && (
-                      <div className="flex items-center justify-between p-3 border-t border-slate-100 bg-slate-50/50 text-[10px] font-bold text-slate-500 uppercase tracking-wider" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          disabled={!skillHasPrev || isFetchingSkills}
-                          onClick={() => fetchSkills(skillPage - 1, skillSearchTerm)}
-                          className={`px-3 py-1.5 rounded-xl border transition-all ${
-                            skillHasPrev 
-                              ? "bg-white border-slate-200 hover:bg-slate-100 text-slate-700 font-bold" 
-                              : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
-                          }`}
-                        >
-                          Previous
-                        </button>
-                        
-                        <span className="font-bold text-slate-700">
-                          Page {skillPage} of {skillTotalPages}
-                        </span>
-
-                        <button
-                          type="button"
-                          disabled={!skillHasNext || isFetchingSkills}
-                          onClick={() => fetchSkills(skillPage + 1, skillSearchTerm)}
-                          className={`px-3 py-1.5 rounded-xl border transition-all ${
-                            skillHasNext 
-                              ? "bg-white border-slate-200 hover:bg-slate-100 text-slate-700 font-bold" 
-                              : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
-                          }`}
-                        >
-                          Next
-                        </button>
-                      </div>
-                    )}
-                  </motion.div>
-                </div>
-              )}
-            </AnimatePresence>
+          <div className="w-full md:max-w-[280px] md:min-w-[200px] flex-1">
+            <Dropdown
+              id="skills-filter"
+              placeholder="All Skills"
+              endpoint={`${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`}
+              params={{ doctype: "Skill" }}
+              mapOptions={(data: any) => data.map((item: any) => ({
+                value: item.name,
+                label: item.name
+              }))}
+              value={selectedSkills}
+              onChange={setSelectedSkills}
+              multiSelect={true}
+              searchable={true}
+            />
           </div>
 
           {/* Current Year Select Dropdown */}

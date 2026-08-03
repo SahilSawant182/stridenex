@@ -559,7 +559,7 @@ export default function StudentOnboarding({
       }
     } catch (err: any) {
       console.error("Error verifying email OTP:", err);
-      const errorMessage = err?.response?.data?.message || "Verification failed";
+      const errorMessage = err?.message || err?.response?.data?.message || "Verification failed";
       setError(errorMessage);
     } finally {
       // setLoading(false);
@@ -625,7 +625,7 @@ export default function StudentOnboarding({
       }
     } catch (err: any) {
       console.error("Error verifying mobile OTP:", err);
-      setError(err?.response?.data?.message || "Verification failed");
+      setError(err?.message || err?.response?.data?.message || "Verification failed");
     } finally {
       // setLoading(false);
     }

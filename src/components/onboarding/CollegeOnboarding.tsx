@@ -246,7 +246,7 @@ export default function CollegeOnboarding({
         setError(response?.message || "Invalid verification code");
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Verification failed");
+      setError(err?.message || err?.response?.data?.message || "Verification failed");
     } finally {
       setLoading(false);
     }
@@ -289,7 +289,7 @@ export default function CollegeOnboarding({
         setError(response?.message || "Invalid verification code");
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Verification failed");
+      setError(err?.message || err?.response?.data?.message || "Verification failed");
     } finally {
       setLoading(false);
     }
@@ -380,10 +380,25 @@ export default function CollegeOnboarding({
       const data = await response.json();
 
       let options: Option[] = [];
+      let arrayData = null;
       if (Array.isArray(data)) {
-        options = data.map((item: any) => ({ value: item.name, label: item.name }));
-      } else if (data.data && Array.isArray(data.data)) {
-        options = data.data.map((item: any) => ({ value: item.name, label: item.name }));
+        arrayData = data;
+      } else if (data && data.data) {
+        if (Array.isArray(data.data)) {
+          arrayData = data.data;
+        } else if (data.data.data && Array.isArray(data.data.data)) {
+          arrayData = data.data.data;
+        }
+      } else if (data && data.message) {
+        if (Array.isArray(data.message)) {
+          arrayData = data.message;
+        } else if (data.message.data && Array.isArray(data.message.data)) {
+          arrayData = data.message.data;
+        }
+      }
+
+      if (arrayData) {
+        options = arrayData.map((item: any) => ({ value: item.name, label: item.name }));
       }
 
       setOptions(options);
@@ -904,10 +919,6 @@ export default function CollegeOnboarding({
         // ─── BILLING INTEGRATION ENDS HERE ──────────────────────────────────
 
         setSuccess("College onboarding completed successfully!");
-        if (typeof updateOnboardedFlag === "function") {
-          updateOnboardedFlag("4");
-        }
-        localStorage.setItem("isOnboarded", "4");
 
         setTimeout(async () => {
           const redirectUrl = isMobileSource ? "https://testwebstridenex.quantcloud.in/login" : "/login";

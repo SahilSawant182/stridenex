@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Label } from "@/components/ui/label";
 import { ChevronDown, X, Check, Search, Loader2 } from "lucide-react";
 import axios from "axios";
@@ -45,16 +46,26 @@ export default function Dropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [hasNext, setHasNext] = useState(false);
   const [hasPrev, setHasPrev] = useState(false);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current && 
+        !containerRef.current.contains(event.target as Node) &&
+        (!modalRef.current || !modalRef.current.contains(event.target as Node))
+      ) {
         setIsOpen(false);
         setSearchTerm("");
       }
@@ -293,9 +304,10 @@ export default function Dropdown({
       </div>
 
       {/* Dropdown menu */}
-      {isOpen && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={() => { setIsOpen(false); setSearchTerm(""); }}>
+      {isOpen && mounted && typeof window !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={() => { setIsOpen(false); setSearchTerm(""); }}>
           <div 
+            ref={modalRef}
             className="w-full max-w-md bg-white rounded-3xl border border-slate-100 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in-0 zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
@@ -435,7 +447,8 @@ export default function Dropdown({
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Loading and error states */}

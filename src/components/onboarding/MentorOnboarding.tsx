@@ -288,13 +288,25 @@ export default function MentorOnboarding({
       );
       const data = await response.json();
       let options: Array<{ value: string; label: string }> = [];
+      let arrayData = null;
       if (Array.isArray(data)) {
-        options = data.map((item: any) => ({
-          value: item.name,
-          label: item.name
-        }));
-      } else if (data.data && Array.isArray(data.data)) {
-        options = data.data.map((item: any) => ({
+        arrayData = data;
+      } else if (data && data.data) {
+        if (Array.isArray(data.data)) {
+          arrayData = data.data;
+        } else if (data.data.data && Array.isArray(data.data.data)) {
+          arrayData = data.data.data;
+        }
+      } else if (data && data.message) {
+        if (Array.isArray(data.message)) {
+          arrayData = data.message;
+        } else if (data.message.data && Array.isArray(data.message.data)) {
+          arrayData = data.message.data;
+        }
+      }
+
+      if (arrayData) {
+        options = arrayData.map((item: any) => ({
           value: item.name,
           label: item.name
         }));
@@ -459,7 +471,7 @@ export default function MentorOnboarding({
       }
     } catch (err: any) {
       setError(
-        err?.response?.data?.message || "Verification failed"
+        err?.message || err?.response?.data?.message || "Verification failed"
       );
     }
   };
@@ -525,7 +537,7 @@ export default function MentorOnboarding({
       }
     } catch (err: any) {
       setError(
-        err?.response?.data?.message || "Verification failed"
+        err?.message || err?.response?.data?.message || "Verification failed"
       );
     }
   };
@@ -847,11 +859,6 @@ export default function MentorOnboarding({
             return; // Stop the redirect if billing fails so the user can see the error
           }
           // ─── BILLING INTEGRATION ENDS HERE ──────────────────────────────────
-
-          if (typeof updateOnboardedFlag === "function") {
-            updateOnboardedFlag("3");
-          }
-          localStorage.setItem("isOnboarded", "3");
 
           setSuccess(
             "Mentor onboarding completed successfully! You will be redirected to login page."
