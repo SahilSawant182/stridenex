@@ -133,10 +133,11 @@ export default function CompanyProfileTabContent() {
   const [partnersError, setPartnersError] = useState<string | null>(null);
 
   const fetchSkillsList = async () => {
-    if (!data?.company_name) return;
+    const companyName = data?.company_name || data?.name;
+    if (!companyName) return;
     try {
       setSkillsLoading(true);
-      const response = await getSkillDomain(data.company_name);
+      const response = await getSkillDomain(companyName);
 
       // Extensive data extraction
       let apiData: any[] = [];
@@ -167,7 +168,7 @@ export default function CompanyProfileTabContent() {
           raw: domain
         };
       });
-      console.log("SUCCESSFULLY MAPPED:", mapped.length, "domains for", data.company_name);
+      console.log("SUCCESSFULLY MAPPED:", mapped.length, "domains for", companyName);
       setSkillDomains(mapped);
     } catch (err: any) {
       console.error("Error in fetchSkillsList:", err);
@@ -179,11 +180,12 @@ export default function CompanyProfileTabContent() {
   };
 
   const fetchCampusPartners = async () => {
-    if (!data?.company_name) return;
+    const companyName = data?.company_name || data?.name;
+    if (!companyName) return;
     try {
       setCampusPartnersLoading(true);
       setPartnersError(null);
-      const response = await getCampusPartnerList(data.company_name);
+      const response = await getCampusPartnerList(companyName);
       const apiData = response?.data || response?.message?.data || response?.message || [];
       setCampusPartners(Array.isArray(apiData) ? apiData : []);
     } catch (err: any) {
@@ -407,17 +409,19 @@ export default function CompanyProfileTabContent() {
         await refreshIndustryData();
       } else if (modalMode === "skill_domain") {
         const payload = {
-          industry: data?.company_name,
-          skill_domain: "",
+          industry: data?.company_name || data?.name || "",
           domain: formData.domain,
-          sub_domain: formData.sub_domain,
+          sub_domain: formData.sub_domain || "",
           skills: Array.isArray(formData.skills) ? formData.skills.map((s: string) => ({ skill: s })) : [],
           roles: Array.isArray(formData.roles) ? formData.roles.map((r: string) => ({ designation: r })) : [],
         };
+        console.log("CompanyProfileTabContent: Submitting skill_domain payload:", payload);
         if (skillDomainToEdit) {
+          console.log("CompanyProfileTabContent: Updating skill domain named:", skillDomainToEdit.name);
           await updateSkillDomain(skillDomainToEdit.name, { ...payload, name: skillDomainToEdit.name });
           setSkillDomainToEdit(undefined);
         } else {
+          console.log("CompanyProfileTabContent: Creating new skill domain");
           await createSkillDomain(payload);
         }
         await fetchSkillsList();

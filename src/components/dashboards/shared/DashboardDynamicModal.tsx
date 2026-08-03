@@ -221,8 +221,11 @@ export default function DashboardDynamicModal({
     }));
   };
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleFormSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e && typeof e.preventDefault === 'function') {
+      e.preventDefault();
+    }
+    console.log("DashboardDynamicModal: handleFormSubmit called. formData:", formData);
 
     // Perform validation
     const newErrors: Record<string, string> = {};
@@ -242,10 +245,12 @@ export default function DashboardDynamicModal({
     });
 
     if (Object.keys(newErrors).length > 0) {
+      console.warn("DashboardDynamicModal: Validation failed:", newErrors);
       setErrors(newErrors);
       return;
     }
 
+    console.log("DashboardDynamicModal: Validation passed. Calling onSubmit...");
     try {
       await onSubmit(formData);
     } catch (err: any) {

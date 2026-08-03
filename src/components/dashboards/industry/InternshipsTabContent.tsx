@@ -104,7 +104,10 @@ export default function InternshipsTabContent() {
         data = await getMasterData(doctype, extraPayload);
       }
       const apiData = data.message?.data || data.data || data.message || [];
-      const mapField = extraPayload?.fields || "name";
+      let mapField = "name";
+      if (extraPayload?.fields) {
+        mapField = Array.isArray(extraPayload.fields) ? extraPayload.fields[0] : extraPayload.fields;
+      }
       let options = Array.isArray(apiData) ? apiData.map((item: any) => item[mapField] || item.name || item.department_name || item.department || item) : [];
       if (doctype === "Courses") {
         options = ["All", ...options];
@@ -303,7 +306,7 @@ export default function InternshipsTabContent() {
       fetchOptions("Skill", setSkillOptions);
     } else if (fieldName === "type" && categoryOptions.length === 0) {
       fetchOptions("Industry Skill Domain", setCategoryOptions, {
-        fields: "domain",
+        fields: ["domain"],
         filters: {
           industry: companyName
         }

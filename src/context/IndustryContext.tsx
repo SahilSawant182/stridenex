@@ -21,6 +21,7 @@ export interface HiringRound {
 }
 
 export interface IndustryData {
+  name?: string;
   company_name: string;
   about: string | null;
   business_type: string;
