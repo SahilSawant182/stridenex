@@ -299,8 +299,14 @@ function ActivePlanSection({ plan }: ActivePlanSectionProps) {
   );
 }
 
-const SESSION_TYPES = ["Session Booking", "1:1 Mentorship", "Group Session"];
-const isSession = (type?: string) => type ? SESSION_TYPES.includes(type) : false;
+const SESSION_TYPES = [
+  "session booking",
+  "1:1 mentorship",
+  "group session",
+  "async review",
+  "workshop"
+];
+const isSession = (type?: string) => type ? SESSION_TYPES.includes(type.toLowerCase()) : false;
 
 function SubscriptionCard({ entry }: { entry: SubscriptionHistoryItem }) {
   return (
@@ -396,7 +402,14 @@ function SessionCard({ entry }: { entry: SubscriptionHistoryItem }) {
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-bold text-slate-800">{entry.package_name}</p>
                   <Badge className="bg-orange-100 text-orange-700 border-0 text-[10px] px-2 py-0.5 font-bold">
-                    {entry.package_type === "Group Session" ? "Group Session" : "1:1 Session"}
+                    {(() => {
+                      const typeLower = (entry.package_type || "").toLowerCase();
+                      if (typeLower === "group session") return "Group Session";
+                      if (typeLower === "async review") return "Async Review";
+                      if (typeLower === "workshop" || typeLower === "worksop") return "Workshop";
+                      if (typeLower === "1:1 mentorship") return "1:1 Mentorship";
+                      return entry.package_type || "1:1 Session";
+                    })()}
                   </Badge>
                   <Badge className={`border-0 text-[10px] px-2 py-0.5 font-bold ${entry.payment_status === "Paid" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
                     }`}>
@@ -483,7 +496,7 @@ function PurchaseHistory({ history }: PurchaseHistoryProps) {
             <div className="w-7 h-7 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center">
               <Server className="w-4 h-4 text-indigo-500" />
             </div>
-            <h2 className="text-base font-bold text-slate-800 tracking-tight">Software Subscriptions</h2>
+            <h2 className="text-base font-bold text-slate-800 tracking-tight">Plan Subscription History</h2>
             <span className="ml-1 text-[10px] font-bold text-indigo-500 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-full">
               {subscriptions.length}
             </span>
