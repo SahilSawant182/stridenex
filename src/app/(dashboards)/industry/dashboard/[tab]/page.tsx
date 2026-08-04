@@ -11,6 +11,7 @@ import CompanyProfileTabContent from "@/components/dashboards/industry/CompanyPr
 import ProjectsTabContent from "@/components/dashboards/industry/ProjectsTabContent";
 import FeedbackTabContent from "@/components/dashboards/industry/FeedbackTabContent";
 import SettingsTabContent from "@/components/dashboards/industry/SettingsTabContent";
+import JobsTabContent from "@/components/dashboards/industry/JobsTabContent";
 
 export default function IndustryTabContent({
   params
@@ -18,7 +19,7 @@ export default function IndustryTabContent({
   params: Promise<{ tab: string }>
 }) {
   const resolvedParams = use(params);
-  
+
   const renderTab = () => {
     switch (resolvedParams.tab) {
       case "company-profile":
@@ -31,6 +32,8 @@ export default function IndustryTabContent({
         return <ProjectsTabContent />;
       case "internships":
         return <InternshipsTabContent />;
+      case "jobs":
+        return <JobsTabContent />;
       case "feedback":
         return <FeedbackTabContent />;
       case "analytics":

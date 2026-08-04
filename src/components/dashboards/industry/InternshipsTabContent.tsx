@@ -354,7 +354,13 @@ export default function InternshipsTabContent() {
           ? editingInternship.skills.map((s: any) => s.skill || s.skills)
           : Array.isArray(editingInternship.required_skills)
             ? editingInternship.required_skills.map((s: any) => s.skill || s.skills)
-            : []
+            : [],
+        course: Array.isArray(editingInternship.course)
+          ? editingInternship.course.map((c: any) => c.course || c)
+          : [],
+        department: Array.isArray(editingInternship.department)
+          ? editingInternship.department.map((d: any) => d.department || d)
+          : []
       };
     }
     return {

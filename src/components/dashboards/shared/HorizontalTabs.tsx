@@ -45,6 +45,7 @@ const tabConfig = {
     { name: "Community", icon: Users, path: "/student/dashboard/community" },
     { name: "Projects", icon: FolderGit2, path: "/student/dashboard/projects" },
     { name: "Internships", icon: Briefcase, path: "/student/dashboard/internships" },
+    { name: "Jobs", icon: Briefcase, path: "/student/dashboard/jobs" },
     { name: "Habits", icon: CheckSquare, path: "/student/dashboard/habits" },
     { name: "Mentors", icon: UserCircle, path: "/student/dashboard/mentors" },
     { name: "Events", icon: Calendar, path: "/student/dashboard/events" },
@@ -74,7 +75,9 @@ const tabConfig = {
     { name: "Find Talent", icon: Briefcase, path: "/industry/dashboard/find-talent" },
     { name: "Internships Pipeline", icon: Mail, path: "/industry/dashboard/pipeline" },
     { name: "Projects", icon: FolderGit2, path: "/industry/dashboard/projects" },
+
     { name: "Internships", icon: UserCheck, path: "/industry/dashboard/internships" },
+    { name: "Job Profiles", icon: Briefcase, path: "/industry/dashboard/jobs" },
     // { name: "Feedback", icon: Star, path: "/industry/dashboard/feedback" },
     // { name: "Analytics", icon: Calendar, path: "/industry/dashboard/analytics" },
     { name: "Settings", icon: Settings, path: "/industry/dashboard/settings" },

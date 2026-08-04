@@ -390,7 +390,13 @@ export default function ProjectsTabContent() {
           ? projectToEdit.skills.map((s: any) => s.skill || s.skills)
           : Array.isArray(projectToEdit.required_skills)
             ? projectToEdit.required_skills.map((s: any) => s.skill || s.skills)
-            : []
+            : [],
+        course: Array.isArray(projectToEdit.course)
+          ? projectToEdit.course.map((c: any) => c.course || c)
+          : [],
+        department: Array.isArray(projectToEdit.department)
+          ? projectToEdit.department.map((d: any) => d.department || d)
+          : []
       };
     }
     return {
