@@ -53,8 +53,8 @@ export const studentConfig: RoleConfig = {
   searchPlaceholder: "Search resources, skills, internships...",
   links: [
     { name: "Overview", href: "/student/dashboard", icon: LayoutDashboard }, // Base route
-    { name: "Skills", href: "/student/dashboard/skills", icon: Code },
-    { name: "Path", href: "/student/dashboard/path", icon: Target },
+    { name: "Skill Ledger", href: "/student/dashboard/skills", icon: Code },
+    { name: "Skill Path", href: "/student/dashboard/path", icon: Target },
     { name: "Shorts", href: "/student/dashboard/shorts", icon: Video },
     { name: "Community", href: "/student/dashboard/community", icon: Users },
     { name: "Projects", href: "/student/dashboard/projects", icon: FolderGit2 },

@@ -1,14 +1,14 @@
 // components/dashboards/student/StoriesTabContent.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Quote,
     Briefcase,
-    IndianRupee,
     Rocket,
     Sparkles,
+    ChevronLeft,
     ChevronRight,
     Award,
     TrendingUp,
@@ -41,6 +41,10 @@ export default function StoriesTabContent() {
     const [testimonial, setTestimonial] = useState("");
     const [status, setStatus] = useState("Published");
 
+    // Carousel autoplay state & ref
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+    const [isAutoplayStopped, setIsAutoplayStopped] = useState(false);
+
     const fetchStories = async () => {
         try {
             setLoading(true);
@@ -48,7 +52,6 @@ export default function StoriesTabContent() {
             console.log("Success stories API raw response:", res);
             
             let fetchedStories: any[] = [];
-            
             if (res) {
                 if (Array.isArray(res)) {
                     fetchedStories = res;
@@ -64,7 +67,6 @@ export default function StoriesTabContent() {
                     fetchedStories = res.data.message.data;
                 }
             }
-            
             setStories(fetchedStories);
         } catch (error) {
             console.error("Error loading success stories:", error);
@@ -77,18 +79,14 @@ export default function StoriesTabContent() {
     useEffect(() => {
         fetchStories();
         
-        // Load student details
         const loadStudentProfile = async () => {
             if (!currentUser) return;
             try {
-                // Try local storage first
                 const stored = localStorage.getItem("studentDetails");
                 if (stored) {
                     setStudentProfile(JSON.parse(stored));
                     return;
                 }
-                
-                // Fetch from API
                 const res = await getStudentByEmail(currentUser);
                 const data = res?.data || res?.message?.data || res?.message;
                 if (data && typeof data === "object") {
@@ -99,9 +97,30 @@ export default function StoriesTabContent() {
                 console.error("Error loading student profile:", error);
             }
         };
-        
         loadStudentProfile();
     }, [currentUser]);
+
+    // Autoplay slide interval
+    useEffect(() => {
+        if (stories.length === 0 || isAutoplayStopped) return;
+
+        const interval = setInterval(() => {
+            if (scrollContainerRef.current) {
+                const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+                
+                // If close to the end, wrap back to the beginning
+                if (scrollLeft + clientWidth >= scrollWidth - 15) {
+                    scrollContainerRef.current.scrollTo({ left: 0, behavior: "smooth" });
+                } else {
+                    // Scroll by roughly 1 card width
+                    const cardWidth = clientWidth / 3 || 320;
+                    scrollContainerRef.current.scrollTo({ left: scrollLeft + cardWidth, behavior: "smooth" });
+                }
+            }
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [stories, isAutoplayStopped]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -120,9 +139,8 @@ export default function StoriesTabContent() {
         
         try {
             setSubmitting(true);
-
             const payload = {
-                student: studentProfile?.name || currentUser, // Fallback to currentUser email if studentProfile is not loaded
+                student: studentProfile?.name || currentUser,
                 outcome_category: outcomeCategory,
                 outcome_title: outcomeTitle,
                 outcome_metric: outcomeMetric || null,
@@ -134,12 +152,10 @@ export default function StoriesTabContent() {
             if (res) {
                 showToast("Success story published successfully!", "success");
                 setIsOpen(false);
-                // Reset form
                 setOutcomeTitle("");
                 setOutcomeMetric("");
                 setTestimonial("");
                 setStatus("Published");
-                // Refresh list
                 fetchStories();
             }
         } catch (error: any) {
@@ -197,24 +213,87 @@ export default function StoriesTabContent() {
         }
     };
 
+    const getCategoryColors = (category: string) => {
+        switch (category?.toLowerCase()) {
+            case "placement":
+                return {
+                    border: "border-l-orange-500",
+                    badge: "bg-orange-50 text-orange-600 border-orange-100/80",
+                    iconBg: "bg-orange-100/50 text-orange-650"
+                };
+            case "internship":
+                return {
+                    border: "border-l-emerald-500",
+                    badge: "bg-emerald-50 text-emerald-600 border-emerald-100/80",
+                    iconBg: "bg-emerald-100/50 text-emerald-650"
+                };
+            case "startup":
+            case "entrepreneurship":
+                return {
+                    border: "border-l-purple-500",
+                    badge: "bg-purple-50 text-purple-600 border-purple-100/80",
+                    iconBg: "bg-purple-100/50 text-purple-650"
+                };
+            default:
+                return {
+                    border: "border-l-blue-500",
+                    badge: "bg-blue-50 text-blue-600 border-blue-100/80",
+                    iconBg: "bg-blue-100/50 text-blue-650"
+                };
+        }
+    };
+
+    const scroll = (direction: "left" | "right") => {
+        setIsAutoplayStopped(true); // Stop autoplay on manual interaction
+        if (scrollContainerRef.current) {
+            const { scrollLeft, clientWidth } = scrollContainerRef.current;
+            const scrollTo = direction === "left" 
+                ? scrollLeft - clientWidth / 2 
+                : scrollLeft + clientWidth / 2;
+            scrollContainerRef.current.scrollTo({ left: scrollTo, behavior: "smooth" });
+        }
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-5">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Success Stories</h1>
-                    <p className="text-slate-500 mt-1 text-sm">Real outcomes from StrideNex students — your inspiration starts here</p>
+                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Success Stories</h1>
+                    <p className="text-slate-500 mt-1 text-xs font-medium">Real outcomes from StrideNex students — your inspiration starts here</p>
                 </div>
                 <Button 
                     onClick={() => setIsOpen(true)}
-                    className="bg-orange-500 hover:bg-orange-600 text-white font-semibold flex items-center gap-2 px-5 py-2.5 rounded-xl shadow-md transition-all duration-200 hover:-translate-y-0.5"
+                    className="bg-orange-500 hover:bg-orange-600 text-white font-bold flex items-center gap-2 px-5 py-2.5 rounded-xl shadow-sm transition-all duration-200 hover:-translate-y-0.5"
                 >
                     <Sparkles className="w-4 h-4" />
                     Share Your Story
                 </Button>
             </div>
 
-            {/* Stories Grid */}
+            {/* Carousel navigation controls */}
+            {!loading && stories.length > 0 && (
+                <div className="flex justify-end gap-2 mb-2">
+                    <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => scroll("left")}
+                        className="w-9 h-9 rounded-xl border-slate-200 hover:bg-slate-50 shadow-sm active:scale-95 transition-all"
+                    >
+                        <ChevronLeft className="w-4 h-4 text-slate-600" />
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        size="icon" 
+                        onClick={() => scroll("right")}
+                        className="w-9 h-9 rounded-xl border-slate-200 hover:bg-slate-50 shadow-sm active:scale-95 transition-all"
+                    >
+                        <ChevronRight className="w-4 h-4 text-slate-600" />
+                    </Button>
+                </div>
+            )}
+
+            {/* Carousel Container */}
             {loading ? (
                 <div className="flex justify-center items-center py-20">
                     <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
@@ -226,94 +305,106 @@ export default function StoriesTabContent() {
                     className="text-center py-16 bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col items-center justify-center"
                 >
                     <Sparkles className="w-12 h-12 text-slate-300 mb-3" />
-                    <p className="text-slate-400 mb-4 font-medium">No success stories published yet.</p>
+                    <p className="text-slate-400 mb-4 font-semibold text-sm">No success stories published yet.</p>
                     <Button onClick={() => setIsOpen(true)} variant="outline" className="border-orange-500 text-orange-500 hover:bg-orange-50">
                         Be the first to share!
                     </Button>
                 </motion.div>
             ) : (
-                <motion.div 
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4 }}
-                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+                <div 
+                    ref={scrollContainerRef}
+                    className="flex gap-6 overflow-x-auto scrollbar-none scroll-smooth pb-4 -mx-1 px-1 snap-x snap-mandatory"
                 >
-                    {stories.map((story) => {
+                    {stories.map((story, index) => {
                         const Icon = getCategoryIcon(story.outcome_category);
                         const displayName = getStudentDisplayName(story);
                         const initials = getInitials(story);
                         const avatarStyle = getAvatarStyle(story);
+                        const cardTheme = getCategoryColors(story.outcome_category);
+                        
                         return (
-                            <BaseCard key={story.id} className="overflow-hidden hover:shadow-lg hover:border-slate-300/80 transition-all duration-300 group border-slate-200 bg-white">
-                                <div className="p-5 flex flex-col justify-between h-full space-y-4">
-                                    {/* Header with Avatar and Name */}
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="w-11 h-11 border border-slate-100">
-                                                <AvatarFallback style={avatarStyle} className="text-white font-bold text-sm">
-                                                    {initials}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <h3 className="font-semibold text-slate-800 text-sm leading-tight">{displayName}</h3>
-                                                <p className="text-[11px] text-slate-400 font-medium mt-0.5" title={story.college}>{story.college || "StrideNex Student"}</p>
+                            <div 
+                                key={story.id || index} 
+                                className="w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] shrink-0 snap-start"
+                                onClick={() => setIsAutoplayStopped(true)} // Stop autoplay when clicked
+                            >
+                                <BaseCard className={`overflow-hidden hover:shadow-xl hover:border-slate-300 transition-all duration-300 border-slate-200 bg-white h-[200px] flex flex-col justify-between relative group rounded-xl border-l-[4px] ${cardTheme.border}`}>
+                                    {/* Subtle hover gradient backdrop */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-slate-50/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                                    
+                                    <div className="p-4 flex flex-col justify-between h-full space-y-2.5 relative z-10">
+                                        {/* Header with Avatar, Name, and Badge */}
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2.5 min-w-0">
+                                                <Avatar className="w-8 h-8 border border-slate-100 shadow-sm shrink-0">
+                                                    <AvatarFallback style={avatarStyle} className="text-white font-bold text-[10px]">
+                                                        {initials}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="min-w-0">
+                                                    <h3 className="font-bold text-slate-800 text-xs leading-tight truncate group-hover:text-orange-650 transition-colors">{displayName}</h3>
+                                                    <p className="text-[9px] text-slate-405 font-semibold truncate" title={story.college}>{story.college || "StrideNex Student"}</p>
+                                                </div>
                                             </div>
+                                            <Badge variant="outline" className={`${cardTheme.badge} text-[9px] font-bold py-0.5 px-2 rounded-full uppercase tracking-wider shrink-0`}>
+                                                {story.outcome_category}
+                                            </Badge>
                                         </div>
-                                        <Badge variant="outline" className="bg-orange-50/50 text-orange-600 border-orange-100/60 text-[10px] font-semibold py-0.5 px-2">
-                                            {story.outcome_category}
-                                        </Badge>
-                                    </div>
 
-                                    {/* Achievement and Metric Row */}
-                                    <div className="bg-slate-50/50 rounded-xl p-3 flex items-center justify-between border border-slate-100/50">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="p-1.5 bg-orange-100/40 text-orange-600 rounded-lg">
-                                                <Icon className="w-4 h-4" />
-                                            </div>
-                                            <div>
-                                                <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Achievement</span>
-                                                <p className="font-semibold text-slate-700 text-xs mt-0.5">{story.outcome_title}</p>
-                                            </div>
+                                        {/* Testimonial Quote Box */}
+                                        <div className="bg-slate-50/70 border border-slate-100/80 rounded-lg p-2.5 relative min-h-[52px] flex items-center group-hover:bg-slate-100/30 transition-colors duration-200">
+                                            <Quote className="w-8 h-8 text-slate-200/40 absolute right-1.5 top-1 pointer-events-none" />
+                                            <p className="text-[10px] text-slate-600 italic leading-relaxed line-clamp-2 pr-6">
+                                                "{story.testimonial}"
+                                            </p>
                                         </div>
-                                        {story.outcome_metric && (
-                                            <div className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg text-xs font-bold border border-emerald-100/60 shadow-sm">
-                                                {story.outcome_metric}
-                                            </div>
-                                        )}
-                                    </div>
 
-                                    {/* Testimonial Quote */}
-                                    <div className="relative pl-3 border-l-2 border-orange-400/80">
-                                        <p className="text-xs text-slate-500 italic leading-relaxed">
-                                            "{story.testimonial}"
-                                        </p>
+                                        {/* Achievement and Metric Row */}
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                                <div className={`p-1.5 rounded-lg shrink-0 ${cardTheme.iconBg}`}>
+                                                    <Icon className="w-3.5 h-3.5" />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <span className="text-[7px] text-slate-400 font-bold block uppercase tracking-wider leading-none mb-0.5">Role</span>
+                                                    <p className="font-bold text-slate-850 text-xs truncate leading-tight">{story.outcome_title}</p>
+                                                </div>
+                                            </div>
+                                            {story.outcome_metric && (
+                                                <div className="bg-emerald-500 text-white px-2 py-0.5 rounded text-[9px] font-black shadow-sm shrink-0 ml-2">
+                                                    {story.outcome_metric}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            </BaseCard>
+                                </BaseCard>
+                            </div>
                         );
                     })}
-                </motion.div>
+                </div>
             )}
 
             {/* Call to Action */}
             <div className="mt-8">
-                <BaseCard className="bg-gradient-to-r from-orange-100 to-amber-100 border-orange-200 overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-orange-200/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-amber-200/30 rounded-full blur-2xl -translate-x-1/2 translate-y-1/2" />
+                <BaseCard className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-100 overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-orange-200/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-amber-200/20 rounded-full blur-2xl -translate-x-1/2 translate-y-1/2" />
 
-                    <div className="relative p-8">
-                        <h2 className="text-2xl font-bold text-slate-800 mb-2">Your Success Story Starts Today</h2>
-                        <p className="text-slate-600 mb-6 max-w-xl text-sm">
-                            Join 10,000+ students building their future on StrideNex
-                        </p>
-                        <div className="flex items-center gap-4">
-                            <Button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-5 text-base font-semibold shadow-sm">
+                    <div className="relative p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                        <div>
+                            <h2 className="text-xl font-bold text-slate-900 mb-1">Your Success Story Starts Today</h2>
+                            <p className="text-slate-500 max-w-xl text-xs font-medium">
+                                Join 10,000+ students building their future on StrideNex
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                            <Button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm rounded-xl px-5 py-2.5 active:scale-95 transition-all">
                                 Start Your Path
                             </Button>
                             <Button
                                 onClick={() => setIsOpen(true)}
                                 variant="outline"
-                                className="border-orange-300 text-orange-600 hover:bg-orange-100 hover:text-orange-700 hover:border-orange-400 px-6 py-5 text-base transition-all"
+                                className="border-orange-200 text-orange-600 hover:bg-orange-100/50 hover:text-orange-700 hover:border-orange-300 font-semibold text-sm rounded-xl px-5 py-2.5 transition-all"
                             >
                                 Share Your Story
                                 <ChevronRight className="w-4 h-4 ml-2" />
@@ -368,7 +459,6 @@ export default function StoriesTabContent() {
 
                                 {/* Form */}
                                 <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 bg-white">
-                                    {/* Category select */}
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-1">Outcome Category</label>
                                         <select
@@ -384,7 +474,6 @@ export default function StoriesTabContent() {
                                         </select>
                                     </div>
 
-                                    {/* Status select */}
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-1">Status</label>
                                         <select
@@ -398,7 +487,6 @@ export default function StoriesTabContent() {
                                         </select>
                                     </div>
 
-                                    {/* Title input */}
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-1">Outcome Title</label>
                                         <input
@@ -411,7 +499,6 @@ export default function StoriesTabContent() {
                                         />
                                     </div>
 
-                                    {/* Metric input */}
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-1">Outcome Metric / Package (Optional)</label>
                                         <input
@@ -423,7 +510,6 @@ export default function StoriesTabContent() {
                                         />
                                     </div>
 
-                                    {/* Testimonial textarea */}
                                     <div>
                                         <label className="block text-sm font-semibold text-slate-700 mb-1">Testimonial</label>
                                         <textarea
@@ -436,7 +522,6 @@ export default function StoriesTabContent() {
                                         />
                                     </div>
 
-                                    {/* Action buttons */}
                                     <div className="flex justify-end gap-3 pt-2">
                                         <Button
                                             type="button"

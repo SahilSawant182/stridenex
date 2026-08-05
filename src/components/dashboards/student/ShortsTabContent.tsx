@@ -1344,7 +1344,7 @@ export default function ShortsTabContent() {
                         <span className="text-[11px] font-bold mt-1 text-zinc-300 tracking-wide drop-shadow-sm">{getLikesCount(short)}</span>
                       </div>
 
-                      {/* Comments Button */}
+                      {/* Comments Button - Hidden for now
                       <div className="flex flex-col items-center">
                         <button
                           onClick={() => handleOpenComments(short)}
@@ -1356,6 +1356,7 @@ export default function ShortsTabContent() {
                           {localCommentCounts[String(short.id)] !== undefined ? localCommentCounts[String(short.id)] : short.commentCount}
                         </span>
                       </div>
+                      */}
 
                       {/* Share Button */}
                       <div className="flex flex-col items-center">

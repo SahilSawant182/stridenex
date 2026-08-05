@@ -11,7 +11,7 @@ import SkillsWidget from "@/components/dashboards/widgets/SkillsWidget";
 import AlertsWidget from "@/components/dashboards/widgets/AlertsWidget";
 import InternshipsWidget from "@/components/dashboards/widgets/InternshipsWidget";
 import { useAuth } from "@/context/AuthContext";
-import { getStudentSkills, getDashboardStats, getStudentByEmail, getStudentInternshipList, getLearningActivity, getTodaysOpportunityAlerts } from "@/services/student.services";
+import { getDashboardStats, getStudentByEmail, getStudentInternshipList, getLearningActivity, getTodaysOpportunityAlerts } from "@/services/student.services";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -38,7 +38,7 @@ const item: Variants = {
 
 export default function StudentDashboardPage() {
   const { currentUser } = useAuth();
-  const [skillsData, setSkillsData] = useState<any[]>([]);
+
   const [statsData, setStatsData] = useState<any>(() => {
     if (typeof window !== "undefined") {
       const stored = localStorage.getItem("studentStats");
@@ -139,44 +139,7 @@ export default function StudentDashboardPage() {
     return () => window.removeEventListener("student-stats-updated", handleStatsUpdate);
   }, []);
 
-  useEffect(() => {
-    if (!currentUser) return;
-    const fetchSkills = async () => {
-      try {
-        const res = await getStudentSkills(currentUser);
-        console.log("Student skills API response:", res);
-        
-        let rawSkills = [];
-        if (res && res.message && Array.isArray(res.message.skills)) {
-          rawSkills = res.message.skills;
-        } else if (res && Array.isArray(res.message)) {
-          rawSkills = res.message;
-        }
 
-        const mapLevelToPercentage = (level?: string): number => {
-          if (!level) return 0;
-          switch (level.toLowerCase()) {
-            case "beginner": return 35;
-            case "intermediate": return 65;
-            case "advanced": return 85;
-            case "expert": return 100;
-            default: return 50;
-          }
-        };
-
-        const mapped = rawSkills.map((item: any) => ({
-          name: item.skill,
-          level: item.level || "Beginner",
-          percentage: mapLevelToPercentage(item.level)
-        }));
-        
-        setSkillsData(mapped);
-      } catch (error) {
-        console.error("Error fetching skills snapshot:", error);
-      }
-    };
-    fetchSkills();
-  }, [currentUser]);
 
   useEffect(() => {
     if (!currentUser) return;
@@ -259,16 +222,7 @@ export default function StudentDashboardPage() {
     fetchInternships();
   }, [currentUser]);
 
-  const fallbackSkills = [
-    { name: "Python", percentage: 78 },
-    { name: "Machine Learning", percentage: 61 },
-    { name: "SQL", percentage: 85 },
-    { name: "Data Viz", percentage: 55 },
-    { name: "Communication", percentage: 72 },
-    { name: "Problem Solving", percentage: 80 }
-  ];
-  
-  const displayedSkills = skillsData.length > 0 ? skillsData : fallbackSkills;
+
 
   return (
     <motion.div
@@ -339,9 +293,7 @@ export default function StudentDashboardPage() {
 
       {/* Bottom Row */}
       <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        <SkillsWidget
-          data={displayedSkills}
-        />
+        <SkillsWidget />
 
         <AlertsWidget
           data={{

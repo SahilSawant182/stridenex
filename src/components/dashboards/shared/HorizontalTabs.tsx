@@ -39,8 +39,8 @@ interface HorizontalTabsProps {
 const tabConfig = {
   student: [
     { name: "Overview", icon: LayoutDashboard, path: "/student/dashboard" },
-    { name: "Skills", icon: Code, path: "/student/dashboard/skills" },
-    { name: "Path", icon: Target, path: "/student/dashboard/path" },
+    { name: "Skill Ledger", icon: Code, path: "/student/dashboard/skills" },
+    { name: "Skill Path", icon: Target, path: "/student/dashboard/path" },
     { name: "Shorts", icon: Video, path: "/student/dashboard/shorts" },
     { name: "Community", icon: Users, path: "/student/dashboard/community" },
     { name: "Projects", icon: FolderGit2, path: "/student/dashboard/projects" },
