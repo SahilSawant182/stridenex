@@ -17,7 +17,7 @@ interface StatsWidgetProps {
     icon?: any;
     iconBg?: string;
     iconColor?: string;
-    trend?: "up" | "down" | string;  // This is optional
+    trend?: "up" | "down" | string;
     [key: string]: any;
   };
   delay?: number;
@@ -26,10 +26,63 @@ interface StatsWidgetProps {
 export default function StatsWidget({ title, data, delay = 0 }: StatsWidgetProps) {
   const Icon = data.icon || TrendingUp;
 
+  // Determine if trend is down based on trend prop or negative change
+  const isTrendDown = data.trend === "down" || (data.change && data.change < 0);
+
+  // Dynamic pastel themes based on stat titles (only color classes, no sizes)
+  const getThemeColors = () => {
+    const t = title.toLowerCase();
+    if (t.includes("active students") || t.includes("total students")) {
+      return {
+        cardBg: "bg-blue-50/50 border-blue-100",
+        iconBg: "bg-blue-100/60",
+        iconColor: "text-blue-500",
+        valColor: "text-slate-800",
+        labelColor: "text-blue-600/80"
+      };
+    }
+    if (t.includes("employability")) {
+      return {
+        cardBg: "bg-emerald-50/50 border-emerald-100",
+        iconBg: "bg-emerald-100/60",
+        iconColor: "text-emerald-500",
+        valColor: "text-slate-800",
+        labelColor: "text-emerald-600/80"
+      };
+    }
+    if (t.includes("at-risk") || t.includes("risk")) {
+      return {
+        cardBg: "bg-rose-50/50 border-rose-100",
+        iconBg: "bg-rose-100/60",
+        iconColor: "text-rose-500",
+        valColor: "text-slate-800",
+        labelColor: "text-rose-600/80"
+      };
+    }
+    if (t.includes("new this semester") || t.includes("recruiter") || t.includes("partners") || t.includes("package")) {
+      return {
+        cardBg: "bg-purple-50/50 border-purple-100",
+        iconBg: "bg-purple-100/60",
+        iconColor: "text-purple-500",
+        valColor: "text-slate-800",
+        labelColor: "text-purple-600/80"
+      };
+    }
+    return {
+      cardBg: "bg-white border-slate-200/60",
+      iconBg: "bg-slate-100",
+      iconColor: "text-slate-600",
+      valColor: "text-slate-800",
+      labelColor: "text-slate-500"
+    };
+  };
+
+  const theme = getThemeColors();
+
   const renderValue = () => {
     if (data.value !== undefined) {
       return (
-        <p className="text-2xl font-bold text-slate-800">
+        <p className={cn("text-2xl font-bold", theme.valColor)}>
           {data.value}
           {data.max && <span className="text-sm font-normal text-slate-400 ml-1">/{data.max}</span>}
         </p>
@@ -39,7 +92,7 @@ export default function StatsWidget({ title, data, delay = 0 }: StatsWidgetProps
     if (data.sent !== undefined) {
       return (
         <>
-          <p className="text-2xl font-bold text-slate-800">{data.sent} Sent</p>
+          <p className={cn("text-2xl font-bold", theme.valColor)}>{data.sent} Sent</p>
           <p className="text-xs text-slate-500">{data.shortlisted} shortlisted</p>
         </>
       );
@@ -48,24 +101,26 @@ export default function StatsWidget({ title, data, delay = 0 }: StatsWidgetProps
     return null;
   };
 
-  // Determine if trend is down based on trend prop or negative change
-  const isTrendDown = data.trend === "down" || (data.change && data.change < 0);
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay }}
-      className="bg-white rounded-xl border border-slate-200/60 p-5 hover:shadow-md transition-all hover:-translate-y-1"
+      className={cn(
+        "rounded-xl border p-5 hover:shadow-md transition-all hover:-translate-y-1",
+        theme.cardBg
+      )}
     >
       <div className="flex items-start justify-between mb-3">
         <div>
-          <p className="text-xs text-slate-500 font-medium mb-1 uppercase tracking-wider">{title}</p>
+          <p className={cn("text-xs font-medium mb-1 uppercase tracking-wider", theme.labelColor)}>
+            {title}
+          </p>
           {renderValue()}
         </div>
         {Icon && (
-          <div className={cn("p-3 rounded-xl", data.iconBg || 'bg-slate-100')}>
-            <Icon className={cn("w-5 h-5", data.iconColor || 'text-slate-600')} />
+          <div className={cn("p-3 rounded-xl", theme.iconBg)}>
+            <Icon className={cn("w-5 h-5", theme.iconColor)} />
           </div>
         )}
       </div>
