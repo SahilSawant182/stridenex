@@ -54,7 +54,7 @@ interface Habit {
     color: string;
     bgColor: string;
     progress: number;
-    weeklyData: boolean[];
+    weeklyData: ('done' | 'partial' | 'missed' | 'none')[];
 }
 
 interface HabitPlan {
@@ -83,7 +83,7 @@ interface StatsData {
         total: number;
         days: {
             day: string;
-            status: 'done' | 'partial' | 'missed';
+            status: 'done' | 'partial' | 'missed' | 'future';
         }[];
     };
 }
@@ -132,24 +132,31 @@ const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const statusConfig = {
     done: {
         icon: CheckCircle2,
-        color: "text-emerald-500",
-        bgColor: "bg-emerald-100",
+        color: "text-emerald-600",
+        bgColor: "bg-emerald-50",
         borderColor: "border-emerald-200",
         indicator: "✓"
     },
     partial: {
         icon: Circle,
-        color: "text-orange-500",
-        bgColor: "bg-orange-100",
-        borderColor: "border-orange-200",
+        color: "text-amber-600",
+        bgColor: "bg-amber-50",
+        borderColor: "border-amber-200",
         indicator: "○"
     },
     missed: {
         icon: Circle,
-        color: "text-slate-400",
-        bgColor: "bg-slate-100",
-        borderColor: "border-slate-200",
+        color: "text-rose-600",
+        bgColor: "bg-rose-50",
+        borderColor: "border-rose-200",
         indicator: "−"
+    },
+    future: {
+        icon: Circle,
+        color: "text-slate-300",
+        bgColor: "bg-slate-50/20",
+        borderColor: "border-slate-200/60 border-dashed",
+        indicator: ""
     }
 };
 
@@ -196,7 +203,7 @@ export default function HabitsTabContent() {
         { name: "plan_name", label: "Plan Name", type: "text", icon: Target, required: true, colSpan: 2, placeholder: "e.g., Daily Coding Challenge", disabled: !!habitToEdit },
         { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "MM/DD/YYYY", textTransform: "uppercase" },
         { name: "end_date", label: "End Date", type: "date", icon: Calendar, placeholder: "MM/DD/YYYY", textTransform: "uppercase" },
-        { name: "linked_path", label: "Linked Path", type: "text", icon: Link, placeholder: "e.g., /career/software-engineering" },
+        // { name: "linked_path", label: "Linked Path", type: "text", icon: Link, placeholder: "e.g., /career/software-engineering" },
         {
             name: "habits",
             label: "Habits",
@@ -439,7 +446,7 @@ export default function HabitsTabContent() {
                         color: getColorForCategory(habit.habit_type),
                         bgColor: getBgColorForCategory(habit.habit_type),
                         progress: habit.completion_rate || 0,
-                        weeklyData: habit.weekly_data || [false, false, false, false, false, false, false]
+                        weeklyData: habit.weekly_data || ['none', 'none', 'none', 'none', 'none', 'none', 'none']
                     })) : [];
 
                     return {
@@ -474,7 +481,16 @@ export default function HabitsTabContent() {
                     const doneCount = data.last_30_days.filter((day: any) => day.status === 'done').length;
                     const partialCount = data.last_30_days.filter((day: any) => day.status === 'partial').length;
                     const missedCount = data.last_30_days.filter((day: any) => day.status === 'none' || day.status === 'missed').length;
-                    const completionRate = data.last_30_days.length > 0 ? Math.round((doneCount / data.last_30_days.length) * 100) : 0;
+
+                    // Calculate average completion rate from active habits
+                    let calculatedRate = 0;
+                    if (data.habits && Array.isArray(data.habits)) {
+                        const allHabits = data.habits.flatMap((p: any) => p.habits || []);
+                        if (allHabits.length > 0) {
+                            const sumRates = allHabits.reduce((acc: number, h: any) => acc + (h.completion_rate || 0), 0);
+                            calculatedRate = sumRates / allHabits.length;
+                        }
+                    }
 
                     setStatsData(prev => ({
                         ...prev,
@@ -482,7 +498,7 @@ export default function HabitsTabContent() {
                             done: data.done_30 !== undefined ? data.done_30 : doneCount,
                             partial: data.partial_30 !== undefined ? data.partial_30 : partialCount,
                             missed: data.missed_30 !== undefined ? data.missed_30 : missedCount,
-                            completionRate: data.missed_30 !== undefined ? (data.done_30 || 0) / (data.last_30_days.length || 1) * 100 : completionRate
+                            completionRate: calculatedRate
                         }
                     }));
                 }
@@ -491,16 +507,31 @@ export default function HabitsTabContent() {
                 if (data.this_week && Array.isArray(data.this_week)) {
                     const completedCount = data.this_week.filter((day: any) => day.status === 'done').length;
                     const totalCount = data.this_week.length;
+                    const localTodayStr = new Date().toLocaleDateString('en-CA'); // Local YYYY-MM-DD
 
                     setStatsData(prev => ({
                         ...prev,
                         thisWeek: {
                             completed: completedCount,
                             total: totalCount,
-                            days: data.this_week.map((day: any) => ({
-                                day: day.day,
-                                status: day.status === 'none' ? 'missed' : day.status
-                            }))
+                            days: data.this_week.map((day: any) => {
+                                let status: 'done' | 'partial' | 'missed' | 'future' = 'future';
+                                if (day.date > localTodayStr) {
+                                    status = 'future';
+                                } else if (day.date === localTodayStr) {
+                                    if (day.status === 'done') status = 'done';
+                                    else if (day.status === 'partial') status = 'partial';
+                                    else status = 'future'; // Today, not logged yet -> show as future/pending
+                                } else {
+                                    if (day.status === 'done') status = 'done';
+                                    else if (day.status === 'partial') status = 'partial';
+                                    else status = 'missed'; // Past day unlogged/none -> missed
+                                }
+                                return {
+                                    day: day.day,
+                                    status
+                                };
+                            })
                         }
                     }));
                 }
@@ -719,19 +750,19 @@ export default function HabitsTabContent() {
                     <div className="absolute top-0 right-0 w-24 h-24 bg-orange-100/30 rounded-full blur-2xl -mr-5 -mt-5" />
                     <div className="flex items-center justify-between">
                         <div className="space-y-1.5">
-                            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Current Streak</span>
+                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Current Streak</span>
                             <div className="flex items-baseline gap-1">
-                                <span className="text-3xl font-black text-slate-800">{statsData.streak.current}</span>
-                                <span className="text-xs font-bold text-slate-500">days</span>
+                                <span className="text-4xl font-black text-slate-800">{statsData.streak.current}</span>
+                                <span className="text-sm font-bold text-slate-500">days</span>
                             </div>
                         </div>
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-orange-500/20 transform hover:scale-105 transition-transform duration-200">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/10 transform hover:scale-105 transition-transform duration-200">
                             <Flame className="w-6 h-6 animate-pulse" />
                         </div>
                     </div>
                     <div className="mt-4 pt-3 border-t border-orange-100/50 flex items-center justify-between text-xs">
-                        <span className="text-slate-500 font-medium">Keep the fire burning!</span>
-                        <span className="font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100/40">
+                        <span className="text-slate-500 font-semibold">Keep the fire burning!</span>
+                        <span className="font-extrabold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full border border-orange-100/40 text-xs">
                             Best: {statsData.streak.longest}d
                         </span>
                     </div>
@@ -742,21 +773,21 @@ export default function HabitsTabContent() {
                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100/30 rounded-full blur-2xl -mr-5 -mt-5" />
                     <div className="flex items-center justify-between">
                         <div className="space-y-1.5">
-                            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">30-Day Completion</span>
+                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">30-Day Completion</span>
                             <div className="flex items-baseline gap-1">
-                                <span className="text-3xl font-black text-slate-800">{statsData.last30Days.completionRate.toFixed(1)}%</span>
+                                <span className="text-4xl font-black text-slate-800">{statsData.last30Days.completionRate.toFixed(1)}%</span>
                             </div>
                         </div>
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 transform hover:scale-105 transition-transform duration-200">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/10 transform hover:scale-105 transition-transform duration-200">
                             <CheckCircle2 className="w-6 h-6" />
                         </div>
                     </div>
-                    <div className="mt-4 space-y-2">
+                    <div className="mt-4 space-y-2.5">
                         <Progress value={statsData.last30Days.completionRate} className="h-1.5 bg-slate-100" indicatorColor="bg-emerald-500" />
-                        <div className="flex items-center justify-between text-[11px] text-slate-500">
-                            <span className="font-medium">Done: <strong className="text-slate-700">{statsData.last30Days.done}</strong></span>
-                            <span className="font-medium">Partial: <strong className="text-slate-700">{statsData.last30Days.partial}</strong></span>
-                            <span className="font-medium">Missed: <strong className="text-slate-700">{statsData.last30Days.missed}</strong></span>
+                        <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
+                            <span>Done: <strong className="text-emerald-600">{statsData.last30Days.done}</strong></span>
+                            <span>Partial: <strong className="text-amber-600">{statsData.last30Days.partial}</strong></span>
+                            <span>Missed: <strong className="text-rose-600">{statsData.last30Days.missed}</strong></span>
                         </div>
                     </div>
                 </div>
@@ -766,10 +797,10 @@ export default function HabitsTabContent() {
                     <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-100/30 rounded-full blur-2xl -mr-5 -mt-5" />
                     <div className="flex items-center justify-between">
                         <div className="space-y-1.5">
-                            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">Weekly Activity</span>
+                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Weekly Activity</span>
                             <div className="flex items-baseline gap-1">
-                                <span className="text-3xl font-black text-slate-800">{statsData.thisWeek.completed}</span>
-                                <span className="text-xs font-bold text-slate-500">/ {statsData.thisWeek.total} days</span>
+                                <span className="text-4xl font-black text-slate-800">{statsData.thisWeek.completed}</span>
+                                <span className="text-sm font-bold text-slate-500">/ {statsData.thisWeek.total} days</span>
                             </div>
                         </div>
                         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/20 transform hover:scale-105 transition-transform duration-200">
@@ -782,13 +813,32 @@ export default function HabitsTabContent() {
                             return (
                                 <div
                                     key={day.day}
-                                    className={`flex-1 flex flex-col items-center py-1 rounded border text-[9px] font-extrabold ${config.bgColor} ${config.color} ${config.borderColor}`}
+                                    className={`flex-1 flex flex-col items-center py-1.5 rounded border text-[10px] font-extrabold ${config.bgColor} ${config.color} ${config.borderColor}`}
                                     title={`${day.day}: ${day.status}`}
                                 >
                                     <span>{day.day[0]}</span>
                                 </div>
                             );
                         })}
+                    </div>
+                    {/* Color Coding Legend */}
+                    <div className="mt-3.5 pt-2.5 border-t border-indigo-100/30 flex items-center justify-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-1 text-[10px] text-slate-500 font-semibold">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 border border-emerald-200 shadow-sm" />
+                            <span>Done</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] text-slate-500 font-semibold">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 border border-amber-200 shadow-sm" />
+                            <span>Partial</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] text-slate-500 font-semibold">
+                            <span className="w-2 h-2 rounded-full bg-rose-500 border border-rose-200 shadow-sm" />
+                            <span>Missed</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] text-slate-500 font-semibold">
+                            <span className="w-2 h-2 rounded-full bg-slate-100 border border-slate-200 border-dashed" />
+                            <span>Pending</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -867,10 +917,10 @@ export default function HabitsTabContent() {
                                         }`}>
                                         <div className="flex items-center gap-3">
                                             <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${isExpired
-                                                    ? "bg-rose-50 border-rose-100"
-                                                    : isInactive
-                                                        ? "bg-slate-100 border-slate-200"
-                                                        : "bg-orange-50 border-orange-100"
+                                                ? "bg-rose-50 border-rose-100"
+                                                : isInactive
+                                                    ? "bg-slate-100 border-slate-200"
+                                                    : "bg-orange-50 border-orange-100"
                                                 }`}>
                                                 <Target className={`w-5 h-5 ${isExpired ? "text-rose-400" : isInactive ? "text-slate-400" : "text-orange-500"
                                                     }`} />
@@ -879,10 +929,10 @@ export default function HabitsTabContent() {
                                                 <h4 className="font-bold text-slate-800 text-base">{plan.plan_name}</h4>
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${isExpired
-                                                            ? "bg-rose-50 text-rose-600 border-rose-100"
-                                                            : isInactive
-                                                                ? "bg-slate-100 text-slate-600 border-slate-200"
-                                                                : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                                                        ? "bg-rose-50 text-rose-600 border-rose-100"
+                                                        : isInactive
+                                                            ? "bg-slate-100 text-slate-600 border-slate-200"
+                                                            : "bg-emerald-50 text-emerald-600 border-emerald-100"
                                                         }`}>
                                                         {isExpired ? "Expired" : isInactive ? "Inactive" : "Active"}
                                                     </span>
@@ -973,19 +1023,33 @@ export default function HabitsTabContent() {
                                                                 </td>
                                                                 <td className="py-3.5 px-6">
                                                                     <div className="flex items-center gap-1">
-                                                                        {habit.weeklyData.map((completed: boolean, idx: number) => (
-                                                                            <div
-                                                                                key={idx}
-                                                                                className={`w-5 h-5 rounded-sm flex items-center justify-center text-[10px] font-bold ${completed
-                                                                                        ? isInactive
-                                                                                            ? 'bg-slate-100 text-slate-500 border border-slate-300'
-                                                                                            : 'bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-sm shadow-emerald-100'
-                                                                                        : 'bg-slate-50 text-slate-400 border border-slate-200/80'
-                                                                                    }`}
-                                                                            >
-                                                                                {weekDays[idx][0]}
-                                                                            </div>
-                                                                        ))}
+                                                                        {habit.weeklyData.map((status: 'done' | 'partial' | 'missed' | 'none', idx: number) => {
+                                                                            let boxClass = "";
+                                                                            if (isInactive) {
+                                                                                boxClass = status === 'done'
+                                                                                    ? 'bg-slate-100 text-slate-500 border border-slate-300'
+                                                                                    : 'bg-slate-50/50 text-slate-300 border border-slate-200/50';
+                                                                            } else {
+                                                                                if (status === 'done') {
+                                                                                    boxClass = 'bg-emerald-50 text-emerald-600 border border-emerald-200 shadow-sm shadow-emerald-100';
+                                                                                } else if (status === 'partial') {
+                                                                                    boxClass = 'bg-amber-50 text-amber-600 border border-amber-200 shadow-sm shadow-amber-100';
+                                                                                } else if (status === 'missed') {
+                                                                                    boxClass = 'bg-rose-50 text-rose-600 border border-rose-200 shadow-sm shadow-rose-100';
+                                                                                } else {
+                                                                                    boxClass = 'bg-slate-50 text-slate-400 border border-slate-200/80';
+                                                                                }
+                                                                            }
+                                                                            return (
+                                                                                <div
+                                                                                    key={idx}
+                                                                                    className={`w-5 h-5 rounded-sm flex items-center justify-center text-[10px] font-bold ${boxClass}`}
+                                                                                    title={`${weekDays[idx]}: ${status}`}
+                                                                                >
+                                                                                    {weekDays[idx][0]}
+                                                                                </div>
+                                                                            );
+                                                                        })}
                                                                     </div>
                                                                 </td>
                                                                 <td className="py-3.5 px-6 text-right">
