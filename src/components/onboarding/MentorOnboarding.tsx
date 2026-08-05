@@ -15,7 +15,7 @@ import {
 } from "@/services/onboarding.services";
 import DynamicForm from "@/components/forms/DynamicForm";
 import { FormField } from "@/types/doctypes.types";
-import { apiService, BASE_URL } from "@/services/api.services";
+import { BASE_URL } from "@/services/api.services";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronDown, Plus, X } from "lucide-react";
@@ -116,7 +116,6 @@ export default function MentorOnboarding({
   >(null);
   const platformDropdownRefs = useRef<(HTMLDivElement | null)[]>([]);
 
-  // ── Form data ───────────────────────────────────────────────────────────────
   const [formData, setFormData] = useState({
     email: "",
     emailVerified: false,
@@ -142,7 +141,9 @@ export default function MentorOnboarding({
     terms_and_conditions: false,
     address_line1: "",
     address_line2: "",
-    pincode: ""
+    pincode: "",
+    has_gst: false,
+    gstin: ""
   });
 
   // ── OTP state ───────────────────────────────────────────────────────────────
@@ -352,7 +353,9 @@ export default function MentorOnboarding({
             ifsc_code: data.ifsc_code || "",
             address_line1: prev.address_line1 || localStorage.getItem("userAddressLine1") || "",
             address_line2: prev.address_line2 || localStorage.getItem("userAddressLine2") || "",
-            pincode: prev.pincode || localStorage.getItem("userPincode") || ""
+            pincode: prev.pincode || localStorage.getItem("userPincode") || "",
+            has_gst: data.has_gst === 1 || data.has_gst === true || false,
+            gstin: data.gstin || ""
           }));
 
           if (
@@ -613,6 +616,17 @@ export default function MentorOnboarding({
       if (wordCount < 50)
         errors.profile_description = `Please write at least 50 words (current: ${wordCount} word${wordCount === 1 ? '' : 's'})`;
     }
+
+    if (formData.has_gst) {
+      if (!formData.gstin?.trim()) {
+        errors.gstin = "GSTIN is required";
+      } else if (formData.gstin.trim().length !== 15) {
+        errors.gstin = "GSTIN must be exactly 15 characters long";
+      } else if (!/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/i.test(formData.gstin.trim())) {
+        errors.gstin = "Please enter a valid GSTIN format (e.g. 27AAAAA1111A1Z1)";
+      }
+    }
+
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -678,7 +692,9 @@ export default function MentorOnboarding({
       doctype: "Mentor",
       mentor_platform_urls: platformUrlsArray,
       domain: domainArray,
-      mentor_skills: skillsArray
+      mentor_skills: skillsArray,
+      has_gst: formData.has_gst ? 1 : 0,
+      gstin: formData.has_gst ? formData.gstin?.toUpperCase()?.trim() || "" : ""
       // ⚠️  terms_accepted deliberately excluded — server throws 500
     };
   };
@@ -743,7 +759,9 @@ export default function MentorOnboarding({
           bank_name: "",
           account_number: "",
           ifsc_code: "",
-          profile_description: ""
+          profile_description: "",
+          has_gst: formData.has_gst ? 1 : 0,
+          gstin: formData.has_gst ? formData.gstin?.toUpperCase()?.trim() || "" : ""
           // ⚠️  terms_accepted deliberately excluded
         };
       } else {
@@ -816,7 +834,9 @@ export default function MentorOnboarding({
                 state: formData.state,
                 city: formData.city,
                 address_line1: formData.district ? `${formData.tahsil}, ${formData.district}` : "Not Provided",
-                billing_details: [{ title: "Stridenex App" }]
+                billing_details: [{ title: "Stridenex App" }],
+                has_gst: formData.has_gst ? 1 : 0,
+                gstin: formData.has_gst ? formData.gstin?.toUpperCase()?.trim() || "" : ""
               }
             };
             console.log("Submitting Mentor Billing registration payload:", billingPayload);
@@ -947,7 +967,9 @@ export default function MentorOnboarding({
         bank_name: "",
         account_number: "",
         ifsc_code: "",
-        profile_description: ""
+        profile_description: "",
+        has_gst: formData.has_gst ? 1 : 0,
+        gstin: formData.has_gst ? formData.gstin?.toUpperCase()?.trim() || "" : ""
         // ⚠️  terms_accepted deliberately excluded
       };
 
@@ -1542,22 +1564,6 @@ export default function MentorOnboarding({
         customPlaceholder: "Enter custom domain name",
         apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: { doctype: "Domain" },
-        onCreateCustomValue: async (val: string) => {
-          try {
-            const userEmail = formData.email || localStorage.getItem("userEmail") || currentUser || "";
-            const response = await apiService.post(
-              `method/stridenex_app.api_stridenex_app.mentor.mentor.request_new_domain?domain_name=${encodeURIComponent(JSON.stringify(val))}`,
-              {
-                domain_name: val,
-                mentor_email: userEmail
-              }
-            );
-            return response;
-          } catch (err) {
-            console.error("Failed to request new domain:", err);
-            throw err;
-          }
-        },
         mapOptions: data => {
           const items = data.data || data || [];
           return items.map((item: any) => ({
@@ -1598,7 +1604,23 @@ export default function MentorOnboarding({
         layout: "full",
         inputClassName: "min-h-[150px]",
         minLetters: 50
-      }
+      },
+      {
+        fieldname: "has_gst",
+        label: "Do you have a GST number?",
+        fieldtype: "Check",
+        required: false,
+        layout: "full"
+      },
+      ...(formData.has_gst ? [{
+        fieldname: "gstin",
+        label: "GSTIN",
+        fieldtype: "Data",
+        required: true,
+        placeholder: "Enter 15-character GSTIN",
+        layout: "half" as const,
+        maxLength: 15
+      }] : [])
     ];
 
     return (
@@ -1611,11 +1633,20 @@ export default function MentorOnboarding({
           initialValues={formData}
           errors={fieldErrors}
           onChange={data => {
-            setFormData(prev => ({ ...prev, ...data }));
+            setFormData(prev => {
+              const next = { ...prev, ...data };
+              if (data.has_gst === false) {
+                next.gstin = "";
+              }
+              return next;
+            });
             const updatedErrors = { ...fieldErrors };
             Object.keys(data).forEach(
               key => delete updatedErrors[key]
             );
+            if (data.has_gst === false) {
+              delete updatedErrors.gstin;
+            }
             setFieldErrors(updatedErrors);
             setError("");
           }}

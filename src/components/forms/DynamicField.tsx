@@ -16,10 +16,10 @@ interface Props {
 // Simple Button component
 const Button = ({ children, onClick, disabled, className, variant, ...props }: any) => {
   const baseClasses = "px-4 py-2 text-sm rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-accent";
-  const variantClasses = variant === "outline" 
-    ? "border border-slate-200 hover:bg-slate-50" 
+  const variantClasses = variant === "outline"
+    ? "border border-slate-200 hover:bg-slate-50"
     : "bg-accent text-white hover:bg-accent/90 disabled:opacity-50 disabled:cursor-not-allowed";
-  
+
   return (
     <button
       onClick={onClick}
@@ -298,8 +298,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
 
   const handleRetry = () => {
     setFetchError("");
-    setIsOpen(true);
-    justOpenedRef.current = false;
+    fetchOptions(1, searchTerm);
   };
 
   const handleSingleSelect = (selectedValue: string) => {
@@ -328,7 +327,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
       const currentValues = Array.isArray(value) ? value : [];
       // Use the actual custom value text
       const customOptionValue = customValue.trim();
-      
+
       if (field.onCreateCustomValue) {
         try {
           setCustomError(null);
@@ -345,18 +344,18 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
       }
 
       // Add to options list for display
-      const newOption = { 
-        value: customOptionValue, 
-        label: customValue.trim() 
+      const newOption = {
+        value: customOptionValue,
+        label: customValue.trim()
       };
-      
+
       // Check if this custom value already exists in options
       const exists = optionsMap.has(customOptionValue);
       if (!exists) {
         setOptions(prev => [...prev, newOption]);
         setFilteredOptions(prev => [...prev, newOption]);
       }
-      
+
       // Add to selected values
       if (field.multiSelect) {
         if (!currentValues.includes(customOptionValue)) {
@@ -365,7 +364,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
       } else {
         onChange(field.fieldname, customOptionValue);
       }
-      
+
       setCustomValue("");
       setShowCustomInput(false);
     }
@@ -416,9 +415,9 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
     const parts = text.split(new RegExp(`(${search})`, 'gi'));
     return (
       <span>
-        {parts.map((part, i) => 
-          part.toLowerCase() === search.toLowerCase() ? 
-            <span key={i} className="bg-yellow-200 font-medium">{part}</span> : 
+        {parts.map((part, i) =>
+          part.toLowerCase() === search.toLowerCase() ?
+            <span key={i} className="bg-yellow-200 font-medium">{part}</span> :
             <span key={i}>{part}</span>
         )}
       </span>
@@ -467,7 +466,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
 
           {/* Dropdown menu with search and "Others" option */}
           {isOpen && !fetchError && (
-             <div className="absolute z-[100] mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg overflow-hidden">
+            <div className="absolute z-[100] mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg overflow-hidden">
               {!showCustomInput ? (
                 <>
                   {/* Search input */}
@@ -543,15 +542,14 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
                         type="button"
                         disabled={!hasPrev || loading}
                         onClick={() => fetchOptions(page - 1, searchTerm)}
-                        className={`px-2 py-1 rounded border transition-colors ${
-                          hasPrev 
-                            ? "bg-white border-slate-200 hover:bg-slate-50 text-slate-700" 
-                            : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
-                        }`}
+                        className={`px-2 py-1 rounded border transition-colors ${hasPrev
+                          ? "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+                          : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                          }`}
                       >
                         Previous
                       </button>
-                      
+
                       <span>
                         Page {page} of {totalPages}
                       </span>
@@ -560,11 +558,10 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
                         type="button"
                         disabled={!hasNext || loading}
                         onClick={() => fetchOptions(page + 1, searchTerm)}
-                        className={`px-2 py-1 rounded border transition-colors ${
-                          hasNext 
-                            ? "bg-white border-slate-200 hover:bg-slate-50 text-slate-700" 
-                            : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
-                        }`}
+                        className={`px-2 py-1 rounded border transition-colors ${hasNext
+                          ? "bg-white border-slate-200 hover:bg-slate-50 text-slate-700"
+                          : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                          }`}
                       >
                         Next
                       </button>
@@ -934,15 +931,17 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
 
   return (
     <div className="space-y-1">
-      <label className="text-sm font-medium text-slate-700">
-        {field.label}
-        {field.required && <span className="text-red-500 ml-1">*</span>}
-        {field.description && (
-          <span className="text-xs font-normal text-slate-500 ml-2">
-            {field.description}
-          </span>
-        )}
-      </label>
+      {field.fieldtype !== "Check" && (
+        <label className="text-sm font-medium text-slate-700">
+          {field.label}
+          {field.required && <span className="text-red-500 ml-1">*</span>}
+          {field.description && (
+            <span className="text-xs font-normal text-slate-500 ml-2">
+              {field.description}
+            </span>
+          )}
+        </label>
+      )}
 
       {renderField()}
 
