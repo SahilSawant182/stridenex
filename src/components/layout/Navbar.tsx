@@ -10,7 +10,6 @@ import {
   X,
   ChevronDown,
   Search,
-  Sparkles,
   GraduationCap,
   Building2,
   Briefcase,
@@ -21,7 +20,7 @@ import {
   FaFacebook,
   FaYoutube
 } from "react-icons/fa";
-import { navigationConfig, getBadgeColorClasses } from "@/config/navigation";
+import { navigationConfig, getBadgeColorClasses, type NavSection, type NavItem } from "@/config/navigation";
 
 interface NavbarProps {
   appName?: string;
@@ -79,7 +78,7 @@ const sectionVariants = {
   visible: { opacity: 1, y: 0 }
 };
 
-export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
+export default function PublicNavbar({ }: NavbarProps) {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -88,20 +87,34 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
 
   const megaMenuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
       setActiveMegaMenu(null);
       setSearchOpen(false);
     };
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (megaMenuRef.current && !megaMenuRef.current.contains(event.target as Node)) {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
         setActiveMegaMenu(null);
       }
 
@@ -123,14 +136,23 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
   }, [activeMegaMenu, mobileMenuOpen, searchOpen]);
 
   const handleMegaMenuEnter = (key: string) => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
     const item = navItems.find(item => item.key === key);
     if (item?.sections && item.sections.length > 0) {
       setActiveMegaMenu(key);
+    } else {
+      setActiveMegaMenu(null);
     }
   };
 
   const handleMegaMenuLeave = () => {
-    setTimeout(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
       if (!megaMenuRef.current?.matches(':hover')) {
         setActiveMegaMenu(null);
       }
@@ -140,6 +162,10 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
   const handleNavigation = (href: string) => {
     router.push(href);
     setMobileMenuOpen(false);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
     setActiveMegaMenu(null);
     setSearchOpen(false);
   };
@@ -307,6 +333,7 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
         <AnimatePresence>
           {activeMegaMenu && (
             <motion.div
+              key={activeMegaMenu}
               ref={megaMenuRef}
               variants={megaMenuVariants}
               initial="hidden"
@@ -317,12 +344,11 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
               style={{ originY: 0 }}
             >
               <div className="max-w-7xl mx-auto px-6 py-6">
-                <div className={`flex flex-col md:flex-row flex-wrap gap-6 md:gap-8 lg:gap-12 ${
-                  (navItems.find(item => item.key === activeMegaMenu)?.sections?.length || 0) === 1 
-                    ? 'justify-start' 
-                    : 'justify-center'
-                }`}>
-                  {navItems.find(item => item.key === activeMegaMenu)?.sections.map((section, idx) => (
+                <div className={`flex flex-col md:flex-row flex-wrap gap-6 md:gap-8 lg:gap-12 ${(navItems.find(item => item.key === activeMegaMenu)?.sections?.length || 0) === 1
+                  ? 'justify-start'
+                  : 'justify-center'
+                  }`}>
+                  {navItems.find(item => item.key === activeMegaMenu)?.sections.map((section) => (
                     <motion.div
                       key={section.title}
                       variants={sectionVariants}
@@ -332,7 +358,7 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
                         {section.title}
                       </h4>
                       <div className="space-y-1">
-                        {section.items.map((item, itemIdx) => (
+                        {section.items.map((item) => (
                           <motion.div
                             key={item.label}
                             variants={itemVariants}
@@ -539,13 +565,13 @@ export default function PublicNavbar({ appName = "StrideNex" }: NavbarProps) {
                           exit={{ opacity: 0, height: 0 }}
                           className="space-y-4 overflow-hidden"
                         >
-                          {item.sections.map((section: any) => (
+                          {item.sections.map((section: NavSection) => (
                             <div key={section.title} className="space-y-2">
                               <h5 className="text-xs font-bold uppercase text-primary tracking-wider">
                                 {section.title}
                               </h5>
                               <div className="space-y-1">
-                                {section.items.map((subItem: any) => (
+                                {section.items.map((subItem: NavItem) => (
                                   <button
                                     key={subItem.label}
                                     onClick={() => handleNavigation(subItem.href)}
