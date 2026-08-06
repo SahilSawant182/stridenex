@@ -5,7 +5,6 @@ import {
   Briefcase,
   Settings,
   HelpCircle,
-  FileText,
   Users,
   BarChart,
   Target,
@@ -15,15 +14,11 @@ import {
   CheckSquare,
   UserCircle,
   BookOpen,
-  Compass,
   TrendingUp,
-  Award,
   Building2,
-  School,
   MessageSquare,
   Mail,
   UserCheck,
-  Star,
   FolderGit2,
   type LucideIcon
 } from "lucide-react";
@@ -122,7 +117,6 @@ export const industryConfig: RoleConfig = {
   links: [
     { name: "Overview", href: "/industry/dashboard", icon: LayoutDashboard },
     { name: "Company Profile", href: "/industry/dashboard/company-profile", icon: Building2 },
-    { name: "Find Talent", href: "/industry/dashboard/find-talent", icon: Briefcase },
     { name: "Internships Pipeline", href: "/industry/dashboard/pipeline", icon: Mail },
     { name: "Projects & R&D", href: "/industry/dashboard/projects", icon: FolderGit2 },
     { name: "Internship Posts", href: "/industry/dashboard/internships", icon: UserCheck },

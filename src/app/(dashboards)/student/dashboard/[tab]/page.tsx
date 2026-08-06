@@ -12,10 +12,15 @@ import PlanTabContent from "@/components/dashboards/student/PlanTabContent";
 import ShortsTabContent from "@/components/dashboards/student/ShortsTabContent";
 import ProjectsTabContent from "@/components/dashboards/student/ProjectsTabContent";
 import JobsTabContent from "@/components/dashboards/student/JobsTabContent";
+import ResumeTabContent from "@/components/dashboards/student/ResumeTabContent";
 
 export default function DynamicStudentTabPage({ params }: { params: Promise<{ tab: string }> }) {
   const unwrappedParams = use(params);
   // `unwrappedParams.tab` comes from the URL, e.g., `/student/dashboard/skills` -> `tab` = "skills"
+
+  if (unwrappedParams.tab === "resume") {
+    return <ResumeTabContent />;
+  }
 
   if (unwrappedParams.tab === "skills") {
     return <SkillsTabContent />;

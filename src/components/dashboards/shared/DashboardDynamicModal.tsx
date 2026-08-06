@@ -29,6 +29,7 @@ export interface DynamicField {
   required?: boolean;
   onFocus?: (fieldName: string) => void;
   textTransform?: "uppercase" | "lowercase" | "capitalize" | "none";
+  testTransform?: "uppercase" | "lowercase" | "capitalize" | "none";
   disabled?: boolean;
   multiple?: boolean;
   apiEndpoint?: string;
@@ -882,8 +883,8 @@ function DynamicFieldItem({
                 ? getOneDayPrior(formData.driveDate)
                 : field.max
             }
-            style={field.textTransform ? { textTransform: field.textTransform } : {}}
-            className={`${field.icon ? 'pl-12' : 'px-4'} h-12 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-slate-900 ${field.textTransform === 'uppercase' ? 'placeholder:uppercase' : ''} disabled:bg-slate-50 disabled:text-slate-500`}
+            style={(field.textTransform || (field as any).testTransform) ? { textTransform: field.textTransform || (field as any).testTransform } : {}}
+            className={`${field.icon ? 'pl-12' : 'px-4'} h-12 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-slate-900 ${(field.textTransform || (field as any).testTransform) === 'uppercase' ? 'placeholder:uppercase' : ''} disabled:bg-slate-50 disabled:text-slate-500`}
           />
         )}
       </div>

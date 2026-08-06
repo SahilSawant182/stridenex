@@ -3,6 +3,7 @@
 
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
+import Link from "next/link";
 import {
   Flame,
   Check,
@@ -1195,6 +1196,15 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
                 >
                   <Pen className="w-[18px] h-[18px] text-white/50 group-hover/edit:text-white transition-colors" strokeWidth={2.5} />
                 </button>
+              )}
+              {role === "student" && !onlyModal && (
+                <Link
+                  href="/student/dashboard/resume"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-500/20 active:scale-95 ml-2"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  Create Resume
+                </Link>
               )}
             </h2>
             <div className={`text-sm ${config.textColor}`}>
