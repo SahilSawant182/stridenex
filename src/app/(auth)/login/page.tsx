@@ -185,7 +185,8 @@ export default function LoginPage() {
           email,
           fullName,
           role: userRole,
-          isOnboarded: data.is_onboarded
+          isOnboarded: data.is_onboarded,
+          userImage: data.user_image
         });
 
         if (userRole === "college") {

@@ -31,7 +31,7 @@ const apiRequest = async (config: AxiosRequestConfig) => {
     } else {
       console.error(`API Error (${config.method} ${config.url}):`, error);
     }
-    
+
     if (error.response && error.response.data) {
       const data = error.response.data;
       // Extract the most meaningful error message from Frappe/ERPNext response
@@ -71,7 +71,7 @@ const apiRequest = async (config: AxiosRequestConfig) => {
       if (serverMessage && typeof serverMessage === 'string') {
         serverMessage = serverMessage.replace(/<[^>]*>/g, '').trim();
       }
-      
+
       // Cleanup common raw database errors
       if (serverMessage && typeof serverMessage === 'string') {
         // Data too long error
@@ -111,4 +111,80 @@ export const apiService = {
   put: (url: string, data?: any, config?: AxiosRequestConfig) => apiRequest({ ...config, method: "PUT", url, data }),
   patch: (url: string, data?: any, config?: AxiosRequestConfig) => apiRequest({ ...config, method: "PATCH", url, data }),
   delete: (url: string, config?: AxiosRequestConfig) => apiRequest({ ...config, method: "DELETE", url }),
+};
+
+/**
+ * Upload a profile picture file to Frappe.
+ * Uses multipart/form-data so the binary is sent correctly.
+ */
+export const uploadProfilePicture = async (file: File): Promise<{ file_url: string; file_name: string }> => {
+  const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+  const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch(
+    `${BASE_URL}method/stridenex_app.api_stridenex_app.app.upload_profile_picture`,
+    {
+      method: "POST",
+      headers: {
+        ...(apiKey && apiSecret ? { Authorization: `token ${apiKey}:${apiSecret}` } : {}),
+      },
+      body: formData,
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok || data?.http_status_code >= 400) {
+    const msg =
+      data?.message ||
+      data?.exception ||
+      `Upload failed (HTTP ${response.status})`;
+    throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+  }
+
+  // Frappe wraps response in { message: { ... } } or sets response.data for gen_response
+  const payload = data?.data ?? data?.message ?? data;
+  if (!payload?.file_url) {
+    throw new Error("Upload succeeded but no file URL was returned");
+  }
+
+  return { file_url: payload.file_url, file_name: payload.file_name };
+};
+
+/**
+ * Fetch the profile picture URL for the current user.
+ */
+export const getProfilePicture = async (): Promise<string | null> => {
+  const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+  const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+
+  if (!apiKey || !apiSecret) return null;
+
+  const response = await fetch(
+    `${BASE_URL}method/stridenex_app.api_stridenex_app.app.get_profile_picture`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `token ${apiKey}:${apiSecret}`,
+        Accept: "application/json",
+      },
+    }
+  );
+
+  if (!response.ok) return null;
+  const data = await response.json();
+  return data?.data?.user_image ?? data?.message?.user_image ?? null;
+};
+
+/**
+ * Build an absolute URL for a Frappe file_url so it can be rendered in an <img> tag.
+ * Private Frappe files have paths like /private/files/... which need the backend domain prepended.
+ */
+export const buildProfileImageUrl = (fileUrl: string | null | undefined): string | null => {
+  if (!fileUrl) return null;
+  if (fileUrl.startsWith("http")) return fileUrl;
+  return `${BASE_DOMAIN}${fileUrl}`;
 };
