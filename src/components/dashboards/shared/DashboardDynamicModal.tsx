@@ -57,6 +57,8 @@ interface DashboardDynamicModalProps {
   onFieldFocus?: (fieldName: string) => void;
   onValuesChange?: (values: Record<string, any>, changedFieldName: string) => Record<string, any> | void;
   children?: React.ReactNode;
+  /** Optional content rendered between the modal header and the form fields */
+  headerContent?: React.ReactNode;
   maxWidth?: string;
   hideFooter?: boolean;
   submitText?: string;
@@ -77,6 +79,7 @@ export default function DashboardDynamicModal({
   onFieldFocus,
   onValuesChange,
   children,
+  headerContent,
   maxWidth = "max-w-2xl",
   hideFooter = false,
   submitText
@@ -298,6 +301,10 @@ export default function DashboardDynamicModal({
 
               {/* Form Content */}
               <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                {/* Optional header content (e.g. profile image uploader) */}
+                {headerContent && (
+                  <div className="mb-4">{headerContent}</div>
+                )}
                 {fields.length > 0 && (
                   <form id="dynamic-industry-form" onSubmit={handleFormSubmit} className={`grid grid-cols-2 gap-6 ${activeSelect ? 'pb-[240px]' : 'pb-6'}`}>
                     {fields.map((field) => (
@@ -528,10 +535,6 @@ function DynamicFieldItem({
       setHasPrev(prevFlag || pageNum > 1);
       setTotalPages(totalPgs);
       setPage(pageNum);
-      
-      if (mapped.length === 0) {
-        setApiError("No options available");
-      }
     } catch (err: any) {
       console.error(`Error fetching options for ${field.name}:`, err);
       setApiError(err?.message || "Failed to load options");

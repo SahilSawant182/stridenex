@@ -1,6 +1,6 @@
 "use client";
 
-import { BASE_URL } from "@/services/api.services";
+import { BASE_URL, getProfilePicture } from "@/services/api.services";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useState, useEffect } from "react";
 
@@ -11,6 +11,7 @@ interface AuthContextType {
   currentUser: string | null;
   fullName: string | null;
   role: string | null;
+  userImage: string | null;
   login: (
     key: string,
     secret: string,
@@ -19,6 +20,7 @@ interface AuthContextType {
       fullName?: string;
       role?: string;
       isOnboarded?: string;
+      userImage?: string | null;
     }
   ) => Promise<void>;
   logout: (redirectPath?: string) => void;
@@ -26,6 +28,7 @@ interface AuthContextType {
   getCurrentUser: () => Promise<string | null>;
   isOnboarded: string | null;
   updateOnboardedFlag: (flag: string) => void;
+  updateUserImage: (url: string | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,6 +42,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [role, setRole] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [isOnboarded, setIsOnboarded] = useState<string | null>(null);
+  const [userImage, setUserImage] = useState<string | null>(null);
   const router = useRouter();
   const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
@@ -73,6 +77,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsOnboarded(storedOnboarded);
     }
 
+    const storedUserImage = localStorage.getItem("userImage");
+    if (storedUserImage) {
+      setUserImage(storedUserImage);
+    }
+
     setIsInitialized(true);
   }, []);
 
@@ -93,6 +102,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       isMounted = false;
     };
   }, [apiKey, apiSecret, currentUser, isInitialized]);
+
+  // Auto-fetch profile picture if authenticated to keep in sync with DB
+  useEffect(() => {
+    let isMounted = true;
+
+    if (apiKey && apiSecret && isInitialized) {
+      getProfilePicture().then((imgUrl) => {
+        if (isMounted) {
+          setUserImage(imgUrl);
+          if (imgUrl) {
+            localStorage.setItem("userImage", imgUrl);
+          } else {
+            localStorage.removeItem("userImage");
+          }
+        }
+      });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [apiKey, apiSecret, isInitialized]);
 
   const getCurrentUser = async (): Promise<string | null> => {
     if (!apiKey || !apiSecret) return null;
@@ -130,7 +161,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       email?: string;
       fullName?: string;
       role?: string;
-      isOnboarded?: string; // ✅ ADD THIS
+      isOnboarded?: string;
+      userImage?: string | null;
     }
   ) => {
     try {
@@ -161,6 +193,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setIsOnboarded(userData.isOnboarded);
           localStorage.setItem("isOnboarded", userData.isOnboarded);
         }
+
+        if (userData.userImage !== undefined) {
+          const imgVal = userData.userImage || null;
+          setUserImage(imgVal);
+          if (imgVal) {
+            localStorage.setItem("userImage", imgVal);
+          } else {
+            localStorage.removeItem("userImage");
+          }
+        }
       } else {
         const user = await getCurrentUser();
         if (user) {
@@ -177,18 +219,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setFullName(null);
       setRole(null);
       setIsOnboarded(null); // ✅ ADD THIS
+      setUserImage(null);
 
       localStorage.removeItem("apiKey");
       localStorage.removeItem("apiSecret");
       localStorage.removeItem("fullName");
       localStorage.removeItem("role");
       localStorage.removeItem("isOnboarded"); // ✅ ADD THIS
+      localStorage.removeItem("userImage");
     }
   };
 
   const updateOnboardedFlag = (flag: string) => {
     setIsOnboarded(flag);
     localStorage.setItem("isOnboarded", flag);
+  };
+
+  const updateUserImage = (url: string | null) => {
+    setUserImage(url);
+    if (url) {
+      localStorage.setItem("userImage", url);
+    } else {
+      localStorage.removeItem("userImage");
+    }
   };
 
   const logout = async (redirectPath: string = "/") => {
@@ -218,6 +271,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setFullName(null);
     setIsAuthenticated(false);
     setIsOnboarded(null);
+    setUserImage(null);
 
     // Clear localStorage
     localStorage.clear();
@@ -238,12 +292,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         currentUser,
         fullName,
         role,
+        userImage,
         login,
         logout,
         getCurrentUser,
         isInitialized,
         isOnboarded,
-        updateOnboardedFlag
+        updateOnboardedFlag,
+        updateUserImage,
       }}
     >
       {children}

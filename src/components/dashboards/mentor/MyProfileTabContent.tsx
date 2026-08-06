@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Pencil,
   Shield,
@@ -15,12 +15,14 @@ import {
   Phone,
   CreditCard,
   Award,
-  Link2
+  Link2,
+  X
 } from "lucide-react";
 import { getMentorByEmail, updateMentor } from "@/services/mentor.services";
 import { useAuth } from "@/context/AuthContext";
-import { BASE_URL } from "@/services/api.services";
+import { BASE_URL, buildProfileImageUrl } from "@/services/api.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
+import ProfileImageUploader from "@/components/profile/ProfileImageUploader";
 import { useToast } from "@/context/ToastContext";
 
 //helpers
@@ -39,7 +41,8 @@ function parseAxiosError(err: any, fallback: string): string {
 //Component
 
 export default function MyProfileTabContent() {
-  const { currentUser } = useAuth();
+  const { currentUser, userImage } = useAuth();
+  const imageUrl = buildProfileImageUrl(userImage);
   const { showToast } = useToast();
 
   const userEmail = currentUser || localStorage.getItem("userEmail") || "";
@@ -48,6 +51,7 @@ export default function MyProfileTabContent() {
   const [mentorData, setMentorData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
 
   // Modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -380,9 +384,23 @@ export default function MyProfileTabContent() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-6 md:p-8">
           {/* Avatar + name */}
           <div className="flex items-start gap-4 mb-8">
-            <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-2xl shrink-0 mt-1 relative">
-              {initials}
-              <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
+            <div
+              onClick={() => imageUrl && setIsImagePreviewOpen(true)}
+              className={`w-16 h-16 rounded-full overflow-hidden bg-orange-500 flex items-center justify-center text-white font-bold text-2xl shrink-0 mt-1 relative group select-none ${
+                imageUrl ? "cursor-zoom-in hover:ring-4 hover:ring-orange-100 transition-all duration-300" : ""
+              }`}
+            >
+              {imageUrl ? (
+                <>
+                  <img src={imageUrl} alt={fullName} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                  <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <Eye className="w-5 h-5 text-white" />
+                  </div>
+                </>
+              ) : (
+                initials
+              )}
+              <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm z-10">
                 <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
                   <span className="text-white text-[10px]">✨</span>
                 </div>
@@ -573,8 +591,22 @@ export default function MyProfileTabContent() {
 
             <div className="border border-slate-200 rounded-xl p-5 relative overflow-hidden">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-lg">
-                  {initials}
+                <div
+                  onClick={() => imageUrl && setIsImagePreviewOpen(true)}
+                  className={`w-12 h-12 rounded-full overflow-hidden bg-orange-500 flex items-center justify-center text-white font-bold text-lg shrink-0 mt-1 relative group select-none ${
+                    imageUrl ? "cursor-zoom-in hover:ring-4 hover:ring-orange-100 transition-all duration-300" : ""
+                  }`}
+                >
+                  {imageUrl ? (
+                    <>
+                      <img src={imageUrl} alt={fullName} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" />
+                      <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                        <Eye className="w-4 h-4 text-white" />
+                      </div>
+                    </>
+                  ) : (
+                    initials
+                  )}
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5 mb-0.5">
@@ -645,6 +677,16 @@ export default function MyProfileTabContent() {
         onSubmit={handleModalSubmit}
         loading={modalLoading}
         error={modalError}
+        headerContent={
+          <div className="flex flex-col items-center py-4 border-b border-slate-100 mb-2">
+            <ProfileImageUploader
+              currentImageUrl={userImage}
+              initials={initials}
+              bgClass="bg-orange-500"
+              size="md"
+            />
+          </div>
+        }
         onValuesChange={(values, changedField) => {
           let overrides: Record<string, string> = {};
           if (changedField === "state") overrides = { district: "", tahsil: "", city: "" };
@@ -655,6 +697,56 @@ export default function MyProfileTabContent() {
           return overrides;
         }}
       />
+
+      {/* ── Profile Image Zoom Modal ── */}
+      <AnimatePresence>
+        {isImagePreviewOpen && imageUrl && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsImagePreviewOpen(false)}
+            className="fixed inset-0 z-[999] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 cursor-zoom-out"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-md w-full bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-100 p-3 cursor-default"
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setIsImagePreviewOpen(false)}
+                className="absolute top-5 right-5 z-10 w-9 h-9 rounded-full bg-white/90 hover:bg-white text-slate-700 flex items-center justify-center transition-all shadow-md hover:scale-105 active:scale-95"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Image Container */}
+              <div className="aspect-square w-full rounded-2xl overflow-hidden bg-slate-50 border border-slate-100">
+                <img
+                  src={imageUrl}
+                  alt={fullName}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              {/* Footer info in Modal */}
+              <div className="p-4 pt-5 pb-2 flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">{fullName}</h3>
+                  <p className="text-sm font-semibold text-slate-500">{mentorData?.role || "Mentor"}</p>
+                </div>
+                <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md border border-blue-200 shadow-sm">
+                  <Shield className="w-3.5 h-3.5 text-blue-600" /> Mentor
+                </span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

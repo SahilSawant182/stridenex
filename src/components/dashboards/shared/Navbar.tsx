@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/context/AuthContext";
+import { buildProfileImageUrl } from "@/services/api.services";
 import { User, Menu, Search, LogOut, CreditCard, ChevronRight, Pen, Mail, Building2, Phone, Globe, MapPin, CheckCircle2, FileText, Target, Clock, Linkedin, Instagram, Map } from "lucide-react";
 import { getStudentByEmail, getUserPackages } from "@/services/student.services";
 import { getIndustryByEmail } from "@/services/industry.services";
@@ -477,7 +478,8 @@ interface NavbarProps {
 
 export default function Navbar({ role }: NavbarProps) {
   const pathname = usePathname();
-  const { currentUser, fullName, logout } = useAuth();
+  const { currentUser, fullName, logout, userImage } = useAuth();
+  const imageUrl = buildProfileImageUrl(userImage);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showProfileBox, setShowProfileBox] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -518,29 +520,25 @@ export default function Navbar({ role }: NavbarProps) {
   const isShortsPage = pathname.endsWith("/shorts");
 
   return (
-    <nav className={`h-16 sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between transition-colors duration-300 ${
-      isShortsPage 
-        ? 'bg-[#0f0f0f] border-b border-zinc-800 text-white' 
+    <nav className={`h-16 sticky top-0 z-40 px-4 lg:px-8 flex items-center justify-between transition-colors duration-300 ${isShortsPage
+        ? 'bg-[#0f0f0f] border-b border-zinc-800 text-white'
         : 'bg-white border-b border-slate-200 text-slate-800 shadow-sm'
-    }`}>
+      }`}>
       <div className="flex items-center gap-4">
-        <button className={`lg:hidden p-2 rounded-lg transition-colors ${
-          isShortsPage ? 'text-zinc-400 hover:bg-zinc-800' : 'text-slate-600 hover:bg-slate-50'
-        }`}>
+        <button className={`lg:hidden p-2 rounded-lg transition-colors ${isShortsPage ? 'text-zinc-400 hover:bg-zinc-800' : 'text-slate-600 hover:bg-slate-50'
+          }`}>
           <Menu className="w-5 h-5" />
         </button>
         <div className="hidden sm:flex relative">
-          <Search className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${
-            isShortsPage ? 'text-zinc-500' : 'text-slate-400'
-          }`} />
+          <Search className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${isShortsPage ? 'text-zinc-500' : 'text-slate-400'
+            }`} />
           <input
             type="text"
             placeholder={config.searchPlaceholder}
-            className={`pl-9 pr-4 py-2 rounded-full text-sm w-64 transition-all focus:outline-none focus:ring-1 ${
-              isShortsPage 
-                ? 'bg-zinc-900 border border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-700 focus:ring-zinc-700' 
+            className={`pl-9 pr-4 py-2 rounded-full text-sm w-64 transition-all focus:outline-none focus:ring-1 ${isShortsPage
+                ? 'bg-zinc-900 border border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-700 focus:ring-zinc-700'
                 : 'bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:ring-slate-400'
-            }`}
+              }`}
           />
         </div>
       </div>
@@ -551,18 +549,23 @@ export default function Navbar({ role }: NavbarProps) {
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setUserMenuOpen(!userMenuOpen)}
-            className={`flex items-center gap-2 p-1 pl-2 pr-3 rounded-full border transition-colors ${
-              isShortsPage 
-                ? 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-200' 
+            className={`flex items-center gap-2 p-1 pl-2 pr-3 rounded-full border transition-colors ${isShortsPage
+                ? 'bg-zinc-900 hover:bg-zinc-800 border-zinc-800 text-zinc-200'
                 : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'
-            }`}
+              }`}
           >
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-medium text-sm ${role === 'student' ? 'bg-gradient-to-tr from-accent to-orange-500' :
-              role === 'college' ? 'bg-green-600' :
-                role === 'mentor' ? 'bg-violet-600' :
-                  'bg-purple-600' // industry
+            <div className={`w-8 h-8 rounded-full overflow-hidden flex items-center justify-center text-white font-medium text-sm shrink-0 ${imageUrl ? '' : (
+                role === 'student' ? 'bg-gradient-to-tr from-accent to-orange-500' :
+                  role === 'college' ? 'bg-green-600' :
+                    role === 'mentor' ? 'bg-violet-600' :
+                      'bg-purple-600' // industry
+              )
               }`}>
-              {displayName.charAt(0).toUpperCase()}
+              {imageUrl ? (
+                <img src={imageUrl} alt={displayName} className="w-full h-full object-cover" />
+              ) : (
+                displayName.charAt(0).toUpperCase()
+              )}
             </div>
             <span className={`text-sm font-medium hidden sm:block transition-colors ${isShortsPage ? 'text-zinc-200' : 'text-slate-700'}`}>
               {displayName}
