@@ -24,16 +24,20 @@ import {
   Globe,
   MapPin,
   Github,
-  Linkedin
+  Linkedin,
+  User,
+  CreditCard
 } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { getStudentByEmail, updateStudent, mapYearToWord, getDashboardStats } from "@/services/student.services";
 import { updateIndustry } from "@/services/industry.services";
-import { getMentorByEmail, getMentorDashboardStats } from "@/services/mentor.services";
+import { getMentorByEmail, getMentorDashboardStats, updateMentor } from "@/services/mentor.services";
 import { getCollegeDetails, updateCollegeDetails, getPlacementStats, getDashboardSummary } from "@/services/college.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { useToast } from "@/context/ToastContext";
 import { OperatingHoursTable, OperatingHour } from "@/components/dashboards/shared/OperatingHoursTable";
+import ProfileImageUploader from "@/components/profile/ProfileImageUploader";
+import { buildProfileImageUrl } from "@/services/api.services";
 
 
 interface BannerMetric {
@@ -134,8 +138,9 @@ const roleConfig = {
 };
 
 export default function RoleBannerWidget({ role, customData, onlyModal = false }: RoleBannerWidgetProps) {
-  const { fullName, currentUser } = useAuth();
+  const { fullName, currentUser, userImage } = useAuth();
   const config = roleConfig[role];
+  const profileImageUrl = buildProfileImageUrl(userImage);
 
   // Student specific state
   const [studentData, setStudentData] = useState<any>(() => {
@@ -212,6 +217,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
   const [placementStats, setPlacementStats] = useState<any>(null);
   const [dashboardSummary, setDashboardSummary] = useState<any>(null);
   const [collegeFormState, setCollegeFormState] = useState<any>({});
+  const [mentorFormState, setMentorFormState] = useState<any>({});
 
   const fetchStudentData = async () => {
     const email = currentUser || (typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail")) : "") || "";
@@ -381,6 +387,110 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
     { name: "github", label: "GitHub URL", type: "url", icon: Github },
     { name: "cgpa", label: "CGPA", type: "number", icon: Award, required: true },
   ], []);
+
+  const mentorFields: DynamicField[] = useMemo(() => [
+    {
+      name: "first_name", label: "First Name", type: "text",
+      icon: User, required: true, colSpan: 1, placeholder: "e.g. Kavya"
+    },
+    {
+      name: "last_name", label: "Last Name", type: "text",
+      icon: User, required: true, colSpan: 1, placeholder: "e.g. Reddy"
+    },
+    {
+      name: "role", label: "Current Role", type: "text",
+      icon: Briefcase, required: false, colSpan: 1, placeholder: "e.g. Senior Software Engineer"
+    },
+    {
+      name: "experience", label: "Experience (Years)", type: "number",
+      icon: Award, required: false, colSpan: 1, placeholder: "e.g. 5"
+    },
+    {
+      name: "type", label: "Mentor Type", type: "select",
+      icon: Briefcase, required: false, colSpan: 1, placeholder: "Select Type",
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: { doctype: "Type" },
+      mapOptions: (data: any) => {
+        const items = data?.data || data || [];
+        return items.map((item: any) => ({ value: item.name, label: item.name }));
+      }
+    },
+    {
+      name: "travelling_possible", label: "Willing to Travel", type: "select",
+      icon: MapPin, required: false, colSpan: 1, placeholder: "Select",
+      options: ["Yes", "No", "Maybe"]
+    },
+    {
+      name: "state", label: "State", type: "select",
+      icon: MapPin, required: false, colSpan: 1, placeholder: "Select State",
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: { doctype: "State" },
+      mapOptions: (data: any) => {
+        const items = data?.data || data || [];
+        return items.map((item: any) => ({ value: item.name, label: item.name }));
+      }
+    },
+    {
+      name: "district", label: "District", type: "select",
+      icon: MapPin, required: false, colSpan: 1, placeholder: "Select District",
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: mentorFormState.state
+        ? { doctype: "District", fields: ["name", "district_name"], filters: [["state", "=", mentorFormState.state]], order_by: "district_name asc", limit_page_length: 1000 }
+        : undefined,
+      mapOptions: (data: any) => {
+        const items = data?.data || data || [];
+        return items.map((item: any) => ({ value: item.name, label: item.district_name || item.name }));
+      },
+      disabled: !mentorFormState.state
+    },
+    {
+      name: "tahsil", label: "Taluka", type: "select",
+      icon: MapPin, required: false, colSpan: 1, placeholder: "Select Taluka",
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: mentorFormState.district
+        ? { doctype: "Tahsil", fields: ["name", "tahsil_name"], filters: [["district", "=", mentorFormState.district]], order_by: "tahsil_name asc", limit_page_length: 1000 }
+        : undefined,
+      mapOptions: (data: any) => {
+        const items = data?.data || data || [];
+        return items.map((item: any) => ({ value: item.name, label: item.tahsil_name || item.name }));
+      },
+      disabled: !mentorFormState.district
+    },
+    {
+      name: "city", label: "City", type: "select",
+      icon: MapPin, required: false, colSpan: 1, placeholder: "Select City",
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: mentorFormState.tahsil
+        ? { doctype: "City", fields: ["name", "city_name"], filters: [["tahsil", "=", mentorFormState.tahsil]], order_by: "city_name asc", limit_page_length: 1000 }
+        : undefined,
+      mapOptions: (data: any) => {
+        const items = data?.data || data || [];
+        return items.map((item: any) => ({ value: item.name, label: item.city_name || item.name }));
+      },
+      disabled: !mentorFormState.tahsil
+    },
+    {
+      name: "mobile_no", label: "Mobile Number", type: "text",
+      icon: Phone, required: false, colSpan: 1, placeholder: "e.g. +91-9876543210"
+    },
+    {
+      name: "profile_description", label: "Bio / Profile Description", type: "textarea",
+      icon: FileText, required: false, colSpan: 2,
+      placeholder: "Describe your expertise and mentoring approach..."
+    },
+    {
+      name: "bank_name", label: "Bank Name", type: "text",
+      icon: CreditCard, required: false, colSpan: 1, placeholder: "e.g. HDFC Bank"
+    },
+    {
+      name: "account_number", label: "Account Number", type: "text",
+      icon: CreditCard, required: false, colSpan: 1, placeholder: "e.g. 123456789012"
+    },
+    {
+      name: "ifsc_code", label: "IFSC Code", type: "text",
+      icon: CreditCard, required: false, colSpan: 1, placeholder: "e.g. HDFC0001234"
+    },
+  ], [mentorFormState.state, mentorFormState.district, mentorFormState.tahsil]);
 
   const collegeFields: DynamicField[] = useMemo(() => [
     { name: "college_name", label: "College Name", type: "text", icon: Building2, required: true, colSpan: 2 },
@@ -583,6 +693,40 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         };
         await updateCollegeDetails(currentUser, payload);
         await fetchCollegeData();
+      } else if (role === "mentor") {
+        const email = currentUser || (typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail")) : "") || "";
+        const domainArray = (mentorData?.domains || []).map((d: any) => ({ domain: d.domain || d }));
+        const skillsArray = (mentorData?.mentor_skills || mentorData?.skills || []).map((s: any) => ({ skill: s.skill || s }));
+        const platformUrlsPayload = (mentorData?.mentor_platform_urls || []).map((p: any) => ({ platform: p.platform, url: p.url }));
+
+        const payload = {
+          name: email,
+          email_id: email,
+          first_name: formData.first_name || mentorData?.first_name || "",
+          last_name: formData.last_name || mentorData?.last_name || "",
+          mobile_no: formData.mobile_no || mentorData?.mobile_no || null,
+          type: formData.type || null,
+          travelling_possible: formData.travelling_possible || "Yes",
+          country: mentorData?.country || "India",
+          state: formData.state || null,
+          district: formData.district || null,
+          tahsil: formData.tahsil || null,
+          city: formData.city || null,
+          profile_description: formData.profile_description?.trim() || null,
+          role: formData.role || mentorData?.role || null,
+          experience: formData.experience || mentorData?.experience || null,
+          bank_name: formData.bank_name?.trim() || null,
+          account_number: formData.account_number?.trim() || null,
+          ifsc_code: formData.ifsc_code?.trim() || null,
+          doctype: "Mentor",
+          domain: domainArray,
+          mentor_skills: skillsArray,
+          mentor_platform_urls: platformUrlsPayload,
+        };
+
+        await updateMentor(email, payload);
+        window.dispatchEvent(new Event("mentor-profile-updated"));
+        await fetchMentorData();
       }
       showToast("Profile updated successfully", "success");
       setIsModalOpen(false);
@@ -596,6 +740,26 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
 
   // Compute initial values for the modal
   const computedInitialValues = useMemo(() => {
+    if (role === "mentor") {
+      return {
+        first_name: mentorData?.first_name || "",
+        last_name: mentorData?.last_name || "",
+        role: mentorData?.role || "",
+        experience: mentorData?.experience || "",
+        type: mentorData?.type || "",
+        travelling_possible: mentorData?.travelling_possible || "Yes",
+        state: mentorData?.state || "",
+        district: mentorData?.district || "",
+        tahsil: mentorData?.tahsil || "",
+        city: mentorData?.city || "",
+        mobile_no: mentorData?.mobile_no || "",
+        profile_description: mentorData?.profile_description || "",
+        bank_name: mentorData?.bank_name || "",
+        account_number: mentorData?.account_number || "",
+        ifsc_code: mentorData?.ifsc_code || "",
+      };
+    }
+
     if (role === "college") {
       return {
         college_name: collegeData?.college_name || "",
@@ -669,11 +833,14 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
       last_name: lastName || studentData?.last_name || "",
       email_id: currentUser || studentData?.email_id || "",
     };
-  }, [studentData, collegeData, fullName, currentUser, customData?.rawIndustryData, role]);
+  }, [studentData, collegeData, mentorData, fullName, currentUser, customData?.rawIndustryData, role]);
 
   useEffect(() => {
     if (isModalOpen && role === "college") {
       setCollegeFormState(computedInitialValues);
+    }
+    if (isModalOpen && role === "mentor") {
+      setMentorFormState(computedInitialValues);
     }
   }, [isModalOpen, role, computedInitialValues]);
 
@@ -911,19 +1078,34 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
   if (onlyModal) {
     return (
       <>
-        {(role === "student" || role === "industry" || role === "college") && (
+        {(role === "student" || role === "industry" || role === "college" || role === "mentor") && (
           <DashboardDynamicModal
             isOpen={isModalOpen}
             onClose={() => setIsModalOpen(false)}
-            title={role === "student" ? "Update Profile" : role === "college" ? "Edit College Details" : "Edit Company Profile"}
-            subtitle={role === "student" ? "Keep your academic details up to date" : role === "college" ? "Update your college onboarding information" : (customData?.title || "Manage your company's presence")}
-            headerIcon={role === "student" ? Pen : role === "college" ? Building2 : Building2}
-            iconBgColor={role === "student" ? "bg-orange-500" : role === "college" ? "bg-emerald-600" : "bg-blue-600"}
-            fields={role === "student" ? studentFields : role === "college" ? collegeFields : (customData?.fields || industryFields)}
+            title={role === "student" || role === "mentor" ? "Update Profile" : role === "college" ? "Edit College Details" : "Edit Company Profile"}
+            subtitle={role === "student" ? "Keep your academic details up to date" : role === "mentor" ? "Keep your profile details up to date" : role === "college" ? "Update your college onboarding information" : (customData?.title || "Manage your company's presence")}
+            headerIcon={role === "student" || role === "mentor" ? Pen : role === "college" ? Building2 : Building2}
+            iconBgColor={role === "student" ? "bg-orange-500" : role === "college" ? "bg-emerald-600" : role === "mentor" ? "bg-violet-600" : "bg-blue-600"}
+            fields={role === "student" ? studentFields : role === "college" ? collegeFields : role === "mentor" ? mentorFields : (customData?.fields || industryFields)}
             initialValues={computedInitialValues}
             onSubmit={handleUpdateProfile}
             loading={modalLoading}
             error={modalError}
+            headerContent={
+              <div className="flex flex-col items-center py-4 border-b border-slate-100 mb-2">
+                <ProfileImageUploader
+                  currentImageUrl={userImage}
+                  initials={getInitials()}
+                  bgClass={
+                    role === "student" ? "bg-gradient-to-tr from-blue-600 to-orange-500" :
+                    role === "college" ? "bg-emerald-600" :
+                    role === "industry" ? "bg-purple-600" :
+                    "bg-violet-600"
+                  }
+                  size="md"
+                />
+              </div>
+            }
             onValuesChange={(updatedValues, changedFieldName) => {
               if (role === "college") {
                 const sideEffects: any = {};
@@ -939,6 +1121,22 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
                 }
                 const newFormState = { ...updatedValues, ...sideEffects };
                 setCollegeFormState(newFormState);
+                return sideEffects;
+              }
+              if (role === "mentor") {
+                const sideEffects: any = {};
+                if (changedFieldName === "state") {
+                  sideEffects.district = "";
+                  sideEffects.tahsil = "";
+                  sideEffects.city = "";
+                } else if (changedFieldName === "district") {
+                  sideEffects.tahsil = "";
+                  sideEffects.city = "";
+                } else if (changedFieldName === "tahsil") {
+                  sideEffects.city = "";
+                }
+                const newFormState = { ...updatedValues, ...sideEffects };
+                setMentorFormState(newFormState);
                 return sideEffects;
               }
             }}
@@ -960,8 +1158,13 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
 
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <div className={`w-14 h-14 rounded-full bg-gradient-to-r ${getProgressGradient()} flex items-center justify-center shadow-lg border-2 border-white/20`}>
-            <span className="text-xl font-bold text-white">{getInitials()}</span>
+          <div className={`w-14 h-14 rounded-full bg-gradient-to-r ${getProgressGradient()} flex items-center justify-center shadow-lg border-2 border-white/20 overflow-hidden`}>
+            {profileImageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={profileImageUrl} alt={userFullName} className="w-full h-full object-cover" />
+            ) : (
+              <span className="text-xl font-bold text-white">{getInitials()}</span>
+            )}
           </div>
           <div>
             <p className={`text-[10px] ${config.textColor} font-medium uppercase tracking-wider mb-0.5 flex items-center gap-1`}>
@@ -977,11 +1180,14 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
                   <Shield className="w-3 h-3" /> VERIFIED
                 </span>
               )}
-              {(role === "student" || role === "industry" || role === "college") && (
+              {(role === "student" || role === "industry" || role === "college" || role === "mentor") && (
                 <button
                   onClick={() => {
                     if (role === "college") {
                       fetchCollegeData();
+                    }
+                    if (role === "mentor") {
+                      fetchMentorData();
                     }
                     setIsModalOpen(true);
                   }}
@@ -1043,19 +1249,34 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         </div>
       )}
 
-      {(role === "student" || role === "industry" || role === "college") && (
+      {(role === "student" || role === "industry" || role === "college" || role === "mentor") && (
         <DashboardDynamicModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          title={role === "student" ? "Update Profile" : role === "college" ? "Edit College Details" : "Edit Company Profile"}
-          subtitle={role === "student" ? "Keep your academic details up to date" : role === "college" ? "Update your college onboarding information" : (customData?.title || "Manage your company's presence")}
-          headerIcon={role === "student" ? Pen : role === "college" ? Building2 : Building2}
-          iconBgColor={role === "student" ? "bg-orange-500" : role === "college" ? "bg-emerald-600" : "bg-blue-600"}
-          fields={role === "student" ? studentFields : role === "college" ? collegeFields : (customData?.fields || industryFields)}
+          title={role === "student" || role === "mentor" ? "Update Profile" : role === "college" ? "Edit College Details" : "Edit Company Profile"}
+          subtitle={role === "student" ? "Keep your academic details up to date" : role === "mentor" ? "Keep your profile details up to date" : role === "college" ? "Update your college onboarding information" : (customData?.title || "Manage your company's presence")}
+          headerIcon={role === "student" || role === "mentor" ? Pen : role === "college" ? Building2 : Building2}
+          iconBgColor={role === "student" ? "bg-orange-500" : role === "college" ? "bg-emerald-600" : role === "mentor" ? "bg-violet-600" : "bg-blue-600"}
+          fields={role === "student" ? studentFields : role === "college" ? collegeFields : role === "mentor" ? mentorFields : (customData?.fields || industryFields)}
           initialValues={computedInitialValues}
           onSubmit={handleUpdateProfile}
           loading={modalLoading}
           error={modalError}
+          headerContent={
+            <div className="flex flex-col items-center py-4 border-b border-slate-100 mb-2">
+              <ProfileImageUploader
+                currentImageUrl={userImage}
+                initials={getInitials()}
+                bgClass={
+                  role === "student" ? "bg-gradient-to-tr from-blue-600 to-orange-500" :
+                  role === "college" ? "bg-emerald-600" :
+                  role === "industry" ? "bg-purple-600" :
+                  "bg-violet-600"
+                }
+                size="md"
+              />
+            </div>
+          }
           onValuesChange={(updatedValues, changedFieldName) => {
             if (role === "college") {
               const sideEffects: any = {};
@@ -1071,6 +1292,22 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
               }
               const newFormState = { ...updatedValues, ...sideEffects };
               setCollegeFormState(newFormState);
+              return sideEffects;
+            }
+            if (role === "mentor") {
+              const sideEffects: any = {};
+              if (changedFieldName === "state") {
+                sideEffects.district = "";
+                sideEffects.tahsil = "";
+                sideEffects.city = "";
+              } else if (changedFieldName === "district") {
+                sideEffects.tahsil = "";
+                sideEffects.city = "";
+              } else if (changedFieldName === "tahsil") {
+                sideEffects.city = "";
+              }
+              const newFormState = { ...updatedValues, ...sideEffects };
+              setMentorFormState(newFormState);
               return sideEffects;
             }
           }}
