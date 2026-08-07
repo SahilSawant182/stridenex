@@ -19,7 +19,12 @@ import {
     Zap,
     Trash2,
     ShieldAlert,
-    ChevronDown
+    ChevronDown,
+    Trophy,
+    Medal,
+    Award,
+    Shield,
+    Sparkles
 } from "lucide-react";
 import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { Button } from "@/components/ui/button";
@@ -40,8 +45,10 @@ import {
     getHabitHistory,
     getPlanSummary,
     completeHabitPlanStatus,
-    deleteHabitPlan
+    deleteHabitPlan,
+    getStudentBadges
 } from "@/services/student.services";
+import { BASE_DOMAIN } from "@/services/api.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 
 // Types
@@ -125,8 +132,32 @@ interface HabitItem {
     doctype?: string;
 }
 
+interface BadgeItem {
+    badge_id: string;
+    badge_name: string;
+    streak_count: number;
+    description: string;
+    badge_icon: string | null;
+    color_theme: 'Bronze' | 'Silver' | 'Gold' | 'Platinum' | 'Diamond';
+    is_earned: boolean;
+    earned_date: string | null;
+    progress: {
+        current: number;
+        target: number;
+        percentage: number;
+    };
+}
+
 // Dynamic data
 const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+const getImageUrl = (path: string | null) => {
+    if (!path) return "";
+    if (path.startsWith("http")) return path;
+    const domain = BASE_DOMAIN.endsWith("/") ? BASE_DOMAIN.slice(0, -1) : BASE_DOMAIN;
+    const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    return `${domain}${cleanPath}`;
+};
 
 // Status configurations
 const statusConfig = {
@@ -175,6 +206,63 @@ const convertISOToDDMMYYYY = (iso: string): string => {
     return `${day}/${month}/${year}`;
 };
 
+const getBadgeIcon = (streakCount: number) => {
+    if (streakCount >= 365) return Flame;
+    if (streakCount >= 100) return Sparkles;
+    if (streakCount >= 50) return Trophy;
+    if (streakCount >= 30) return Award;
+    if (streakCount >= 14) return Shield;
+    return Medal;
+};
+
+function ConfettiEffect() {
+    const particles = useMemo(() => {
+        return Array.from({ length: 80 }).map((_, i) => ({
+            id: i,
+            x: Math.random() * 100, // percentage width
+            y: -10 - Math.random() * 20, // start above screen
+            size: 5 + Math.random() * 10,
+            color: ['#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#EF4444'][Math.floor(Math.random() * 6)],
+            delay: Math.random() * 2,
+            duration: 2 + Math.random() * 3,
+            rotation: Math.random() * 360,
+        }));
+    }, []);
+
+    return (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-[9999]">
+            {particles.map((p) => (
+                <motion.div
+                    key={p.id}
+                    initial={{
+                        x: `${p.x}vw`,
+                        y: `${p.y}vh`,
+                        rotate: p.rotation,
+                        opacity: 1
+                    }}
+                    animate={{
+                        y: '110vh',
+                        rotate: p.rotation + 720,
+                        opacity: 0
+                    }}
+                    transition={{
+                        delay: p.delay,
+                        duration: p.duration,
+                        ease: 'easeOut',
+                    }}
+                    style={{
+                        position: 'absolute',
+                        width: p.size,
+                        height: p.size,
+                        backgroundColor: p.color,
+                        borderRadius: Math.random() > 0.5 ? '50%' : '20%',
+                    }}
+                />
+            ))}
+        </div>
+    );
+}
+
 export default function HabitsTabContent() {
     const { showToast } = useToast();
     const { checkAndConsume, hasQuota, getRemaining, entitlements } = useEntitlements();
@@ -188,6 +276,8 @@ export default function HabitsTabContent() {
     const [habitHistory, setHabitHistory] = useState<HabitHistoryItem[]>([]);
     const [suggestedHabit, setSuggestedHabit] = useState<SuggestedHabit | null>(null);
     const [loading, setLoading] = useState(true);
+    const [badges, setBadges] = useState<BadgeItem[]>([]);
+    const [newlyUnlockedBadge, setNewlyUnlockedBadge] = useState<BadgeItem | null>(null);
 
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -428,11 +518,12 @@ export default function HabitsTabContent() {
             }
 
             // Fetch all habits data in parallel
-            const [dashboardRes, pendingRes, plansRes, streaksRes] = await Promise.all([
+            const [dashboardRes, pendingRes, plansRes, streaksRes, badgesRes] = await Promise.all([
                 getStudentDashboardHabits(studentEmail),
                 getTodaysPendingHabits(studentEmail),
                 getStudentPlans(studentEmail),
-                getHabitStreaks(studentEmail)
+                getHabitStreaks(studentEmail),
+                getStudentBadges(studentEmail)
             ]);
 
             const mapPlansFromAPI = (apiPlans: any[]) => {
@@ -580,6 +671,54 @@ export default function HabitsTabContent() {
                 const categories = allHabits.map(h => h.category);
                 const suggestion = generateSuggestedHabit(categories);
                 setSuggestedHabit(suggestion);
+            }
+
+            // Process badges
+            const badgesData = badgesRes?.message || badgesRes;
+            if (badgesData && Array.isArray(badgesData.badges)) {
+                setBadges(prevBadges => {
+                    const celebratedStr = localStorage.getItem("celebrated_badges") || "[]";
+                    let celebratedIds: string[] = [];
+                    try {
+                        celebratedIds = JSON.parse(celebratedStr);
+                    } catch (e) {
+                        celebratedIds = [];
+                    }
+                    const celebratedSet = new Set(celebratedIds);
+
+                    // Get today's date in YYYY-MM-DD format (local time)
+                    const localToday = new Date();
+                    const year = localToday.getFullYear();
+                    const month = String(localToday.getMonth() + 1).padStart(2, '0');
+                    const day = String(localToday.getDate()).padStart(2, '0');
+                    const todayStr = `${year}-${month}-${day}`;
+
+                    let newlyEarned = null;
+
+                    if (prevBadges && prevBadges.length > 0) {
+                        // Case A: Transition during the session (completing a habit)
+                        const prevEarnedIds = new Set(prevBadges.filter(b => b.is_earned).map(b => b.badge_id));
+                        newlyEarned = badgesData.badges.find(
+                            (b: any) => b.is_earned && !prevEarnedIds.has(b.badge_id)
+                        );
+                    } else {
+                        // Case B: First load of the page, badge was earned today but not celebrated yet
+                        newlyEarned = badgesData.badges.find(
+                            (b: any) => b.is_earned && b.earned_date === todayStr && !celebratedSet.has(b.badge_id)
+                        );
+                    }
+
+                    if (newlyEarned) {
+                        setNewlyUnlockedBadge(newlyEarned);
+                        showToast(`🏆 Badge Unlocked: ${newlyEarned.badge_name}!`, "success");
+
+                        // Mark as celebrated
+                        celebratedSet.add(newlyEarned.badge_id);
+                        localStorage.setItem("celebrated_badges", JSON.stringify(Array.from(celebratedSet)));
+                    }
+
+                    return badgesData.badges;
+                });
             }
 
         } catch (err) {
@@ -890,7 +1029,7 @@ export default function HabitsTabContent() {
                 <div className="p-4 space-y-3 bg-slate-50/30 max-h-[420px] overflow-y-auto">
                     {habitPlans.length === 0 ? (
                         <div className="text-center py-12 text-slate-400 text-sm bg-white rounded-xl border border-dashed border-slate-200">
-                            No habit plans created yet. Click "New Habit" to get started!
+                            No habit plans created yet. Click &quot;New Habit&quot; to get started!
                         </div>
                     ) : (() => {
                         const today = new Date(new Date().setHours(0, 0, 0, 0));
@@ -1119,6 +1258,129 @@ export default function HabitsTabContent() {
                 </div>
             </motion.div>
 
+            {/* Streak Achievements Section */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+                className="bg-white rounded-xl border border-slate-200/60 shadow-sm p-5"
+            >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 mb-5">
+                    <div>
+                        <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                            <Trophy className="w-4 h-4 text-orange-500" />
+                            My Achievements
+                        </h3>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">Track your consistency milestones</p>
+                    </div>
+                    {badges.length > 0 && (
+                        <div className="text-xs font-bold text-slate-600 bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <span>{badges.filter(b => b.is_earned).length} / {badges.length} Badges Earned</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Left & Middle: Earned Badges Row */}
+                    <div className="md:col-span-2 space-y-3">
+                        <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Earned Badges</h4>
+                        {badges.filter(b => b.is_earned).length === 0 ? (
+                            <div className="flex flex-col items-center justify-center p-6 border border-dashed border-slate-200/80 rounded-2xl bg-slate-50/40 text-center">
+                                <Medal className="w-8 h-8 text-slate-300 mb-2" />
+                                <p className="text-xs font-bold text-slate-500">No badges earned yet</p>
+                                <p className="text-[10px] text-slate-400 font-medium mt-0.5">Complete your daily habits to start unlocking badges!</p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-wrap gap-4">
+                                {badges.filter(b => b.is_earned).map((b) => {
+                                    const IconComponent = getBadgeIcon(b.streak_count);
+
+                                    const themes = {
+                                        Bronze: "from-amber-500 to-amber-700 shadow-amber-500/20 text-white",
+                                        Silver: "from-slate-400 to-slate-600 shadow-slate-500/20 text-white",
+                                        Gold: "from-yellow-400 via-amber-500 to-yellow-600 shadow-yellow-500/30 text-white",
+                                        Platinum: "from-sky-400 via-indigo-500 to-purple-600 shadow-indigo-500/25 text-white",
+                                        Diamond: "from-cyan-400 via-teal-400 to-blue-600 shadow-cyan-500/30 text-white"
+                                    };
+                                    const themeClass = themes[b.color_theme] || themes.Bronze;
+
+                                    return (
+                                        <div
+                                            key={b.badge_id}
+                                            className="group relative flex flex-col items-center p-3 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-slate-50 transition-colors w-24"
+                                        >
+                                            <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${themeClass} flex items-center justify-center shadow-lg transition-transform duration-200 group-hover:scale-110 overflow-hidden`}>
+                                                {b.badge_icon ? (
+                                                    <img src={getImageUrl(b.badge_icon)} alt={b.badge_name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <IconComponent className="w-6 h-6" />
+                                                )}
+                                            </div>
+                                            <span className="text-[10px] font-bold text-slate-700 text-center mt-2.5 leading-tight truncate w-full">
+                                                {b.badge_name}
+                                            </span>
+
+                                            {/* Tooltip */}
+                                            <div className="absolute bottom-full mb-2 hidden group-hover:block w-48 p-2.5 bg-slate-900 text-white text-[10px] rounded-lg shadow-xl z-50 pointer-events-none">
+                                                <p className="font-bold text-orange-400 mb-0.5">{b.badge_name}</p>
+                                                <p className="text-slate-300 leading-normal">{b.description}</p>
+                                                {b.earned_date && (
+                                                    <p className="text-emerald-400 font-semibold mt-1">Earned on: {new Date(b.earned_date).toLocaleDateString()}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Right: Next Milestone */}
+                    <div className="space-y-3">
+                        <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Next Milestone</h4>
+                        {(() => {
+                            const nextBadge = badges.find(b => !b.is_earned);
+                            if (!nextBadge) {
+                                return (
+                                    <div className="flex flex-col items-center justify-center p-6 border border-slate-200/60 rounded-2xl bg-gradient-to-br from-emerald-50/50 to-teal-50/30 text-center h-[106px]">
+                                        <Trophy className="w-6 h-6 text-emerald-500 mb-1" />
+                                        <p className="text-xs font-black text-slate-800">All Badges Unlocked!</p>
+                                        <p className="text-[10px] text-slate-500 font-medium">You are a habit master!</p>
+                                    </div>
+                                );
+                            }
+
+                            const IconComponent = getBadgeIcon(nextBadge.streak_count);
+                            return (
+                                <div className="p-4 border border-slate-200/60 rounded-2xl bg-slate-50/30 flex flex-col justify-between h-[106px]">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-200/60 text-slate-400 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                                            {nextBadge.badge_icon ? (
+                                                <img src={getImageUrl(nextBadge.badge_icon)} alt={nextBadge.badge_name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <IconComponent className="w-5 h-5" />
+                                            )}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-bold text-slate-700 truncate">{nextBadge.badge_name}</p>
+                                            <p className="text-[10px] text-slate-500 font-medium">Reach {nextBadge.streak_count}-day streak</p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1 mt-2">
+                                        <div className="flex justify-between text-[9px] font-extrabold text-slate-500">
+                                            <span>Current Streak: {nextBadge.progress.current}d</span>
+                                            <span>Target: {nextBadge.progress.target}d</span>
+                                        </div>
+                                        <Progress value={nextBadge.progress.percentage} className="h-1.5 bg-slate-200/60" indicatorColor="bg-orange-500" />
+                                    </div>
+                                </div>
+                            );
+                        })()}
+                    </div>
+                </div>
+            </motion.div>
+
             {/* Today's Pending Habits Section */}
             {pendingHabits.length > 0 && (
                 <motion.div
@@ -1130,7 +1392,7 @@ export default function HabitsTabContent() {
                     <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                            <h3 className="text-sm font-bold text-slate-800">Today's Pending Habits</h3>
+                            <h3 className="text-sm font-bold text-slate-800">Today&apos;s Pending Habits</h3>
                         </div>
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-50 text-orange-600 border border-orange-100">
                             {pendingHabits.length} remaining
@@ -1215,6 +1477,61 @@ export default function HabitsTabContent() {
                 loading={modalLoading}
                 error={modalError}
             />
+
+            {/* Badge Celebration Modal */}
+            {newlyUnlockedBadge && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+                    <ConfettiEffect />
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-white rounded-3xl p-8 max-w-sm w-full border border-slate-100 shadow-2xl relative overflow-hidden flex flex-col items-center"
+                    >
+                        <button
+                            onClick={() => setNewlyUnlockedBadge(null)}
+                            className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <motion.div
+                            animate={{ rotate: [0, 10, -10, 10, 0] }}
+                            transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse" }}
+                            className={`w-24 h-24 rounded-3xl bg-gradient-to-br ${newlyUnlockedBadge.color_theme === 'Bronze' ? 'from-amber-600 to-amber-800' :
+                                newlyUnlockedBadge.color_theme === 'Silver' ? 'from-slate-400 to-slate-600' :
+                                    newlyUnlockedBadge.color_theme === 'Gold' ? 'from-yellow-500 via-amber-500 to-yellow-600' :
+                                        newlyUnlockedBadge.color_theme === 'Platinum' ? 'from-sky-400 via-indigo-500 to-purple-600' :
+                                            'from-cyan-400 via-teal-400 to-blue-600'
+                                } text-white flex items-center justify-center shadow-xl shadow-orange-500/25 mb-6 overflow-hidden`}
+                        >
+                            {(() => {
+                                if (newlyUnlockedBadge.badge_icon) {
+                                    return <img src={getImageUrl(newlyUnlockedBadge.badge_icon)} alt={newlyUnlockedBadge.badge_name} className="w-full h-full object-cover" />;
+                                }
+                                const Icon = getBadgeIcon(newlyUnlockedBadge.streak_count);
+                                return <Icon className="w-12 h-12" />;
+                            })()}
+                        </motion.div>
+
+                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-orange-500 mb-2">New Achievement!</span>
+                        <h3 className="text-xl font-black text-slate-800 text-center mb-1">
+                            {newlyUnlockedBadge.badge_name}
+                        </h3>
+                        <p className="text-sm font-semibold text-slate-500 mb-4">{newlyUnlockedBadge.streak_count}-Day Streak Milestone</p>
+
+                        <p className="text-sm text-slate-600 text-center bg-slate-50 rounded-2xl p-4 border border-slate-100 mb-6 font-medium">
+                            &quot;{newlyUnlockedBadge.description}&quot;
+                        </p>
+
+                        <Button
+                            onClick={() => setNewlyUnlockedBadge(null)}
+                            className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold h-12 rounded-2xl shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-95 transition-transform"
+                        >
+                            Awesome! Keep it up
+                        </Button>
+                    </motion.div>
+                </div>
+            )}
         </div>
     );
 }

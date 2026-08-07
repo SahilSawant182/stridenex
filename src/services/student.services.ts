@@ -62,7 +62,7 @@ export const getStudentInternshipList = async (
     if (studentEmail) params.append("student", studentEmail);
     params.append("course", course || "null");
     params.append("department", department || "null");
-    
+
     const yearWord = mapYearToWord(academicYear);
     params.append("current_year", yearWord || "null");
 
@@ -100,7 +100,7 @@ export const getStudentProjectList = async (
     if (studentEmail) params.append("student", studentEmail);
     params.append("course", course || "null");
     params.append("department", department || "null");
-    
+
     const yearWord = mapYearToWord(academicYear);
     params.append("current_year", yearWord || "null");
 
@@ -591,6 +591,22 @@ export const deleteHabitPlan = async (planName: string, habitName: string, stude
 };
 
 /**
+ * Fetch student badges (earned and locked).
+ */
+export const getStudentBadges = async (studentEmail: string) => {
+  try {
+    const response = await apiService.get(
+      `method/nexedu.habits_builder.api.get_student_badges?student=${encodeURIComponent(studentEmail)}`
+    );
+    return response?.message || response;
+  } catch (error) {
+    console.error("Error fetching student badges:", error);
+    throw error;
+  }
+};
+
+
+/**
  * Get booked sessions for a student.
  */
 export const getBookedSessions = async (studentEmail: string) => {
@@ -744,7 +760,7 @@ export const initiateSessionBooking = async (payload: any): Promise<any> => {
         headers: {
           "Content-Type": "application/json",
         },
-       
+
         body: JSON.stringify({ payload: JSON.stringify(payload) }),
       }
     );
@@ -752,7 +768,7 @@ export const initiateSessionBooking = async (payload: any): Promise<any> => {
     const data = await response.json();
 
     if (!response.ok) {
-     
+
       let errMsg = `Server error ${response.status}`;
       try {
         if (data?._server_messages) {
@@ -838,7 +854,7 @@ export const getShortsFeed = async (userEmail?: string): Promise<any> => {
   try {
     const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
     const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -867,7 +883,7 @@ export const saveShort = async (payload: { user: string; short_name: string }): 
   try {
     const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
     const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -894,7 +910,7 @@ export const unsaveShort = async (payload: { user: string; short_name: string })
   try {
     const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
     const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -921,7 +937,7 @@ export const toggleLikeShort = async (payload: { short: string }): Promise<any> 
   try {
     const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
     const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -948,7 +964,7 @@ export const getSavedShorts = async (userEmail: string): Promise<any> => {
   try {
     const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
     const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -978,7 +994,7 @@ export const addShortComment = async (payload: { short: string; content: string;
   try {
     const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
     const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -1010,7 +1026,7 @@ export const getShortComments = async (shortId: string): Promise<any> => {
   try {
     const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
     const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -1038,7 +1054,7 @@ export const toggleLikeComment = async (payload: { comment: string }): Promise<a
   try {
     const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
     const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -1067,7 +1083,7 @@ export const getStudentSkills = async (studentEmail: string): Promise<any> => {
   try {
     const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
     const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -1096,7 +1112,7 @@ export const getDashboardStats = async (studentEmail: string): Promise<any> => {
   try {
     const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
     const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -1125,7 +1141,7 @@ export const getTags = async (): Promise<any> => {
   try {
     const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
     const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -1151,7 +1167,7 @@ export const createTag = async (title: string): Promise<any> => {
   try {
     const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
     const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -1178,7 +1194,7 @@ export const getLearningActivity = async (studentEmail: string): Promise<any> =>
   try {
     const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
     const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -1207,7 +1223,7 @@ export const getTodaysOpportunityAlerts = async (studentEmail: string): Promise<
   try {
     const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
     const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
