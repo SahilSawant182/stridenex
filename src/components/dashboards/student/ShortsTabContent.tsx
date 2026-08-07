@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getShortsFeed, saveShort, unsaveShort, getSavedShorts, toggleLikeShort, addShortComment, getShortComments, toggleLikeComment } from "@/services/student.services";
+import { getShortsFeed, saveShort, unsaveShort, getSavedShorts, toggleLikeShort, addShortComment, getShortComments, toggleLikeComment, createPlaylist, saveShortToPlaylist, getStudentPlaylists } from "@/services/student.services";
 import { BASE_DOMAIN } from "@/services/api.services";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -448,6 +448,115 @@ export default function ShortsTabContent() {
   const likedIdsFromFeedOnLoad = useRef<Set<string>>(new Set());
   const lastFetchedWebShortIdRef = useRef<string | null>(null);
   const [localCommentCounts, setLocalCommentCounts] = useState<Record<string, number>>({});
+
+  const [isPlaylistModalOpen, setIsPlaylistModalOpen] = useState(false);
+  const [playlistShortId, setPlaylistShortId] = useState<string | null>(null);
+  const [playlists, setPlaylists] = useState<any[]>([]);
+  const [playlistsLoading, setPlaylistsLoading] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState("");
+  const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
+  const [selectedPlaylistForView, setSelectedPlaylistForView] = useState<any | null>(null);
+
+  const playPlaylistShort = (shortItem: any) => {
+    const shortId = String(shortItem.name || shortItem.id);
+    const exists = shortsList.some(s => String(s.id) === shortId);
+    if (!exists) {
+      const videoUrl = shortItem.video ? (shortItem.video.startsWith('http') ? shortItem.video : `${BASE_DOMAIN}${shortItem.video}`) : '';
+      const thumbnail = shortItem.thumbnail ? (shortItem.thumbnail.startsWith('http') ? shortItem.thumbnail : `${BASE_DOMAIN}${shortItem.thumbnail}`) : undefined;
+      const mappedShort: ShortVideo = {
+        id: shortId,
+        title: shortItem.title || "Untitled Short",
+        category: shortItem.skill || "Skill",
+        duration: shortItem.duration_display || `${shortItem.duration_seconds || 30} sec`,
+        views: shortItem.views_display || `${shortItem.view_count || 0}`,
+        likes: String(shortItem.like_count || 0),
+        commentCount: Number(shortItem.comment_count || 0),
+        author: "StrideNex",
+        authorHandle: "@stridenex",
+        authorAvatar: (shortItem.skill || "Skill").substring(0, 2).toUpperCase(),
+        tags: [],
+        description: shortItem.description || "",
+        isSaved: true,
+        videoUrl: videoUrl,
+        thumbnail: thumbnail,
+        color: "orange"
+      };
+      setShortsList(prev => [...prev, mappedShort]);
+    }
+    
+    setTimeout(() => {
+      const el = document.getElementById(`short-card-${shortId}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+        setActiveVideoId(shortId);
+      }
+    }, 150);
+    setIsSavedListOpen(false);
+  };
+
+  const fetchPlaylists = async () => {
+    if (!currentUser) return;
+    try {
+      setPlaylistsLoading(true);
+      const res = await getStudentPlaylists(currentUser);
+      let rawPlaylists = [];
+      if (res && Array.isArray(res.message)) {
+        rawPlaylists = res.message;
+      } else if (res && Array.isArray(res.data)) {
+        rawPlaylists = res.data;
+      } else if (res && res.message && Array.isArray(res.message.data)) {
+        rawPlaylists = res.message.data;
+      }
+      setPlaylists(rawPlaylists);
+    } catch (err) {
+      console.error("Error loading student playlists:", err);
+    } finally {
+      setPlaylistsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isPlaylistModalOpen) {
+      fetchPlaylists();
+    }
+  }, [isPlaylistModalOpen]);
+
+  const handleCreatePlaylist = async () => {
+    if (!newPlaylistName.trim() || !currentUser) return;
+    try {
+      setIsCreatingPlaylist(true);
+      const res = await createPlaylist({
+        student: currentUser,
+        playlist_name: newPlaylistName.trim()
+      });
+      const alertMsg = res?.message?.message || "Playlist created!";
+      showToast(alertMsg, "success");
+      setNewPlaylistName("");
+      await fetchPlaylists();
+    } catch (err: any) {
+      console.error("Error creating playlist:", err);
+      showToast(err.message || "Failed to create playlist", "error");
+    } finally {
+      setIsCreatingPlaylist(false);
+    }
+  };
+
+  const handleSaveToPlaylist = async (playlistId: string) => {
+    if (!playlistShortId) return;
+    try {
+      const res = await saveShortToPlaylist({
+        playlist: playlistId,
+        shorts: String(playlistShortId)
+      });
+      const alertMsg = res?.message?.message || "Short added to playlist!";
+      showToast(alertMsg, "success");
+      setIsPlaylistModalOpen(false);
+      setPlaylistShortId(null);
+    } catch (err: any) {
+      console.error("Error saving short to playlist:", err);
+      showToast(err.message || "Failed to add short to playlist", "error");
+    }
+  };
 
   const formatComments = (rawList: any[]): any[] => {
     if (!Array.isArray(rawList)) return [];
@@ -1112,11 +1221,15 @@ export default function ShortsTabContent() {
           <span>Gaps & Recommendations</span>
         </button>
         <button
-          onClick={() => setIsSavedListOpen(true)}
+          onClick={() => {
+            fetchPlaylists();
+            setSelectedPlaylistForView(null);
+            setIsSavedListOpen(true);
+          }}
           className="flex items-center gap-1.5 px-4 py-2 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 rounded-full text-xs font-bold text-zinc-200 hover:text-white hover:scale-105 active:scale-95 transition-all shadow-xl backdrop-blur-md"
         >
           <Bookmark className="w-3.5 h-3.5 text-orange-400" />
-          <span>Saved List</span>
+          <span>Saved & Playlists</span>
         </button>
       </div>
 
@@ -1256,7 +1369,8 @@ export default function ShortsTabContent() {
                               {/* Add to Playlist */}
                               <button
                                 onClick={() => {
-                                  toggleSave(short.id);
+                                  setPlaylistShortId(short.id);
+                                  setIsPlaylistModalOpen(true);
                                   setOpenMenuShortId(null);
                                 }}
                                 className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 transition-colors text-xs font-semibold text-slate-700"
@@ -1532,7 +1646,9 @@ export default function ShortsTabContent() {
               <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Bookmark className="w-5 h-5 text-orange-500" />
-                  <h2 className="text-base font-bold">Saved Study Shorts</h2>
+                  <h2 className="text-base font-bold">
+                    {selectedPlaylistForView ? `Playlist: ${selectedPlaylistForView.playlist_name}` : "Saved & Playlists"}
+                  </h2>
                 </div>
                 <button 
                   onClick={() => setIsSavedListOpen(false)}
@@ -1544,38 +1660,119 @@ export default function ShortsTabContent() {
 
               {/* Content */}
               <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                {savedShortsList.length === 0 ? (
-                  <div className="text-center py-12 text-zinc-500 text-sm">
-                    No saved shorts yet.
+                {selectedPlaylistForView ? (
+                  // View Playlist shorts
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => setSelectedPlaylistForView(null)}
+                      className="text-xs font-bold text-orange-500 hover:underline flex items-center gap-1 mb-4"
+                    >
+                      &larr; Back to Playlists
+                    </button>
+                    {(!selectedPlaylistForView.shorts || selectedPlaylistForView.shorts.length === 0) ? (
+                      <div className="text-center py-12 text-zinc-500 text-sm">
+                        No videos in this playlist yet.
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {selectedPlaylistForView.shorts.map((shortItem: any, idx: number) => {
+                          const icon = (shortItem.skill || "Skill").toLowerCase().includes("python") ? "🐍" : "🗄️";
+                          return (
+                            <div 
+                              key={shortItem.name || shortItem.id || `short-${idx}`} 
+                              className="flex items-center gap-3.5 p-3.5 bg-zinc-800/30 hover:bg-zinc-800/60 border border-zinc-800 hover:border-zinc-700 rounded-xl group cursor-pointer transition-all"
+                              onClick={() => playPlaylistShort(shortItem)}
+                            >
+                              <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center text-lg shrink-0 group-hover:scale-105 transition-transform border border-zinc-700/50">
+                                {icon}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-zinc-200 group-hover:text-orange-400 transition-colors truncate">
+                                  {shortItem.title || "Untitled Short"}
+                                </p>
+                                <p className="text-xs text-zinc-400 mt-0.5">{shortItem.skill}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {savedShortsList.map((saved) => (
-                      <div 
-                        key={saved.id} 
-                        className="flex items-center gap-3.5 p-3.5 bg-zinc-800/30 hover:bg-zinc-800/60 border border-zinc-800 hover:border-zinc-700 rounded-xl group cursor-pointer transition-all"
-                        onClick={() => {
-                          const el = document.getElementById(`short-card-${saved.id}`);
-                          if (el) {
-                            el.scrollIntoView({ behavior: 'smooth' });
-                            setActiveVideoId(saved.id);
-                          } else {
-                            setActiveSubTab("saved");
-                          }
-                          setIsSavedListOpen(false);
-                        }}
-                      >
-                        <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center text-lg shrink-0 group-hover:scale-105 transition-transform border border-zinc-700/50">
-                          {saved.icon}
+                  // Main View with default saved list + user playlists
+                  <div className="space-y-6">
+                    {/* Playlists section */}
+                    <div>
+                      <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">My Playlists</h3>
+                      {playlistsLoading ? (
+                        <div className="flex justify-center py-6">
+                          <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-bold text-zinc-200 group-hover:text-orange-400 transition-colors truncate">
-                            {saved.title}
-                          </p>
-                          <p className="text-xs text-zinc-400 mt-0.5">{saved.category}</p>
+                      ) : playlists.length === 0 ? (
+                        <div className="text-center py-4 bg-zinc-800/20 border border-zinc-800 rounded-xl text-zinc-500 text-xs font-medium">
+                          No custom playlists created yet.
                         </div>
-                      </div>
-                    ))}
+                      ) : (
+                        <div className="space-y-2">
+                          {playlists.map((pl, idx) => (
+                            <div
+                              key={pl.playlist_id || pl.name || `pl-${idx}`}
+                              onClick={() => setSelectedPlaylistForView(pl)}
+                              className="flex items-center justify-between p-3.5 bg-zinc-800/40 hover:bg-zinc-800/80 border border-zinc-800 hover:border-zinc-700 rounded-xl transition-all cursor-pointer group"
+                            >
+                              <div>
+                                <h4 className="text-sm font-bold text-zinc-200 group-hover:text-orange-400 transition-colors">
+                                  {pl.playlist_name}
+                                </h4>
+                                <p className="text-xs text-zinc-400 mt-0.5">
+                                  {pl.total_shorts || (pl.shorts ? pl.shorts.length : 0)} shorts
+                                </p>
+                              </div>
+                              <ChevronRightIcon className="w-4 h-4 text-zinc-500 group-hover:text-orange-500 transition-colors" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Standard saved shorts list */}
+                    <div>
+                      <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">Library Saved Shorts</h3>
+                      {savedShortsList.length === 0 ? (
+                        <div className="text-center py-6 bg-zinc-800/20 border border-zinc-800 rounded-xl text-zinc-500 text-xs">
+                          No saved shorts in Library yet.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {savedShortsList.map((saved) => (
+                            <div 
+                              key={saved.id} 
+                              className="flex items-center gap-3.5 p-3.5 bg-zinc-800/30 hover:bg-zinc-800/60 border border-zinc-800 hover:border-zinc-700 rounded-xl group cursor-pointer transition-all"
+                              onClick={() => {
+                                const el = document.getElementById(`short-card-${saved.id}`);
+                                if (el) {
+                                  el.scrollIntoView({ behavior: 'smooth' });
+                                  setActiveVideoId(saved.id);
+                                } else {
+                                  setActiveSubTab("saved");
+                                }
+                                setIsSavedListOpen(false);
+                              }}
+                            >
+                              <div className="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center text-lg shrink-0 group-hover:scale-105 transition-transform border border-zinc-700/50">
+                                {saved.icon}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold text-zinc-200 group-hover:text-orange-400 transition-colors truncate">
+                                  {saved.title}
+                                </p>
+                                <p className="text-xs text-zinc-400 mt-0.5">{saved.category}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1695,6 +1892,80 @@ export default function ShortsTabContent() {
               </div>
               <div className="max-h-60 overflow-y-auto pr-2 text-sm text-zinc-300 leading-relaxed hide-scrollbar select-text whitespace-pre-line">
                 {showDescriptionShort.description || "No description available."}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Playlist Modal Overlay */}
+      <AnimatePresence>
+        {isPlaylistModalOpen && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl max-w-md w-full text-zinc-100 shadow-2xl relative"
+            >
+              <button
+                onClick={() => {
+                  setIsPlaylistModalOpen(false);
+                  setPlaylistShortId(null);
+                }}
+                className="absolute top-4 right-4 text-zinc-400 hover:text-white p-1 rounded-full bg-zinc-800/80 hover:bg-zinc-800 transition-all pointer-events-auto"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <h3 className="text-base font-bold text-zinc-100 mb-4 mt-1 select-none">
+                Add to Playlist
+              </h3>
+              
+              {/* Playlists List */}
+              <div className="max-h-60 overflow-y-auto pr-2 mb-4 space-y-2 hide-scrollbar">
+                {playlistsLoading ? (
+                  <div className="flex justify-center py-6">
+                    <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : playlists.length === 0 ? (
+                  <div className="text-center py-6 text-zinc-500 text-xs font-medium">
+                    No playlists found. Create one below!
+                  </div>
+                ) : (
+                  playlists.map((playlist, index) => (
+                    <button
+                      key={playlist.playlist_id || playlist.name || `playlist-${index}`}
+                      onClick={() => handleSaveToPlaylist(playlist.playlist_id || playlist.name)}
+                      className="w-full flex items-center justify-between p-3 bg-zinc-850/40 hover:bg-zinc-800/80 border border-zinc-800 hover:border-zinc-700 rounded-xl transition-all text-left text-xs font-semibold text-zinc-200"
+                    >
+                      <span>{playlist.playlist_name}</span>
+                      <Plus className="w-3.5 h-3.5 text-zinc-500" />
+                    </button>
+                  ))
+                )}
+              </div>
+
+              {/* Create Playlist Input */}
+              <div className="border-t border-zinc-800 pt-4 flex gap-2">
+                <input
+                  type="text"
+                  placeholder="New playlist name..."
+                  value={newPlaylistName}
+                  onChange={(e) => setNewPlaylistName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && newPlaylistName.trim()) {
+                      handleCreatePlaylist();
+                    }
+                  }}
+                  className="flex-1 text-xs bg-zinc-800 border border-zinc-700 rounded-lg px-3.5 py-2 text-white placeholder:text-zinc-500 focus:outline-none focus:border-orange-500"
+                />
+                <Button
+                  onClick={handleCreatePlaylist}
+                  disabled={isCreatingPlaylist || !newPlaylistName.trim()}
+                  className="bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-semibold px-4"
+                >
+                  {isCreatingPlaylist ? "Creating..." : "Create"}
+                </Button>
               </div>
             </motion.div>
           </div>

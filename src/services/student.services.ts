@@ -1276,3 +1276,88 @@ export const applyForJob = async (formData: FormData) => {
     throw error;
   }
 };
+
+/**
+ * Create a new playlist.
+ */
+export const createPlaylist = async (payload: { student: string; playlist_name: string }): Promise<any> => {
+  try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret) {
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    }
+
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.playlist_shorts.playlist_shorts.create_playlist",
+      payload,
+      { headers }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error creating playlist:", error);
+    throw error;
+  }
+};
+
+/**
+ * Save educational short to a playlist.
+ */
+export const saveShortToPlaylist = async (payload: { playlist: string; shorts: string }): Promise<any> => {
+  try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret) {
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    }
+
+    const url = `method/stridenex_app.stridenex_app.doctype.playlist_shorts.playlist_shorts.save_short_to_playlist?playlist=${encodeURIComponent(payload.playlist)}&shorts=${encodeURIComponent(payload.shorts)}`;
+
+    const response = await apiService.post(
+      url,
+      payload,
+      { headers }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error saving short to playlist:", error);
+    throw error;
+  }
+};
+
+/**
+ * Fetch playlists for a student.
+ */
+export const getStudentPlaylists = async (studentEmail: string): Promise<any> => {
+  try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret) {
+      headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+    }
+
+    const response = await apiService.get(
+      "method/stridenex_app.stridenex_app.doctype.playlist_shorts.playlist_shorts.get_student_playlists",
+      {
+        params: { student: studentEmail },
+        headers
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching student playlists:", error);
+    throw error;
+  }
+};
