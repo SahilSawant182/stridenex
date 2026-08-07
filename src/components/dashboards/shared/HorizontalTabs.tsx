@@ -72,7 +72,6 @@ const tabConfig = {
   industry: [
     { name: "Overview", icon: LayoutDashboard, path: "/industry/dashboard" },
     { name: "Company Profile", icon: Building2, path: "/industry/dashboard/company-profile" },
-    { name: "Find Talent", icon: Briefcase, path: "/industry/dashboard/find-talent" },
     { name: "Internships Pipeline", icon: Mail, path: "/industry/dashboard/pipeline" },
     { name: "Projects", icon: FolderGit2, path: "/industry/dashboard/projects" },
 
@@ -98,8 +97,8 @@ export default function HorizontalTabs({ role }: HorizontalTabsProps) {
   };
 
   return (
-    <div className="w-full bg-white rounded-full border border-slate-200 p-2 shadow-sm overflow-x-auto hide-scrollbar mb-6">
-      <div className="flex items-center gap-1 min-w-max">
+    <div className="w-full bg-white rounded-full border border-slate-200 p-1.5 shadow-sm mb-6">
+      <div className="flex items-center justify-around w-full">
         {tabs.map((tab) => {
           const Icon = tab.icon;
 
@@ -113,14 +112,14 @@ export default function HorizontalTabs({ role }: HorizontalTabsProps) {
             <Link
               key={tab.path}
               href={tab.path}
-              className={`relative flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-colors ${isActive
-                ? "text-slate-900 bg-slate-100"
-                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              title={tab.name}
+              className={`relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 ${isActive
+                ? "text-slate-900 bg-slate-100 scale-105"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 hover:scale-105"
                 }`}
             >
-              <span className="relative z-10 flex items-center gap-2">
-                <Icon className={`w-4 h-4 ${isActive ? getActiveColor() : 'text-slate-500'}`} />
-                {tab.name}
+              <span className="relative z-10 flex items-center justify-center">
+                <Icon className={`w-5 h-5 ${isActive ? getActiveColor() : 'text-slate-500'}`} />
               </span>
             </Link>
           );
