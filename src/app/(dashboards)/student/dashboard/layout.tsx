@@ -1,9 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import HorizontalTabs from "@/components/dashboards/shared/HorizontalTabs";
 import RoleBannerWidget from "@/components/dashboards/widgets/RoleBannerWidget";
+import ResumePreviewTabContent from "@/components/dashboards/student/ResumePreviewTabContent";
 
 export default function StudentDashboardSubLayout({
   children,
@@ -11,11 +12,23 @@ export default function StudentDashboardSubLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const isPreviewing = searchParams.get("preview") === "resume";
   const isOverview = pathname === "/student/dashboard" || pathname === "/student/dashboard/";
   const isShortsPage = pathname.endsWith("/shorts");
 
   if (isShortsPage) {
     return <div className="w-full h-full">{children}</div>;
+  }
+
+  if (isPreviewing) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-6 pb-12">
+        <ResumePreviewTabContent onBack={() => router.push("/student/dashboard")} />
+      </div>
+    );
   }
 
   return (

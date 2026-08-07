@@ -27,7 +27,8 @@ import {
   Github,
   Linkedin,
   User,
-  CreditCard
+  CreditCard,
+  Eye
 } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { getStudentByEmail, updateStudent, mapYearToWord, getDashboardStats } from "@/services/student.services";
@@ -38,7 +39,7 @@ import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/sha
 import { useToast } from "@/context/ToastContext";
 import { OperatingHoursTable, OperatingHour } from "@/components/dashboards/shared/OperatingHoursTable";
 import ProfileImageUploader from "@/components/profile/ProfileImageUploader";
-import { buildProfileImageUrl } from "@/services/api.services";
+import { buildProfileImageUrl, BASE_DOMAIN } from "@/services/api.services";
 
 
 interface BannerMetric {
@@ -169,6 +170,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [isResumeDropdownOpen, setIsResumeDropdownOpen] = useState(false);
   const { showToast } = useToast();
 
   // Mentor specific state
@@ -1198,13 +1200,23 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
                 </button>
               )}
               {role === "student" && !onlyModal && (
-                <Link
-                  href="/student/dashboard/resume"
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-500/20 active:scale-95 ml-2"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  Create Resume
-                </Link>
+                <div className="flex items-center gap-2 ml-2">
+                  <Link
+                    href="/student/dashboard/resume"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-500/20 active:scale-95 whitespace-nowrap"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    Create Resume
+                  </Link>
+
+                  <Link
+                    href="/student/dashboard?preview=resume"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-white rounded-xl text-xs font-bold transition-all active:scale-95 whitespace-nowrap"
+                  >
+                    <Eye className="w-3.5 h-3.5 text-zinc-300" />
+                    Preview Resume
+                  </Link>
+                </div>
               )}
             </h2>
             <div className={`text-sm ${config.textColor}`}>
