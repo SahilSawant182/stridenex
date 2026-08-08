@@ -25,7 +25,7 @@ import ApplicationsPipelineModal from "./ApplicationsPipelineModal";
 import { calculateEndDate } from "@/utils/date.utils";
 import { useToast } from "@/context/ToastContext";
 
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -44,6 +44,7 @@ export default function ProjectsTabContent() {
   const { industryData, loading: industryLoading, refreshIndustryData } = useIndustry();
   const { showToast } = useToast();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -221,56 +222,13 @@ export default function ProjectsTabContent() {
     }
   };
 
-  const handleTotalApplicationsClick = async () => {
-    setSelectedProjectName(null);
-    setApplicationsModalOpen(true);
-    setApplicationsLoading(true);
-    try {
-      const response = await getMasterData("Student Project Enrollment", {
-        filters: { industry: companyName },
-        fields: ["name", "student", "project", "industry", "status", "applied_on", "resume"]
-      });
-      let data = [];
-      if (Array.isArray(response?.message?.data)) {
-        data = response.message.data;
-      } else if (Array.isArray(response?.data)) {
-        data = response.data;
-      } else if (Array.isArray(response?.message)) {
-        data = response.message;
-      }
-      setApplicationsData(data);
-    } catch (err) {
-      console.error("Error fetching applications:", err);
-      showToast("Failed to fetch applications", "error");
-    } finally {
-      setApplicationsLoading(false);
-    }
+  const handleTotalApplicationsClick = () => {
+    router.push(`/industry/dashboard/pipeline?type=project`);
   };
 
-  const handleProjectClick = async (project: any) => {
-    setSelectedProjectName(project.project_name || project.name);
-    setApplicationsModalOpen(true);
-    setApplicationsLoading(true);
-    try {
-      const response = await getMasterData("Student Project Enrollment", {
-        filters: { industry: companyName, project: project.name },
-        fields: ["name", "student", "project", "industry", "status", "applied_on", "resume"]
-      });
-      let data = [];
-      if (Array.isArray(response?.message?.data)) {
-        data = response.message.data;
-      } else if (Array.isArray(response?.data)) {
-        data = response.data;
-      } else if (Array.isArray(response?.message)) {
-        data = response.message;
-      }
-      setApplicationsData(data);
-    } catch (err) {
-      console.error("Error fetching project applications:", err);
-      showToast("Failed to fetch applications for project", "error");
-    } finally {
-      setApplicationsLoading(false);
-    }
+  const handleProjectClick = (project: any) => {
+    const projName = project.project_name || project.name || "";
+    router.push(`/industry/dashboard/pipeline?type=project&project=${encodeURIComponent(projName)}`);
   };
 
   useEffect(() => {

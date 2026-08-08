@@ -72,7 +72,7 @@ const tabConfig = {
   industry: [
     { name: "Overview", icon: LayoutDashboard, path: "/industry/dashboard" },
     { name: "Company Profile", icon: Building2, path: "/industry/dashboard/company-profile" },
-    { name: "Internships Pipeline", icon: Mail, path: "/industry/dashboard/pipeline" },
+    { name: "Pipeline", icon: Mail, path: "/industry/dashboard/pipeline" },
     { name: "Projects", icon: FolderGit2, path: "/industry/dashboard/projects" },
 
     { name: "Internships", icon: UserCheck, path: "/industry/dashboard/internships" },

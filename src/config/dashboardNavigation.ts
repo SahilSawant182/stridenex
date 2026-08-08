@@ -117,7 +117,7 @@ export const industryConfig: RoleConfig = {
   links: [
     { name: "Overview", href: "/industry/dashboard", icon: LayoutDashboard },
     { name: "Company Profile", href: "/industry/dashboard/company-profile", icon: Building2 },
-    { name: "Internships Pipeline", href: "/industry/dashboard/pipeline", icon: Mail },
+    { name: "Pipeline", href: "/industry/dashboard/pipeline", icon: Mail },
     { name: "Projects & R&D", href: "/industry/dashboard/projects", icon: FolderGit2 },
     { name: "Internship Posts", href: "/industry/dashboard/internships", icon: UserCheck },
     { name: "Job Profiles", href: "/industry/dashboard/jobs", icon: Briefcase },
