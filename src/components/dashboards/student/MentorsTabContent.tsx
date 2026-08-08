@@ -68,6 +68,7 @@ interface BookedSession {
   from_time: string;
   to_time: string;
   duration: string;
+  offering?: string;
 }
 
 const COLORS = [
@@ -707,8 +708,8 @@ export default function MentorsTabContent() {
                       <Badge
                         variant="outline"
                         className={`${isSessionAlreadyBooked(mentor)
-                            ? 'bg-slate-50 text-slate-600 border-slate-200'
-                            : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                          ? 'bg-slate-50 text-slate-600 border-slate-200'
+                          : 'bg-emerald-50 text-emerald-600 border-emerald-200'
                           } text-[10px] px-1.5 py-0 shrink-0 h-fit mt-0.5`}
                       >
                         {isSessionAlreadyBooked(mentor) ? 'Booked' : 'Available'}
@@ -751,21 +752,12 @@ export default function MentorsTabContent() {
 
                   {/* Action Buttons */}
                   <div className="flex items-center gap-2 mt-auto">
-                    {isSessionAlreadyBooked(mentor) ? (
-                      <Button
-                        className="flex-1 bg-slate-400 text-white text-sm cursor-not-allowed"
-                        disabled
-                      >
-                        Booked
-                      </Button>
-                    ) : (
-                      <Button
-                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm"
-                        onClick={() => handleBookSession(mentor)}
-                      >
-                        Book Session
-                      </Button>
-                    )}
+                    <Button
+                      className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm"
+                      onClick={() => handleBookSession(mentor)}
+                    >
+                      Book Session
+                    </Button>
                     <Button variant="outline" size="icon" className="border-slate-200 shrink-0">
                       <ChevronRight className="w-4 h-4 text-slate-600" />
                     </Button>
@@ -822,10 +814,10 @@ export default function MentorsTabContent() {
                           <Badge
                             variant="outline"
                             className={`${session.priority === 'High'
-                                ? 'bg-red-50 text-red-600 border-red-200 font-medium'
-                                : session.priority === 'Medium'
-                                  ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
-                                  : 'bg-green-50 text-green-600 border-green-200'
+                              ? 'bg-red-50 text-red-600 border-red-200 font-medium'
+                              : session.priority === 'Medium'
+                                ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
+                                : 'bg-green-50 text-green-600 border-green-200'
                               }`}
                           >
                             {session.priority} Priority
@@ -834,12 +826,12 @@ export default function MentorsTabContent() {
                         <Badge
                           variant="outline"
                           className={`${session.status === 'Scheduled'
-                              ? 'bg-blue-50 text-blue-600 border-blue-200'
-                              : session.status === 'Completed'
-                                ? 'bg-green-50 text-green-600 border-green-200'
-                                : session.status === 'Cancelled'
-                                  ? 'bg-red-50 text-red-600 border-red-200'
-                                  : 'bg-gray-50 text-gray-600 border-gray-200'
+                            ? 'bg-blue-50 text-blue-600 border-blue-200'
+                            : session.status === 'Completed'
+                              ? 'bg-green-50 text-green-600 border-green-200'
+                              : session.status === 'Cancelled'
+                                ? 'bg-red-50 text-red-600 border-red-200'
+                                : 'bg-gray-50 text-gray-600 border-gray-200'
                             }`}
                         >
                           {session.status}
@@ -898,7 +890,7 @@ export default function MentorsTabContent() {
               <Button
                 variant="ghost"
                 size="icon"
-                              onClick={() => {
+                onClick={() => {
                   setSelectedMentorForBooking(null);
                   setSelectedOfferingForBooking(null);
                   setMentorOfferings([]);
@@ -931,36 +923,53 @@ export default function MentorsTabContent() {
                   <div className="space-y-4">
                     <h3 className="text-sm font-semibold text-slate-800 mb-2">Select an Offering</h3>
                     <div className="grid grid-cols-1 gap-4">
-                      {mentorOfferings.map((offering) => (
-                        <div
-                          key={offering.name}
-                          onClick={() => handleSelectOffering(offering)}
-                          className="p-5 bg-white rounded-2xl border border-slate-200 hover:border-orange-500 hover:shadow-md cursor-pointer transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                        >
-                          <div className="flex-1 space-y-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="font-bold text-slate-800 text-sm">{offering.title}</h4>
-                              <Badge className="bg-orange-50 text-orange-600 border-orange-200 text-[10px] px-2 py-0">
-                                {offering.offering_type}
-                              </Badge>
-                              <Badge className="bg-blue-50 text-blue-600 border-blue-200 text-[10px] px-2 py-0">
-                                {offering.category}
-                              </Badge>
+                      {mentorOfferings.map((offering) => {
+                        const isBooked = offering.offering_type !== "1:1 Mentorship" &&
+                          bookedSessions.some(session => session.offering === offering.name);
+
+                        return (
+                          <div
+                            key={offering.name}
+                            onClick={() => {
+                              if (!isBooked) {
+                                handleSelectOffering(offering);
+                              }
+                            }}
+                            className={`p-5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isBooked
+                                ? "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed"
+                                : "bg-white border-slate-200 hover:border-orange-500 hover:shadow-md cursor-pointer"
+                              }`}
+                          >
+                            <div className="flex-1 space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h4 className="font-bold text-slate-800 text-sm">{offering.title}</h4>
+                                <Badge className="bg-orange-50 text-orange-600 border-orange-200 text-[10px] px-2 py-0">
+                                  {offering.offering_type}
+                                </Badge>
+                                <Badge className="bg-blue-50 text-blue-600 border-blue-200 text-[10px] px-2 py-0">
+                                  {offering.category}
+                                </Badge>
+                                {isBooked && (
+                                  <Badge className="bg-slate-100 text-slate-500 border-slate-300 text-[10px] px-2 py-0">
+                                    Booked
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500 line-clamp-2">{offering.description}</p>
+                              <div className="flex gap-4 text-[11px] font-semibold text-slate-400">
+                                <span>Duration: {offering.duration_minutes} mins</span>
+                                {offering.max_group_size > 1 && <span>Max Size: {offering.max_group_size}</span>}
+                              </div>
                             </div>
-                            <p className="text-xs text-slate-500 line-clamp-2">{offering.description}</p>
-                            <div className="flex gap-4 text-[11px] font-semibold text-slate-400">
-                              <span>Duration: {offering.duration_minutes} mins</span>
-                              {offering.max_group_size > 1 && <span>Max Size: {offering.max_group_size}</span>}
+                            <div className="text-left sm:text-right shrink-0">
+                              <div className="text-lg font-extrabold text-slate-800">
+                                {offering.price_per_session ? `₹${offering.price_per_session}` : "Free"}
+                              </div>
+                              <div className="text-xs text-slate-400">Per Session</div>
                             </div>
                           </div>
-                          <div className="text-left sm:text-right shrink-0">
-                            <div className="text-lg font-extrabold text-slate-800">
-                              {offering.price_per_session ? `₹${offering.price_per_session}` : "Free"}
-                            </div>
-                            <div className="text-xs text-slate-400">Per Session</div>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )
@@ -977,7 +986,7 @@ export default function MentorsTabContent() {
                     <Button
                       variant="outline"
                       size="sm"
-                                        onClick={() => {
+                      onClick={() => {
                         setSelectedOfferingForBooking(null);
                         setSelectedSlotForBooking(null);
                         setSelectedDate(null);
@@ -1041,9 +1050,8 @@ export default function MentorsTabContent() {
                             <div className="text-sm font-semibold text-slate-800">
                               {groupSessionData.seats_left} / {groupSessionData.max_group_size} left
                             </div>
-                            <div className={`text-[10px] font-semibold ${
-                              groupSessionData.seat_status === 'open' ? 'text-emerald-600' : 'text-red-500'
-                            }`}>
+                            <div className={`text-[10px] font-semibold ${groupSessionData.seat_status === 'open' ? 'text-emerald-600' : 'text-red-500'
+                              }`}>
                               {groupSessionData.seat_status === 'open' ? '● Open' : '● Full'}
                             </div>
                           </div>
@@ -1096,11 +1104,10 @@ export default function MentorsTabContent() {
                                 setSelectedDate(date);
                                 setSelectedSlotForBooking(null);
                               }}
-                              className={`snap-start shrink-0 px-4 py-3 rounded-xl border transition-all ${
-                                selectedDate === date
+                              className={`snap-start shrink-0 px-4 py-3 rounded-xl border transition-all ${selectedDate === date
                                   ? "bg-orange-50 border-orange-200 text-orange-700 shadow-sm"
                                   : "bg-white border-slate-200 text-slate-600 hover:border-orange-200 hover:bg-orange-50/50"
-                              }`}
+                                }`}
                             >
                               <div className="text-xs font-medium uppercase opacity-70 mb-1">
                                 {new Date(date).toLocaleDateString('en-US', { weekday: 'short' })}
@@ -1131,22 +1138,19 @@ export default function MentorsTabContent() {
                                 <div
                                   key={idx}
                                   onClick={() => { if (isAvailable) setSelectedSlotForBooking(slot); }}
-                                  className={`p-3 rounded-xl border text-center transition-all ${
-                                    !isAvailable
+                                  className={`p-3 rounded-xl border text-center transition-all ${!isAvailable
                                       ? "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed"
                                       : isSelected
                                         ? "bg-emerald-50 border-emerald-500 shadow-md ring-2 ring-emerald-500/20 cursor-pointer"
                                         : "bg-white border-emerald-200 hover:border-emerald-500 hover:shadow-md cursor-pointer group"
-                                  }`}
+                                    }`}
                                 >
-                                  <div className={`text-sm font-semibold ${
-                                    isAvailable ? (isSelected ? "text-emerald-800" : "text-slate-800 group-hover:text-emerald-700") : "text-slate-500"
-                                  }`}>
+                                  <div className={`text-sm font-semibold ${isAvailable ? (isSelected ? "text-emerald-800" : "text-slate-800 group-hover:text-emerald-700") : "text-slate-500"
+                                    }`}>
                                     {slot.from_time.slice(0, 5)} – {slot.to_time.slice(0, 5)}
                                   </div>
-                                  <div className={`text-[10px] mt-1 font-medium ${
-                                    isAvailable ? "text-emerald-600" : "text-slate-400"
-                                  }`}>
+                                  <div className={`text-[10px] mt-1 font-medium ${isAvailable ? "text-emerald-600" : "text-slate-400"
+                                    }`}>
                                     {isAvailable ? "Available" : "Booked"}
                                   </div>
                                 </div>
