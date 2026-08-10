@@ -19,7 +19,7 @@ import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { getStudentProjectList, createStudentProjectEnrollment, getStudentByEmail } from "@/services/student.services";
+import { getStudentProjectList, applyOpportunity, getStudentByEmail } from "@/services/student.services";
 import { useAuth } from "@/context/AuthContext";
 // import { useToast } from "@/components/ui/use-toast"; // use-toast not available
 
@@ -117,18 +117,14 @@ export default function ProjectsTabContent() {
 
       const payload = {
         student: currentUser,
-        project: name,
-        industry: industry || "", // ✅ safe fallback
-        status: "Applied",
-        applied_on: new Date().toISOString().slice(0, 19).replace("T", " "),
-        resume: null,
-        match_score: 0.0,
-        notes: "Enrolled from Student Dashboard",
+        opportunity_type: "Project",
+        opportunity_name: name,
+        notes: "Interested in this project.",
       };
 
       console.log("Payload:", payload);
 
-      const response = await createStudentProjectEnrollment(payload);
+      const response = await applyOpportunity(payload);
 
       if (
         response &&
@@ -146,10 +142,12 @@ export default function ProjectsTabContent() {
         // ✅ Better than setTimeout
         await fetchProjects();
       } else {
+        const errMsg = response && typeof response.message === 'object'
+          ? response.message.message
+          : response?.message;
         setFeedback({
           type: "error",
-          message:
-            response?.message || "Something went wrong. Please try again.",
+          message: errMsg || "Something went wrong. Please try again.",
         });
       }
 

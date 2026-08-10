@@ -20,6 +20,7 @@ import {
   Mail,
   UserCheck,
   FolderGit2,
+  Award,
   type LucideIcon
 } from "lucide-react";
 
@@ -54,7 +55,8 @@ export const studentConfig: RoleConfig = {
     { name: "Community", href: "/student/dashboard/community", icon: Users },
     { name: "Projects", href: "/student/dashboard/projects", icon: FolderGit2 },
     { name: "Internships", href: "/student/dashboard/internships", icon: Briefcase },
-    { name: "Jobs", href: "/student/dashboard/jobs", icon: Briefcase },
+    { name: "Jobs", href: "/student/dashboard/jobs", icon: Award },
+    { name: "Campus Drives", href: "/student/dashboard/campus-drives", icon: Building2 },
     { name: "Habits", href: "/student/dashboard/habits", icon: CheckSquare },
     { name: "Mentors", href: "/student/dashboard/mentors", icon: UserCircle },
     { name: "Events", href: "/student/dashboard/events", icon: Calendar },

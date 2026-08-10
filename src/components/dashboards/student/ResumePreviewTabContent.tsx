@@ -7,10 +7,12 @@ import {
   Eye, 
   Download, 
   Loader2,
-  ArrowLeft
+  ArrowLeft,
+  Upload
 } from "lucide-react";
 import { BASE_DOMAIN } from "@/services/api.services";
 import { useAuth } from "@/context/AuthContext";
+import React, { useRef } from "react";
 
 export default function ResumePreviewTabContent({ onBack }: { onBack?: () => void }) {
   const { currentUser } = useAuth();
@@ -18,6 +20,8 @@ export default function ResumePreviewTabContent({ onBack }: { onBack?: () => voi
   const [iframeLoading, setIframeLoading] = useState(true);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const studentEmail = typeof window !== "undefined" 
     ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || currentUser || "") 
@@ -76,6 +80,46 @@ export default function ResumePreviewTabContent({ onBack }: { onBack?: () => voi
     document.body.removeChild(link);
   };
 
+  const handleUploadResume = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("doctype", "Student");
+      formData.append("docname", studentEmail);
+      formData.append("fieldname", "resume");
+      formData.append("is_private", "0");
+
+      const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+      const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+      const headers: Record<string, string> = {};
+      if (apiKey && apiSecret) {
+        headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+      }
+
+      const response = await fetch(`${BASE_DOMAIN}/api/method/stridenex_app.api_stridenex_app.app.upload_file_api`, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        alert("Resume uploaded successfully!");
+      } else {
+        alert(result?.message || "Failed to upload resume. Please try again.");
+      }
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      alert(err.message || "Something went wrong during upload.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div className="space-y-6 w-full">
       {/* Header Control Panel */}
@@ -121,6 +165,27 @@ export default function ResumePreviewTabContent({ onBack }: { onBack?: () => voi
           >
             <Download className="w-4 h-4" />
             Download PDF
+          </button>
+
+          {/* Upload Resume Button */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            className="hidden"
+            accept=".pdf,.doc,.docx,.odt"
+            onChange={handleUploadResume}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center justify-center gap-1.5 px-4 py-2.5 bg-orange-50 border border-orange-200 hover:bg-orange-100 disabled:bg-zinc-150 disabled:text-zinc-400 text-orange-600 rounded-xl text-xs font-bold transition-all shadow-sm active:scale-95 whitespace-nowrap cursor-pointer"
+          >
+            {uploading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4" />
+            )}
+            {uploading ? "Uploading..." : "Upload Resume"}
           </button>
         </div>
       </div>

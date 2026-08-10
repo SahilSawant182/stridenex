@@ -27,7 +27,7 @@ import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { getStudentInternshipList, createStudentApplication, getStudentByEmail } from "@/services/student.services";
+import { getStudentInternshipList, applyOpportunity, getStudentByEmail } from "@/services/student.services";
 import { useAuth } from "@/context/AuthContext";
 // import { useToast } from "@/components/ui/use-toast"; // use-toast not available
 
@@ -115,16 +115,14 @@ export default function InternshipTabContent() {
       setApplying(internship.name);
       const payload = {
         student: currentUser,
-        internship: internship.name,
-        industry: internship.industry,
-        status: "Applied",
-        applied_on: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        match_score: 100.0,
+        opportunity_type: "Internship",
+        opportunity_name: internship.name,
+        notes: "Very interested in this internship, available immediately."
       };
 
-      const response = await createStudentApplication(payload);
+      const response = await applyOpportunity(payload);
 
-      if (response && (response.status === 200 || response.status === "200")) {
+      if (response && (response.status === 200 || response.status === "200" || response.message?.status === 200)) {
         setSuccessfullyApplied(prev => [...prev, internship.name]);
         setFeedback({
           type: 'success',
@@ -134,9 +132,12 @@ export default function InternshipTabContent() {
         fetchInternships();
       } else {
         // Handle non-200 responses (e.g., 409 Conflict)
+        const errMsg = response && typeof response.message === 'object' 
+          ? response.message.message 
+          : response?.message;
         setFeedback({
           type: 'error',
-          message: response?.message || "Something went wrong. Please try again."
+          message: errMsg || "Something went wrong. Please try again."
         });
       }
       

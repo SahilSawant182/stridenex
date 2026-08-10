@@ -14,6 +14,7 @@ import ProjectsTabContent from "@/components/dashboards/student/ProjectsTabConte
 import JobsTabContent from "@/components/dashboards/student/JobsTabContent";
 import ResumeTabContent from "@/components/dashboards/student/ResumeTabContent";
 import ResumePreviewTabContent from "@/components/dashboards/student/ResumePreviewTabContent";
+import CampusDrivesTabContent from "@/components/dashboards/student/CampusDrivesTabContent";
 
 export default function DynamicStudentTabPage({ params }: { params: Promise<{ tab: string }> }) {
   const unwrappedParams = use(params);
@@ -47,6 +48,9 @@ export default function DynamicStudentTabPage({ params }: { params: Promise<{ ta
   }
   if (unwrappedParams.tab === "community") {
     return <CommunityTabContent />;
+  }
+  if (unwrappedParams.tab === "campus-drives") {
+    return <CampusDrivesTabContent />;
   }
   if (unwrappedParams.tab === "internships") {
     return <InternshipTabContent />;
