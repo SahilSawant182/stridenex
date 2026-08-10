@@ -12,7 +12,7 @@ import {
 } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
 import { useToast } from "@/context/ToastContext";
-import { Loader2, Zap, Target } from "lucide-react";
+import { Loader2, Zap, Target, FileText } from "lucide-react";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -44,6 +44,7 @@ interface Candidate {
   course?: string;
   department?: string;
   mobileNo?: string;
+  resume?: string;
 }
 
 interface DropdownOption {
@@ -231,7 +232,8 @@ export default function PipelineTabContent() {
             lastName: app.last_name,
             course: app.course,
             department: app.department,
-            mobileNo: app.mobile_no
+            mobileNo: app.mobile_no,
+            resume: app.resume || ""
           };
           
           if (newCandidates[candidate.status]) {
@@ -592,6 +594,27 @@ export default function PipelineTabContent() {
                        </div>
                      ))}
                   </div>
+                  
+                  {/* Resume Section */}
+                  {(selectedCandidate?.resume || studentDetails?.resume) && (
+                    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mt-4 text-left">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                          <FileText className="w-3.5 h-3.5 text-orange-500" /> Resume
+                        </span>
+                        <a 
+                          href={(selectedCandidate?.resume || studentDetails?.resume || "").startsWith("http") 
+                            ? (selectedCandidate?.resume || studentDetails?.resume) 
+                            : `https://devstridenex.quantcloud.in${selectedCandidate?.resume || studentDetails?.resume}`}
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-xs font-bold text-orange-500 hover:text-orange-600 hover:underline transition-colors flex items-center gap-1"
+                        >
+                          View Resume
+                        </a>
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mt-4">
                      <h3 className="text-[11px] font-bold text-slate-800 uppercase tracking-widest text-left flex items-center gap-2 mb-4">

@@ -19,7 +19,7 @@ import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { getJobProfiles, applyForJob } from "@/services/student.services";
+import { getJobProfiles, applyForJob, getStudentApplications, updateApplicationStatus } from "@/services/student.services";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 
@@ -41,12 +41,80 @@ export default function JobsTabContent() {
   const { showToast } = useToast();
 
   const [jobs, setJobs] = useState<any[]>([]);
+  const [studentApplications, setStudentApplications] = useState<any[]>([]);
+  const [acceptingOffer, setAcceptingOffer] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [applying, setApplying] = useState<string | null>(null);
   const [successfullyApplied, setSuccessfullyApplied] = useState<string[]>([]);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
+
+  const getApplicationName = (item: any, type: string) => {
+    if (item.application) return item.application;
+    if (item.application_name) return item.application_name;
+    if (item.application_id) return item.application_id;
+    
+    const match = studentApplications.find(app => {
+      if (type === "Internship") {
+        return app.internship === item.name;
+      }
+      if (type === "Project") {
+        return app.project === item.name;
+      }
+      if (type === "Job") {
+        return app.job_profile === item.name;
+      }
+      return false;
+    });
+    return match?.name || null;
+  };
+
+  const handleAcceptOffer = async (item: any, type: string) => {
+    const appName = getApplicationName(item, type);
+    if (!appName) {
+      alert("Application ID not found. Please try refreshing the page.");
+      return;
+    }
+    
+    if (!confirm("Are you sure you want to accept this offer?")) {
+      return;
+    }
+
+    try {
+      setAcceptingOffer(item.name);
+      await updateApplicationStatus(appName, "Accepted");
+      alert("Congratulations! You have accepted the offer.");
+      fetchJobs();
+    } catch (err: any) {
+      console.error("Error accepting offer:", err);
+      alert(err.message || "Failed to accept the offer. Please try again.");
+    } finally {
+      setAcceptingOffer(null);
+    }
+  };
+
+  const getStatusConfig = (status: string) => {
+    const s = status?.toLowerCase();
+    switch (s) {
+      case 'applied':
+        return { bg: "bg-blue-50 text-blue-600 border-blue-100", label: "Applied" };
+      case 'shortlisted':
+        return { bg: "bg-purple-50 text-purple-700 border-purple-200", label: "Shortlisted" };
+      case 'tech interview':
+        return { bg: "bg-violet-50 text-violet-700 border-violet-200", label: "Tech Interview" };
+      case 'hr':
+        return { bg: "bg-pink-50 text-pink-600 border-pink-100", label: "HR" };
+      case 'selected':
+        return { bg: "bg-amber-50 text-amber-600 border-amber-100", label: "Selected" };
+      case 'accepted':
+        return { bg: "bg-emerald-50 text-emerald-600 border-emerald-100", label: "Accepted" };
+      case 'rejected':
+        return { bg: "bg-red-50 text-red-600 border-red-100", label: "Rejected" };
+      default:
+        return { bg: "bg-slate-50 text-slate-600 border-slate-100", label: status };
+    }
+  };
 
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [expectedSalary, setExpectedSalary] = useState("");
@@ -71,6 +139,17 @@ export default function JobsTabContent() {
   const fetchJobs = async () => {
     try {
       setLoading(true);
+      let appsList: any[] = [];
+      if (currentUser) {
+        try {
+          const resApps = await getStudentApplications({ student: currentUser, opportunity_type: "Job" });
+          appsList = resApps?.data?.data || resApps?.message?.data || resApps?.data || resApps?.message || [];
+          setStudentApplications(Array.isArray(appsList) ? appsList : []);
+        } catch (err) {
+          console.error("Error fetching student applications list:", err);
+        }
+      }
+
       const response = await getJobProfiles(currentUser || undefined);
       const dataObj = response?.data || response?.message?.data || response?.message || {};
       let list = [];
@@ -79,8 +158,16 @@ export default function JobsTabContent() {
       } else if (Array.isArray(dataObj?.data)) {
         list = dataObj.data;
       }
-      // Filter out only active/open jobs if any status exists, or keep all
-      setJobs(list);
+      
+      const mappedJobs = list.map((item: any) => {
+        const match = appsList.find(app => app.job_profile === item.name);
+        if (match) {
+          return { ...item, applied_status: match.status };
+        }
+        return item;
+      });
+
+      setJobs(mappedJobs);
     } catch (err) {
       console.error("Error fetching job profiles:", err);
     } finally {
@@ -185,7 +272,7 @@ export default function JobsTabContent() {
       {/* Jobs Grid */}
       <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filteredJobs.map((job, idx) => {
-          const isApplied = successfullyApplied.includes(job.name);
+          const isApplied = successfullyApplied.includes(job.name) || (job.applied_status && job.applied_status !== "Not Applied");
           return (
             <BaseCard key={job.name || idx} padding="none" className="h-full flex flex-col justify-between overflow-hidden border-slate-200 hover:shadow-lg transition-all group">
               <div className="p-5 flex-1 flex flex-col justify-between">
@@ -203,8 +290,8 @@ export default function JobsTabContent() {
                     </div>
                     <div>
                       {isApplied && (
-                        <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 rounded-full text-[9px] px-2 py-0.5 font-bold border">
-                          Applied
+                        <Badge className={`rounded-full text-[9px] px-2 py-0.5 font-bold border ${getStatusConfig(job.applied_status || "Applied").bg}`}>
+                          {getStatusConfig(job.applied_status || "Applied").label}
                         </Badge>
                       )}
                     </div>
@@ -277,6 +364,19 @@ export default function JobsTabContent() {
                       "Apply Now"
                     )}
                   </Button>
+
+                  {job.applied_status?.toLowerCase() === "selected" && (
+                    <Button 
+                      onClick={() => handleAcceptOffer(job, "Job")}
+                      disabled={acceptingOffer === job.name}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-9 rounded-xl transition-all text-xs px-4"
+                    >
+                      {acceptingOffer === job.name ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                      ) : null}
+                      Accept Offer
+                    </Button>
+                  )}
                 </div>
               </div>
             </BaseCard>

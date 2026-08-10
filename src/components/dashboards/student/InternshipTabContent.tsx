@@ -27,7 +27,7 @@ import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { getStudentInternshipList, applyOpportunity, getStudentByEmail } from "@/services/student.services";
+import { getStudentInternshipList, applyOpportunity, getStudentByEmail, getStudentApplications, updateApplicationStatus } from "@/services/student.services";
 import { useAuth } from "@/context/AuthContext";
 // import { useToast } from "@/components/ui/use-toast"; // use-toast not available
 
@@ -52,6 +52,8 @@ export default function InternshipTabContent() {
   const { currentUser } = useAuth();
   // const { toast } = useToast();
   const [internships, setInternships] = useState<any[]>([]);
+  const [studentApplications, setStudentApplications] = useState<any[]>([]);
+  const [acceptingOffer, setAcceptingOffer] = useState<string | null>(null);
   const [statistics, setStatistics] = useState({ total_internships: 0, scheduled_interview_count: 0 });
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState<string | null>(null);
@@ -59,6 +61,50 @@ export default function InternshipTabContent() {
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [selectedInternship, setSelectedInternship] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
+
+  const getApplicationName = (item: any, type: string) => {
+    if (item.application) return item.application;
+    if (item.application_name) return item.application_name;
+    if (item.application_id) return item.application_id;
+    
+    const match = studentApplications.find(app => {
+      if (type === "Internship") {
+        return app.internship === item.name;
+      }
+      if (type === "Project") {
+        return app.project === item.name;
+      }
+      if (type === "Job") {
+        return app.job_profile === item.name;
+      }
+      return false;
+    });
+    return match?.name || null;
+  };
+
+  const handleAcceptOffer = async (item: any, type: string) => {
+    const appName = getApplicationName(item, type);
+    if (!appName) {
+      alert("Application ID not found. Please try refreshing the page.");
+      return;
+    }
+    
+    if (!confirm("Are you sure you want to accept this offer?")) {
+      return;
+    }
+
+    try {
+      setAcceptingOffer(item.name);
+      await updateApplicationStatus(appName, "Accepted");
+      alert("Congratulations! You have accepted the offer.");
+      fetchInternships();
+    } catch (err: any) {
+      console.error("Error accepting offer:", err);
+      alert(err.message || "Failed to accept the offer. Please try again.");
+    } finally {
+      setAcceptingOffer(null);
+    }
+  };
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -88,13 +134,33 @@ export default function InternshipTabContent() {
         }
       }
 
+      let appsList: any[] = [];
+      if (currentUser) {
+        try {
+          const resApps = await getStudentApplications({ student: currentUser, opportunity_type: "Internship" });
+          appsList = resApps?.data?.data || resApps?.message?.data || resApps?.data || resApps?.message || [];
+          setStudentApplications(Array.isArray(appsList) ? appsList : []);
+        } catch (err) {
+          console.error("Error fetching student applications list:", err);
+        }
+      }
+
       const response = await getStudentInternshipList(currentUser || undefined, course, department, academicYear, search);
       const dataContainer = (response?.data && typeof response.data === 'object' && !Array.isArray(response.data)) ? response : (response?.message && typeof response.message === 'object' ? response.message : response);
       const internshipData = dataContainer?.data?.internships || dataContainer?.internships || [];
+      
+      const mappedInternships = (Array.isArray(internshipData) ? internshipData : []).map((item: any) => {
+        const match = appsList.find(app => app.internship === item.name);
+        if (match) {
+          return { ...item, applied_status: match.status };
+        }
+        return item;
+      });
+
       const stats = dataContainer?.data?.statistics || dataContainer?.statistics || {};
-      setInternships(Array.isArray(internshipData) ? internshipData : []);
+      setInternships(mappedInternships);
       setStatistics({
-        total_internships: stats.total_internships ?? internshipData.length,
+        total_internships: stats.total_internships ?? mappedInternships.length,
         scheduled_interview_count: stats.scheduled_interview_count ?? 0,
       });
     } catch (err) {
@@ -172,6 +238,8 @@ export default function InternshipTabContent() {
         return { bg: "bg-red-50", text: "text-red-600", border: "border-red-100", label: "Rejected" };
       case 'selected':
         return { bg: "bg-amber-50", text: "text-amber-600", border: "border-amber-100", label: "Selected" };
+      case 'accepted':
+        return { bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-100", label: "Accepted" };
       default:
         return { bg: "bg-slate-50", text: "text-slate-600", border: "border-slate-100", label: status || "N/A" };
     }
@@ -398,6 +466,19 @@ export default function InternshipTabContent() {
                 >
                   Details
                 </Button>
+
+                {internship.applied_status?.toLowerCase() === "selected" && (
+                  <Button 
+                    onClick={() => handleAcceptOffer(internship, "Internship")}
+                    disabled={acceptingOffer === internship.name}
+                    className="px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl h-10 transition-all text-xs"
+                  >
+                    {acceptingOffer === internship.name ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                    ) : null}
+                    Accept Offer
+                  </Button>
+                )}
               </div>
             </div>
           </BaseCard>
