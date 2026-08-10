@@ -32,7 +32,35 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/Pagination";
-import { getMentorList, getMentorSlotCalendar, bookMentorSlot, getMentorNextAvailableSlot, getBookedSessions, getMentorOfferings, initiateSessionBooking, verifySessionPayment } from "@/services/student.services";
+import { getMentorList, getMentorSlotCalendar, bookMentorSlot, getMentorNextAvailableSlot, getBookedSessions, getMentorOfferings, initiateSessionBooking, verifySessionPayment, getNewGroupWorkshopOfferings } from "@/services/student.services";
+
+interface MentorOffering {
+  name: string;
+  title?: string;
+  offering_title?: string;
+  offering_type: "Group Session" | "Workshop";
+  description?: string;
+  mentor: string;
+  mentor_full_name?: string;
+  mentor_name?: string;
+  mentor_image?: string;
+  duration_minutes: number;
+  duration?: number;
+  start_date: string;
+  end_date?: string;
+  start_time: string;
+  end_time?: string;
+  company?: string;
+  price_per_session?: number;
+  price?: number;
+  category?: string;
+  status?: string;
+  max_group_size?: number;
+  remaining_seats?: number;
+  average_rating?: number;
+  total_bookings?: number;
+  lms_batch?: string;
+}
 
 // Types
 interface Mentor {
@@ -122,6 +150,12 @@ export default function MentorsTabContent() {
   const [error, setError] = useState<string | null>(null);
   const [bookedSessions, setBookedSessions] = useState<BookedSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
+
+  // Group Sessions & Workshops Offerings states
+  const [offerings, setOfferings] = useState<MentorOffering[]>([]);
+  const [loadingOfferings, setLoadingOfferings] = useState(true);
+  const [offeringSearchVal, setOfferingSearchVal] = useState("");
+  const [offeringTypeFilter, setOfferingTypeFilter] = useState<"Group Session" | "Workshop">("Group Session");
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -484,6 +518,126 @@ export default function MentorsTabContent() {
 
 
 
+  const fetchOfferings = async (type: "Group Session" | "Workshop" = offeringTypeFilter, search: string = offeringSearchVal) => {
+    try {
+      setLoadingOfferings(true);
+      const res = await getNewGroupWorkshopOfferings({
+        offering_type: type,
+        search: search || undefined
+      });
+      const data = res?.message?.data || res?.message || res?.data || [];
+      setOfferings(Array.isArray(data) ? data.filter(Boolean) : []);
+    } catch (err) {
+      console.error("Error loading offerings:", err);
+      setOfferings([]);
+    } finally {
+      setLoadingOfferings(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOfferings(offeringTypeFilter, offeringSearchVal);
+  }, [offeringTypeFilter, offeringSearchVal]);
+
+  const handleOfferingSearchChange = (val: string) => {
+    setOfferingSearchVal(val);
+  };
+
+  const handleBookOffering = async (offering: MentorOffering) => {
+    try {
+      setIsBooking(true);
+      const studentEmail = localStorage.getItem("currentUser") || "";
+      if (!studentEmail) {
+        alert("Please log in to book a session.");
+        setIsBooking(false);
+        return;
+      }
+
+      const sessionPayload = {
+        mentor: offering.mentor,
+        student: studentEmail,
+        offering: offering.name,
+        session_date: offering.start_date,
+        from_time: offering.start_time,
+        to_time: offering.start_time,
+        topic: offering.title || offering.offering_title || "Group Session",
+        amount: 0,
+        offering_type: offering.offering_type
+      };
+
+      const initResponse = await initiateSessionBooking(sessionPayload);
+      const initData = initResponse?.message ?? initResponse;
+
+      console.log("[initiateSessionBooking Offering] initData:", initData);
+
+      if (initData?.payment_required === false) {
+        alert(`Joined successfully!`);
+        fetchBookedSessions();
+        setIsBooking(false);
+        return;
+      }
+
+      const sdkLoaded = await loadRazorpayScript();
+      if (!sdkLoaded) {
+        alert("Failed to load payment gateway. Check your internet connection.");
+        setIsBooking(false);
+        return;
+      }
+
+      const { order_id, api_key, booking_id } = initData as {
+        order_id: string;
+        api_key: string;
+        booking_id: string;
+      };
+
+      if (!api_key || !order_id || !booking_id) {
+        throw new Error("Backend did not return required payment fields.");
+      }
+
+      const options: Record<string, any> = {
+        key: api_key,
+        order_id,
+        name: "StrideNex Offering",
+        description: sessionPayload.topic,
+        prefill: { email: studentEmail },
+        theme: { color: "#f97316" },
+        handler: async (razorpayResponse: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) => {
+          try {
+            await verifySessionPayment({
+              booking_id,
+              razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+              razorpay_order_id: razorpayResponse.razorpay_order_id,
+              razorpay_signature: razorpayResponse.razorpay_signature,
+            });
+            alert("Joined successfully! Your session is confirmed.");
+            fetchBookedSessions();
+          } catch (verifyErr) {
+            console.error("Payment verification failed:", verifyErr);
+            alert("Payment received but verification failed. Contact support.");
+          } finally {
+            setIsBooking(false);
+          }
+        },
+        modal: { ondismiss: () => setIsBooking(false) },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on("payment.failed", (failResponse: any) => {
+        alert(`Payment failed: ${failResponse?.error?.description || "Unknown error"}`);
+        setIsBooking(false);
+      });
+      rzp.open();
+    } catch (err: any) {
+      console.error("Error joining offering:", err);
+      alert(err.message || "Failed to initiate booking.");
+      setIsBooking(false);
+    }
+  };
+
   useEffect(() => {
     fetchMentors(currentPage, searchQuery);
   }, [currentPage, searchQuery]);
@@ -513,7 +667,10 @@ export default function MentorsTabContent() {
 
   // Helper function to check if a session is already booked
   const isSessionAlreadyBooked = (mentor: Mentor) => {
+    if (!mentor || !bookedSessions || !Array.isArray(bookedSessions)) return false;
     return bookedSessions.some(session =>
+      session &&
+      mentor.email &&
       session.mentor === mentor.email &&
       session.offering_type === mentor.offering_type &&
       (session.status === 'Scheduled' || session.status === 'Accepted')
@@ -527,8 +684,20 @@ export default function MentorsTabContent() {
       const response = await getMentorList(page, PAGE_SIZE, search);
       console.log(response, 'response');
 
-      const dataObj = response?.data || {};
-      const mentorList = dataObj.Mentor || [];
+      let dataObj = null;
+      if (response?.message?.data?.Mentor) {
+        dataObj = response.message.data;
+      } else if (response?.message?.Mentor) {
+        dataObj = response.message;
+      } else if (response?.data?.Mentor) {
+        dataObj = response.data;
+      } else if (response?.Mentor) {
+        dataObj = response;
+      } else {
+        dataObj = response?.data || response?.message || response || {};
+      }
+
+      const mentorList = Array.isArray(dataObj.Mentor) ? dataObj.Mentor.filter(Boolean) : [];
       const paginationData = dataObj.pagination || {
         total: mentorList.length,
         page: page,
@@ -538,12 +707,12 @@ export default function MentorsTabContent() {
         has_prev: false,
       };
 
-      if (Array.isArray(mentorList)) {
+      if (mentorList.length > 0 || Array.isArray(mentorList)) {
         const mappedMentors = mentorList.map((m: any, index: number) => {
           const name = `${m.first_name || ""} ${m.last_name || ""}`.trim() || m.name || "Unknown Mentor";
           const initials = name
             .split(" ")
-            .map((n: string) => n[0])
+            .map((n: string) => n[0] || "")
             .join("")
             .slice(0, 2)
             .toUpperCase() || "M";
@@ -560,8 +729,8 @@ export default function MentorsTabContent() {
             role: m.role || m.type || "Mentor",
             company: m.company || "Independent",
             expertise: expertise,
-            rating: m.avg_rating || 0,
-            sessions: m.total_sessions || 0,
+            rating: Number(m.avg_rating) || 0,
+            sessions: Number(m.total_sessions) || 0,
             hourlyRate: "Free",
             availability: "Contact for availability",
             tags: expertise,
@@ -622,215 +791,177 @@ export default function MentorsTabContent() {
       animate="show"
       className="space-y-6"
     >
-      {/* Header */}
-      <motion.div variants={item} className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Mentors</h1>
-          <p className="text-slate-500 mt-1">Connect with industry experts</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              ref={searchInputRef}
-              placeholder="search for email"
-              className="pl-9 pr-4 py-2 w-full md:w-64 bg-white border-slate-200 text-sm"
-              value={searchVal}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSearchSubmit();
-                }
-              }}
-            />
-          </div>
-          <Button variant="outline" size="icon" className="border-slate-200 shrink-0">
-            <Filter className="w-4 h-4 text-slate-600" />
-          </Button>
-        </div>
-      </motion.div>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        
+        {/* Left Section (60-70% width) -> col-span-2 */}
+        <div className="xl:col-span-2 space-y-6">
+          {/* Header */}
+          <motion.div variants={item} className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800 font-outfit">Sessions & Offerings</h1>
+              <p className="text-slate-500 text-xs mt-1">Discover expert-led workshops and interactive group sessions</p>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Search offerings..."
+                  className="pl-9 pr-4 py-2 w-full md:w-64 bg-slate-50 border-slate-200 text-sm rounded-xl font-bold text-slate-800 focus-visible:ring-orange-500/50"
+                  value={offeringSearchVal}
+                  onChange={(e) => handleOfferingSearchChange(e.target.value)}
+                />
+              </div>
+            </div>
+          </motion.div>
 
-      {loading ? (
-        <div className="flex justify-center items-center py-20 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
-          <div className="animate-pulse flex items-center gap-2">
-            <Loader2 className="animate-spin w-5 h-5 text-orange-500" />
-            <span>Loading mentors...</span>
+          {/* Filters pills for Group Session & Workshop */}
+          <div className="flex gap-2 p-1.5 bg-slate-100 rounded-2xl w-fit border border-slate-200/50">
+            {(["Group Session", "Workshop"] as const).map((type) => (
+              <button
+                key={type}
+                onClick={() => setOfferingTypeFilter(type)}
+                className={`px-6 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  offeringTypeFilter === type
+                    ? "bg-white text-orange-600 shadow-sm border border-slate-200/30"
+                    : "text-slate-500 hover:text-slate-800 hover:bg-white/50"
+                }`}
+              >
+                {type}s
+              </button>
+            ))}
           </div>
-        </div>
-      ) : error ? (
-        <div className="text-center py-20 text-red-500 bg-white rounded-xl border border-slate-200 border-dashed">
-          {error}
-        </div>
-      ) : mentors.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="text-center py-20 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed"
-        >
-          {searchQuery ? "No mentors found matching your search." : "No mentors available at the moment."}
-        </motion.div>
-      ) : (
-        <>
-          {/* Mentors Grid */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
-          >
-            {mentors.map((mentor) => (
-              <BaseCard key={mentor.id} className="overflow-hidden hover:shadow-lg transition-all group">
-                <div className="p-5 flex flex-col h-full">
-                  <div className="flex-1">
-                    {/* Header with Avatar and Company */}
-                    <div className="flex justify-between items-start mb-4 gap-2">
-                      <div className="flex gap-3 flex-1 min-w-0">
-                        <Avatar className="w-11 h-11 shrink-0">
-                          {mentor.profileImage ? (
-                            <AvatarImage src={mentor.profileImage} alt={mentor.name} className="object-cover" />
-                          ) : null}
-                          <AvatarFallback className={`${mentor.avatarColor} text-white font-medium`}>
-                            {mentor.initials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-slate-800 break-all text-sm leading-tight mt-0.5" title={mentor.name}>
-                            {mentor.name}
-                          </h3>
-                          <p className="text-xs text-slate-500 truncate flex items-center gap-1 mt-1" title={`${mentor.role} • ${mentor.company}`}>
-                            <Briefcase className="w-3 h-3 shrink-0" />
-                            <span className="truncate">{mentor.role} • {mentor.company}</span>
-                          </p>
+
+          {/* Offerings Grid */}
+          {loadingOfferings ? (
+            <div className="flex justify-center items-center py-20 bg-white rounded-3xl border border-slate-200/80 shadow-sm">
+              <div className="animate-pulse flex items-center gap-2 font-bold text-slate-500 text-sm">
+                <Loader2 className="animate-spin w-4 h-4 text-orange-500" />
+                <span>Loading {offeringTypeFilter}s...</span>
+              </div>
+            </div>
+          ) : offerings.length === 0 ? (
+            <div className="text-center py-20 bg-white rounded-3xl border border-slate-200 border-dashed">
+              <Calendar className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+              <h3 className="font-bold text-slate-700 text-sm">No {offeringTypeFilter}s Found</h3>
+              <p className="text-xs text-slate-400 mt-1">Check back later or try adjusting your search.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {offerings.map((offering, idx) => {
+                const isBooked = bookedSessions.some(
+                  (s) => s && s.topic === offering.title && s.offering_type === offering.offering_type && (s.status === "Scheduled" || s.status === "Accepted")
+                );
+                
+                return (
+                  <BaseCard key={offering.name || idx} padding="none" className="h-full flex flex-col justify-between overflow-hidden border-slate-200 hover:shadow-lg transition-all group">
+                    <div className="p-5 flex-1 flex flex-col justify-between">
+                      <div>
+                        {/* Title and Mentor info */}
+                        <div className="flex justify-between items-start gap-2 mb-3">
+                          <Badge className="bg-orange-50 text-orange-600 border-orange-100 rounded-full text-[9px] px-2 py-0.5 font-bold border">
+                            {offering.offering_type}
+                          </Badge>
+                          <Badge className="bg-slate-50 text-slate-600 border-slate-200 rounded-full text-[9px] px-2 py-0.5 font-bold border">
+                            {offering.duration_minutes || offering.duration || "60"} Mins
+                          </Badge>
+                        </div>
+
+                        <h3 className="font-bold text-slate-800 text-sm group-hover:text-orange-600 transition-colors line-clamp-1 mb-1">{offering.title || offering.offering_title}</h3>
+
+                        {/* Mentor + Category */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
+                              <span className="text-[10px] font-bold text-indigo-600">
+                                {((offering.mentor_full_name || offering.mentor_name || offering.mentor || "M").charAt(0)).toUpperCase()}
+                              </span>
+                            </div>
+                            <span className="text-xs text-slate-500 font-bold truncate">{offering.mentor_full_name || offering.mentor_name || offering.mentor}</span>
+                          </div>
+                          {offering.category && (
+                            <Badge className="bg-indigo-50 text-indigo-600 border-indigo-100 rounded-full text-[9px] px-2 py-0.5 font-bold border">
+                              {offering.category}
+                            </Badge>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-slate-500 leading-relaxed font-medium mb-3 line-clamp-2">
+                          {offering.description || "Join this expert-led session to deepen your industry knowledge."}
+                        </p>
+
+                        {/* Seats + Price row */}
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-md px-2 py-0.5">
+                            {offering.remaining_seats ?? offering.max_group_size ?? "—"} seats left
+                          </span>
+                          <span className="text-[10px] font-bold text-orange-600 bg-orange-50 border border-orange-100 rounded-md px-2 py-0.5">
+                            {offering.price_per_session ? `₹${offering.price_per_session}` : "Free"}
+                          </span>
                         </div>
                       </div>
-                      <Badge
-                        variant="outline"
-                        className={`${isSessionAlreadyBooked(mentor)
-                            ? 'bg-slate-50 text-slate-600 border-slate-200'
-                            : 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                          } text-[10px] px-1.5 py-0 shrink-0 h-fit mt-0.5`}
-                      >
-                        {isSessionAlreadyBooked(mentor) ? 'Booked' : 'Available'}
-                      </Badge>
-                    </div>
 
-                    {/* Expertise Tags */}
-                    {mentor.expertise && mentor.expertise.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 mb-4">
-                        {mentor.expertise.map((exp, i) => (
-                          <Badge key={i} variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-xs">
-                            {exp}
+                      {/* Footer: Date/Time + Booking button */}
+                      <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-4 mt-auto">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Date & Time</span>
+                          <span className="text-xs font-bold text-slate-700 mt-0.5">
+                            {offering.start_date && !isNaN(new Date(offering.start_date).getTime())
+                              ? new Date(offering.start_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                              : "Upcoming"} • {offering.start_time ? offering.start_time.slice(0, 5) : "TBD"}
+                          </span>
+                        </div>
+                        
+                        {isBooked ? (
+                          <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 rounded-xl text-xs font-bold border px-3 py-1.5">
+                            Joined
                           </Badge>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Stats Row */}
-                    <div className="flex items-center justify-between mb-4 mt-auto">
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                        <span className="text-sm font-semibold text-slate-800">{mentor.rating.toFixed(1)}</span>
-                        <span className="text-xs text-slate-400">({mentor.sessions})</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4 text-slate-400" />
-                        <span className="text-sm font-medium text-slate-600">{mentor.hourlyRate}</span>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold h-8 px-4 transition-colors"
+                            onClick={() => handleBookOffering(offering)}
+                          >
+                            Join Session
+                          </Button>
+                        )}
                       </div>
                     </div>
-
-                    {/* Next Available */}
-                    <div className="flex items-center gap-2 mb-4 p-2 bg-slate-50 rounded-lg">
-                      <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-                      <span className="text-xs text-slate-600">Next available: </span>
-                      <span className="text-xs font-medium text-slate-800 truncate">
-                        {mentor.nextAvailableSlot || mentor.availability}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2 mt-auto">
-                    {isSessionAlreadyBooked(mentor) ? (
-                      <Button
-                        className="flex-1 bg-slate-400 text-white text-sm cursor-not-allowed"
-                        disabled
-                      >
-                        Booked
-                      </Button>
-                    ) : (
-                      <Button
-                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm"
-                        onClick={() => handleBookSession(mentor)}
-                      >
-                        Book Session
-                      </Button>
-                    )}
-                    <Button variant="outline" size="icon" className="border-slate-200 shrink-0">
-                      <ChevronRight className="w-4 h-4 text-slate-600" />
-                    </Button>
-                  </div>
-                </div>
-              </BaseCard>
-            ))}
-          </motion.div>
-          {pagination.total_pages > 1 && (
-            <div className="mt-4">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={pagination.total_pages}
-                onPageChange={setCurrentPage}
-              />
+                  </BaseCard>
+                );
+              })}
             </div>
           )}
-        </>
-      )}
-
-      {/* Booked Sessions Section */}
-      <motion.div variants={item}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-slate-800">Your Booked Sessions</h2>
-          <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200">
-            {bookedSessions.length} Sessions
-          </Badge>
         </div>
 
-        {loadingSessions ? (
-          <div className="flex justify-center items-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200">
-            <div className="animate-pulse flex items-center gap-2">
-              <Clock className="animate-spin w-5 h-5" />
-              <span>Loading your sessions...</span>
+        {/* Right Section (30-40% width) -> col-span-1 */}
+        <div className="space-y-6">
+          {/* Top: Booked Sessions Card */}
+          <motion.div variants={item} className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold text-slate-800 font-outfit">Your Booked Sessions</h2>
+              <Badge className="bg-orange-50 text-orange-600 border-orange-100 text-[10px] font-bold border rounded-full px-2 py-0.5">
+                {bookedSessions.length}
+              </Badge>
             </div>
-          </div>
-        ) : bookedSessions.length === 0 ? (
-          <div className="text-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
-            <Calendar className="w-12 h-12 mx-auto mb-3 text-slate-300" />
-            <p>No booked sessions found.</p>
-            <p className="text-sm mt-1">Book a session with a mentor to get started!</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {bookedSessions.map((session, index) => (
-              <BaseCard key={index} className="overflow-hidden">
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      {/* Session Header */}
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-slate-800 truncate">{session.name}</h3>
-                          <Badge
-                            variant="outline"
-                            className={`${session.priority === 'High'
-                                ? 'bg-red-50 text-red-600 border-red-200 font-medium'
-                                : session.priority === 'Medium'
-                                  ? 'bg-yellow-50 text-yellow-600 border-yellow-200'
-                                  : 'bg-green-50 text-green-600 border-green-200'
-                              }`}
-                          >
-                            {session.priority} Priority
-                          </Badge>
-                        </div>
+
+            {loadingSessions ? (
+              <div className="flex justify-center items-center py-8 text-slate-400">
+                <Loader2 className="animate-spin w-4 h-4 text-orange-500 mr-2" />
+                <span className="text-xs font-bold">Loading sessions...</span>
+              </div>
+            ) : bookedSessions.length === 0 ? (
+              <div className="text-center py-10 bg-slate-50 border border-slate-200 border-dashed rounded-2xl">
+                <Calendar className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                <p className="text-xs font-bold text-slate-500">No sessions booked yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1">
+                {bookedSessions.filter(Boolean).map((session, index) => (
+                  <BaseCard key={index} className="overflow-hidden border-slate-200 shadow-sm">
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <h4 className="font-bold text-slate-800 text-xs leading-tight line-clamp-1">{session.topic || session.name}</h4>
                         <Badge
                           variant="outline"
                           className={`${session.status === 'Scheduled'
@@ -840,46 +971,182 @@ export default function MentorsTabContent() {
                                 : session.status === 'Cancelled'
                                   ? 'bg-red-50 text-red-600 border-red-200'
                                   : 'bg-gray-50 text-gray-600 border-gray-200'
-                            }`}
+                            } text-[9px] px-1.5 py-0 shrink-0 font-bold`}
                         >
                           {session.status}
                         </Badge>
                       </div>
 
-                      {/* Session Details */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                        <div className="flex items-center gap-2 text-slate-600">
-                          <Users className="w-4 h-4 text-slate-400" />
+                      <div className="flex flex-col gap-1 text-[11px] text-slate-500 font-bold">
+                        <div className="flex items-center gap-1.5 truncate">
+                          <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span className="truncate">Mentor: {session.mentor}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-slate-600">
-                          <Calendar className="w-4 h-4 text-slate-400" />
-                          <span>{new Date(session.session_date).toLocaleDateString()}</span>
+                        <div className="flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>{session.session_date ? new Date(session.session_date).toLocaleDateString() : ""}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-slate-600">
-                          <Clock className="w-4 h-4 text-slate-400" />
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                           <span>{session.from_time} - {session.to_time}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-slate-600">
-                          <Target className="w-4 h-4 text-slate-400" />
-                          <span className="truncate">{session.topic}</span>
+                      </div>
+                    </div>
+                  </BaseCard>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Industry Mentors Section - Full Width */}
+      <div className="space-y-6">
+        {/* Mentors Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+          <div>
+            <h2 className="text-xl font-bold text-slate-800 font-outfit">Industry Mentors</h2>
+            <p className="text-slate-500 text-xs mt-1">Connect with experts for 1:1 guidance and mockup preparation</p>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              ref={searchInputRef}
+              placeholder="Search mentor email..."
+              className="pl-9 pr-4 py-2 w-full md:w-64 bg-slate-50 border-slate-200 text-sm rounded-xl font-bold text-slate-800 focus-visible:ring-orange-500/50"
+              value={searchVal}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSearchSubmit(); }}
+            />
+          </div>
+        </div>
+
+        {/* Mentors Cards Grid */}
+        {loading ? (
+          <div className="flex justify-center items-center py-20 bg-white rounded-3xl border border-slate-200/80 shadow-sm">
+            <div className="animate-pulse flex items-center gap-2 font-bold text-slate-500 text-sm">
+              <Loader2 className="animate-spin w-4 h-4 text-orange-500" />
+              <span>Loading mentors...</span>
+            </div>
+          </div>
+        ) : error ? (
+          <div className="text-center py-20 text-red-500 bg-white rounded-3xl border border-slate-200 border-dashed">
+            <AlertCircle className="w-12 h-12 mx-auto mb-3 text-red-400" />
+            <h3 className="font-bold text-red-700 text-sm">{error}</h3>
+          </div>
+        ) : mentors.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-3xl border border-slate-200 border-dashed">
+            <Users className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+            <h3 className="font-bold text-slate-700 text-sm">No Mentors Found</h3>
+          </div>
+        ) : (
+          <>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"
+            >
+              {mentors.map((mentor) => (
+                <BaseCard key={mentor.id} className="overflow-hidden hover:shadow-lg transition-all group">
+                  <div className="p-5 flex flex-col h-full">
+                    <div className="flex-1">
+                      <div className="flex justify-between items-start mb-4 gap-2">
+                        <div className="flex gap-3 flex-1 min-w-0">
+                          <Avatar className="w-11 h-11 shrink-0">
+                            {mentor.profileImage ? (
+                              <AvatarImage src={mentor.profileImage} alt={mentor.name} className="object-cover" />
+                            ) : null}
+                            <AvatarFallback className={`${mentor.avatarColor} text-white font-medium`}>
+                              {mentor.initials}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-slate-800 break-words text-sm leading-tight mt-0.5">
+                              {mentor.name}
+                            </h3>
+                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                              <Briefcase className="w-3 h-3 shrink-0" />
+                              <span className="truncate">{mentor.role} • {mentor.company}</span>
+                            </p>
+                          </div>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={`${isSessionAlreadyBooked(mentor)
+                              ? 'bg-slate-50 text-slate-600 border-slate-200'
+                              : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                            } text-[10px] px-1.5 py-0 shrink-0 h-fit mt-0.5`}
+                        >
+                          {isSessionAlreadyBooked(mentor) ? 'Booked' : 'Available'}
+                        </Badge>
+                      </div>
+
+                      {mentor.expertise && mentor.expertise.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-4">
+                          {mentor.expertise.map((exp, i) => (
+                            <Badge key={i} variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-xs">
+                              {exp}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                          <span className="text-sm font-semibold text-slate-800">{Number(mentor.rating || 0).toFixed(1)}</span>
+                          <span className="text-xs text-slate-400">({mentor.sessions})</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-4 h-4 text-slate-400" />
+                          <span className="text-sm font-medium text-slate-600">{mentor.hourlyRate}</span>
                         </div>
                       </div>
 
-                      {/* Additional Info */}
-                      <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500">
-                        <span>Type: {session.session_type}</span>
-                        <span>Duration: {session.duration}</span>
-                        <span>Offering: {session.offering_type}</span>
+                      <div className="flex items-center gap-2 mb-4 p-2 bg-slate-50 rounded-lg">
+                        <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span className="text-xs text-slate-600">Next available: </span>
+                        <span className="text-xs font-medium text-slate-800 truncate">
+                          {mentor.nextAvailableSlot || mentor.availability}
+                        </span>
                       </div>
                     </div>
+
+                    <div className="flex items-center gap-2 mt-auto">
+                      {isSessionAlreadyBooked(mentor) ? (
+                        <Button className="flex-1 bg-slate-400 text-white text-sm cursor-not-allowed" disabled>
+                          Booked
+                        </Button>
+                      ) : (
+                        <Button
+                          className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-sm"
+                          onClick={() => handleBookSession(mentor)}
+                        >
+                          Book Session
+                        </Button>
+                      )}
+                      <Button variant="outline" size="icon" className="border-slate-200 shrink-0">
+                        <ChevronRight className="w-4 h-4 text-slate-600" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </BaseCard>
-            ))}
-          </div>
+                </BaseCard>
+              ))}
+            </motion.div>
+            {pagination.total_pages > 1 && (
+              <div className="mt-6 w-full">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={pagination.total_pages}
+                  onPageChange={setCurrentPage}
+                  className="w-full"
+                />
+              </div>
+            )}
+          </>
         )}
-      </motion.div>
+      </div>
 
       {/* Booking Modal */}
       {selectedMentorForBooking && (
@@ -954,7 +1221,7 @@ export default function MentorsTabContent() {
                             </div>
                           </div>
                           <div className="text-left sm:text-right shrink-0">
-                            <div className="text-lg font-extrabold text-slate-800">
+                            <div className="text-lg font-semibold text-slate-800">
                               {offering.price_per_session ? `₹${offering.price_per_session}` : "Free"}
                             </div>
                             <div className="text-xs text-slate-400">Per Session</div>
@@ -970,7 +1237,7 @@ export default function MentorsTabContent() {
                   {/* Selected Offering Summary */}
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
                     <div>
-                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block mb-0.5">Selected Offering</span>
+                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest block mb-0.5">Selected Offering</span>
                       <h4 className="font-bold text-slate-800 text-sm">{selectedOfferingForBooking.title}</h4>
                       <span className="text-xs text-slate-500">{selectedOfferingForBooking.offering_type} • {selectedOfferingForBooking.price_per_session ? `₹${selectedOfferingForBooking.price_per_session}` : "Free"}</span>
                     </div>
@@ -1011,7 +1278,7 @@ export default function MentorsTabContent() {
                             <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{groupSessionData.description}</p>
                           </div>
                           <div className="shrink-0 text-right">
-                            <div className="text-base font-extrabold text-indigo-700">
+                            <div className="text-base font-semibold text-indigo-700">
                               {groupSessionData.price_per_session ? `₹${groupSessionData.price_per_session}` : "Free"}
                             </div>
                             <div className="text-[10px] text-slate-400">Per Session</div>

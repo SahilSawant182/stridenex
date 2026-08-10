@@ -666,6 +666,25 @@ export const getBookedSessions = async (studentEmail: string) => {
 };
 
 /**
+ * Fetch group session and workshop offerings.
+ */
+export const getNewGroupWorkshopOfferings = async (params: {
+  offering_type?: string;
+  search?: string;
+}) => {
+  try {
+    const response = await apiService.get(
+      "method/stridenex_app.stridenex_app.doctype.mentor_offering.mentor_offering.get_new_group_workshop_offerings",
+      { params }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching group/workshop offerings:", error);
+    throw error;
+  }
+};
+
+/**
  * Fetch billing packages for a user by email.
  */
 export const getUserPackages = async (email: string) => {
