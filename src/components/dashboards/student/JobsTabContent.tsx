@@ -16,6 +16,7 @@ import {
   FileText
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
+import { OfferLetterModal } from "@/components/dashboards/shared/OfferLetterModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -49,6 +50,13 @@ export default function JobsTabContent() {
   const [successfullyApplied, setSuccessfullyApplied] = useState<string[]>([]);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
+
+  // Offer Letter State
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [offerPdfUrl, setOfferPdfUrl] = useState<string | null>(null);
+  const [loadingOffer, setLoadingOffer] = useState(false);
+  const [selectedOfferApp, setSelectedOfferApp] = useState<{item: any, type: string} | null>(null);
+  const [rejectingOffer, setRejectingOffer] = useState<string | null>(null);
 
   const getApplicationName = (item: any, type: string) => {
     if (item.application) return item.application;
@@ -91,6 +99,70 @@ export default function JobsTabContent() {
       alert(err.message || "Failed to accept the offer. Please try again.");
     } finally {
       setAcceptingOffer(null);
+      setShowOfferModal(false);
+    }
+  };
+
+  const handleRejectOffer = async (item: any, type: string) => {
+    const appName = getApplicationName(item, type);
+    if (!appName) return;
+    
+    if (!confirm("Are you sure you want to reject this offer? This action cannot be undone.")) return;
+
+    try {
+      setRejectingOffer(item.name);
+      await updateApplicationStatus(appName, "Rejected");
+      alert("You have rejected the offer.");
+      fetchJobs();
+    } catch (err: any) {
+      console.error("Error rejecting offer:", err);
+      alert(err.message || "Failed to reject the offer. Please try again.");
+    } finally {
+      setRejectingOffer(null);
+      setShowOfferModal(false);
+    }
+  };
+
+  const handleViewOfferLetter = async (item: any, type: string) => {
+    setSelectedOfferApp({ item, type });
+    setShowOfferModal(true);
+    setLoadingOffer(true);
+    setOfferPdfUrl(null);
+    
+    try {
+      const queryParams = new URLSearchParams({
+        student: currentUser || "",
+        name: item.name || "",
+        offer_type: type || "",
+        template: type || ""
+      }).toString();
+      
+      const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+      const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+      const authHeader: Record<string, string> = apiKey && apiSecret ? { "Authorization": `token ${apiKey}:${apiSecret}` } : {};
+      
+      const response = await fetch(`https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.app.get_offer_letter?${queryParams}`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeader
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to load offer letter");
+      }
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setOfferPdfUrl(url);
+    } catch (err: any) {
+      console.error(err);
+      alert("Could not load the offer letter.");
+      setShowOfferModal(false);
+    } finally {
+      setLoadingOffer(false);
     }
   };
 
@@ -269,6 +341,22 @@ export default function JobsTabContent() {
         ))}
       </motion.div>
 
+      {/* Offer Letter Modal */}
+      <OfferLetterModal 
+        isOpen={showOfferModal}
+        onClose={() => {
+          setShowOfferModal(false);
+          if (offerPdfUrl) URL.revokeObjectURL(offerPdfUrl);
+        }}
+        pdfUrl={offerPdfUrl}
+        isLoading={loadingOffer}
+        title="Job Offer Letter"
+        isAccepting={!!(selectedOfferApp && acceptingOffer === selectedOfferApp.item.name)}
+        isRejecting={!!(selectedOfferApp && rejectingOffer === selectedOfferApp.item.name)}
+        onAccept={() => selectedOfferApp && handleAcceptOffer(selectedOfferApp.item, selectedOfferApp.type)}
+        onReject={() => selectedOfferApp && handleRejectOffer(selectedOfferApp.item, selectedOfferApp.type)}
+      />
+
       {/* Jobs Grid */}
       <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {filteredJobs.map((job, idx) => {
@@ -367,14 +455,10 @@ export default function JobsTabContent() {
 
                   {job.applied_status?.toLowerCase() === "selected" && (
                     <Button 
-                      onClick={() => handleAcceptOffer(job, "Job")}
-                      disabled={acceptingOffer === job.name}
+                      onClick={() => handleViewOfferLetter(job, "Job")}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-9 rounded-xl transition-all text-xs px-4"
                     >
-                      {acceptingOffer === job.name ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                      ) : null}
-                      Accept Offer
+                      View Offer Letter
                     </Button>
                   )}
                 </div>
@@ -481,6 +565,17 @@ export default function JobsTabContent() {
               >
                 Close
               </button>
+              {selectedJob.applied_status?.toLowerCase() === "selected" && (
+                <Button 
+                  onClick={() => {
+                    handleViewOfferLetter(selectedJob, "Job");
+                    setShowDetails(false);
+                  }}
+                  className="h-10 px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-sm"
+                >
+                  View Offer Letter
+                </Button>
+              )}
               <Button
                 onClick={() => {
                   handleApply(selectedJob);
