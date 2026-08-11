@@ -20,7 +20,7 @@ import { OfferLetterModal } from "@/components/dashboards/shared/OfferLetterModa
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { getJobProfiles, applyForJob, getStudentApplications, updateApplicationStatus } from "@/services/student.services";
+import { getJobProfiles, applyOpportunity, getStudentApplications, updateApplicationStatus } from "@/services/student.services";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 
@@ -190,9 +190,7 @@ export default function JobsTabContent() {
 
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [expectedSalary, setExpectedSalary] = useState("");
-  const [availableFrom, setAvailableFrom] = useState("");
   const [coverLetter, setCoverLetter] = useState("I am interested in this position.");
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [applyModalError, setApplyModalError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -265,9 +263,7 @@ export default function JobsTabContent() {
     }
     setSelectedJob(job);
     setExpectedSalary("");
-    setAvailableFrom("");
     setCoverLetter("I am interested in this position.");
-    setResumeFile(null);
     setApplyModalError(null);
     setShowApplyModal(true);
   };
@@ -623,28 +619,18 @@ export default function JobsTabContent() {
                   setApplyModalError("Expected salary is required.");
                   return;
                 }
-                if (!availableFrom) {
-                  setApplyModalError("Availability date is required.");
-                  return;
-                }
-                if (!resumeFile) {
-                  setApplyModalError("Please upload your resume.");
-                  return;
-                }
 
                 setApplyModalError(null);
                 setApplying(selectedJob.name);
 
                 try {
-                  const fd = new FormData();
-                  fd.append("student", currentUser || "");
-                  fd.append("job_profile", selectedJob.name);
-                  fd.append("cover_letter", coverLetter);
-                  fd.append("expected_salary", expectedSalary);
-                  fd.append("available_from", availableFrom);
-                  fd.append("resume", resumeFile);
-
-                  await applyForJob(fd);
+                  await applyOpportunity({
+                    student: currentUser || "",
+                    opportunity_type: "Job",
+                    opportunity_name: selectedJob.name,
+                    notes: coverLetter,
+                    expected_salary: expectedSalary
+                  });
 
                   const updatedApplied = [...successfullyApplied, selectedJob.name];
                   setSuccessfullyApplied(updatedApplied);
@@ -685,53 +671,15 @@ export default function JobsTabContent() {
 
               <div>
                 <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
-                  Available From <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  required
-                  value={availableFrom}
-                  onChange={(e) => setAvailableFrom(e.target.value)}
-                  min={new Date().toISOString().split("T")[0]}
-                  className="w-full h-11 px-4 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all shadow-sm uppercase"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
                   Cover Letter
                 </label>
                 <textarea
-                  placeholder="Tell the employer why you're a great fit..."
-                  rows={3}
+                  required
                   value={coverLetter}
                   onChange={(e) => setCoverLetter(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all shadow-sm resize-none"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
-                  Resume (PDF / DOC / DOCX) <span className="text-red-500">*</span>
-                </label>
-                <div className="border-2 border-dashed border-slate-200 hover:border-orange-400/80 rounded-2xl p-4 transition-all relative flex flex-col items-center justify-center bg-slate-50/30">
-                  <input
-                    type="file"
-                    required
-                    accept=".pdf,.doc,.docx"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        setResumeFile(e.target.files[0]);
-                      }
-                    }}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                  />
-                  <FileText className="w-8 h-8 text-slate-300 mb-2" />
-                  <p className="text-xs font-bold text-slate-500 text-center font-sans">
-                    {resumeFile ? resumeFile.name : "Click to select or drag resume file"}
-                  </p>
-                  <p className="text-[10px] text-slate-400 mt-1">Supports PDF, DOC, DOCX up to 10MB</p>
-                </div>
+                  className="w-full h-32 p-4 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all shadow-sm resize-none"
+                  placeholder="Tell us why you are a great fit..."
+                ></textarea>
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3 bg-slate-50/50 -mx-6 -mb-6 p-6">

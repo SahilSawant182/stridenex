@@ -39,10 +39,7 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
-    router.push("/");
-  };
+
 
   const getInitials = () => {
     if (fullName) {

@@ -48,7 +48,6 @@ export default function ProjectsTabContent() {
   const [statistics, setStatistics] = useState({ total_projects: 0, total_applied: 0, total_completed: 0, total_awarded: 0 });
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState<string | null>(null);
-  const [successfullyEnrolled, setSuccessfullyEnrolled] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   
   // Offer Letter State
@@ -215,28 +214,9 @@ export default function ProjectsTabContent() {
         }
       }
 
-      let appsList: any[] = [];
-      if (studentEmail) {
-        try {
-          const resApps = await getStudentApplications({ student: studentEmail, opportunity_type: "Project" });
-          appsList = resApps?.data?.data || resApps?.message?.data || resApps?.data || resApps?.message || [];
-          setStudentApplications(Array.isArray(appsList) ? appsList : []);
-        } catch (err) {
-          console.error("Error fetching student applications list:", err);
-        }
-      }
-
       const response = await getStudentProjectList(studentEmail, course, department, academicYear, search);
       const dataContainer = (response?.data && typeof response.data === 'object' && !Array.isArray(response.data)) ? response : (response?.message && typeof response.message === 'object' ? response.message : response);
-      const projectData = dataContainer?.data?.projects || dataContainer?.projects || [];
-      
-      const mappedProjects = (Array.isArray(projectData) ? projectData : []).map((item: any) => {
-        const match = appsList.find(app => app.project === item.name);
-        if (match) {
-          return { ...item, applied_status: match.status };
-        }
-        return item;
-      });
+      const mappedProjects = dataContainer?.data?.projects || dataContainer?.projects || [];
 
       const stats = dataContainer?.data?.statistics || dataContainer?.statistics || {};
       const activeProjectsCount = mappedProjects.filter(
@@ -258,11 +238,7 @@ export default function ProjectsTabContent() {
   };
 
   const handleEnroll = async (project: any) => {
-    // ✅ Freeze values immediately (prevents mutation issues)
-    const { name, industry, project_name } = { ...project };
-
-    console.log("Clicked project:", project);
-    console.log("Industry at click:", industry);
+    const { name, project_name } = { ...project };
 
     if (!currentUser) {
       alert("Authentication Required: Please log in to enroll in projects.");
@@ -279,8 +255,6 @@ export default function ProjectsTabContent() {
         notes: "Interested in this project.",
       };
 
-      console.log("Payload:", payload);
-
       const response = await applyOpportunity(payload);
 
       if (
@@ -289,15 +263,12 @@ export default function ProjectsTabContent() {
           response.status === "200" ||
           response.message?.status === 200)
       ) {
-        setSuccessfullyEnrolled((prev) => [...prev, name]);
+        setProjects(prev => prev.map(p => p.name === name ? { ...p, applied_status: "Applied" } : p));
 
         setFeedback({
           type: "success",
           message: `Successfully enrolled in ${project_name}!`,
         });
-
-        // ✅ Better than setTimeout
-        await fetchProjects();
       } else {
         const errMsg = response && typeof response.message === 'object'
           ? response.message.message
@@ -420,11 +391,11 @@ export default function ProjectsTabContent() {
 
                     <div className="flex items-center gap-2 flex-wrap justify-end">
                       <Badge className={`${
-                        project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
-                          ? "bg-red-50 text-red-600 border-red-100"
-                          : project.status === "Active" || project.status === "active" || !project.status
-                            ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                            : "bg-indigo-50 text-indigo-600 border-indigo-100"
+                        project.applied_status && project.applied_status !== "Not Applied"
+                          ? "hidden"
+                          : project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
+                            ? "bg-red-50 text-red-600 border-red-100"
+                            : "bg-emerald-50 text-emerald-600 border-emerald-100"
                         } rounded-full text-[10px] px-3 py-1 font-bold`}>
                         {project.status || "Active"}
                       </Badge>
@@ -501,32 +472,31 @@ export default function ProjectsTabContent() {
 
                 <div className="flex items-center gap-3">
                   <Button
-                    onClick={() => handleEnroll({ ...project })}
+                    onClick={() => handleEnroll(project)}
                     disabled={
                       enrolling === project.name ||
                       project.status?.toLowerCase() === "disabled" ||
                       project.status?.toLowerCase() === "disable" ||
-                      (project.applied_status && project.applied_status !== "Not Applied") ||
-                      successfullyEnrolled.includes(project.name)
+                      (project.applied_status && project.applied_status !== "Not Applied")
                     }
                     className={`flex-1 ${project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
                       ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-                      : ((project.applied_status && project.applied_status !== "Not Applied") || successfullyEnrolled.includes(project.name))
+                      : (project.applied_status && project.applied_status !== "Not Applied")
                         ? "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 active:scale-95 translate-y-0 hover:-translate-y-0.5"
                         : "bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/20 active:scale-95 translate-y-0 hover:-translate-y-0.5"
                       } font-bold h-10 rounded-xl transition-all text-xs`}
                   >
                     {enrolling === project.name ? (
                       <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    ) : ((project.applied_status && project.applied_status !== "Not Applied") || successfullyEnrolled.includes(project.name)) ? (
+                    ) : (project.applied_status && project.applied_status !== "Not Applied") ? (
                       <CheckCircle2 className="w-4 h-4 mr-2" />
                     ) : project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable" ? null : (
                       <ArrowRight className="w-4 h-4 mr-2" />
                     )}
                     {project.status?.toLowerCase() === "disabled" || project.status?.toLowerCase() === "disable"
                       ? "Disabled"
-                      : ((project.applied_status && project.applied_status !== "Not Applied") || successfullyEnrolled.includes(project.name))
-                        ? "Applied"
+                      : (project.applied_status && project.applied_status !== "Not Applied")
+                        ? String(project.applied_status)
                         : "Apply Now"}
                   </Button>
 

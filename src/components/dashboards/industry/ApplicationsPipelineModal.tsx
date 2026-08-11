@@ -36,6 +36,7 @@ export default function ApplicationsPipelineModal({
     { id: "Interview Scheduled", title: "Interview Scheduled", color: "bg-orange-500" },
     { id: "Rejected", title: "Rejected", color: "bg-red-600" },
     { id: "Selected", title: "Selected", color: "bg-emerald-500" },
+    { id: "Accepted", title: "Accepted", color: "bg-teal-600" },
     { id: "Awarded", title: "Awarded", color: "bg-purple-600" }
   ], []);
 
@@ -46,6 +47,7 @@ export default function ApplicationsPipelineModal({
       "Interview Scheduled": [],
       "Rejected": [],
       "Selected": [],
+      "Accepted": [],
       "Awarded": []
     };
     applicationsData.forEach(app => {

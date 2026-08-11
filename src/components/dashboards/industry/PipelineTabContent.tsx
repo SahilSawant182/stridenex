@@ -65,6 +65,7 @@ export default function PipelineTabContent() {
     "HR": [],
     "Rejected": [],
     "Selected": [],
+    "Accepted": [],
     "Interview Scheduled": [],
     "Awarded": []
   });
@@ -76,6 +77,7 @@ export default function PipelineTabContent() {
     "HR": 0,
     "Rejected": 0,
     "Selected": 0,
+    "Accepted": 0,
     "Interview Scheduled": 0,
     "Awarded": 0
   });
@@ -107,6 +109,7 @@ export default function PipelineTabContent() {
         { id: "Interview Scheduled", title: "Interview Scheduled", color: "bg-orange-500" },
         { id: "Rejected", title: "Rejected", color: "bg-red-600" },
         { id: "Selected", title: "Selected", color: "bg-emerald-500" },
+        { id: "Accepted", title: "Accepted", color: "bg-teal-600" },
         { id: "Awarded", title: "Awarded", color: "bg-purple-600" }
       ];
     } else {
@@ -116,7 +119,8 @@ export default function PipelineTabContent() {
         { id: "Tech Interview", title: "Tech Interview", color: "bg-orange-500" },
         { id: "HR", title: "HR", color: "bg-indigo-500" },
         { id: "Rejected", title: "Rejected", color: "bg-red-600" },
-        { id: "Selected", title: "Selected", color: "bg-emerald-500" }
+        { id: "Selected", title: "Selected", color: "bg-emerald-500" },
+        { id: "Accepted", title: "Accepted", color: "bg-teal-600" }
       ];
     }
   }, [opportunityType]);

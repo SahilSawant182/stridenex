@@ -3,6 +3,7 @@
 import { useAuth } from "@/context/AuthContext";
 import { buildProfileImageUrl } from "@/services/api.services";
 import { User, Menu, Search, LogOut, CreditCard, ChevronRight, Pen, Mail, Building2, Phone, Globe, MapPin, CheckCircle2, FileText, Target, Clock, Linkedin, Instagram, Map } from "lucide-react";
+import { LogoutModal } from "./LogoutModal";
 import { getStudentByEmail, getUserPackages } from "@/services/student.services";
 import { getIndustryByEmail } from "@/services/industry.services";
 import { getMentorByEmail } from "@/services/mentor.services";
@@ -482,6 +483,8 @@ export default function Navbar({ role }: NavbarProps) {
   const imageUrl = buildProfileImageUrl(userImage);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [showProfileBox, setShowProfileBox] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -622,7 +625,7 @@ export default function Navbar({ role }: NavbarProps) {
                   </Link>
                   <button
                     onClick={() => {
-                      logout();
+                      setShowLogoutModal(true);
                       setUserMenuOpen(false);
                     }}
                     className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg flex items-center gap-2"
@@ -635,6 +638,20 @@ export default function Navbar({ role }: NavbarProps) {
           </AnimatePresence>
         </div>
       </div>
+
+      <LogoutModal 
+        isOpen={showLogoutModal}
+        isLoggingOut={isLoggingOut}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={async () => {
+          setIsLoggingOut(true);
+          try {
+            await logout();
+          } finally {
+            setIsLoggingOut(false);
+          }
+        }}
+      />
     </nav>
   );
 }
