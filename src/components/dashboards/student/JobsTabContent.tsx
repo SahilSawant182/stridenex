@@ -55,14 +55,14 @@ export default function JobsTabContent() {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [offerPdfUrl, setOfferPdfUrl] = useState<string | null>(null);
   const [loadingOffer, setLoadingOffer] = useState(false);
-  const [selectedOfferApp, setSelectedOfferApp] = useState<{item: any, type: string} | null>(null);
+  const [selectedOfferApp, setSelectedOfferApp] = useState<{ item: any, type: string } | null>(null);
   const [rejectingOffer, setRejectingOffer] = useState<string | null>(null);
 
   const getApplicationName = (item: any, type: string) => {
     if (item.application) return item.application;
     if (item.application_name) return item.application_name;
     if (item.application_id) return item.application_id;
-    
+
     const match = studentApplications.find(app => {
       if (type === "Internship") {
         return app.internship === item.name;
@@ -84,7 +84,7 @@ export default function JobsTabContent() {
       alert("Application ID not found. Please try refreshing the page.");
       return;
     }
-    
+
     if (!confirm("Are you sure you want to accept this offer?")) {
       return;
     }
@@ -106,7 +106,7 @@ export default function JobsTabContent() {
   const handleRejectOffer = async (item: any, type: string) => {
     const appName = getApplicationName(item, type);
     if (!appName) return;
-    
+
     if (!confirm("Are you sure you want to reject this offer? This action cannot be undone.")) return;
 
     try {
@@ -128,7 +128,7 @@ export default function JobsTabContent() {
     setShowOfferModal(true);
     setLoadingOffer(true);
     setOfferPdfUrl(null);
-    
+
     try {
       const queryParams = new URLSearchParams({
         student: currentUser || "",
@@ -136,11 +136,11 @@ export default function JobsTabContent() {
         offer_type: type || "",
         template: type || ""
       }).toString();
-      
+
       const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
       const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
       const authHeader: Record<string, string> = apiKey && apiSecret ? { "Authorization": `token ${apiKey}:${apiSecret}` } : {};
-      
+
       const response = await fetch(`https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.app.get_offer_letter?${queryParams}`, {
         method: "GET",
         credentials: "include",
@@ -149,11 +149,11 @@ export default function JobsTabContent() {
           ...authHeader
         }
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to load offer letter");
       }
-      
+
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       setOfferPdfUrl(url);
@@ -228,7 +228,7 @@ export default function JobsTabContent() {
       } else if (Array.isArray(dataObj?.data)) {
         list = dataObj.data;
       }
-      
+
       const mappedJobs = list.map((item: any) => {
         const match = appsList.find(app => app.job_profile === item.name);
         if (match) {
@@ -308,7 +308,7 @@ export default function JobsTabContent() {
             Apply to full-time or part-time job openings matching your career path
           </p>
         </div>
-        
+
         {/* Search Field */}
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -338,7 +338,7 @@ export default function JobsTabContent() {
       </motion.div>
 
       {/* Offer Letter Modal */}
-      <OfferLetterModal 
+      <OfferLetterModal
         isOpen={showOfferModal}
         onClose={() => {
           setShowOfferModal(false);
@@ -400,7 +400,7 @@ export default function JobsTabContent() {
                   </div>
 
                   <div className="text-xs text-slate-600 leading-relaxed font-medium mb-3 line-clamp-2 h-9 opacity-85"
-                       dangerouslySetInnerHTML={{ __html: job.job_description || "No description provided." }}>
+                    dangerouslySetInnerHTML={{ __html: job.job_description || "No description provided." }}>
                   </div>
 
                   {/* Skills required */}
@@ -434,11 +434,10 @@ export default function JobsTabContent() {
                   <Button
                     onClick={() => handleApply(job)}
                     disabled={isApplied || applying === job.name}
-                    className={`h-9 px-4 rounded-xl text-xs font-bold transition-all shadow-sm ${
-                      isApplied
+                    className={`h-9 px-4 rounded-xl text-xs font-bold transition-all shadow-sm ${isApplied
                         ? "bg-slate-100 border border-slate-200 text-slate-400 hover:bg-slate-100 cursor-not-allowed shadow-none"
                         : "bg-orange-500 hover:bg-orange-600 text-white"
-                    }`}
+                      }`}
                   >
                     {applying === job.name ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -450,7 +449,7 @@ export default function JobsTabContent() {
                   </Button>
 
                   {job.applied_status?.toLowerCase() === "selected" && (
-                    <Button 
+                    <Button
                       onClick={() => handleViewOfferLetter(job, "Job")}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-9 rounded-xl transition-all text-xs px-4"
                     >
@@ -536,7 +535,7 @@ export default function JobsTabContent() {
               <div>
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Job Description</h4>
                 <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4 text-sm text-slate-600 leading-relaxed max-h-48 overflow-y-auto"
-                     dangerouslySetInnerHTML={{ __html: selectedJob.job_description || "No description provided." }}>
+                  dangerouslySetInnerHTML={{ __html: selectedJob.job_description || "No description provided." }}>
                 </div>
               </div>
 
@@ -562,7 +561,7 @@ export default function JobsTabContent() {
                 Close
               </button>
               {selectedJob.applied_status?.toLowerCase() === "selected" && (
-                <Button 
+                <Button
                   onClick={() => {
                     handleViewOfferLetter(selectedJob, "Job");
                     setShowDetails(false);

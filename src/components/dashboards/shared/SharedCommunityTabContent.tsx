@@ -42,23 +42,20 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
   const fetchCommunities = async () => {
     setIsLoading(true);
     try {
-      const email = typeof window !== "undefined" ? localStorage.getItem("userEmail") || "" : "";
+      const email = typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || "") : "";
+      const capitalizedUserType = userType.charAt(0).toUpperCase() + userType.slice(1);
       const response = await getCommunities({
         user: email,
-        user_type: userType,
+        user_type: capitalizedUserType,
       });
       if (response) {
-        if (Array.isArray(response.message)) {
-          setCommunities(response.message);
-        } else if (Array.isArray(response.data)) {
-          setCommunities(response.data);
-        } else if (response.message && Array.isArray(response.message.communities)) {
-          setCommunities(response.message.communities);
-        } else if (response.data && Array.isArray(response.data.communities)) {
-          setCommunities(response.data.communities);
-        } else {
-          setCommunities([]);
+        let communitiesArray = response?.message?.data || response?.data?.data || response?.data || response?.message || [];
+        if (!Array.isArray(communitiesArray)) {
+          if (Array.isArray(response?.message?.communities)) communitiesArray = response.message.communities;
+          else if (Array.isArray(response?.data?.communities)) communitiesArray = response.data.communities;
+          else communitiesArray = [];
         }
+        setCommunities(Array.isArray(communitiesArray) ? communitiesArray : []);
       }
     } catch (error: any) {
       showToast(error.message || "Failed to load communities", "error");
@@ -71,18 +68,22 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const email = typeof window !== "undefined" ? localStorage.getItem("userEmail") || "" : "";
-      await createCommunity({
+      const email = typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || "") : "";
+      const capitalizedUserType = userType.charAt(0).toUpperCase() + userType.slice(1);
+      const response = await createCommunity({
         ...formData,
-        user_type: userType,
+        user_type: capitalizedUserType,
         community_owner: email,
       });
-      showToast("Community created successfully!", "success");
+      
+      const successMsg = response?.message?.message || response?.data?.message || "Community created successfully!";
+      showToast(successMsg, "success");
       setIsModalOpen(false);
       setFormData({ community_name: "", description: "", community_type: "Public" });
       fetchCommunities();
     } catch (error: any) {
-      showToast(error.message || "Failed to create community", "error");
+      const errMsg = error?.response?.data?.message?.message || error?.response?.data?.message || error.message || "Failed to create community";
+      showToast(errMsg, "error");
     } finally {
       setIsSubmitting(false);
     }

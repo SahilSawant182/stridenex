@@ -2,13 +2,23 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { buildProfileImageUrl } from "@/services/api.services";
-import { User, Menu, Search, LogOut, CreditCard, ChevronRight, Pen, Mail, Building2, Phone, Globe, MapPin, CheckCircle2, FileText, Target, Clock, Linkedin, Instagram, Map } from "lucide-react";
+import { User, Menu, Search, LogOut, CreditCard, ChevronRight, Pen, Mail, Building2, Phone, Globe, MapPin, CheckCircle2, FileText, Target, Clock, Linkedin, Instagram, Map, GraduationCap, University, Briefcase, UserCheck } from "lucide-react";
 import { LogoutModal } from "./LogoutModal";
 import { getStudentByEmail, getUserPackages } from "@/services/student.services";
 import { getIndustryByEmail } from "@/services/industry.services";
 import { getMentorByEmail } from "@/services/mentor.services";
 import { getCollegeDetails } from "@/services/college.services";
 import NotificationDropdown from "@/components/notifications/NotificationDropdown";
+
+const getRoleIcon = (role: string, className: string = "w-5 h-5") => {
+  switch (role) {
+    case 'student': return <GraduationCap className={`${className} text-orange-500`} />;
+    case 'college': return <University className={`${className} text-green-500`} />;
+    case 'industry': return <Briefcase className={`${className} text-purple-500`} />;
+    case 'mentor': return <UserCheck className={`${className} text-violet-500`} />;
+    default: return <User className={`${className} text-slate-500`} />;
+  }
+};
 
 function ProfileDetailsPopover({ role, currentUser, fullName, config, onClose }: any) {
   const [data, setData] = useState<any>(null);
@@ -570,8 +580,11 @@ export default function Navbar({ role }: NavbarProps) {
                 displayName.charAt(0).toUpperCase()
               )}
             </div>
-            <span className={`text-sm font-medium hidden sm:block transition-colors ${isShortsPage ? 'text-zinc-200' : 'text-slate-700'}`}>
+            <span className={`text-sm font-medium hidden sm:flex items-center gap-2 transition-colors ${isShortsPage ? 'text-zinc-200' : 'text-slate-700'}`}>
               {displayName}
+              <span className="flex items-center justify-center">
+                {getRoleIcon(role, "w-5 h-5")}
+              </span>
             </span>
           </button>
 

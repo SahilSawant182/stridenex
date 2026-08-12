@@ -6,7 +6,17 @@ import { usePathname, useRouter } from "next/navigation";
 import { dashboardConfig, type DashboardRole } from "@/config/dashboardNavigation";
 import { useAuth } from "@/context/AuthContext";
 import { buildProfileImageUrl } from "@/services/api.services";
-import { LogOut, Settings, HelpCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { LogOut, Settings, HelpCircle, ChevronLeft, ChevronRight, GraduationCap, University, Briefcase, UserCheck, User } from "lucide-react";
+
+const getRoleIcon = (role: string, className: string = "w-4 h-4") => {
+  switch (role) {
+    case 'student': return <GraduationCap className={`${className} text-orange-500`} />;
+    case 'college': return <University className={`${className} text-green-500`} />;
+    case 'industry': return <Briefcase className={`${className} text-purple-500`} />;
+    case 'mentor': return <UserCheck className={`${className} text-violet-500`} />;
+    default: return <User className={`${className} text-slate-500`} />;
+  }
+};
 import { motion } from "framer-motion";
 import { useState } from "react";
 
@@ -193,7 +203,10 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
               <div className={`font-semibold text-[13px] tracking-wide truncate ${isShortsPage ? 'text-zinc-200' : 'text-slate-800'}`}>
                 {fullName || "User"}
               </div>
-              <div className={`text-[11px] font-medium uppercase tracking-widest truncate ${isShortsPage ? 'text-zinc-550 text-zinc-500' : 'text-slate-500'}`}>
+              <div className={`text-[11px] font-medium uppercase tracking-widest truncate flex items-center gap-1.5 ${isShortsPage ? 'text-zinc-550 text-zinc-500' : 'text-slate-500'}`}>
+                <span className="flex items-center justify-center">
+                  {getRoleIcon(role, "w-[14px] h-[14px]")}
+                </span>
                 {config.roleName}
               </div>
             </div>
@@ -214,9 +227,9 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="absolute left-full ml-4 px-3 py-1.5 bg-slate-800 text-white text-xs font-medium rounded-md shadow-lg whitespace-nowrap z-50 pointer-events-none"
+                className="absolute left-full ml-4 px-3 py-1.5 bg-slate-800 text-white text-xs font-medium rounded-md shadow-lg whitespace-nowrap z-50 pointer-events-none flex items-center gap-2"
               >
-                {fullName || "User"} • {config.roleName}
+                {fullName || "User"} • {getRoleIcon(role, "w-[14px] h-[14px]")} {config.roleName}
               </motion.div>
             )}
           </div>

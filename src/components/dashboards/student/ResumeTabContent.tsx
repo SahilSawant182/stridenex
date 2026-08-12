@@ -174,7 +174,7 @@ export default function ResumeTabContent() {
     { name: "certificate_name", label: "Certificate Name", type: "text", placeholder: "e.g., AWS Certified Solutions Architect", required: true },
     { name: "issuing_organization", label: "Issuing Organization", type: "text", placeholder: "e.g., Amazon Web Services", required: true },
     { name: "issue_date", label: "Issue Date", type: "date", required: true, textTransform: "uppercase", testTransform: "uppercase" },
-    { name: "expiry_date", label: "Expiry Date", type: "date", required: false, textTransform: "uppercase", testTransform: "uppercase" },
+    { name: "expiry_date", label: "End Date", type: "date", required: false, textTransform: "uppercase", testTransform: "uppercase" },
     { name: "certificate_file", label: "Certificate File / URL", type: "url", placeholder: "e.g., https://credential-url.com", required: false }
   ];
 
@@ -514,7 +514,7 @@ export default function ResumeTabContent() {
                           <th className="py-3 px-4">Certificate Name</th>
                           <th className="py-3 px-4">Issuing Organization</th>
                           <th className="py-3 px-4">Issue Date</th>
-                          <th className="py-3 px-4">Expiry Date</th>
+                          <th className="py-3 px-4">End Date</th>
                           <th className="py-3 px-4">Certificate File</th>
                           <th className="py-3 px-4 text-center">Actions</th>
                         </tr>

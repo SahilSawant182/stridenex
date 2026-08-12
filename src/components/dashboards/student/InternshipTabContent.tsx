@@ -325,32 +325,28 @@ export default function InternshipTabContent() {
       title: "APPLIED",
       value: internships.filter(i => i.applied_status === "Applied").length.toString(),
       icon: Send,
-      iconBg: "bg-blue-50",
-      iconColor: "text-blue-600"
+      color: "blue"
     },
     {
       id: 2,
       title: "SHORTLISTED",
       value: internships.filter(i => i.applied_status === "Shortlisted").length.toString(),
       icon: CheckCircle2,
-      iconBg: "bg-emerald-50",
-      iconColor: "text-emerald-600"
+      color: "emerald"
     },
     {
       id: 3,
       title: "INTERVIEWS",
       value: statistics.scheduled_interview_count.toString(),
       icon: Calendar,
-      iconBg: "bg-purple-50",
-      iconColor: "text-purple-600"
+      color: "purple"
     },
     {
       id: 4,
       title: "MATCHING OPENINGS",
       value: (statistics.total_internships || internships.length).toString(),
       icon: Briefcase,
-      iconBg: "bg-orange-50",
-      iconColor: "text-orange-600"
+      color: "orange"
     }
   ];
 
@@ -408,25 +404,42 @@ export default function InternshipTabContent() {
       </motion.div>
 
       {/* Stats Grid */}
-      <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {statsData.map((stat) => (
-          <StatsWidget
+          <motion.div
             key={stat.id}
-            title={stat.title}
-            data={{
-              value: stat.value,
-              icon: stat.icon,
-              iconBg: stat.iconBg,
-              iconColor: stat.iconColor
-            }}
-          />
+            variants={item}
+            className={`bg-white rounded-2xl border border-slate-200 p-4 md:p-5 shadow-sm hover:shadow-md transition-all border-t-4 ${
+              stat.color === 'orange' ? 'border-t-orange-400' :
+              stat.color === 'blue' ? 'border-t-blue-400' :
+              stat.color === 'emerald' ? 'border-t-emerald-400' : 'border-t-purple-400'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-1">{stat.title}</p>
+                <p className="text-2xl font-black text-slate-900">{stat.value}</p>
+              </div>
+              <div className={`p-3 rounded-xl ${
+                stat.color === 'orange' ? 'bg-orange-50' :
+                stat.color === 'blue' ? 'bg-blue-50' :
+                stat.color === 'emerald' ? 'bg-emerald-50' : 'bg-purple-50'
+              }`}>
+                <stat.icon className={`w-5 h-5 ${
+                  stat.color === 'orange' ? 'text-orange-500' :
+                  stat.color === 'blue' ? 'text-blue-500' :
+                  stat.color === 'emerald' ? 'text-emerald-500' : 'text-purple-500'
+                }`} />
+              </div>
+            </div>
+          </motion.div>
         ))}
-      </motion.div>
+      </div>
 
       {/* Internships Grid */}
       <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {internships.map((internship, idx) => (
-          <BaseCard key={internship.name || idx} padding="none" className="h-full flex flex-col justify-between overflow-hidden border-slate-200 hover:shadow-lg transition-all group">
+          <BaseCard key={internship.name || idx} padding="none" className="h-full flex flex-col justify-between overflow-hidden border-slate-200 hover:border-orange-500 hover:shadow-lg transition-all group">
             <div className="p-5 flex-1 flex flex-col justify-between">
               <div>
                 {/* Header with Logo and Match */}
