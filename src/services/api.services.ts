@@ -188,3 +188,28 @@ export const buildProfileImageUrl = (fileUrl: string | null | undefined): string
   if (fileUrl.startsWith("http")) return fileUrl;
   return `${BASE_DOMAIN}${fileUrl}`;
 };
+
+export const createCommunity = async (payload: {
+  community_name: string;
+  description: string;
+  community_type: string;
+  user_type: string;
+  community_owner: string;
+}) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.community.community.create_community",
+    data: payload,
+  });
+};
+
+export const getCommunities = async (payload: {
+  user: string;
+  user_type: string;
+}) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.community.community.get_communities",
+    data: payload,
+  });
+};

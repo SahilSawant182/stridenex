@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import Dropdown from "@/components/ui/Dropdown";
 import { BASE_URL } from "@/services/api.services";
-import { getCampusDriveList, applyCampusDrive } from "@/services/student.services";
+import { getCampusDriveList, applyCampusDrive, getStudentByEmail } from "@/services/student.services";
 import { useAuth } from "@/context/AuthContext";
 import StatsWidget from "@/components/dashboards/widgets/StatsWidget";
 
@@ -50,7 +50,7 @@ export default function CampusDrivesTabContent() {
   const [selectedDrive, setSelectedDrive] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [search, setSearch] = useState("");
-  const [filterCollege, setFilterCollege] = useState("");
+  const [studentCollege, setStudentCollege] = useState("");
   const [filterSkill, setFilterSkill] = useState<string[]>([]);
 
   useEffect(() => {
@@ -68,22 +68,49 @@ export default function CampusDrivesTabContent() {
   }, [currentUser]);
 
   useEffect(() => {
+    if (currentUser) {
+      getStudentByEmail(currentUser).then(res => {
+        const studentData = res?.data?.data || res?.message?.data || res?.data || res;
+        if (studentData?.college) {
+          setStudentCollege(studentData.college);
+        }
+      }).catch(err => console.error("Error fetching student profile:", err));
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      fetchDrives();
+      if (currentUser) {
+        fetchDrives();
+      }
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [currentUser, filterCollege, filterSkill]);
+  }, [currentUser, studentCollege, filterSkill]);
 
   const fetchDrives = async () => {
     try {
       setLoading(true);
       const response = await getCampusDriveList({ 
         student: currentUser || undefined,
-        college: filterCollege || undefined,
+        college: studentCollege || undefined,
         required_skill: filterSkill.length > 0 ? filterSkill.join(",") : undefined
       });
-      const drivesArray = response?.data?.drives || response?.message?.data?.drives || response?.data || response?.message?.data || response?.message || response || [];
-      const driveList = Array.isArray(drivesArray) ? drivesArray : [];
+      let drivesArray = response?.data?.drives || response?.message?.data?.drives || response?.message?.drives || response?.drives;
+      
+      if (!drivesArray) {
+        if (Array.isArray(response?.data)) drivesArray = response.data;
+        else if (Array.isArray(response?.message?.data)) drivesArray = response.message.data;
+        else if (Array.isArray(response?.message)) drivesArray = response.message;
+        else if (Array.isArray(response)) drivesArray = response;
+      }
+      
+      const driveList = Array.isArray(drivesArray) ? drivesArray.map((d: any) => ({
+        ...d,
+        company: d.industry_name || d.industry || d.company,
+        role: d.job_title || d.role,
+        branch: d.college || d.branch
+      })) : [];
+      
       setDrives(driveList);
     } catch (err) {
       console.error("Error fetching campus drives:", err);
@@ -228,22 +255,7 @@ export default function CampusDrivesTabContent() {
 
         {/* Filter Fields */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="w-full md:w-48 z-20">
-            <Dropdown
-              id="college-filter"
-              modalTitle="Colleges"
-              placeholder="Filter by College"
-              endpoint={`${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`}
-              params={{ doctype: "College" }}
-              mapOptions={(data: any) => data.map((item: any) => ({
-                value: item.name,
-                label: item.name
-              }))}
-              value={filterCollege}
-              onChange={setFilterCollege}
-              searchable={true}
-            />
-          </div>
+
           <div className="w-full md:w-48 z-10">
             <Dropdown
               id="skill-filter"
