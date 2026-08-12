@@ -19,7 +19,9 @@ import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { getCampusDriveList, applyOpportunity } from "@/services/student.services";
+import Dropdown from "@/components/ui/Dropdown";
+import { BASE_URL } from "@/services/api.services";
+import { getCampusDriveList, applyCampusDrive } from "@/services/student.services";
 import { useAuth } from "@/context/AuthContext";
 import StatsWidget from "@/components/dashboards/widgets/StatsWidget";
 
@@ -48,6 +50,8 @@ export default function CampusDrivesTabContent() {
   const [selectedDrive, setSelectedDrive] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [search, setSearch] = useState("");
+  const [filterCollege, setFilterCollege] = useState("");
+  const [filterSkill, setFilterSkill] = useState<string[]>([]);
 
   useEffect(() => {
     // Load successfully applied drive IDs from localStorage
@@ -61,15 +65,25 @@ export default function CampusDrivesTabContent() {
         console.error("Error loading applied drives from localStorage:", err);
       }
     }
-    fetchDrives();
   }, [currentUser]);
+
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      fetchDrives();
+    }, 500);
+    return () => clearTimeout(delayDebounceFn);
+  }, [currentUser, filterCollege, filterSkill]);
 
   const fetchDrives = async () => {
     try {
       setLoading(true);
-      const response = await getCampusDriveList();
-      const rawData = response?.data || response?.message?.data || response?.message || response || [];
-      const driveList = Array.isArray(rawData) ? rawData : [];
+      const response = await getCampusDriveList({ 
+        student: currentUser || undefined,
+        college: filterCollege || undefined,
+        required_skill: filterSkill.length > 0 ? filterSkill.join(",") : undefined
+      });
+      const drivesArray = response?.data?.drives || response?.message?.data?.drives || response?.data || response?.message?.data || response?.message || response || [];
+      const driveList = Array.isArray(drivesArray) ? drivesArray : [];
       setDrives(driveList);
     } catch (err) {
       console.error("Error fetching campus drives:", err);
@@ -88,12 +102,11 @@ export default function CampusDrivesTabContent() {
       setApplying(drive.name);
       const payload = {
         student: currentUser,
-        opportunity_type: "Campus Drive",
-        opportunity_name: drive.name,
-        notes: "Applying to campus drive."
+        drive: drive.name,
+        remarks: "Applying to campus drive."
       };
 
-      const response = await applyOpportunity(payload);
+      const response = await applyCampusDrive(payload);
 
       // Check if successful (or duplicate warning 409)
       const isSuccess = response && (response.status === 200 || response.status === "200" || response.message?.status === 200 || response.message?.message?.includes("success"));
@@ -102,11 +115,7 @@ export default function CampusDrivesTabContent() {
         : response?.message;
 
       if (isSuccess || (errMsg && errMsg.toLowerCase().includes("already applied"))) {
-        const updated = [...successfullyApplied, drive.name];
-        setSuccessfullyApplied(updated);
-        if (typeof window !== "undefined") {
-          localStorage.setItem(`applied_campus_drives_${currentUser}`, JSON.stringify(updated));
-        }
+        setDrives(prev => prev.map(d => d.name === drive.name ? { ...d, applied_status: "Applied" } : d));
         setFeedback({
           type: "success",
           message: isSuccess 
@@ -154,7 +163,7 @@ export default function CampusDrivesTabContent() {
     {
       id: 2,
       title: "APPLIED DRIVES",
-      value: successfullyApplied.length.toString(),
+      value: drives.filter(d => d.applied_status && d.applied_status !== "Not Applied").length.toString(),
       icon: Check,
       iconBg: "bg-emerald-50",
       iconColor: "text-emerald-600"
@@ -209,24 +218,59 @@ export default function CampusDrivesTabContent() {
       )}
 
       {/* Header Section */}
-      <motion.div variants={item} className="flex flex-col md:flex-row items-center justify-between gap-6 px-1">
-        <div className="text-center md:text-left">
+      <motion.div variants={item} className="flex flex-col md:flex-row items-center justify-between gap-4 px-1">
+        <div className="text-center md:text-left flex-1">
           <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">College Campus Drives</h1>
           <p className="text-xs md:text-sm text-slate-500 font-medium mt-1 opacity-90 font-outfit">
             Participate and apply in active campus placement drives organized by your institution
           </p>
         </div>
 
-        {/* Search Field */}
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            type="text"
-            placeholder="Search drives or roles..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-11 bg-white border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus-visible:ring-orange-500 focus-visible:border-orange-500 shadow-sm"
-          />
+        {/* Filter Fields */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="w-full md:w-48 z-20">
+            <Dropdown
+              id="college-filter"
+              modalTitle="Colleges"
+              placeholder="Filter by College"
+              endpoint={`${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`}
+              params={{ doctype: "College" }}
+              mapOptions={(data: any) => data.map((item: any) => ({
+                value: item.name,
+                label: item.name
+              }))}
+              value={filterCollege}
+              onChange={setFilterCollege}
+              searchable={true}
+            />
+          </div>
+          <div className="w-full md:w-48 z-10">
+            <Dropdown
+              id="skill-filter"
+              modalTitle="Skills"
+              placeholder="Filter by Skill"
+              endpoint={`${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`}
+              params={{ doctype: "Skill" }}
+              mapOptions={(data: any) => data.map((item: any) => ({
+                value: item.name,
+                label: item.name
+              }))}
+              value={filterSkill}
+              onChange={setFilterSkill}
+              multiSelect={true}
+              searchable={true}
+            />
+          </div>
+          <div className="relative w-full md:w-64">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              type="text"
+              placeholder="Search drives or roles..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 h-11 bg-white border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus-visible:ring-orange-500 focus-visible:border-orange-500 shadow-sm"
+            />
+          </div>
         </div>
       </motion.div>
 
@@ -255,9 +299,11 @@ export default function CampusDrivesTabContent() {
       ) : (
         <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredDrives.map((drive, idx) => {
-            const hasApplied = successfullyApplied.includes(drive.name);
+            const hasApplied = drive.applied_status && drive.applied_status !== "Not Applied";
             const isClosed = drive.status?.toLowerCase() === "closed";
             const roleTitle = drive.job_title || drive.role || "Special Placement Drive";
+            const rawPackage = drive.package_offered || drive.package || "As per industry";
+            const formattedPackage = !isNaN(Number(rawPackage)) ? `${rawPackage} LPA` : rawPackage;
 
             return (
               <BaseCard
@@ -276,14 +322,22 @@ export default function CampusDrivesTabContent() {
                         <div>
                           <h3 className="font-bold text-slate-800 line-clamp-1">{roleTitle}</h3>
                           <p className="text-xs text-slate-500 font-medium">{drive.company || "Industry Partner"}</p>
+                          {drive.college && (
+                            <p className="text-[10px] text-slate-400 font-medium mt-0.5 flex items-center gap-1 line-clamp-1">
+                              <Building2 className="w-3 h-3 shrink-0" />
+                              {drive.college}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <Badge className={`${
-                        isClosed
-                          ? "bg-red-50 text-red-600 border-red-100"
-                          : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                        hasApplied 
+                          ? "bg-emerald-50 text-emerald-600 border-emerald-100"
+                          : isClosed
+                            ? "bg-red-50 text-red-600 border-red-100"
+                            : "bg-blue-50 text-blue-600 border-blue-100"
                       } rounded-full text-[9px] px-2 py-0.5 font-bold border`}>
-                        {drive.status || "Active"}
+                        {hasApplied ? drive.applied_status : isClosed ? "Closed" : "Active"}
                       </Badge>
                     </div>
 
@@ -291,7 +345,7 @@ export default function CampusDrivesTabContent() {
                     <div className="grid grid-cols-2 gap-3 my-4 p-3 bg-slate-50 rounded-xl text-xs font-medium text-slate-600 border border-slate-100">
                       <div className="flex items-center gap-2">
                         <DollarSign className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="truncate">{drive.package_offered || drive.package || "As per industry"}</span>
+                        <span className="truncate">{formattedPackage}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
@@ -388,7 +442,7 @@ export default function CampusDrivesTabContent() {
               <div className="grid grid-cols-2 gap-4 mt-4 p-4 bg-slate-50 rounded-xl border border-slate-100 text-sm font-medium text-slate-700">
                 <div>
                   <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Package Offered</p>
-                  <p className="mt-0.5 font-bold text-slate-800">{selectedDrive.package_offered || selectedDrive.package || "As per industry"}</p>
+                  <p className="mt-0.5 font-bold text-slate-800">{!isNaN(Number(selectedDrive.package_offered || selectedDrive.package)) ? `${selectedDrive.package_offered || selectedDrive.package} LPA` : (selectedDrive.package_offered || selectedDrive.package || "As per industry")}</p>
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Job Type</p>
@@ -400,7 +454,7 @@ export default function CampusDrivesTabContent() {
                 </div>
                 <div>
                   <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Status</p>
-                  <p className="mt-0.5 font-bold text-slate-800">{selectedDrive.status || "Active"}</p>
+                  <p className="mt-0.5 font-bold text-slate-800">{(selectedDrive.applied_status && selectedDrive.applied_status !== "Not Applied") ? selectedDrive.applied_status : (selectedDrive.status || "Active")}</p>
                 </div>
               </div>
 
@@ -415,7 +469,10 @@ export default function CampusDrivesTabContent() {
                 <div className="space-y-2">
                   <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Required Skills</h3>
                   <div className="flex flex-wrap gap-1.5">
-                    {String(selectedDrive.required_skill).split(",").map((s: string, i: number) => (
+                    {(Array.isArray(selectedDrive.required_skill)
+                      ? selectedDrive.required_skill.map((s: any) => (typeof s === 'string' ? s : s.skill)).filter(Boolean)
+                      : String(selectedDrive.required_skill).split(",")
+                    ).map((s: string, i: number) => (
                       <Badge key={i} className="bg-slate-100 text-slate-700 border-none rounded-lg text-xs font-medium px-2.5 py-1">
                         {s.trim()}
                       </Badge>

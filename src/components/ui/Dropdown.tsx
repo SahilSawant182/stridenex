@@ -21,6 +21,7 @@ interface DropdownProps {
   placeholder?: string;
   multiSelect?: boolean;
   searchable?: boolean;
+  modalTitle?: string;
 }
 
 export default function Dropdown({
@@ -37,7 +38,8 @@ export default function Dropdown({
   disabled = false,
   placeholder = "Select option",
   multiSelect = false,
-  searchable = true
+  searchable = true,
+  modalTitle
 }: DropdownProps) {
   const [options, setOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [loading, setLoading] = useState(false);
@@ -317,7 +319,7 @@ export default function Dropdown({
           >
             {/* Modal Header */}
             <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/50">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{placeholder || "Select option"}</span>
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{modalTitle || label || placeholder || "Select option"}</span>
               <button
                 onClick={() => { setIsOpen(false); setSearchTerm(""); }}
                 className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors"
