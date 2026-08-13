@@ -7,7 +7,8 @@ import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { SkillRadar } from "@/components/dashboards/shared/RadarChart";
 import { SummaryList } from "@/components/dashboards/shared/SummaryList";
 import { CircularScore } from "@/components/dashboards/shared/CircularScore";
-import { getSkillLedger, getEmployabilityScore, createStudentSkill, addSkillEvidence, getSkillTestQuestions, submitSkillTest } from "@/services/student.services";
+import { getSkillLedger, createStudentSkill, addSkillEvidence, getSkillTestQuestions, submitSkillTest } from "@/services/student.services";
+import { getSkillScore } from "@/services/api.services";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Check, ChevronRight, AlertCircle, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -109,7 +110,7 @@ export default function SkillsTabContent() {
 
       const [ledgerRes, scoreRes] = await Promise.all([
         getSkillLedger(studentEmail),
-        getEmployabilityScore(studentEmail)
+        getSkillScore({ student: studentEmail })
       ]);
 
       if (ledgerRes?.message) {

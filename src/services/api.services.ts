@@ -154,6 +154,14 @@ export const uploadProfilePicture = async (file: File): Promise<{ file_url: stri
   return { file_url: payload.file_url, file_name: payload.file_name };
 };
 
+export const getSkillScore = async (data: { student: string }) => {
+  return apiRequest({
+    url: "method/nexedu.skill_ledger.doctype.student_skill.student_skill.get_skill_score",
+    method: "POST",
+    data,
+  });
+};
+
 /**
  * Fetch the profile picture URL for the current user.
  */
@@ -210,6 +218,16 @@ export const getCommunities = async (payload: {
   return apiRequest({
     method: "POST",
     url: "method/stridenex_app.stridenex_app.doctype.community.community.get_communities",
+    data: payload,
+  });
+};
+
+export const getCommunity = async (payload: {
+  community: string;
+}) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.community.community.get_community",
     data: payload,
   });
 };

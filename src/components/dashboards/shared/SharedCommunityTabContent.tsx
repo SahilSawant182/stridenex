@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, Plus, Loader2, X, Search, Globe, Lock } from "lucide-react";
-import { createCommunity, getCommunities } from "@/services/api.services";
+import { createCommunity, getCommunities, getCommunity } from "@/services/api.services";
+import SharedCommunityDiscussionView from "./SharedCommunityDiscussionView";
 import { useToast } from "@/context/ToastContext";
 
 interface SharedCommunityTabContentProps {
@@ -26,6 +27,10 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
+  const [communityDetails, setCommunityDetails] = useState<any | null>(null);
+  const [isFetchingDetails, setIsFetchingDetails] = useState(false);
   const { showToast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -89,10 +94,64 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
     }
   };
 
+  const handleCommunityClick = async (community: Community) => {
+    setSelectedCommunityId(community.name);
+    setIsFetchingDetails(true);
+    try {
+      const response = await getCommunity({ community: community.name });
+      if (response && (response.message?.data || response.data?.data)) {
+        const data = response.message?.data || response.data?.data;
+        setCommunityDetails({
+          ...data,
+          id: data.name,
+          name: data.community_name,
+          category: data.community_type,
+          description: data.description,
+        });
+      } else {
+        // Fallback to list data if API fails to return expected format
+        setCommunityDetails({
+          ...community,
+          id: community.name,
+          name: community.community_name,
+          category: community.community_type,
+          description: community.description,
+        });
+      }
+    } catch (error: any) {
+      showToast(error.message || "Failed to fetch community details", "error");
+      setCommunityDetails({
+        ...community,
+        id: community.name,
+        name: community.community_name,
+        category: community.community_type,
+        description: community.description,
+      });
+    } finally {
+      setIsFetchingDetails(false);
+    }
+  };
+
   const filteredCommunities = (Array.isArray(communities) ? communities : []).filter(c => 
     c.community_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     c.description?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (selectedCommunityId && communityDetails) {
+    return (
+      <div className="fixed inset-0 z-[100] w-full h-full bg-[#0E0F10] text-white overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+        <div className="p-0 min-h-screen">
+          <SharedCommunityDiscussionView 
+            community={communityDetails} 
+            onBack={() => {
+              setSelectedCommunityId(null);
+              setCommunityDetails(null);
+            }} 
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
@@ -136,8 +195,14 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
               key={community.name || index}
-              className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow group cursor-pointer"
+              onClick={() => handleCommunityClick(community)}
+              className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow group cursor-pointer relative"
             >
+              {isFetchingDetails && selectedCommunityId === community.name && (
+                <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] rounded-2xl flex items-center justify-center z-10">
+                  <Loader2 className="w-8 h-8 animate-spin text-accent" />
+                </div>
+              )}
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
                   {community.community_type === "Private" ? <Lock className="w-6 h-6" /> : <Globe className="w-6 h-6" />}
