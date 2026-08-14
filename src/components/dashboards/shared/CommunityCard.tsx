@@ -19,6 +19,7 @@ interface CommunityCardProps {
     messageCount?: number;
   };
   isJoined?: boolean;
+  action?: string;
   onJoin?: (id: string) => void;
   className?: string;
 }
@@ -71,7 +72,7 @@ const categoryStyles: Record<string, { badge: string; iconBg: string; text: stri
   },
 };
 
-export function CommunityCard({ community, isJoined = false, onJoin, className = "" }: CommunityCardProps) {
+export function CommunityCard({ community, isJoined = false, action, onJoin, className = "" }: CommunityCardProps) {
   const styles = categoryStyles[community.category] || {
     badge: "bg-slate-50 text-slate-700 border-slate-200/60",
     iconBg: "bg-slate-100 text-slate-600 border border-slate-200/20",
@@ -145,7 +146,7 @@ export function CommunityCard({ community, isJoined = false, onJoin, className =
 
         {/* Dynamic Action Button */}
         <div className="mt-auto pt-4 border-t border-slate-100/60">
-          {isJoined ? (
+          {(isJoined || action === "leave") ? (
             <Button
               onClick={() => onJoin?.(community.id)}
               variant="outline"

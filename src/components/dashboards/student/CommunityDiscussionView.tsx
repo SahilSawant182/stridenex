@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { apiService, BASE_DOMAIN } from "@/services/api.services";
+import { apiService, BASE_DOMAIN, getPosts, getPostDetail, postComment, toggleCommentLike } from "@/services/api.services";
 import { getTags, createTag } from "@/services/student.services";
 import { useToast } from "@/context/ToastContext";
 
@@ -248,6 +248,7 @@ export default function CommunityDiscussionView({ community, onBack }: Community
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [repliesLoading, setRepliesLoading] = useState(false);
   const [newReplyText, setNewReplyText] = useState("");
+  const [replyingToCommentId, setReplyingToCommentId] = useState<string>("");
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [newPostTitle, setNewPostTitle] = useState("");
   const [newPostContent, setNewPostContent] = useState("");
@@ -548,18 +549,20 @@ export default function CommunityDiscussionView({ community, onBack }: Community
     if (post && post.id && isApiPostId(post.id)) {
       try {
         setRepliesLoading(true);
-        const res = await apiService.post(
-          "method/stridenex_app.api_stridenex_app.raven.get_replies",
-          { message_id: post.id }
-        );
-        const list = res?.message?.replies || res?.data?.message?.replies || (Array.isArray(res?.message) ? res.message : (Array.isArray(res?.data) ? res.data : []));
-        if (Array.isArray(list)) {
-          const apiReplies = list.map((r: any) => ({
-            author: r.owner ? r.owner.split("@")[0].split(/[._-]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "Anonymous",
-            content: stripHtml(r.text || ""),
-            time: r.creation ? formatCreationTime(r.creation) : "Just now",
-            image: r.image || undefined
+        const res = await getPostDetail({ post: post.id });
+        const data = res?.message?.data || res?.data?.data || res?.data || res?.message;
+        
+        if (data && Array.isArray(data.comments)) {
+          const apiReplies = data.comments.map((r: any) => ({
+            id: r.name,
+            author: r.comment_by || r.student || r.owner || "Anonymous",
+            content: stripHtml(r.content || r.comment || ""),
+            time: (r.posted_on || r.creation) ? formatCreationTime(r.posted_on || r.creation) : "Just now",
+            image: r.attachment || undefined,
+            likes: r.like_count || 0,
+            is_liked: !!r.is_liked
           }));
+          
           setSelectedPost(prev => prev && prev.id === post.id ? {
             ...prev,
             replies: apiReplies,
@@ -567,7 +570,7 @@ export default function CommunityDiscussionView({ community, onBack }: Community
           } : prev);
         }
       } catch (err) {
-        console.error("Error fetching replies:", err);
+        console.error("Error fetching post detail:", err);
       } finally {
         setRepliesLoading(false);
       }
@@ -575,45 +578,37 @@ export default function CommunityDiscussionView({ community, onBack }: Community
   };
 
   const mapApiMessageToPost = (msg: any): Post => {
-    const textContent = stripHtml(msg.text || "");
+    const textContent = stripHtml(msg.content || msg.text || "");
     const title = textContent.split("\n")[0] || "Untitled Question";
     const displayTitle = title.length > 80 ? title.substring(0, 80) + "..." : title;
     
+    const authorEmail = msg.author || msg.owner || "";
+    const authorName = authorEmail ? authorEmail.split("@")[0].split(/[._-]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "Anonymous";
+
+    const timeStr = msg.posted_on || msg.creation || "";
+
     return {
       id: msg.name,
       title: displayTitle,
-      author: msg.owner ? msg.owner.split("@")[0].split(/[._-]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "Anonymous",
-      timeAgo: msg.creation ? formatCreationTime(msg.creation) : "Recent",
-      likes: msg.likes || Math.floor(Math.random() * 15) + 2,
-      comments: 0,
+      author: authorName,
+      timeAgo: timeStr ? formatCreationTime(timeStr) : "Recent",
+      likes: msg.like_count || msg.likes || 0,
+      comments: msg.comment_count || 0,
       content: textContent,
       category: msg.channel_category || selectedCategory || "Category",
-      replies: [],
-      tags: ["api-integrated", msg.message_type || "Question"],
-      contributors: [msg.owner ? msg.owner.substring(0, 2).toUpperCase() : "U"]
+      replies: msg.comments || [],
+      tags: ["api-integrated", msg.post_type || msg.message_type || "Question"],
+      contributors: [authorName.substring(0, 2).toUpperCase()]
     };
   };
 
   const processApiMessages = (allMsgs: any[]): Post[] => {
-    const questions = allMsgs.filter(m => !m.is_reply && !m.linked_message);
-    const replies = allMsgs.filter(m => m.is_reply || m.linked_message);
-    
-    return questions.map(q => {
+    return allMsgs.map(q => {
       const qPost = mapApiMessageToPost(q);
-      const qReplies = replies
-        .filter(r => r.linked_message === q.name)
-        .map(r => ({
-          author: r.owner ? r.owner.split("@")[0].split(/[._-]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "Anonymous",
-          content: stripHtml(r.text || ""),
-          time: r.creation ? formatCreationTime(r.creation) : "Just now",
-          image: r.image || undefined
-        }));
-        
-      qPost.replies = qReplies;
-      qPost.comments = qReplies.length;
+      
       qPost.contributors = Array.from(new Set([
         qPost.author,
-        ...qReplies.map(r => r.author)
+        ...(qPost.replies || []).map((r: any) => r.author || "User")
       ])).slice(0, 4);
       
       return qPost;
@@ -623,21 +618,12 @@ export default function CommunityDiscussionView({ community, onBack }: Community
   const fetchCategoryQuestions = async (catName: string) => {
     try {
       setApiLoading(true);
-      const res = await apiService.post(
-        "method/stridenex_app.api_stridenex_app.raven.list_messages",
-        {
-          channel_id: community.id,
-          channel_category: catName
-        },
-        {
-          params: {
-            channel_id: community.id,
-            channel_category: catName
-          }
-        }
-      );
+      const res = await getPosts({
+        community: community.id,
+        category: catName
+      });
       
-      const list = res?.message || res?.data || [];
+      const list = res?.message?.data || res?.data || res?.message || [];
       if (Array.isArray(list) && list.length > 0) {
         const posts = processApiMessages(list);
         setCategoryQuestions(prev => ({
@@ -695,26 +681,18 @@ export default function CommunityDiscussionView({ community, onBack }: Community
 
   const handleLeaveCommunity = async () => {
     try {
-      const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
-      const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
-
-      const response = await fetch(
-        "https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.raven.leave_channel",
+      const email = typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || "") : "";
+      
+      const response = await apiService.post(
+        "method/stridenex_app.stridenex_app.doctype.community.community.leave_community",
         {
-          method: "POST",
-          headers: {
-            Authorization: `token ${apiKey}:${apiSecret}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            channel_id: community.id,
-          }),
+          community: community.id,
+          student: email
         }
       );
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || "Failed to leave space");
+      if (response?.message?.success === false) {
+        throw new Error(response.message.message || "Failed to leave space");
       }
 
       onBack();
@@ -750,36 +728,28 @@ export default function CommunityDiscussionView({ community, onBack }: Community
     };
 
     try {
-      const formData = new FormData();
-      formData.append("channel_id", community.id);
-      formData.append("reply_to_message", selectedPost.content || selectedPost.title || selectedPost.id);
-      formData.append("channel_category", selectedCategory || selectedPost.category || "Community");
-      formData.append("text", newReplyText);
-      if (replyImageFile) {
-        formData.append("file", replyImageFile);
-      }
+      const email = typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || "") : "";
+      const res = await postComment({
+        post: selectedPost.id,
+        comment: newReplyText,
+        parent_comment: replyingToCommentId, // Handle nested
+        student: email
+      });
 
-      const res = await apiService.post(
-        "method/stridenex_app.api_stridenex_app.raven.send_message",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      const msg = res?.message || res?.data?.message || res?.data;
+      const msg = res?.message?.data || res?.data?.data || res?.data || res?.message;
       if (msg) {
         apiReply = {
-          author: msg.owner ? msg.owner.split("@")[0].split(/[._-]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ") : "You (Student)",
-          content: stripHtml(msg.text || ""),
+          id: msg.name || `temp_${Date.now()}`,
+          author: msg.student || msg.owner || "You (Student)",
+          content: stripHtml(msg.comment || newReplyText),
           time: msg.creation ? formatCreationTime(msg.creation) : "Just now",
-          image: msg.image ? (msg.image.startsWith("http") || msg.image.startsWith("data:") ? msg.image : `${BASE_DOMAIN}${msg.image.startsWith("/") ? "" : "/"}${msg.image}`) : clientImage || undefined
+          image: msg.attachment || clientImage || undefined,
+          likes: 0,
+          is_liked: false
         };
       }
     } catch (err) {
-      console.error("Error sending reply to server:", err);
+      console.error("Error posting comment:", err);
     }
     
     // Find category
@@ -836,11 +806,57 @@ export default function CommunityDiscussionView({ community, onBack }: Community
     } : null);
 
     setNewReplyText("");
+    setReplyingToCommentId("");
     setSelectedReplyImage(null);
     setReplyImageFile(null);
   };
 
-  const handleCreatePost = () => {
+  const handleToggleCommentLike = async (commentId: string, currentLikeStatus: boolean) => {
+    if (!selectedPost) return;
+    
+    // Optimistic UI update
+    setSelectedPost(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        replies: prev.replies.map((r: any) => {
+          if (r.id === commentId) {
+            return {
+              ...r,
+              is_liked: !currentLikeStatus,
+              likes: currentLikeStatus ? Math.max(0, (r.likes || 0) - 1) : (r.likes || 0) + 1
+            };
+          }
+          return r;
+        })
+      };
+    });
+
+    try {
+      await toggleCommentLike({ comment: commentId });
+    } catch (err) {
+      console.error("Error toggling comment like:", err);
+      // Revert optimistic update
+      setSelectedPost(prev => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          replies: prev.replies.map((r: any) => {
+            if (r.id === commentId) {
+              return {
+                ...r,
+                is_liked: currentLikeStatus,
+                likes: currentLikeStatus ? (r.likes || 0) + 1 : Math.max(0, (r.likes || 0) - 1)
+              };
+            }
+            return r;
+          })
+        };
+      });
+    }
+  };
+
+  const handleCreatePost = async () => {
     if (!newPostTitle.trim() || !newPostContent.trim()) return;
 
     const newPostObj: Post = {
@@ -958,7 +974,7 @@ export default function CommunityDiscussionView({ community, onBack }: Community
             <div className="flex items-center gap-2">
               <span className="text-xl">💬</span>
               <h2 className="font-bold text-white tracking-tight text-sm md:text-base">{community.name} Space</h2>
-              <Badge className="bg-primary/20 text-primary border-primary/20 text-[10px] uppercase font-bold py-0.5">
+              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/20 text-[10px] uppercase font-bold py-0.5">
                 {community.category}
               </Badge>
             </div>
@@ -972,13 +988,6 @@ export default function CommunityDiscussionView({ community, onBack }: Community
             className="border-red-500/35 hover:border-red-500 bg-red-500/5 hover:bg-red-500 hover:text-white text-red-500 font-bold text-xs md:text-sm py-2 px-4 transition-all active:scale-[0.98]"
           >
             Leave Space
-          </Button>
-          <Button 
-            onClick={() => setShowCreatePost(true)}
-            className="bg-accent hover:bg-accent/90 text-white font-bold gap-2 text-xs md:text-sm py-2 px-4 shadow-lg hover:shadow-accent/20 transition-all active:scale-[0.98]"
-          >
-            <Plus className="w-4 h-4" />
-            Create Topic
           </Button>
         </div>
       </header>
@@ -997,7 +1006,7 @@ export default function CommunityDiscussionView({ community, onBack }: Community
                   activeTab === "categories" && !selectedCategory ? "bg-[#1E2024] text-white" : "text-slate-400 hover:text-white hover:bg-[#121315]/50"
                 }`}
               >
-                <Folder className="w-4 h-4 text-primary" />
+                <Folder className="w-4 h-4 text-blue-400" />
                 <span>Categories</span>
               </button>
               <button 
@@ -1029,7 +1038,7 @@ export default function CommunityDiscussionView({ community, onBack }: Community
                 ) : (categoriesList.length > 0 ? categoriesList : Object.keys(categoriesData).map(k => ({ name: k }))).map((cat: any, idx) => {
                   const catName = cat.category_name || cat.name;
                   const mockCat = categoriesData[catName];
-                  const colorClass = mockCat ? mockCat.color : "bg-primary";
+                  const colorClass = mockCat ? mockCat.color : "bg-blue-500";
                   return (
                     <div key={catName || idx} className="flex items-center gap-3 py-1">
                       <div className={`w-2.5 h-2.5 rounded-sm ${colorClass} flex-shrink-0`} />
@@ -1139,7 +1148,7 @@ export default function CommunityDiscussionView({ community, onBack }: Community
                         </div>
                         
                         <div className="flex items-center gap-3">
-                          <div className={`w-4 h-4 rounded-sm ${categoriesData[selectedCategory]?.color || "bg-primary"} flex-shrink-0`} />
+                          <div className={`w-4 h-4 rounded-sm ${categoriesData[selectedCategory]?.color || "bg-blue-500"} flex-shrink-0`} />
                           <h2 className="text-xl md:text-2xl font-extrabold text-white tracking-tight">
                             {selectedCategory}
                           </h2>
@@ -1443,7 +1452,7 @@ export default function CommunityDiscussionView({ community, onBack }: Community
                                 <span className="text-slate-600">•</span>
                                 <span className="text-[10px] text-slate-500">{post.timeAgo}</span>
                               </div>
-                              <Badge className="bg-primary/20 text-primary border-primary/20 text-[9px] uppercase font-bold py-0.5">
+                              <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/20 text-[9px] uppercase font-bold py-0.5">
                                 {post.category}
                               </Badge>
                             </div>
@@ -1502,7 +1511,7 @@ export default function CommunityDiscussionView({ community, onBack }: Community
                         <span className="text-[10px] text-slate-500 font-medium">{selectedPost.timeAgo}</span>
                       </div>
                     </div>
-                    <Badge className="bg-primary/20 text-primary border-primary/20">
+                    <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/20">
                       {selectedPost.category || community.name}
                     </Badge>
                   </div>
@@ -1573,6 +1582,24 @@ export default function CommunityDiscussionView({ community, onBack }: Community
                                 <img src={reply.image} alt="Reply attachment" className="w-full h-auto object-cover max-h-[300px]" />
                               </div>
                             )}
+                            <div className="flex items-center gap-4 mt-2">
+                              <button
+                                onClick={() => handleToggleCommentLike(reply.id, !!reply.is_liked)}
+                                className={`flex items-center gap-1.5 text-[10px] font-semibold transition-colors ${reply.is_liked ? "text-[#FF6B00]" : "text-slate-500 hover:text-slate-300"}`}
+                              >
+                                <Heart className="w-3 h-3" fill={reply.is_liked ? "currentColor" : "none"} />
+                                {reply.likes || 0}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setReplyingToCommentId(reply.id);
+                                  document.getElementById("reply-input-field")?.focus();
+                                }}
+                                className="text-[10px] font-semibold text-slate-500 hover:text-[#FF6B00] transition-colors"
+                              >
+                                Reply
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -1582,17 +1609,24 @@ export default function CommunityDiscussionView({ community, onBack }: Community
 
                 {/* Add Reply Input Panel */}
                 <div className="bg-[#121315] rounded-2xl border border-[#1F2023] p-5 flex flex-col gap-4 shadow-xl">
-                  <div className="flex gap-3 items-start">
-                    <div className="bg-[#1E2024] w-8 h-8 rounded-lg flex items-center justify-center font-bold text-slate-500 uppercase text-xs shrink-0 mt-1">
-                      YO
+                  {replyingToCommentId && (
+                    <div className="flex justify-between items-center bg-[#1F2023] px-3 py-2 rounded-lg text-xs text-slate-400">
+                      <span>Replying to comment...</span>
+                      <button onClick={() => setReplyingToCommentId("")} className="text-[#FF6B00] hover:text-[#FF6B00]/80">Cancel</button>
                     </div>
-                    <div className="flex-1 space-y-3">
+                  )}
+                  <div className="flex gap-3 items-start">
+                    <div className="bg-[#1E2024] w-8 h-8 rounded-full flex items-center justify-center font-bold text-slate-500 text-xs shrink-0 border border-[#2A2D35]">
+                      ME
+                    </div>
+                    <div className="flex-1 flex flex-col gap-3">
                       <textarea
+                        id="reply-input-field"
                         rows={3}
                         placeholder="Write a helpful reply, solution, or comment..."
                         value={newReplyText}
                         onChange={(e) => setNewReplyText(e.target.value)}
-                        className="w-full bg-[#0E0F10] border border-[#28292E] rounded-xl py-3 px-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-accent transition-all resize-none"
+                        className="w-full bg-[#0E0F10] border border-[#1F2023] rounded-xl p-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-[#FF6B00] transition-colors resize-none min-h-[80px]"
                       />
                       
                       {selectedReplyImage && (

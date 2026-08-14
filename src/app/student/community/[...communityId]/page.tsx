@@ -74,40 +74,27 @@ export default function CommunityDiscussionPage({
           headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
         }
 
-        // 1. Verify / Join channel
-        const joinUrl = `method/stridenex_app.api_stridenex_app.raven.join_channel`;
-        await apiService.post(joinUrl, { channel_id: communityId }, { headers });
-
-        // 2. Fetch channel list to get metadata
-        const channelsResponse = await apiService.get(
-          "method/stridenex_app.api_stridenex_app.raven.list_channels"
+        const response = await apiService.post(
+          "method/stridenex_app.stridenex_app.doctype.community.community.get_community",
+          { community: communityId }
         );
-        
+
+        let data = null;
+        if (response?.data) {
+          data = response.data;
+        } else if (response?.message?.data) {
+          data = response.message.data;
+        } else if (response?.message) {
+          data = response.message;
+        }
+
         let foundComm: CommunityDetails = {
           id: communityId,
-          name: formatChannelName(communityId).join(" & "),
-          category: "Public",
-          description: "",
+          name: data?.community_name || formatChannelName(communityId).join(" & "),
+          category: data?.community_type || "Public",
+          description: data?.description || getFallbackDescription(data?.community_type || "Public", data?.community_name || communityId),
         };
 
-        if (channelsResponse && channelsResponse.message) {
-          const rawChannel = channelsResponse.message.find(
-            (c: any) => c.name === communityId
-          );
-          if (rawChannel) {
-            const prettyName = formatChannelName(rawChannel.channel_name);
-            const prettyNameStr = prettyName.join(" & ");
-            foundComm = {
-              id: rawChannel.name,
-              name: prettyNameStr,
-              category: rawChannel.type || "Public",
-              description:
-                rawChannel.channel_description ||
-                getFallbackDescription(rawChannel.type, prettyNameStr),
-            };
-          }
-        }
-        
         setCommunity(foundComm);
         setIsValidated(true);
       } catch (err: any) {

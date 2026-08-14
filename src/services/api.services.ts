@@ -162,6 +162,14 @@ export const getSkillScore = async (data: { student: string }) => {
   });
 };
 
+export const createCategory = async (data: { category_name: string, description: string, parent_category: string }) => {
+  return apiRequest({
+    url: "method/stridenex_app.stridenex_app.doctype.community.community.create_category",
+    method: "POST",
+    data,
+  });
+};
+
 /**
  * Fetch the profile picture URL for the current user.
  */
@@ -213,11 +221,27 @@ export const createCommunity = async (payload: {
 
 export const getCommunities = async (payload: {
   user: string;
-  user_type: string;
+  user_type?: string;
 }) => {
   return apiRequest({
     method: "POST",
     url: "method/stridenex_app.stridenex_app.doctype.community.community.get_communities",
+    data: payload,
+  });
+};
+
+export const joinCommunity = async (payload: { community: string; student: string }) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.community.community.join_community",
+    data: payload,
+  });
+};
+
+export const leaveCommunity = async (payload: { community: string; student: string }) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.community.community.leave_community",
     data: payload,
   });
 };
@@ -228,6 +252,62 @@ export const getCommunity = async (payload: {
   return apiRequest({
     method: "POST",
     url: "method/stridenex_app.stridenex_app.doctype.community.community.get_community",
+    data: payload,
+  });
+};
+
+export const createPost = async (payload: {
+  community: string;
+  user: string;
+  content: string;
+  post_type: string;
+  category: string;
+}) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.community.community.create_post",
+    data: payload,
+  });
+};
+
+export const getPosts = async (payload: {
+  community: string;
+  category: string;
+}) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.community.community.get_posts",
+    data: payload,
+  });
+};
+
+export const getPostDetail = async (payload: {
+  post: string;
+}) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.community.community.get_post_detail",
+    data: payload,
+  });
+};
+
+export const postComment = async (payload: {
+  post: string;
+  comment: string;
+  parent_comment: string;
+  student: string;
+}) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.community.community.post_comment",
+    data: payload,
+  });
+};
+
+export const toggleCommentLike = async (payload: { comment: string }) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.community.community.toggle_comment_like",
     data: payload,
   });
 };

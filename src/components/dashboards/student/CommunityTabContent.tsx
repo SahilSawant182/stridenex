@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { CommunityCard } from "@/components/dashboards/shared/CommunityCard";
 import { FeedCard } from "@/components/dashboards/shared/FeedCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
-import { apiService } from "@/services/api.services";
+import { apiService, getCommunities, joinCommunity, leaveCommunity } from "@/services/api.services";
 import { useToast } from "@/context/ToastContext";
 import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 
@@ -142,23 +142,35 @@ export default function CommunityTabContent() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiService.get("method/stridenex_app.api_stridenex_app.raven.list_channels");
-      if (response && response.message) {
-        const rawChannels = response.message;
-        const mappedChannels = rawChannels.map((channel: any) => {
-          const prettyName = formatChannelName(channel.channel_name);
-          const prettyNameStr = prettyName.join(" & ");
+      const email = typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || "") : "";
+      const response = await getCommunities({
+        user: email
+      });
+      
+      let communitiesArray = response?.message?.data || response?.data?.data || response?.data || response?.message || [];
+      if (!Array.isArray(communitiesArray)) {
+        if (Array.isArray(response?.message?.communities)) communitiesArray = response.message.communities;
+        else if (Array.isArray(response?.data?.communities)) communitiesArray = response.data.communities;
+        else communitiesArray = [];
+      }
+
+      if (Array.isArray(communitiesArray)) {
+        const mappedChannels = communitiesArray.map((channel: any) => {
+          const prettyName = [channel.community_name || channel.name];
+          const prettyNameStr = prettyName.join(" ");
           return {
             id: channel.name,
             nameParts: prettyName,
-            rawName: channel.channel_name,
-            category: channel.type || "Public",
-            description: channel.channel_description || getFallbackDescription(channel.type, prettyNameStr),
-            icon: getFallbackIcon(channel.channel_name, channel.type),
+            rawName: channel.community_name,
+            category: channel.community_type || "Public",
+            description: channel.description || getFallbackDescription(channel.community_type, prettyNameStr),
+            icon: getFallbackIcon(channel.community_name, channel.community_type),
             owner: channel.owner,
-            creation: channel.creation,
+            creation: channel.created_on,
             memberCount: channel.member_count,
-            messageCount: channel.message_count
+            messageCount: 0,
+            isMember: channel.is_member === 1,
+            action: channel.action
           };
         });
         setCommunities(mappedChannels);
@@ -179,50 +191,32 @@ export default function CommunityTabContent() {
   }, []);
 
   const handleJoinCommunity = async (communityId: string) => {
-    if (joinedCommunities.includes(communityId)) {
+    const community = communities.find(c => c.id === communityId);
+    
+    if (community?.action === 'leave' || joinedCommunities.includes(communityId) || community?.isMember) {
       router.push(`/student/community/${communityId}`);
       return;
     }
 
+    const email = typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || "") : "";
+
     try {
-      const apiKey =
-        typeof window !== "undefined"
-          ? localStorage.getItem("apiKey")
-          : null;
-
-      const apiSecret =
-        typeof window !== "undefined"
-          ? localStorage.getItem("apiSecret")
-          : null;
-
-      const response = await fetch(
-        "https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.raven.join_channel",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `token ${apiKey}:${apiSecret}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            channel_id: communityId,
-          }),
-        }
-      );
-
-      const data = await response.json();
-
-      console.log("Status:", response.status);
-      console.log("Response:", data);
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed");
+      // Join
+      const response = await joinCommunity({
+        community: communityId,
+        student: email
+      });
+      
+      if (response?.message?.success || response?.message === "Success" || response?.data) {
+        setJoinedCommunities((prev) => [...prev, communityId]);
+        showToast("Successfully joined!", "success");
+        fetchChannels(); // Refresh the list
+      } else {
+        throw new Error("Failed to join community");
       }
-
-      setJoinedCommunities((prev) => [...prev, communityId]);
-      showToast("Successfully joined!", "success");
-      router.push(`/student/community/${communityId}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      showToast(err?.message || "Operation failed", "error");
     }
   };
 
@@ -299,7 +293,8 @@ export default function CommunityTabContent() {
               <CommunityCard
                 key={community.id}
                 community={community}
-                isJoined={joinedCommunities.includes(community.id)}
+                isJoined={joinedCommunities.includes(community.id) || community.isMember || community.action === 'leave'}
+                action={community.action}
                 onJoin={handleJoinCommunity}
               />
             ))}

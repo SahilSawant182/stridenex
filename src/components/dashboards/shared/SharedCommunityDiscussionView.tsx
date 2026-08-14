@@ -1,7 +1,9 @@
-import React, { useState } from "react";
-import { ArrowLeft, MessageSquare, Plus, Folder, Hash, Search, FileText } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ArrowLeft, MessageSquare, Plus, Folder, Hash, Search, FileText, Send, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
+import { useToast } from "@/context/ToastContext";
+import DashboardDynamicModal from "@/components/dashboards/shared/DashboardDynamicModal";
+import { createCategory, getPosts, createPost, getPostDetail, postComment, leaveCommunity } from "@/services/api.services";
 interface SharedCommunityDiscussionViewProps {
   community: any;
   onBack: () => void;
@@ -10,6 +12,201 @@ interface SharedCommunityDiscussionViewProps {
 export default function SharedCommunityDiscussionView({ community, onBack }: SharedCommunityDiscussionViewProps) {
   const [activeTab, setActiveTab] = useState<"categories" | "discussions" | "members">("categories");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isSubmittingCategory, setIsSubmittingCategory] = useState(false);
+  
+  // Category Posts Thread State
+  const [selectedCategory, setSelectedCategory] = useState<any>(null);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [isFetchingPosts, setIsFetchingPosts] = useState(false);
+  const [newPostContent, setNewPostContent] = useState("");
+  const [isSubmittingPost, setIsSubmittingPost] = useState(false);
+
+  const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [postDetails, setPostDetails] = useState<any>(null);
+  const [isFetchingPostDetails, setIsFetchingPostDetails] = useState(false);
+
+  const [newComment, setNewComment] = useState("");
+  const [replyingToCommentId, setReplyingToCommentId] = useState("");
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  const { showToast } = useToast();
+
+  const handleCreateCategory = async (formData: Record<string, any>) => {
+    try {
+      setIsSubmittingCategory(true);
+      const response = await createCategory({
+        category_name: formData.category_name,
+        description: formData.description,
+        parent_category: community.id || community.name,
+      });
+      
+      if (response?.message?.success === false || response?.success === false) {
+        throw new Error(response?.message?.message || response?.message || "Failed to create category");
+      }
+
+      const successMsg = response?.message?.message || response?.message || "Category created successfully!";
+      showToast(typeof successMsg === 'string' ? successMsg : "Category created successfully!", "success");
+      setIsCategoryModalOpen(false);
+      // NOTE: For a full UX, we'd trigger a refetch of the community details here
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.message?.message || error?.response?.data?.message || error.message || "Failed to create category";
+      showToast(typeof errMsg === 'string' ? errMsg : "Failed to create category", "error");
+    } finally {
+      setIsSubmittingCategory(false);
+    }
+  };
+
+  const fetchPosts = async (catName: string) => {
+    try {
+      setIsFetchingPosts(true);
+      const response = await getPosts({
+        community: community.id || community.name,
+        category: catName
+      });
+      if (response?.message?.data) {
+        setPosts(response.message.data);
+      } else if (response?.data) {
+        setPosts(response.data);
+      }
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.message?.message || error?.response?.data?.message || error.message || "Failed to fetch posts";
+      showToast(typeof errMsg === 'string' ? errMsg : "Failed to fetch posts", "error");
+    } finally {
+      setIsFetchingPosts(false);
+    }
+  };
+
+  const handlePostClick = async (post: any) => {
+    setSelectedPost(post);
+    setIsFetchingPostDetails(true);
+    setPostDetails(null);
+    setNewComment("");
+    setReplyingToCommentId("");
+    try {
+      const response = await getPostDetail({ post: post.name });
+      if (response?.message?.data) {
+        setPostDetails(response.message.data);
+      } else if (response?.data?.data) {
+        setPostDetails(response.data.data);
+      }
+    } catch (error: any) {
+      showToast(error.message || "Failed to fetch post details", "error");
+    } finally {
+      setIsFetchingPostDetails(false);
+    }
+  };
+
+  const handlePostComment = async () => {
+    if (!newComment.trim()) {
+      showToast("Comment cannot be empty", "error");
+      return;
+    }
+    try {
+      setIsSubmittingComment(true);
+      const studentEmail = typeof window !== 'undefined' ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || "") : "";
+      
+      const response = await postComment({
+        post: selectedPost.name,
+        comment: newComment,
+        parent_comment: replyingToCommentId,
+        student: studentEmail
+      });
+
+      if (response?.message?.success === false || response?.success === false) {
+        throw new Error(response?.message?.message || response?.message || "Failed to post comment");
+      }
+
+      const successMsg = response?.message?.message || response?.data?.message || "Comment posted successfully!";
+      showToast(typeof successMsg === 'string' ? successMsg : "Comment posted successfully!", "success");
+      
+      setNewComment("");
+      setReplyingToCommentId("");
+      
+      // Refresh post details
+      const detailResponse = await getPostDetail({ post: selectedPost.name });
+      if (detailResponse?.message?.data) {
+        setPostDetails(detailResponse.message.data);
+      } else if (detailResponse?.data?.data) {
+        setPostDetails(detailResponse.data.data);
+      }
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.message?.message || error?.response?.data?.message || error.message || "Failed to post comment";
+      showToast(typeof errMsg === 'string' ? errMsg : "Failed to post comment", "error");
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedCategory) {
+      fetchPosts(selectedCategory.category_name || selectedCategory.name);
+    }
+  }, [selectedCategory]);
+
+  const handleCreatePost = async () => {
+    if (!newPostContent.trim()) {
+      showToast("Post content cannot be empty", "error");
+      return;
+    }
+    try {
+      setIsSubmittingPost(true);
+      const studentEmail = typeof window !== 'undefined' ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || "") : "";
+      if (!studentEmail) {
+        showToast("User not found. Please log in again.", "error");
+        setIsSubmittingPost(false);
+        return;
+      }
+
+      const response = await createPost({
+        community: community.id,
+        user: studentEmail,
+        content: newPostContent,
+        post_type: "Text",
+        category: selectedCategory.category_name || selectedCategory.name
+      });
+      
+      if (response?.message?.success === false || response?.success === false) {
+        throw new Error(response?.message?.message || response?.message || "Failed to create post");
+      }
+
+      const successMsg = response?.message?.message || response?.data?.message || "Post created successfully!";
+      showToast(typeof successMsg === 'string' ? successMsg : "Post created successfully!", "success");
+      setNewPostContent("");
+      // Refresh posts
+      fetchPosts(selectedCategory.category_name || selectedCategory.name);
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.message?.message || error?.response?.data?.message || error.message || "Failed to create post";
+      showToast(typeof errMsg === 'string' ? errMsg : "Failed to create post", "error");
+    } finally {
+      setIsSubmittingPost(false);
+    }
+  };
+
+  const handleLeaveCommunity = async () => {
+    try {
+      const studentEmail = typeof window !== 'undefined' ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || "") : "";
+      if (!studentEmail) {
+        showToast("User not found. Please log in again.", "error");
+        return;
+      }
+      
+      const response = await leaveCommunity({
+        community: community.id || community.name,
+        student: studentEmail
+      });
+
+      if (response?.message?.success || response?.message === "Success" || response?.data) {
+        showToast("Successfully left community!", "success");
+        onBack();
+      } else {
+        throw new Error("Failed to leave community");
+      }
+    } catch (error: any) {
+      console.error("Error leaving community:", error);
+      showToast(error?.message || "Failed to leave community", "error");
+    }
+  };
 
   const categories = community?.categories || [];
   const tags = community?.tags || [];
@@ -20,7 +217,16 @@ export default function SharedCommunityDiscussionView({ community, onBack }: Sha
       <div className="flex items-center justify-between px-6 py-4 border-b border-[#1F2023] bg-[#121315]">
         <div className="flex items-center gap-4">
           <button 
-            onClick={onBack}
+            onClick={() => {
+              if (selectedPost) {
+                setSelectedPost(null);
+                setPostDetails(null);
+              } else if (selectedCategory) {
+                setSelectedCategory(null);
+              } else {
+                onBack();
+              }
+            }}
             className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-semibold"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -37,9 +243,11 @@ export default function SharedCommunityDiscussionView({ community, onBack }: Sha
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button className="h-8 bg-[#FF6B00] hover:bg-[#E66000] text-white text-xs font-bold border-0">
-            <Plus className="w-4 h-4 mr-1.5" />
-            Create Topic
+          <Button 
+            onClick={handleLeaveCommunity}
+            className="h-8 bg-red-500/10 hover:bg-red-500/20 text-red-500 hover:text-red-400 text-xs font-bold border-0"
+          >
+            Leave Community
           </Button>
         </div>
       </div>
@@ -86,7 +294,7 @@ export default function SharedCommunityDiscussionView({ community, onBack }: Sha
           <div className="p-4 border-t border-[#1F2023]">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Categories</h3>
-              <span className="text-slate-500 text-xs">▼</span>
+              <Plus className="w-3 h-3 text-slate-500 cursor-pointer hover:text-white" onClick={() => setIsCategoryModalOpen(true)} />
             </div>
             <div className="space-y-1">
               {categories.length > 0 ? (
@@ -125,77 +333,239 @@ export default function SharedCommunityDiscussionView({ community, onBack }: Sha
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 flex flex-col overflow-y-auto bg-[#0E0F10]">
-          <div className="max-w-5xl w-full mx-auto p-6 md:p-8">
-            {/* Header / Title */}
-            <div className="mb-8">
-              <h2 className="text-3xl font-extrabold text-white mb-4 tracking-tight">
-                Welcome to {community.community_name || community.name} discussions!
-              </h2>
-              <div className="flex items-start justify-between gap-6">
-                <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">
-                  {community.description || "A central space to collaborate, find support, ask technical questions, and share resources with fellow members."}
-                </p>
-                <div className="relative hidden md:block">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <input 
-                    type="text" 
-                    placeholder="Search discussions..." 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-64 bg-[#121315] border border-[#1F2023] rounded-full py-2 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF6B00] transition-colors"
-                  />
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col min-w-0 bg-[#0E0F10] relative">
+          {selectedPost ? (
+            <div className="flex-1 flex flex-col h-full bg-[#0E0F10]">
+              <div className="p-6 flex-1 overflow-y-auto">
+                {isFetchingPostDetails ? (
+                  <div className="flex justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF6B00]"></div>
+                  </div>
+                ) : postDetails ? (
+                  <div className="space-y-6 max-w-4xl mx-auto">
+                    {/* Post Content */}
+                    <div className="flex gap-4">
+                      <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0">
+                        <User className="w-6 h-6 text-slate-400" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-bold text-base text-white">{postDetails.author}</span>
+                          <span className="text-xs text-slate-500">
+                            {new Date(postDetails.posted_on).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-base text-slate-300 whitespace-pre-wrap mt-2">{postDetails.content}</p>
+                      </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="flex items-center gap-6 py-4 border-y border-[#1F2023]">
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
+                        <svg className="w-5 h-5" fill={postDetails.is_liked ? "#FF6B00" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
+                        </svg>
+                        <span>{postDetails.like_count} Likes</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
+                        <MessageSquare className="w-5 h-5" />
+                        <span>{postDetails.comment_count} Comments</span>
+                      </div>
+                    </div>
+
+                    {/* Comments Section */}
+                    <div>
+                      <h3 className="text-base font-bold text-white mb-4">Comments</h3>
+                      {postDetails.comments && postDetails.comments.length > 0 ? (
+                        <div className="space-y-4">
+                          {postDetails.comments.map((comment: any, idx: number) => (
+                            <div key={idx} className="bg-[#121315] p-5 rounded-xl border border-[#1F2023]">
+                              <div className="flex items-center gap-2 mb-3">
+                                <span className="font-bold text-sm text-white">{comment.comment_by || comment.student || "Anonymous"}</span>
+                                <span className="text-[10px] text-slate-500">
+                                  {new Date(comment.posted_on || comment.creation).toLocaleString()}
+                                </span>
+                              </div>
+                              <p className="text-sm text-slate-300 mb-3">{comment.content}</p>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-slate-500 italic">No comments yet.</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center p-8 text-slate-400">Failed to load post details.</div>
+                )}
+              </div>
+            </div>
+          ) : selectedCategory ? (
+            <div className="flex flex-col h-full bg-[#0E0F10]">
+              {/* Category Header */}
+              <div className="flex items-center gap-4 px-6 py-4 border-b border-[#1F2023] bg-[#121315]">
+                <button 
+                  onClick={() => setSelectedCategory(null)}
+                  className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-sm font-semibold"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to Categories
+                </button>
+                <div className="flex items-center gap-3 border-l border-[#1F2023] pl-4">
+                  <Folder className="w-5 h-5 text-blue-500" />
+                  <div>
+                    <h2 className="text-lg font-bold text-white leading-tight">{selectedCategory.category_name || selectedCategory.name}</h2>
+                  </div>
+                </div>
+              </div>
+
+              {/* Thread Content */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {isFetchingPosts ? (
+                  <div className="flex justify-center p-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF6B00]"></div>
+                  </div>
+                ) : posts.length > 0 ? (
+                  posts.map((post: any, idx: number) => (
+                    <div 
+                      key={idx} 
+                      className="bg-[#121315] border border-[#1F2023] rounded-xl p-4 flex gap-4 cursor-pointer hover:border-[#FF6B00]/50 transition-colors"
+                      onClick={() => handlePostClick(post)}
+                    >
+                      <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0">
+                        <User className="w-5 h-5 text-slate-400" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-bold text-sm text-white">{post.author || post.user || "User"}</span>
+                          <span className="text-xs text-slate-500">
+                            {new Date(post.posted_on || post.creation || Date.now()).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-300 whitespace-pre-wrap mb-3">{post.content}</p>
+                        <div className="flex items-center gap-4 text-xs font-semibold text-slate-500">
+                          <button className="flex items-center gap-1 hover:text-white transition-colors">
+                            <svg className="w-4 h-4" fill={post.is_liked ? "#FF6B00" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
+                            </svg>
+                            <span>{post.like_count || 0}</span>
+                          </button>
+                          <button className="flex items-center gap-1 hover:text-white transition-colors">
+                            <MessageSquare className="w-4 h-4" />
+                            <span>{post.comment_count || 0}</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center p-12 border border-dashed border-[#1F2023] rounded-xl">
+                    <MessageSquare className="w-12 h-12 text-slate-700 mx-auto mb-4" />
+                    <h3 className="text-lg font-bold text-white mb-2">No posts yet</h3>
+                    <p className="text-sm text-slate-400">Be the first to start the discussion in this category!</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Create Post Input */}
+              <div className="p-4 border-t border-[#1F2023] bg-[#121315]">
+                <div className="w-full flex items-center gap-3">
+                  <div className="flex-1 bg-[#0E0F10] border border-[#1F2023] rounded-xl overflow-hidden focus-within:border-[#FF6B00] transition-colors h-[48px]">
+                    <textarea 
+                      value={newPostContent}
+                      onChange={(e) => setNewPostContent(e.target.value)}
+                      placeholder={`Post something in ${selectedCategory.category_name || selectedCategory.name}...`}
+                      className="w-full h-full bg-transparent text-sm text-white px-4 py-3 focus:outline-none resize-none"
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleCreatePost}
+                    disabled={isSubmittingPost || !newPostContent.trim()}
+                    className="h-[48px] px-6 bg-[#FF6B00] hover:bg-[#E66000] text-white rounded-xl font-bold flex items-center justify-center gap-2"
+                  >
+                    {isSubmittingPost ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        <span>Post</span>
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
             </div>
+          ) : (
+            <div className="max-w-5xl w-full mx-auto p-6 md:p-8">
+              {/* Header / Title */}
+              <div className="mb-8">
+                <h2 className="text-3xl font-extrabold text-white mb-4 tracking-tight">
+                  Welcome to {community.community_name || community.name} discussions!
+                </h2>
+                <div className="flex items-start justify-between gap-6">
+                  <p className="text-sm text-slate-400 max-w-2xl leading-relaxed">
+                    {community.description || "A central space to collaborate, find support, ask technical questions, and share resources with fellow members."}
+                  </p>
+                  <div className="relative hidden md:block">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input 
+                      type="text" 
+                      placeholder="Search discussions..." 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-64 bg-[#121315] border border-[#1F2023] rounded-full py-2 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FF6B00] transition-colors"
+                    />
+                  </div>
+                </div>
+              </div>
 
-            {/* Sub Nav */}
-            <div className="flex items-center gap-6 border-b border-[#1F2023] mb-6">
-              <button 
-                onClick={() => setActiveTab("categories")}
-                className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${
-                  activeTab === "categories" ? "text-[#FF6B00] border-[#FF6B00]" : "text-slate-400 border-transparent hover:text-white"
-                }`}
-              >
-                Categories
-              </button>
-              <button 
-                onClick={() => setActiveTab("discussions")}
-                className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${
-                  activeTab === "discussions" ? "text-[#FF6B00] border-[#FF6B00]" : "text-slate-400 border-transparent hover:text-white"
-                }`}
-              >
-                Discussions Feed
-              </button>
-              <button 
-                onClick={() => setActiveTab("members")}
-                className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${
-                  activeTab === "members" ? "text-[#FF6B00] border-[#FF6B00]" : "text-slate-400 border-transparent hover:text-white"
-                }`}
-              >
-                Members
-              </button>
-            </div>
+              {/* Sub Nav */}
+              <div className="flex items-center gap-6 border-b border-[#1F2023] mb-6">
+                <button 
+                  onClick={() => setActiveTab("categories")}
+                  className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${
+                    activeTab === "categories" ? "text-[#FF6B00] border-[#FF6B00]" : "text-slate-400 border-transparent hover:text-white"
+                  }`}
+                >
+                  Categories
+                </button>
+                <button 
+                  onClick={() => setActiveTab("discussions")}
+                  className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${
+                    activeTab === "discussions" ? "text-[#FF6B00] border-[#FF6B00]" : "text-slate-400 border-transparent hover:text-white"
+                  }`}
+                >
+                  Discussions Feed
+                </button>
+                <button 
+                  onClick={() => setActiveTab("members")}
+                  className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${
+                    activeTab === "members" ? "text-[#FF6B00] border-[#FF6B00]" : "text-slate-400 border-transparent hover:text-white"
+                  }`}
+                >
+                  Members
+                </button>
+              </div>
 
-            {/* Tab Content */}
-            {activeTab === "categories" && (
-              <div className="space-y-4">
-                {categories.length > 0 ? (
-                  categories.map((cat: any, idx: number) => (
-                    <div key={idx} className="flex flex-col md:flex-row md:items-stretch bg-[#121315] border border-[#1F2023] rounded-xl overflow-hidden hover:border-[#334155] transition-colors cursor-pointer">
-                      {/* Left Side: Category Info */}
-                      <div className="flex-1 p-5 md:border-r border-[#1F2023]">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="w-3 h-3 rounded-sm bg-blue-500"></div>
-                          <h3 className="text-lg font-bold text-white">{cat.category_name || cat.name}</h3>
-                        </div>
-                        <p className="text-xs text-slate-400 mb-4 line-clamp-2">
-                          {cat.description || `Discussions related to ${cat.category_name || cat.name}.`}
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          <span className="px-2 py-1 bg-[#1F2023] rounded text-[10px] font-medium text-slate-300 border border-[#27272A]">Introductions</span>
-                          <span className="px-2 py-1 bg-[#1F2023] rounded text-[10px] font-medium text-slate-300 border border-[#27272A]">News</span>
+              {/* Tab Content */}
+              {activeTab === "categories" && (
+                <div className="space-y-4">
+                  {categories.length > 0 ? (
+                    categories.map((cat: any, idx: number) => (
+                      <div key={idx} onClick={() => setSelectedCategory(cat)} className="flex flex-col md:flex-row md:items-stretch bg-[#121315] border border-[#1F2023] rounded-xl overflow-hidden hover:border-[#FF6B00]/50 transition-colors cursor-pointer group">
+                        {/* Left Side: Category Info */}
+                        <div className="flex-1 p-5 md:border-r border-[#1F2023]">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="w-3 h-3 rounded-sm bg-blue-500 group-hover:bg-[#FF6B00] transition-colors"></div>
+                            <h3 className="text-lg font-bold text-white group-hover:text-[#FF6B00] transition-colors">{cat.category_name || cat.name}</h3>
+                          </div>
+                          <p className="text-xs text-slate-400 mb-4 line-clamp-2">
+                            {cat.description || `Discussions related to ${cat.category_name || cat.name}.`}
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            <span className="px-2 py-1 bg-[#1F2023] rounded text-[10px] font-medium text-slate-300 border border-[#27272A]">Introductions</span>
+                            <span className="px-2 py-1 bg-[#1F2023] rounded text-[10px] font-medium text-slate-300 border border-[#27272A]">News</span>
                         </div>
                       </div>
                       
@@ -278,8 +648,38 @@ export default function SharedCommunityDiscussionView({ community, onBack }: Sha
               </div>
             )}
           </div>
+          )}
         </div>
       </div>
+
+      <DashboardDynamicModal
+        isOpen={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        title="Create Category"
+        fields={[
+          {
+            name: "category_name",
+            label: "Category Name",
+            type: "text",
+            required: true,
+            placeholder: "e.g., Technology",
+            colSpan: 2
+          },
+          {
+            name: "description",
+            label: "Description",
+            type: "textarea",
+            required: true,
+            placeholder: "Category description",
+            colSpan: 2
+          }
+        ]}
+        onSubmit={handleCreateCategory}
+        loading={isSubmittingCategory}
+        headerIcon={Folder}
+        submitText="Create Category"
+      />
+
     </div>
   );
 }
