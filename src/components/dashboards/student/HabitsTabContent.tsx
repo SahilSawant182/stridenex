@@ -1,7 +1,7 @@
 // components/dashboards/student/HabitsTabContent.tsx
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     Flame,
     CheckCircle2,
@@ -156,6 +156,9 @@ const getImageUrl = (path: string | null) => {
     if (path.startsWith("http")) return path;
     const domain = BASE_DOMAIN.endsWith("/") ? BASE_DOMAIN.slice(0, -1) : BASE_DOMAIN;
     const cleanPath = path.startsWith("/") ? path : `/${path}`;
+    if (cleanPath.startsWith("/files/") || cleanPath.startsWith("/private/files/")) {
+        return `${domain}/api/method/nexedu.habits_builder.api.get_badge_icon?file_url=${encodeURIComponent(cleanPath)}`;
+    }
     return `${domain}${cleanPath}`;
 };
 
@@ -278,6 +281,7 @@ export default function HabitsTabContent() {
     const [loading, setLoading] = useState(true);
     const [badges, setBadges] = useState<BadgeItem[]>([]);
     const [newlyUnlockedBadge, setNewlyUnlockedBadge] = useState<BadgeItem | null>(null);
+    const [selectedBadge, setSelectedBadge] = useState<BadgeItem | null>(null);
 
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -363,27 +367,27 @@ export default function HabitsTabContent() {
                 );
             }
         },
-        {
-            name: "ai_generated",
-            label: "AI Generated",
-            type: "custom",
-            customRender: (formData: any, handleChange: (value: any) => void) => {
-                return (
-                    <div className="flex items-center gap-3 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={formData.ai_generated === 1}
-                            onChange={(e) => handleChange(e.target.checked ? 1 : 0)}
-                            className="w-4 h-4 text-orange-600 border-slate-300 rounded focus:ring-orange-500"
-                        />
-                        <div className="flex items-center gap-2">
-                            <Zap className="w-4 h-4 text-orange-500" />
-                            <span className="text-sm font-medium text-slate-700">AI Generated</span>
-                        </div>
-                    </div>
-                );
-            }
-        }
+        // {
+        //     name: "ai_generated",
+        //     label: "AI Generated",
+        //     type: "custom",
+        //     customRender: (formData: any, handleChange: (value: any) => void) => {
+        //         return (
+        //             <div className="flex items-center gap-3 cursor-pointer">
+        //                 <input
+        //                     type="checkbox"
+        //                     checked={formData.ai_generated === 1}
+        //                     onChange={(e) => handleChange(e.target.checked ? 1 : 0)}
+        //                     className="w-4 h-4 text-orange-600 border-slate-300 rounded focus:ring-orange-500"
+        //                 />
+        //                 <div className="flex items-center gap-2">
+        //                     <Zap className="w-4 h-4 text-orange-500" />
+        //                     <span className="text-sm font-medium text-slate-700">AI Generated</span>
+        //                 </div>
+        //             </div>
+        //         );
+        //     }
+        // }
     ];
     const [completingHabit, setCompletingHabit] = useState<string | null>(null);
 
@@ -586,9 +590,9 @@ export default function HabitsTabContent() {
                     setStatsData(prev => ({
                         ...prev,
                         last30Days: {
-                            done: data.done_30 !== undefined ? data.done_30 : doneCount,
-                            partial: data.partial_30 !== undefined ? data.partial_30 : partialCount,
-                            missed: data.missed_30 !== undefined ? data.missed_30 : missedCount,
+                            done: doneCount,
+                            partial: partialCount,
+                            missed: missedCount,
                             completionRate: calculatedRate
                         }
                     }));
@@ -1308,7 +1312,8 @@ export default function HabitsTabContent() {
                                     return (
                                         <div
                                             key={b.badge_id}
-                                            className="group relative flex flex-col items-center p-3 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-slate-50 transition-colors w-24"
+                                            onClick={() => setSelectedBadge(b)}
+                                            className="group relative flex flex-col items-center p-3 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-slate-50 transition-colors w-24 cursor-pointer"
                                         >
                                             <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${themeClass} flex items-center justify-center shadow-lg transition-transform duration-200 group-hover:scale-110 overflow-hidden`}>
                                                 {b.badge_icon ? (
@@ -1532,6 +1537,73 @@ export default function HabitsTabContent() {
                     </motion.div>
                 </div>
             )}
+
+            {/* Earned Badge Detail Popup Modal */}
+            <AnimatePresence>
+                {selectedBadge && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[9999] p-4" onClick={() => setSelectedBadge(null)}>
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 350 }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="bg-white rounded-3xl p-8 max-w-sm w-full border border-slate-100 shadow-2xl relative overflow-hidden flex flex-col items-center"
+                        >
+                            <button
+                                onClick={() => setSelectedBadge(null)}
+                                className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+
+                            <motion.div
+                                initial={{ y: -10, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                transition={{ delay: 0.1 }}
+                                className={`w-32 h-32 rounded-3xl bg-gradient-to-br ${selectedBadge.color_theme === 'Bronze' ? 'from-amber-500 to-amber-700 shadow-amber-500/25' :
+                                    selectedBadge.color_theme === 'Silver' ? 'from-slate-400 to-slate-600 shadow-slate-500/25' :
+                                        selectedBadge.color_theme === 'Gold' ? 'from-yellow-400 via-amber-500 to-yellow-600 shadow-yellow-500/25' :
+                                            selectedBadge.color_theme === 'Platinum' ? 'from-sky-400 via-indigo-500 to-purple-600 shadow-indigo-500/25' :
+                                                'from-cyan-400 via-teal-400 to-blue-600 shadow-cyan-500/25'
+                                    } text-white flex items-center justify-center shadow-2xl mb-6 overflow-hidden transform hover:rotate-3 transition-transform duration-300`}
+                            >
+                                {(() => {
+                                    if (selectedBadge.badge_icon) {
+                                        return <img src={getImageUrl(selectedBadge.badge_icon)} alt={selectedBadge.badge_name} className="w-full h-full object-cover" />;
+                                    }
+                                    const Icon = getBadgeIcon(selectedBadge.streak_count);
+                                    return <Icon className="w-16 h-16" />;
+                                })()}
+                            </motion.div>
+
+                            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1.5">Earned Badge</span>
+                            <h3 className="text-xl font-black text-slate-800 text-center mb-1">
+                                {selectedBadge.badge_name}
+                            </h3>
+                            <p className="text-xs font-bold text-slate-400 mb-4">{selectedBadge.streak_count}-Day Streak Milestone</p>
+
+                            <p className="text-sm text-slate-600 text-center bg-slate-50/80 rounded-2xl p-4 border border-slate-100/60 mb-6 font-semibold w-full">
+                                &quot;{selectedBadge.description}&quot;
+                            </p>
+
+                            {selectedBadge.earned_date && (
+                                <div className="text-xs font-bold text-slate-500 bg-emerald-50 text-emerald-700 px-3.5 py-2 rounded-xl border border-emerald-100/50 flex items-center gap-1.5 mb-6">
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                    <span>Unlocked on {new Date(selectedBadge.earned_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                </div>
+                            )}
+
+                            <Button
+                                onClick={() => setSelectedBadge(null)}
+                                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 rounded-2xl shadow-lg transition-transform active:scale-95"
+                            >
+                                Close View
+                            </Button>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
