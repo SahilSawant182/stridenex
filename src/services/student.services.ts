@@ -798,13 +798,19 @@ export const getRecommendedPaths = async (studentEmail: string) => {
 /**
  * Enroll student in a career path.
  */
-export const enrollStudentPath = async (studentEmail: string, careerPath: string) => {
+export const enrollStudentPath = async (
+  studentEmail: string,
+  careerPath: string,
+  pathGenerationMode?: string
+) => {
   try {
     const response = await apiService.post(
       "method/nexedu.path_finder.api.path_enrollment.enroll_student",
       {
         student: studentEmail,
-        career_path: careerPath
+        career_path: careerPath,
+        path_generation_mode: pathGenerationMode,
+        roadmap_source: pathGenerationMode
       }
     );
     return response;
@@ -813,6 +819,93 @@ export const enrollStudentPath = async (studentEmail: string, careerPath: string
     throw error;
   }
 };
+
+/**
+ * Get career path detail.
+ */
+export const getCareerPathDetail = async (careerPath: string, studentEmail?: string) => {
+  try {
+    const student = studentEmail || localStorage.getItem("currentUser") || "ac1@gmail.com";
+    const response = await apiService.get(
+      `method/nexedu.path_finder.api.path_enrollment.get_career_path_detail`,
+      {
+        params: {
+          career_path: careerPath,
+          student: student
+        }
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error getting career path detail:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get career recommendations.
+ */
+export const getCareerRecommendations = async (params: any) => {
+  try {
+    const response = await apiService.post(
+      "method/job_search_ai.api.career_trends.get_career_trends",
+      params
+    );
+    return response;
+  } catch (error) {
+    console.error("Error getting career recommendations:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get hierarchy skills for a path.
+ */
+export const getHierarchySkillsForPath = async (careerPath: string) => {
+  try {
+    const response = await apiService.get(
+      `method/nexedu.path_finder.api.path_enrollment.get_hierarchy_skills_for_path`,
+      {
+        params: {
+          career_path: careerPath
+        }
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error getting hierarchy skills for path:", error);
+    throw error;
+  }
+};
+
+/**
+ * Log milestone progress.
+ */
+export const logMilestoneProgress = async (
+  enrollmentId: string,
+  milestoneRowName: string,
+  score?: number,
+  aiFeedback?: string,
+  evidence?: string
+) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.path_finder.api.path_enrollment.log_milestone_progress",
+      {
+        enrollment: enrollmentId,
+        milestone_row_name: milestoneRowName,
+        score,
+        ai_feedback: aiFeedback,
+        evidence
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error logging milestone progress:", error);
+    throw error;
+  }
+};
+
 
 
 export const initiateSessionBooking = async (payload: any): Promise<any> => {
@@ -1432,9 +1525,9 @@ export const getCampusDriveList = async (params?: { college?: string, student?: 
     if (params?.college) queryParams.append('college', params.college);
     if (params?.student) queryParams.append('student', params.student);
     if (params?.required_skill) queryParams.append('required_skill', params.required_skill);
-    
+
     const queryString = queryParams.toString() ? `?${queryParams.toString()}` : "";
-    
+
     const response = await apiService.get(
       `method/stridenex_app.stridenex_app.doctype.college_campus_drives.college_campus_drives.get_campus_drive_list${queryString}`
     );
@@ -1454,6 +1547,27 @@ export const applyCampusDrive = async (data: { student: string, drive: string, r
     return response;
   } catch (error) {
     console.error("Error applying to campus drive:", error);
+    throw error;
+  }
+};
+
+/**
+ * Complete a milestone checklist point.
+ */
+export const completeMilestonePoint = async (data: {
+  enrollment: string;
+  milestone_title: string;
+  point_title: string;
+  completed: boolean;
+}) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.path_finder.api.path_enrollment.complete_milestone_point",
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error("Error completing milestone point:", error);
     throw error;
   }
 };
