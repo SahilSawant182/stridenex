@@ -94,11 +94,9 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
     }
   };
 
-  const handleCommunityClick = async (community: Community) => {
-    setSelectedCommunityId(community.name);
-    setIsFetchingDetails(true);
+  const fetchCommunityDetails = async (communityName: string, fallbackCommunity?: any) => {
     try {
-      const response = await getCommunity({ community: community.name });
+      const response = await getCommunity({ community: communityName });
       if (response && (response.message?.data || response.data?.data)) {
         const data = response.message?.data || response.data?.data;
         setCommunityDetails({
@@ -108,29 +106,36 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
           category: data.community_type,
           description: data.description,
         });
-      } else {
-        // Fallback to list data if API fails to return expected format
+      } else if (fallbackCommunity) {
         setCommunityDetails({
-          ...community,
-          id: community.name,
-          name: community.community_name,
-          category: community.community_type,
-          description: community.description,
+          ...fallbackCommunity,
+          id: fallbackCommunity.name,
+          name: fallbackCommunity.community_name,
+          category: fallbackCommunity.community_type,
+          description: fallbackCommunity.description,
         });
       }
     } catch (error: any) {
       showToast(error.message || "Failed to fetch community details", "error");
-      setCommunityDetails({
-        ...community,
-        id: community.name,
-        name: community.community_name,
-        category: community.community_type,
-        description: community.description,
-      });
-    } finally {
-      setIsFetchingDetails(false);
+      if (fallbackCommunity) {
+        setCommunityDetails({
+          ...fallbackCommunity,
+          id: fallbackCommunity.name,
+          name: fallbackCommunity.community_name,
+          category: fallbackCommunity.community_type,
+          description: fallbackCommunity.description,
+        });
+      }
     }
   };
+
+  const handleCommunityClick = async (community: Community) => {
+    setSelectedCommunityId(community.name);
+    setIsFetchingDetails(true);
+    await fetchCommunityDetails(community.name, community);
+    setIsFetchingDetails(false);
+  };
+
 
   const filteredCommunities = (Array.isArray(communities) ? communities : []).filter(c => 
     c.community_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -147,6 +152,10 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
               setSelectedCommunityId(null);
               setCommunityDetails(null);
             }} 
+            onRefresh={() => {
+              fetchCommunityDetails(selectedCommunityId);
+              fetchCommunities();
+            }}
           />
         </div>
       </div>

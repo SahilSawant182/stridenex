@@ -575,7 +575,7 @@ export const getEmployabilityDistribution = async (college: string) => {
 export const getOnboardingGrowth = async (college: string) => {
   try {
     const response = await apiService.get(
-      `method/stridenex_app.stridenex_app.doctype.college.college.get_onboarding_growth?college=${encodeURIComponent(college)}`
+      `method/stridenex_app.stridenex_app.doctype.college.college.get_student_onboarding_graph?college=${encodeURIComponent(college)}`
     );
     return response;
   } catch (error) {

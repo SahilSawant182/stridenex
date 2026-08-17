@@ -1,19 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, MessageSquare, Plus, Folder, Hash, Search, FileText, Send, User } from "lucide-react";
+import { ArrowLeft, MessageSquare, Plus, Folder, Hash, Search, FileText, Send, User, X, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/context/ToastContext";
 import DashboardDynamicModal from "@/components/dashboards/shared/DashboardDynamicModal";
-import { createCategory, getPosts, createPost, getPostDetail, postComment, leaveCommunity } from "@/services/api.services";
+import { createCategory, getPosts, createPost, getPostDetail, postComment, leaveCommunity, apiService } from "@/services/api.services";
 interface SharedCommunityDiscussionViewProps {
   community: any;
   onBack: () => void;
+  onRefresh?: () => void;
 }
 
-export default function SharedCommunityDiscussionView({ community, onBack }: SharedCommunityDiscussionViewProps) {
+export default function SharedCommunityDiscussionView({ community, onBack, onRefresh }: SharedCommunityDiscussionViewProps) {
   const [activeTab, setActiveTab] = useState<"categories" | "discussions" | "members">("categories");
   const [searchQuery, setSearchQuery] = useState("");
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isSubmittingCategory, setIsSubmittingCategory] = useState(false);
+  
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false);
+  const [isSubmittingTag, setIsSubmittingTag] = useState(false);
   
   // Category Posts Thread State
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
@@ -48,12 +52,40 @@ export default function SharedCommunityDiscussionView({ community, onBack }: Sha
       const successMsg = response?.message?.message || response?.message || "Category created successfully!";
       showToast(typeof successMsg === 'string' ? successMsg : "Category created successfully!", "success");
       setIsCategoryModalOpen(false);
-      // NOTE: For a full UX, we'd trigger a refetch of the community details here
+      if (onRefresh) {
+        onRefresh();
+      }
     } catch (error: any) {
       const errMsg = error?.response?.data?.message?.message || error?.response?.data?.message || error.message || "Failed to create category";
       showToast(typeof errMsg === 'string' ? errMsg : "Failed to create category", "error");
     } finally {
       setIsSubmittingCategory(false);
+    }
+  };
+
+  const handleCreateTag = async (formData: Record<string, any>) => {
+    try {
+      setIsSubmittingTag(true);
+      const response = await apiService.post(
+        "method/stridenex_app.stridenex_app.doctype.community.community.create_tag",
+        { title: formData.title }
+      );
+      
+      if (response?.message?.success === false || response?.success === false) {
+        throw new Error(response?.message?.message || response?.message || "Failed to create tag");
+      }
+
+      const successMsg = response?.message?.message || response?.message || "Tag created successfully!";
+      showToast(typeof successMsg === 'string' ? successMsg : "Tag created successfully!", "success");
+      setIsTagModalOpen(false);
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.message?.message || error?.response?.data?.message || error.message || "Failed to create tag";
+      showToast(typeof errMsg === 'string' ? errMsg : "Failed to create tag", "error");
+    } finally {
+      setIsSubmittingTag(false);
     }
   };
 
@@ -183,30 +215,7 @@ export default function SharedCommunityDiscussionView({ community, onBack }: Sha
     }
   };
 
-  const handleLeaveCommunity = async () => {
-    try {
-      const studentEmail = typeof window !== 'undefined' ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || "") : "";
-      if (!studentEmail) {
-        showToast("User not found. Please log in again.", "error");
-        return;
-      }
-      
-      const response = await leaveCommunity({
-        community: community.id || community.name,
-        student: studentEmail
-      });
 
-      if (response?.message?.success || response?.message === "Success" || response?.data) {
-        showToast("Successfully left community!", "success");
-        onBack();
-      } else {
-        throw new Error("Failed to leave community");
-      }
-    } catch (error: any) {
-      console.error("Error leaving community:", error);
-      showToast(error?.message || "Failed to leave community", "error");
-    }
-  };
 
   const categories = community?.categories || [];
   const tags = community?.tags || [];
@@ -242,14 +251,6 @@ export default function SharedCommunityDiscussionView({ community, onBack }: Sha
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Button 
-            onClick={handleLeaveCommunity}
-            className="h-8 bg-red-500/10 hover:bg-red-500/20 text-red-500 hover:text-red-400 text-xs font-bold border-0"
-          >
-            Leave Community
-          </Button>
-        </div>
       </div>
 
       {/* Main Layout */}
@@ -268,15 +269,6 @@ export default function SharedCommunityDiscussionView({ community, onBack }: Sha
               >
                 <Folder className={`w-4 h-4 ${activeTab === "categories" ? "text-blue-500" : ""}`} />
                 Categories
-              </button>
-              <button 
-                onClick={() => setActiveTab("discussions")}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  activeTab === "discussions" ? "bg-[#1F2023] text-white" : "text-slate-400 hover:text-white hover:bg-[#1F2023]/50"
-                }`}
-              >
-                <MessageSquare className={`w-4 h-4 ${activeTab === "discussions" ? "text-[#FF6B00]" : ""}`} />
-                Discussions Feed
               </button>
               <button 
                 onClick={() => setActiveTab("members")}
@@ -315,7 +307,7 @@ export default function SharedCommunityDiscussionView({ community, onBack }: Sha
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-[10px] font-extrabold text-slate-500 uppercase tracking-widest">Tags</h3>
               <div className="flex items-center gap-2">
-                <Plus className="w-3 h-3 text-slate-500 cursor-pointer hover:text-white" />
+                <Plus className="w-3 h-3 text-slate-500 cursor-pointer hover:text-white" onClick={() => setIsTagModalOpen(true)} />
                 <span className="text-slate-500 text-xs">▼</span>
               </div>
             </div>
@@ -388,6 +380,36 @@ export default function SharedCommunityDiscussionView({ community, onBack }: Sha
                                 </span>
                               </div>
                               <p className="text-sm text-slate-300 mb-3">{comment.content}</p>
+                              <div className="flex items-center gap-4 text-xs font-semibold text-slate-500">
+                                <button className="flex items-center gap-1.5 hover:text-[#FF6B00] transition-colors group">
+                                  <Heart className={`w-3.5 h-3.5 group-hover:text-[#FF6B00] transition-colors ${comment.is_liked ? 'text-[#FF6B00] fill-[#FF6B00]' : ''}`} />
+                                  <span>{comment.like_count || 0} Likes</span>
+                                </button>
+                                <button 
+                                  onClick={() => setReplyingToCommentId(comment.name)}
+                                  className="flex items-center gap-1.5 hover:text-[#FF6B00] transition-colors group"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5 group-hover:text-[#FF6B00] transition-colors" />
+                                  <span>Reply</span>
+                                </button>
+                              </div>
+                              
+                              {/* Display Replies */}
+                              {comment.replies && comment.replies.length > 0 && (
+                                <div className="mt-4 pl-4 border-l-2 border-[#1F2023] space-y-4">
+                                  {comment.replies.map((reply: any, rIdx: number) => (
+                                    <div key={rIdx} className="bg-[#1F2023]/50 p-4 rounded-xl">
+                                      <div className="flex items-center gap-2 mb-2">
+                                        <span className="font-bold text-xs text-white">{reply.comment_by || reply.student || "Anonymous"}</span>
+                                        <span className="text-[10px] text-slate-500">
+                                          {new Date(reply.posted_on || reply.creation).toLocaleString()}
+                                        </span>
+                                      </div>
+                                      <p className="text-xs text-slate-300">{reply.content}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -400,6 +422,42 @@ export default function SharedCommunityDiscussionView({ community, onBack }: Sha
                   <div className="text-center p-8 text-slate-400">Failed to load post details.</div>
                 )}
               </div>
+              
+              {/* Sticky Comment Input Panel */}
+              {postDetails && !isFetchingPostDetails && (
+                <div className="p-4 border-t border-[#1F2023] bg-[#121315]">
+                  <div className="max-w-4xl mx-auto w-full">
+                    {replyingToCommentId && (
+                      <div className="flex justify-between items-center bg-[#1F2023] px-3 py-2 rounded-lg text-xs text-slate-400 mb-2">
+                        <span>Replying to comment...</span>
+                        <button onClick={() => setReplyingToCommentId("")} className="text-[#FF6B00] hover:text-[#FF6B00]/80">Cancel</button>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="text"
+                        placeholder={`Post something in ${selectedCategory?.category_name || selectedCategory?.name || 'this post'}...`}
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && newComment.trim() && !isSubmittingComment) {
+                            handlePostComment();
+                          }
+                        }}
+                        className="flex-1 bg-[#0E0F10] border border-[#1F2023] rounded-lg p-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#FF6B00] transition-colors"
+                      />
+                      <button
+                        onClick={handlePostComment}
+                        disabled={isSubmittingComment || !newComment.trim()}
+                        className="bg-[#FF6B00] hover:bg-[#FF6B00]/90 text-white font-semibold py-3 px-6 rounded-lg text-sm transition-colors disabled:opacity-50 flex items-center gap-2"
+                      >
+                        <Send className="w-4 h-4" />
+                        {isSubmittingComment ? "Posting..." : "Post"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           ) : selectedCategory ? (
             <div className="flex flex-col h-full bg-[#0E0F10]">
@@ -531,14 +589,6 @@ export default function SharedCommunityDiscussionView({ community, onBack }: Sha
                   Categories
                 </button>
                 <button 
-                  onClick={() => setActiveTab("discussions")}
-                  className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${
-                    activeTab === "discussions" ? "text-[#FF6B00] border-[#FF6B00]" : "text-slate-400 border-transparent hover:text-white"
-                  }`}
-                >
-                  Discussions Feed
-                </button>
-                <button 
                   onClick={() => setActiveTab("members")}
                   className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${
                     activeTab === "members" ? "text-[#FF6B00] border-[#FF6B00]" : "text-slate-400 border-transparent hover:text-white"
@@ -594,19 +644,6 @@ export default function SharedCommunityDiscussionView({ community, onBack }: Sha
                     <p className="text-xs text-slate-400">This community doesn't have any categories defined.</p>
                   </div>
                 )}
-              </div>
-            )}
-
-            {activeTab === "discussions" && (
-              <div className="space-y-4">
-                <div className="text-center py-12 bg-[#121315] rounded-xl border border-[#1F2023]">
-                  <MessageSquare className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                  <h3 className="text-base font-semibold text-white mb-2">No discussions found</h3>
-                  <p className="text-sm text-slate-400">Be the first to start a conversation in this community!</p>
-                  <Button className="mt-6 bg-[#FF6B00] hover:bg-[#E66000] text-white">
-                    Start a Discussion
-                  </Button>
-                </div>
               </div>
             )}
 
@@ -678,6 +715,26 @@ export default function SharedCommunityDiscussionView({ community, onBack }: Sha
         loading={isSubmittingCategory}
         headerIcon={Folder}
         submitText="Create Category"
+      />
+
+      <DashboardDynamicModal
+        isOpen={isTagModalOpen}
+        onClose={() => setIsTagModalOpen(false)}
+        title="Create Tag"
+        fields={[
+          {
+            name: "title",
+            label: "Tag Title",
+            type: "text",
+            required: true,
+            placeholder: "e.g., React, Help, Bug",
+            colSpan: 2
+          }
+        ]}
+        onSubmit={handleCreateTag}
+        loading={isSubmittingTag}
+        headerIcon={Hash}
+        submitText="Create Tag"
       />
 
     </div>

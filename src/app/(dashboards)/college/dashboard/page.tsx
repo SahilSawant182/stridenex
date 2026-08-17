@@ -465,10 +465,16 @@ export default function CollegeDashboardPage() {
 
   // Format onboarding growth dynamically
   const displayMonthlyData = useMemo(() => {
-    if (!onboardingGrowth || !onboardingGrowth.monthly || onboardingGrowth.monthly.length === 0) {
-      return [];
-    }
-    return onboardingGrowth.monthly.map((m: any) => ({
+    if (!onboardingGrowth) return [];
+    
+    // Support both the old format (object with .monthly) and new format (direct array)
+    const dataArray = Array.isArray(onboardingGrowth) 
+      ? onboardingGrowth 
+      : (onboardingGrowth.monthly || []);
+      
+    if (dataArray.length === 0) return [];
+
+    return dataArray.map((m: any) => ({
       month: m.month || m.label || "",
       value: m.value !== undefined ? Number(m.value) : (m.count !== undefined ? Number(m.count) : 0)
     }));
@@ -790,7 +796,6 @@ export default function CollegeDashboardPage() {
             <CardHeader
               title="Student Onboarding Growth"
               icon={<TrendingUp className="w-4 h-4 text-slate-600" />}
-              action={{ label: "View Details" }}
             />
             {displayMonthlyData.length === 0 ? (
               <div className="h-40 flex flex-col items-center justify-center text-slate-400 font-semibold text-xs border border-dashed border-slate-200 rounded-xl mt-4 bg-slate-50/20">
@@ -826,7 +831,6 @@ export default function CollegeDashboardPage() {
             <CardHeader
               title="Top Skill Gaps"
               icon={<Target className="w-4 h-4 text-slate-600" />}
-              action={{ label: "View All" }}
             />
             {displaySkillGaps.length === 0 ? (
               <div className="h-40 flex flex-col items-center justify-center text-slate-400 font-semibold text-xs border border-dashed border-slate-200 rounded-xl mt-4 bg-slate-50/20 px-4 text-center">

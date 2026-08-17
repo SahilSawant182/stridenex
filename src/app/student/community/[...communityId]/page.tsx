@@ -12,6 +12,8 @@ interface CommunityDetails {
   name: string;
   category: string;
   description: string;
+  categories?: any[];
+  tags?: any[];
 }
 
 // Email and Name Formatting Helper
@@ -93,6 +95,8 @@ export default function CommunityDiscussionPage({
           name: data?.community_name || formatChannelName(communityId).join(" & "),
           category: data?.community_type || "Public",
           description: data?.description || getFallbackDescription(data?.community_type || "Public", data?.community_name || communityId),
+          categories: data?.categories || [],
+          tags: data?.tags || [],
         };
 
         setCommunity(foundComm);
