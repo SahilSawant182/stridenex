@@ -719,8 +719,8 @@ export default function CollegeDashboardPage() {
         ))}
       </motion.div>
 
-      {/* Main 3-Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* Main 2-Column Grid (since Action Required is hidden) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Left Column - Employability Distribution */}
         <motion.div variants={item}>
           <ProgressCard
@@ -777,15 +777,15 @@ export default function CollegeDashboardPage() {
           </BaseCard>
         </motion.div>
 
-        {/* Right Column - Action Required */}
-        <motion.div variants={item}>
+        {/* Right Column - Action Required - Hidden temporarily as requested */}
+        {/* <motion.div variants={item}>
           <ListCard
             title="Action Required"
             items={actionItems}
             variant="alerts"
             className="h-full border-slate-200"
           />
-        </motion.div>
+        </motion.div> */}
       </div>
 
       {/* Bottom 2-Column Grid */}

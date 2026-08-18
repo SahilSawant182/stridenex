@@ -350,20 +350,21 @@ export default function StudentsTabContent() {
                   <th className="px-6 py-4 font-medium">Internship</th>
                   <th className="px-6 py-4 font-medium">Status</th>
                   <th className="px-6 py-4 font-medium text-center">Risk</th>
-                  <th className="px-6 py-4 font-medium text-right">Action</th>
+                  {/* Action column hidden temporarily */}
+                  {/* <th className="px-6 py-4 font-medium text-right">Action</th> */}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-400 font-semibold">
+                    <td colSpan={7} className="py-12 text-center text-slate-400 font-semibold">
                       <Loader2 className="w-8 h-8 text-orange-500 animate-spin mx-auto mb-2" />
                       Loading student analytics records...
                     </td>
                   </tr>
                 ) : filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-400 font-semibold">
+                    <td colSpan={7} className="py-12 text-center text-slate-400 font-semibold">
                       <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                       No student records found
                     </td>
@@ -427,11 +428,12 @@ export default function StudentsTabContent() {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-3 text-right">
+                        {/* Action column cell hidden temporarily */}
+                        {/* <td className="px-6 py-3 text-right">
                           <button onClick={() => showToast(`Viewing profile of ${fullName}`, "info")} className="px-4 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-600 text-xs font-bold rounded-full transition-colors shadow-sm inline-flex items-center justify-center">
                             View
                           </button>
-                        </td>
+                        </td> */}
                       </tr>
                     );
                   })

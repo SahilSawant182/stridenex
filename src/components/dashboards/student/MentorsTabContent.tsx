@@ -691,7 +691,7 @@ export default function MentorsTabContent() {
     >
       {/* Main Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
+
         {/* Left Column: Offerings */}
         <div className="lg:col-span-8 space-y-6">
           {/* Offerings Header & Filters */}
@@ -746,7 +746,7 @@ export default function MentorsTabContent() {
                         {offering.status}
                       </Badge>
                     </div>
-                    
+
                     <div className="flex items-center gap-2 text-sm text-slate-600">
                       <Avatar className="w-6 h-6 shrink-0 ring-1 ring-slate-100 shadow-sm">
                         <AvatarFallback className="bg-purple-100 text-purple-700 text-xs">
@@ -755,7 +755,7 @@ export default function MentorsTabContent() {
                       </Avatar>
                       <span className="truncate">{offering.mentor_full_name}</span>
                     </div>
-                    
+
                     {offering.description && (
                       <p className="text-xs text-slate-500 line-clamp-2" title={offering.description}>
                         {offering.description}
@@ -769,7 +769,7 @@ export default function MentorsTabContent() {
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-orange-500" />
-                        <span>{offering.start_time.substring(0,5)} ({offering.duration_minutes}m)</span>
+                        <span>{offering.start_time.substring(0, 5)} ({offering.duration_minutes}m)</span>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <Users className="w-3.5 h-3.5 text-orange-500" />
@@ -777,23 +777,23 @@ export default function MentorsTabContent() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="p-3 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center mt-auto">
                     <div className="font-semibold text-slate-900 text-sm">
                       {offering.price_per_session > 0 ? `₹${offering.price_per_session}` : ""}
                     </div>
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       className="bg-orange-600 hover:bg-orange-700 text-white shadow-sm h-8 px-3 text-xs"
                       onClick={() => {
                         const mentorObj = mentors.find(m => m.email === offering.mentor);
                         if (mentorObj) {
-                           setSelectedMentorForBooking(mentorObj);
-                           setSelectedOfferingForBooking(offering);
-                           setGroupSessionData(offering);
-                           setBookingTopic(offering.title);
+                          setSelectedMentorForBooking(mentorObj);
+                          setSelectedOfferingForBooking(offering);
+                          setGroupSessionData(offering);
+                          setBookingTopic(offering.title);
                         } else {
-                           alert("Mentor details not loaded. Please search for the mentor directly.");
+                          alert("Mentor details not loaded. Please search for the mentor directly.");
                         }
                       }}
                     >
@@ -814,7 +814,7 @@ export default function MentorsTabContent() {
               {bookedSessions.length}
             </Badge>
           </div>
-          
+
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
             {loadingSessions ? (
               <div className="flex justify-center py-10">
@@ -832,18 +832,16 @@ export default function MentorsTabContent() {
                   <div key={idx} className="p-4 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0 relative overflow-hidden">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className={`text-[10px] font-medium border-0 px-2 py-0.5 rounded-sm ${
-                          session.priority === 'High' ? 'bg-red-50 text-red-700' :
-                          session.priority === 'Medium' ? 'bg-orange-50 text-orange-700' :
-                          'bg-emerald-50 text-emerald-700'
-                        }`}>
+                        <Badge variant="outline" className={`text-[10px] font-medium border-0 px-2 py-0.5 rounded-sm ${session.priority === 'High' ? 'bg-red-50 text-red-700' :
+                            session.priority === 'Medium' ? 'bg-orange-50 text-orange-700' :
+                              'bg-emerald-50 text-emerald-700'
+                          }`}>
                           {session.priority}
                         </Badge>
-                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-sm ${
-                          session.status === 'Scheduled' ? 'bg-blue-50 text-blue-700' :
-                          session.status === 'Completed' ? 'bg-emerald-50 text-emerald-700' :
-                          'bg-slate-100 text-slate-700'
-                        }`}>
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-sm ${session.status === 'Scheduled' ? 'bg-blue-50 text-blue-700' :
+                            session.status === 'Completed' ? 'bg-emerald-50 text-emerald-700' :
+                              'bg-slate-100 text-slate-700'
+                          }`}>
                           {session.status}
                         </span>
                       </div>
@@ -853,14 +851,14 @@ export default function MentorsTabContent() {
                         </span>
                       )}
                     </div>
-                    
+
                     <div>
                       <h4 className="font-medium text-slate-900 text-sm mb-1">{session.topic}</h4>
                       <p className="text-xs text-slate-500 mb-3 flex items-center gap-1.5">
                         <UserSquare2 className="w-3.5 h-3.5" />
                         {session.mentor}
                       </p>
-                      
+
                       <div className="flex items-center gap-4 text-xs text-slate-600 bg-white rounded-lg border border-slate-100 p-2">
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5 text-orange-500" />
@@ -868,7 +866,7 @@ export default function MentorsTabContent() {
                         </div>
                         <div className="flex items-center gap-1.5">
                           <Clock className="w-3.5 h-3.5 text-orange-500" />
-                          <span>{session.from_time?.substring(0,5)} - {session.to_time?.substring(0,5)}</span>
+                          <span>{session.from_time?.substring(0, 5)} - {session.to_time?.substring(0, 5)}</span>
                         </div>
                       </div>
                     </div>
@@ -1013,9 +1011,9 @@ export default function MentorsTabContent() {
                     >
                       Book Session
                     </Button>
-                    <Button variant="outline" size="icon" className="border-slate-200 shrink-0">
+                    {/* <Button variant="outline" size="icon" className="border-slate-200 shrink-0">
                       <ChevronRight className="w-4 h-4 text-slate-600" />
-                    </Button>
+                    </Button> */}
                   </div>
                 </div>
               </BaseCard>
