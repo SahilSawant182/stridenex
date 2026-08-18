@@ -24,6 +24,15 @@ const apiRequest = async (config: AxiosRequestConfig) => {
   };
   try {
     const response = await api({ ...config, headers });
+    
+    if (response.data?.message?.success === false || response.data?.success === false) {
+      const errorMessage = response.data?.message?.message || response.data?.message || "Operation failed";
+      const customError = new Error(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
+      (customError as any).status = 400; // Mock status
+      (customError as any).response = { data: response.data };
+      throw customError;
+    }
+
     return response.data;
   } catch (error: any) {
     if (error.response && error.response.status >= 400 && error.response.status < 500) {
@@ -64,7 +73,11 @@ const apiRequest = async (config: AxiosRequestConfig) => {
       }
 
       if (!serverMessage) {
-        serverMessage = data.message || (data.exc && typeof data.exc === 'string' && !data.exc.includes("Traceback") ? data.exc : null);
+        if (data.message && data.message.success === false && data.message.message) {
+          serverMessage = data.message.message;
+        } else {
+          serverMessage = data.message || (data.exc && typeof data.exc === 'string' && !data.exc.includes("Traceback") ? data.exc : null);
+        }
       }
 
       // Strip HTML tags from message
@@ -95,10 +108,11 @@ const apiRequest = async (config: AxiosRequestConfig) => {
         }
       }
 
-      const errorMessage = serverMessage || error.message || "An unexpected error occurred";
+      const errorMessage = typeof serverMessage === 'string' ? serverMessage : (error.message || "An unexpected error occurred");
       const customError = new Error(errorMessage);
       (customError as any).status = error.response.status;
       (customError as any).data = data;
+      (customError as any).response = error.response; // keep original response for UI catch blocks
       throw customError;
     }
     throw error;

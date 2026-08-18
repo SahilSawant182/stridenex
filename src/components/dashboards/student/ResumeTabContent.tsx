@@ -48,6 +48,7 @@ interface Internship {
   location: string;
   start_date: string;
   end_date: string;
+  mode: string;
   technologies_used: string;
 }
 
@@ -138,6 +139,7 @@ export default function ResumeTabContent() {
           location: item.location,
           start_date: item.start_date,
           end_date: item.end_date,
+          mode: item.mode,
           technologies: item.technologies_used || (item as any).technologies || ""
         })),
         project: updatedProjects
@@ -182,7 +184,8 @@ export default function ResumeTabContent() {
     { name: "company_name", label: "Company Name", type: "text", placeholder: "e.g., Razorpay", required: true },
     { name: "job_title", label: "Job Title", type: "text", placeholder: "e.g., Frontend Developer Intern", required: true },
     { name: "employment_type", label: "Employment Type", type: "select", options: ["Internship", "Industrial Training", "Apprenticeship", "Part Time", "Full Time"], required: true },
-    { name: "location", label: "Location", type: "text", placeholder: "e.g., Remote / Mumbai, India", required: true },
+    { name: "mode", label: "Mode of Attendance", type: "select", options: ["Remote", "Hybrid", "Onsite"], required: true },
+    { name: "location", label: "Location", type: "text", placeholder: "e.g., Mumbai, India", required: true },
     { name: "start_date", label: "Start Date", type: "date", required: true, textTransform: "uppercase", testTransform: "uppercase" },
     { name: "end_date", label: "End Date", type: "date", required: true, textTransform: "uppercase", testTransform: "uppercase" },
     { name: "technologies_used", label: "Technologies Used (comma separated)", type: "text", placeholder: "e.g., React, TypeScript, Tailwind", required: true }
@@ -290,6 +293,7 @@ export default function ResumeTabContent() {
         location: data.location,
         start_date: data.start_date,
         end_date: data.end_date,
+        mode: data.mode,
         technologies_used: data.technologies_used
       };
       if (editingIndex !== null) {
@@ -594,6 +598,7 @@ export default function ResumeTabContent() {
                           <th className="py-3 px-4">Company Name</th>
                           <th className="py-3 px-4">Job Title</th>
                           <th className="py-3 px-4">Employment Type</th>
+                          <th className="py-3 px-4">Mode</th>
                           <th className="py-3 px-4">Location</th>
                           <th className="py-3 px-4">Start Date</th>
                           <th className="py-3 px-4">End Date</th>
@@ -610,6 +615,7 @@ export default function ResumeTabContent() {
                             <td className="py-4 px-4">
                               <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-bold text-[10px]">{row.employment_type}</span>
                             </td>
+                            <td className="py-4 px-4 font-semibold text-slate-700">{row.mode}</td>
                             <td className="py-4 px-4">{row.location}</td>
                             <td className="py-4 px-4">{row.start_date}</td>
                             <td className="py-4 px-4">{row.end_date}</td>

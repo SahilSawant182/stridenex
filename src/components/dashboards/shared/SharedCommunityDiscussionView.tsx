@@ -57,7 +57,9 @@ export default function SharedCommunityDiscussionView({ community, onBack, onRef
       }
     } catch (error: any) {
       const errMsg = error?.response?.data?.message?.message || error?.response?.data?.message || error.message || "Failed to create category";
-      showToast(typeof errMsg === 'string' ? errMsg : "Failed to create category", "error");
+      const finalMsg = typeof errMsg === 'string' ? errMsg : "Failed to create category";
+      showToast(finalMsg, "error");
+      alert(finalMsg);
     } finally {
       setIsSubmittingCategory(false);
     }
@@ -83,7 +85,9 @@ export default function SharedCommunityDiscussionView({ community, onBack, onRef
       }
     } catch (error: any) {
       const errMsg = error?.response?.data?.message?.message || error?.response?.data?.message || error.message || "Failed to create tag";
-      showToast(typeof errMsg === 'string' ? errMsg : "Failed to create tag", "error");
+      const finalMsg = typeof errMsg === 'string' ? errMsg : "Failed to create tag";
+      showToast(finalMsg, "error");
+      alert(finalMsg);
     } finally {
       setIsSubmittingTag(false);
     }
@@ -209,7 +213,9 @@ export default function SharedCommunityDiscussionView({ community, onBack, onRef
       fetchPosts(selectedCategory.category_name || selectedCategory.name);
     } catch (error: any) {
       const errMsg = error?.response?.data?.message?.message || error?.response?.data?.message || error.message || "Failed to create post";
-      showToast(typeof errMsg === 'string' ? errMsg : "Failed to create post", "error");
+      const finalMsg = typeof errMsg === 'string' ? errMsg : "Failed to create post";
+      showToast(finalMsg, "error");
+      alert(finalMsg);
     } finally {
       setIsSubmittingPost(false);
     }

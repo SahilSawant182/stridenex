@@ -88,7 +88,9 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
       fetchCommunities();
     } catch (error: any) {
       const errMsg = error?.response?.data?.message?.message || error?.response?.data?.message || error.message || "Failed to create community";
-      showToast(errMsg, "error");
+      const finalMsg = typeof errMsg === 'string' ? errMsg : "Failed to create community";
+      showToast(finalMsg, "error");
+      alert(finalMsg);
     } finally {
       setIsSubmitting(false);
     }
