@@ -476,8 +476,8 @@ export default function EventsTabContent() {
         )}
       </motion.div>
 
-      {/* Featured Event */}
-      <motion.div variants={item} className="mt-6">
+      {/* Featured Event - Hidden temporarily as requested */}
+      {/* <motion.div variants={item} className="mt-6">
         <BaseCard className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-100">
           <div className="p-5 flex items-start justify-between">
             <div className="flex items-start gap-4">
@@ -513,7 +513,7 @@ export default function EventsTabContent() {
             </div>
           </div>
         </BaseCard>
-      </motion.div>
+      </motion.div> */}
 
       {/* Event Details Modal */}
       {selectedEventForDetails && (

@@ -2,9 +2,10 @@
 "use client";
 
 import { Building2, MapPin, Clock, IndianRupee } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 
 interface InternshipsWidgetProps {
   data?: any;
@@ -48,13 +49,17 @@ const defaultInternships = [
 
 export default function InternshipsWidget({ data }: InternshipsWidgetProps) {
   const internships = data || defaultInternships;
+  const router = useRouter();
 
   return (
     <BaseCard padding="lg">
       <CardHeader 
         title="Top Matched Internships" 
         icon={<span>🚀</span>}
-        action={{ label: "View All" }}
+        action={{ 
+          label: "View All",
+          onClick: () => router.push("/student/dashboard/internships")
+        }}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -93,14 +98,15 @@ export default function InternshipsWidget({ data }: InternshipsWidgetProps) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 mt-auto">
+              {/* Apply and Save buttons hidden temporarily */}
+              {/* <div className="flex items-center gap-2 mt-auto">
                 <Button className="flex-1 bg-orange-500 hover:bg-orange-600 text-white text-[13px] font-bold py-2.5 rounded-lg transition-colors shadow-sm">
                   Apply
                 </Button>
                 <Button variant="outline" className="px-4 py-2.5 border-slate-200 text-slate-600 hover:bg-slate-50 text-[13px] font-bold rounded-lg">
                   Save
                 </Button>
-              </div>
+              </div> */}
             </div>
           </BaseCard>
         ))}

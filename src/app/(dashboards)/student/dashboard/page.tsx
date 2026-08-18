@@ -269,17 +269,16 @@ export default function StudentDashboardPage() {
 
       {/* Main Content Grid */}
       <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Left Column (2/3 width) */}
-        <div className="lg:col-span-2">
+        {/* Left Column (3/3 width since AI Coach is hidden) */}
+        <div className="lg:col-span-3">
           {/* Learning Activity Heatmap */}
           <div className="h-full">
             <LearningActivityGraph data={learningActivityData} />
           </div>
         </div>
 
-        {/* Right Column (1/3 width) */}
-        <div>
-          {/* AI Coach */}
+        {/* Right Column (1/3 width) - Hidden for now as requested */}
+        {/* <div>
           <div className="h-full">
             <CoachWidget
               data={{
@@ -288,7 +287,7 @@ export default function StudentDashboardPage() {
               }}
             />
           </div>
-        </div>
+        </div> */}
       </motion.div>
 
       {/* Bottom Row */}

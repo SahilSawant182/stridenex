@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, Variants } from "framer-motion";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
-import { AlertTriangle, Clock, TrendingDown, Target, Zap, Loader2, ChevronDown } from "lucide-react";
+import { AlertTriangle, TrendingDown, Target, Loader2, ChevronDown } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import {
@@ -272,7 +272,8 @@ export default function InterventionsTabContent() {
         </motion.div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Single Column Grid (since AI Recommendations is hidden) */}
+      <div className="grid grid-cols-1 gap-4">
         {/* Left Column - Critical Students */}
         <motion.div variants={itemVariants}>
           <BaseCard className="border-slate-200 p-5 h-full">
@@ -354,8 +355,8 @@ export default function InterventionsTabContent() {
           </BaseCard>
         </motion.div>
 
-        {/* Right Column - AI Recommendations */}
-        <motion.div variants={itemVariants}>
+        {/* Right Column - AI Recommendations - Hidden temporarily as requested */}
+        {/* <motion.div variants={itemVariants}>
           <BaseCard className="border-slate-200 p-5 h-full">
             <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-4 mb-4">
               <Zap className="w-4 h-4 text-blue-500" fill="currentColor" />
@@ -382,7 +383,7 @@ export default function InterventionsTabContent() {
                ))}
             </div>
           </BaseCard>
-        </motion.div>
+        </motion.div> */}
       </div>
     </motion.div>
   );
