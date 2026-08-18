@@ -441,4 +441,18 @@ export const getMentorDashboardData = async (mentorEmail: string) => {
   }
 };
 
+export const markSessionCompleted = async (sessionName: string) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.mark_session_completed",
+      { session_name: sessionName }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error marking session completed:", error);
+    throw error;
+  }
+};
+
+
 

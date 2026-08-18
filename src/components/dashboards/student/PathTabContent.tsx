@@ -1036,28 +1036,28 @@ export default function PathTabContent() {
               </p>
             </div>
 
-            {/* Prerequisites and Missing Skills details */}
+            {/* Acquired Skills and Missing Skills details */}
             {pathData && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 pt-4 border-t border-slate-100">
-                {/* Prerequisites */}
-                <div className="bg-slate-50/60 rounded-xl p-4 border border-slate-100">
-                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5 font-mono">
-                    🔑 Prerequisite Skills
+                {/* Acquired Skills */}
+                <div className="bg-emerald-50/30 rounded-xl p-4 border border-emerald-100/60">
+                  <h4 className="text-xs font-bold text-emerald-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5 font-mono">
+                    ✅ Acquired Skills
                   </h4>
-                  {Array.isArray(pathData.prerequisite_skills) && pathData.prerequisite_skills.length > 0 ? (
+                  {Array.isArray(pathData.matched_skills) && pathData.matched_skills.length > 0 ? (
                     <div className="flex flex-wrap gap-2">
-                      {pathData.prerequisite_skills.map((prereq: any, idx: number) => {
-                        const skillName = prereq.prerequisite_skills || prereq.skill || prereq.name || "";
-                        const skillLevel = prereq.level || prereq.required_level || "Beginner";
+                      {pathData.matched_skills.map((matched: any, idx: number) => {
+                        const skillName = matched.skill || matched.name || "";
+                        const skillLevel = matched.current_level || matched.level || "Beginner";
                         return (
-                          <span key={idx} className="inline-flex items-center px-2.5 py-1 bg-white text-slate-700 text-xs font-semibold rounded-md border border-slate-200 shadow-sm">
-                            {skillName} <span className="ml-1 text-[10px] font-bold text-blue-600 bg-blue-50 px-1 rounded">{skillLevel}</span>
+                          <span key={idx} className="inline-flex items-center px-2.5 py-1 bg-white text-slate-700 text-xs font-semibold rounded-md border border-emerald-200/60 shadow-sm">
+                            {skillName} <span className="ml-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1 rounded">{skillLevel}</span>
                           </span>
                         );
                       })}
                     </div>
                   ) : (
-                    <p className="text-xs font-medium text-slate-400 italic">No prerequisites required</p>
+                    <p className="text-xs font-medium text-slate-400 italic">No acquired skills yet</p>
                   )}
                 </div>
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getUpcomingSessions, getSlotCalendar, getWeeklyBookedSessions, getMonthlyBookedSessions, blockTime, rescheduleSession, saveMentorAvailability, deleteMentorAvailability, getSessionNote, saveSessionNotes } from "@/services/mentor.services";
+import { getUpcomingSessions, getSlotCalendar, getWeeklyBookedSessions, getMonthlyBookedSessions, blockTime, rescheduleSession, saveMentorAvailability, deleteMentorAvailability, getSessionNote, saveSessionNotes, markSessionCompleted } from "@/services/mentor.services";
 import { useToast } from "@/context/ToastContext";
 
 import { motion } from "framer-motion";
@@ -20,7 +20,8 @@ import {
   FileText,
   User,
   Lock,
-  AlertCircle
+  AlertCircle,
+  Check
 } from "lucide-react";
 import { Pagination } from "@/components/ui/Pagination";
 
@@ -117,6 +118,52 @@ export default function ScheduleTabContent() {
   const [savingNotes, setSavingNotes] = useState(false);
   const [notesError, setNotesError] = useState("");
   const [notesSaved, setNotesSaved] = useState(false);
+
+  const [completingSessionId, setCompletingSessionId] = useState<string | null>(null);
+
+  const handleCompleteSession = async (sessionName: string) => {
+    if (!sessionName) return;
+    if (!confirm("Are you sure you want to mark this session as completed?")) return;
+
+    try {
+      setCompletingSessionId(sessionName);
+      await markSessionCompleted(sessionName);
+      showToast("Session marked as completed successfully.", "success");
+
+      const email = getMentorEmail(currentUser);
+      if (email) {
+        if (viewType === 'week') {
+          fetchWeeklyData();
+        } else {
+          fetchMonthlyData();
+        }
+        const upcomingRes = await getUpcomingSessions(email);
+        if (upcomingRes?.message && Array.isArray(upcomingRes.message)) {
+          setUpcoming(upcomingRes.message);
+        } else {
+          setUpcoming([]);
+        }
+      }
+    } catch (err: any) {
+      console.error("Failed to mark session as completed", err);
+      let errorMessage = "Failed to mark session as completed. Please try again.";
+      const errorData = err.data || err.response?.data;
+      if (errorData?._server_messages) {
+        try {
+          const messages = JSON.parse(errorData._server_messages);
+          if (messages.length > 0) {
+            const msgObj = JSON.parse(messages[0]);
+            errorMessage = msgObj.message || errorMessage;
+          }
+        } catch (e) { }
+      } else if (err.message && !err.message.includes("Traceback")) {
+        errorMessage = err.message;
+      }
+      showToast(errorMessage, "error");
+    } finally {
+      setCompletingSessionId(null);
+    }
+  };
 
   const handleOpenNotes = async (sessionId: string, studentEmail: string, studentName: string, topic: string) => {
     setNotesSessionId(sessionId);
@@ -758,6 +805,18 @@ export default function ScheduleTabContent() {
                       >
                         <Edit3 className="w-3.5 h-3.5" /> Prep Notes
                       </button>
+                      <button
+                        onClick={() => handleCompleteSession(session.id)}
+                        disabled={completingSessionId === session.id}
+                        className="px-3 py-1.5 text-emerald-600 hover:bg-emerald-50 bg-emerald-50/50 border border-emerald-100 text-sm font-semibold rounded-lg transition-colors flex items-center gap-1 justify-center disabled:opacity-50"
+                      >
+                        {completingSessionId === session.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5" />
+                        )}
+                        Complete
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -1342,7 +1401,7 @@ export default function ScheduleTabContent() {
                       <div className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1">
                         <User className="w-3 h-3" /> Shared with Student
                       </div>
-                      <span className="text-xs text-slate-400">Visible on student's profile</span>
+                      <span className="text-xs text-slate-400">Visible on student&apos;s profile</span>
                     </div>
                     <textarea
                       className="w-full text-sm text-slate-700 bg-white border border-emerald-200 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 resize-none"
