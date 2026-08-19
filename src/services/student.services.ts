@@ -781,6 +781,28 @@ export const getStudentCareerPath = async (studentEmail: string) => {
 };
 
 /**
+ * Fetch all available career paths in the system.
+ */
+export const getAllCareerPaths = async (searchQuery?: string, page: number = 1, pageLength: number = 20) => {
+  try {
+    const response = await apiService.get(
+      "method/nexedu.path_finder.app_api.get_all_career_paths",
+      {
+        params: {
+          search_query: searchQuery || undefined,
+          page,
+          page_length: pageLength
+        }
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching all career paths:", error);
+    throw error;
+  }
+};
+
+/**
  * Fetch recommended paths.
  */
 export const getRecommendedPaths = async (studentEmail: string) => {
@@ -816,6 +838,22 @@ export const enrollStudentPath = async (
     return response;
   } catch (error) {
     console.error("Error enrolling student path:", error);
+    throw error;
+  }
+};
+
+/**
+ * Delete student enrollment if it was paused/failed.
+ */
+export const deleteStudentEnrollment = async (enrollment: string) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.path_finder.api.path_enrollment.delete_student_enrollment",
+      { enrollment }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error deleting student enrollment:", error);
     throw error;
   }
 };
@@ -1568,6 +1606,26 @@ export const completeMilestonePoint = async (data: {
     return response;
   } catch (error) {
     console.error("Error completing milestone point:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get skill verification test result.
+ */
+export const getSkillTestResult = async (skillTestName: string) => {
+  try {
+    const response = await apiService.get(
+      "method/nexedu.api.skill_assessment_ai.get_skill_test_result",
+      {
+        params: {
+          skill_test_name: skillTestName
+        }
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error getting skill test result:", error);
     throw error;
   }
 };
