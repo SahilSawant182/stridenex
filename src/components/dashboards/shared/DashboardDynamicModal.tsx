@@ -82,7 +82,7 @@ export default function DashboardDynamicModal({
   onValuesChange,
   children,
   headerContent,
-  maxWidth = "max-w-2xl",
+  maxWidth = "max-w-4xl",
   hideFooter = false,
   submitText
 }: DashboardDynamicModalProps) {

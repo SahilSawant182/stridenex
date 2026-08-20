@@ -11,7 +11,7 @@ import { CircularScore } from "@/components/dashboards/shared/CircularScore";
 import { getSkillLedger, createStudentSkill, addSkillEvidence, getSkillTestQuestions, submitSkillTest } from "@/services/student.services";
 import { getSkillScore } from "@/services/api.services";
 import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Check, ChevronRight, AlertCircle, Sparkles, X } from "lucide-react";
+import { Plus, Check, ChevronRight, AlertCircle, Sparkles, X, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { useToast } from "@/context/ToastContext";
@@ -574,7 +574,7 @@ export default function SkillsTabContent() {
                 initial={{ scale: 0.95, opacity: 0, y: 20 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
                 exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-100"
+                className="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-100"
               >
                 {/* Header */}
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -790,6 +790,21 @@ export default function SkillsTabContent() {
                         </p>
                       </div>
 
+                      {/* Retest Motivation Message */}
+                      {!testResult.passed && (
+                        <div className="p-5 bg-gradient-to-r from-amber-500/5 to-rose-500/5 rounded-3xl border border-amber-100/70 flex items-start gap-4 shadow-sm animate-fadeIn">
+                          <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600 shrink-0 shadow-inner">
+                            <Sparkles className="w-5 h-5 animate-pulse" />
+                          </div>
+                          <div className="space-y-1">
+                            <h4 className="text-sm font-bold text-slate-800">Don't give up! We believe in you.</h4>
+                            <p className="text-xs text-slate-600 font-semibold leading-relaxed">
+                              Verification is designed to highlight areas of growth. Review the AI feedback and areas to improve below, continue practicing, and feel free to <span className="font-bold text-orange-600">retest this skill whenever you are ready</span>. Best of luck on your next try! 🚀
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Summary feedback */}
                       {testResult.feedback?.summary && (
                         <div className="space-y-2">
@@ -958,13 +973,32 @@ export default function SkillsTabContent() {
                       </>
                     )
                   ) : (
-                    <div className="w-full flex justify-end">
+                    <div className="w-full flex justify-end items-center gap-3">
                       <Button
                         onClick={() => setIsTestModalOpen(false)}
-                        className="px-8 h-12 rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10"
+                        className="px-8 h-12 rounded-xl text-sm font-bold bg-slate-100 text-slate-800 hover:bg-slate-200 transition-all border border-slate-200"
                       >
                         Close Result
                       </Button>
+                      {!testResult.passed && (
+                        <Button
+                          onClick={() => handleVerifySkillDirect(testSkill, testLevel)}
+                          disabled={isSubmitting}
+                          className="px-8 h-12 rounded-xl text-sm font-bold bg-orange-500 text-white hover:bg-orange-600 transition-all shadow-xl shadow-orange-500/15 flex items-center gap-2 disabled:opacity-50"
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            <>
+                              <RotateCcw className="w-4 h-4" />
+                              Retest Skill
+                            </>
+                          )}
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
