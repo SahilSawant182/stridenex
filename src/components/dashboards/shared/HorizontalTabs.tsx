@@ -41,14 +41,14 @@ const tabConfig = {
     { name: "Overview", icon: LayoutDashboard, path: "/student/dashboard" },
     { name: "Skill Ledger", icon: Code, path: "/student/dashboard/skills" },
     { name: "Skill Path", icon: Target, path: "/student/dashboard/path" },
-    { name: "Shorts", icon: Video, path: "/student/dashboard/shorts" },
-    { name: "Community", icon: Users, path: "/student/dashboard/community" },
+    { name: "Habits", icon: CheckSquare, path: "/student/dashboard/habits" },
     { name: "Projects", icon: FolderGit2, path: "/student/dashboard/projects" },
     { name: "Internships", icon: Briefcase, path: "/student/dashboard/internships" },
     { name: "Jobs", icon: Award, path: "/student/dashboard/jobs" },
     { name: "Campus Drives", icon: Building2, path: "/student/dashboard/campus-drives" },
-    { name: "Habits", icon: CheckSquare, path: "/student/dashboard/habits" },
     { name: "Mentors", icon: UserCircle, path: "/student/dashboard/mentors" },
+    { name: "Shorts", icon: Video, path: "/student/dashboard/shorts" },
+    { name: "Community", icon: Users, path: "/student/dashboard/community" },
     { name: "Events", icon: Calendar, path: "/student/dashboard/events" },
     { name: "Stories", icon: BookOpen, path: "/student/dashboard/stories" },
   ],
@@ -75,11 +75,10 @@ const tabConfig = {
     { name: "Overview", icon: LayoutDashboard, path: "/industry/dashboard" },
     { name: "Company Profile", icon: Building2, path: "/industry/dashboard/company-profile" },
     { name: "Pipeline", icon: Mail, path: "/industry/dashboard/pipeline" },
-    { name: "Community", icon: Users, path: "/industry/dashboard/community" },
     { name: "Projects", icon: FolderGit2, path: "/industry/dashboard/projects" },
-
     { name: "Internships", icon: UserCheck, path: "/industry/dashboard/internships" },
     { name: "Job Profiles", icon: Briefcase, path: "/industry/dashboard/jobs" },
+    { name: "Community", icon: Users, path: "/industry/dashboard/community" },
     // { name: "Feedback", icon: Star, path: "/industry/dashboard/feedback" },
     // { name: "Analytics", icon: Calendar, path: "/industry/dashboard/analytics" },
     { name: "Settings", icon: Settings, path: "/industry/dashboard/settings" },
@@ -100,7 +99,7 @@ export default function HorizontalTabs({ role }: HorizontalTabsProps) {
   };
 
   return (
-    <div className="w-full bg-white rounded-full border border-slate-200 p-1.5 shadow-sm mb-6">
+    <div className="w-full bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm mb-6">
       <div className="flex items-center justify-around w-full">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -116,7 +115,7 @@ export default function HorizontalTabs({ role }: HorizontalTabsProps) {
               key={tab.path}
               href={tab.path}
               title={tab.name}
-              className={`relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 ${isActive
+              className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${isActive
                 ? "text-slate-900 bg-slate-100 scale-105"
                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 hover:scale-105"
                 }`}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Loader2, Save, LucideIcon, ChevronDown, Check, Search, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -81,7 +82,7 @@ export default function DashboardDynamicModal({
   onValuesChange,
   children,
   headerContent,
-  maxWidth = "max-w-2xl",
+  maxWidth = "max-w-4xl",
   hideFooter = false,
   submitText
 }: DashboardDynamicModalProps) {
@@ -89,6 +90,11 @@ export default function DashboardDynamicModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeSelect, setActiveSelect] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Track which initial values we've already loaded to avoid infinite loops
   const lastInitialValuesRef = useRef<string>("");
@@ -263,110 +269,119 @@ export default function DashboardDynamicModal({
     }
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4"
+        >
+          {/* StrideNex Logo brought to front */}
+          <div className="absolute top-0 left-0 h-[72px] flex items-center px-6 z-[110] pointer-events-none">
+            <img
+              src="/images/Logo.png"
+              alt="StrideNex Logo"
+              className="w-48 h-12 object-contain drop-shadow-sm"
+            />
+          </div>
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4"
+            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+            onClick={(e) => e.stopPropagation()}
+            className={`bg-white rounded-[2rem] shadow-2xl w-full ${maxWidth} max-h-[90vh] overflow-hidden flex flex-col border border-slate-100`}
           >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              onClick={(e) => e.stopPropagation()}
-              className={`bg-white rounded-[2rem] shadow-2xl w-full ${maxWidth} max-h-[90vh] overflow-hidden flex flex-col border border-slate-100`}
-            >
-              {/* Header */}
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 ${iconBgColor} rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200/50`}>
-                    <HeaderIcon className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-800">{title}</h2>
-                    {subtitle && <p className="text-sm text-slate-500 font-semibold">{subtitle}</p>}
-                  </div>
+            {/* Header */}
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 ${iconBgColor} rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200/50`}>
+                  <HeaderIcon className="w-6 h-6 text-white" />
                 </div>
-                <button
-                  onClick={onClose}
-                  className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all shadow-sm"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800">{title}</h2>
+                  {subtitle && <p className="text-sm text-slate-500 font-semibold">{subtitle}</p>}
+                </div>
               </div>
+              <button
+                onClick={onClose}
+                className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all shadow-sm"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-              {/* Form Content */}
-              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                {/* Optional header content (e.g. profile image uploader) */}
-                {headerContent && (
-                  <div className="mb-4">{headerContent}</div>
-                )}
-                {fields.length > 0 && (
-                  <form id="dynamic-industry-form" onSubmit={handleFormSubmit} className={`grid grid-cols-2 gap-6 ${activeSelect ? 'pb-[240px]' : 'pb-6'}`}>
-                    {fields.map((field) => (
-                      <DynamicFieldItem
-                        key={field.name}
-                        field={field}
-                        formData={formData}
-                        handleChange={handleChange}
-                        onFieldFocus={onFieldFocus}
-                        activeSelect={activeSelect}
-                        setActiveSelect={setActiveSelect}
-                        searchTerm={searchTerm}
-                        setSearchTerm={setSearchTerm}
-                        toggleSelectValue={toggleSelectValue}
-                        removeMultiSelectValue={removeMultiSelectValue}
-                        errors={errors}
-                        setFormData={setFormData}
-                        onValuesChange={onValuesChange}
-                      />
-                    ))}
-                  </form>
-                )}
-                
-                {children && (
-                  <div className={fields.length > 0 ? "pt-4 pb-10" : "pb-4"}>
-                    {children}
-                  </div>
-                )}
-
-                {error && <p className="mt-4 text-sm font-semibold text-red-500 text-center">{error}</p>}
-              </div>
-
-              {/* Footer */}
-              {!hideFooter && (
-                <div className="p-4 px-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-                  <Button
-                    variant="outline"
-                    onClick={onClose}
-                    className="px-6 h-12 rounded-xl text-sm font-bold border-slate-200 text-slate-600 hover:bg-slate-200 transition-all"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleFormSubmit}
-                    disabled={loading}
-                    className="px-8 h-12 rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10 flex items-center gap-2 disabled:opacity-50"
-                  >
-                    {loading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Save className="w-5 h-5" />
-                    )}
-                    {submitText || "Save Changes"}
-                  </Button>
+            {/* Form Content */}
+            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+              {/* Optional header content (e.g. profile image uploader) */}
+              {headerContent && (
+                <div className="mb-4">{headerContent}</div>
+              )}
+              {fields.length > 0 && (
+                <form id="dynamic-industry-form" onSubmit={handleFormSubmit} className={`grid grid-cols-2 gap-6 ${activeSelect ? 'pb-[240px]' : 'pb-6'}`}>
+                  {fields.map((field) => (
+                    <DynamicFieldItem
+                      key={field.name}
+                      field={field}
+                      formData={formData}
+                      handleChange={handleChange}
+                      onFieldFocus={onFieldFocus}
+                      activeSelect={activeSelect}
+                      setActiveSelect={setActiveSelect}
+                      searchTerm={searchTerm}
+                      setSearchTerm={setSearchTerm}
+                      toggleSelectValue={toggleSelectValue}
+                      removeMultiSelectValue={removeMultiSelectValue}
+                      errors={errors}
+                      setFormData={setFormData}
+                      onValuesChange={onValuesChange}
+                    />
+                  ))}
+                </form>
+              )}
+              
+              {children && (
+                <div className={fields.length > 0 ? "pt-4 pb-10" : "pb-4"}>
+                  {children}
                 </div>
               )}
-            </motion.div>
+
+              {error && <p className="mt-4 text-sm font-semibold text-red-500 text-center">{error}</p>}
+            </div>
+
+            {/* Footer */}
+            {!hideFooter && (
+              <div className="p-4 px-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  className="px-6 h-12 rounded-xl text-sm font-bold border-slate-200 text-slate-600 hover:bg-slate-200 transition-all"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleFormSubmit}
+                  disabled={loading}
+                  className="px-8 h-12 rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10 flex items-center gap-2 disabled:opacity-50"
+                >
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Save className="w-5 h-5" />
+                  )}
+                  {submitText || "Save Changes"}
+                </Button>
+              </div>
+            )}
           </motion.div>
-        </>
+        </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
 

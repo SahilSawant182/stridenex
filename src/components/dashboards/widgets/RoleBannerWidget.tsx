@@ -1161,12 +1161,12 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
 
       <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <div className={`w-14 h-14 rounded-full bg-gradient-to-r ${getProgressGradient()} flex items-center justify-center shadow-lg border-2 border-white/20 overflow-hidden`}>
+          <div className={`${role === "industry" ? "w-20 h-20 md:w-24 md:h-24" : "w-14 h-14"} rounded-full bg-gradient-to-r ${getProgressGradient()} flex items-center justify-center shadow-lg border-2 border-white/20 overflow-hidden shrink-0`}>
             {profileImageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={profileImageUrl} alt={userFullName} className="w-full h-full object-cover" />
             ) : (
-              <span className="text-xl font-bold text-white">{getInitials()}</span>
+              <span className={`${role === "industry" ? "text-3xl md:text-4xl font-bold" : "text-xl font-bold"} text-white`}>{getInitials()}</span>
             )}
           </div>
           <div>
