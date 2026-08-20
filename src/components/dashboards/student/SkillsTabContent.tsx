@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { CheckCircle2, ShieldCheck, Award, FileText, Lock, Star, Loader2, Clock, Globe } from "lucide-react";
 import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { SkillRadar } from "@/components/dashboards/shared/RadarChart";
@@ -61,6 +62,11 @@ export default function SkillsTabContent() {
   const [selectedSkill, setSelectedSkill] = useState<SkillRow | null>(null);
   const [isEvidenceModalOpen, setIsEvidenceModalOpen] = useState(false);
   const { showToast } = useToast();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Skill Verification States
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
@@ -544,20 +550,29 @@ export default function SkillsTabContent() {
       />
 
       {/* Skill Verification Test Modal */}
-      <AnimatePresence>
-        {isTestModalOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4"
-          >
+      {mounted && createPortal(
+        <AnimatePresence>
+          {isTestModalOpen && (
             <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-100"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4"
             >
+              {/* StrideNex Logo brought to front */}
+              <div className="absolute top-0 left-0 h-[72px] flex items-center px-6 z-[110] pointer-events-none">
+                <img
+                  src="/images/Logo.png"
+                  alt="StrideNex Logo"
+                  className="w-48 h-12 object-contain drop-shadow-sm"
+                />
+              </div>
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-100"
+              >
               {/* Header */}
               <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                 <div className="flex items-center gap-4">
@@ -870,7 +885,9 @@ export default function SkillsTabContent() {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
-    </div>
-  );
+      </AnimatePresence>,
+      document.body
+    )}
+  </div>
+);
 }
