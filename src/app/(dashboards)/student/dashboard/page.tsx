@@ -12,6 +12,7 @@ import AlertsWidget from "@/components/dashboards/widgets/AlertsWidget";
 import InternshipsWidget from "@/components/dashboards/widgets/InternshipsWidget";
 import { useAuth } from "@/context/AuthContext";
 import { getDashboardStats, getStudentByEmail, getStudentInternshipList, getLearningActivity, getTodaysOpportunityAlerts } from "@/services/student.services";
+import SuccessStoriesFooter from "@/components/dashboards/student/SuccessStoriesFooter";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -309,6 +310,11 @@ export default function StudentDashboardPage() {
       {/* Internships Row */}
       <motion.div variants={item}>
         <InternshipsWidget data={internshipsData.length > 0 ? internshipsData : undefined} />
+      </motion.div>
+
+      {/* Success Stories Footer */}
+      <motion.div variants={item}>
+        <SuccessStoriesFooter />
       </motion.div>
     </motion.div>
   );
