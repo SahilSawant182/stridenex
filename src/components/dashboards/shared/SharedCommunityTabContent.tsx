@@ -146,7 +146,7 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
 
   if (selectedCommunityId && communityDetails) {
     return (
-      <div className="fixed inset-0 z-[100] w-full h-full bg-[#0E0F10] text-white overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
+      <div className="fixed inset-0 z-[100] w-full h-full bg-slate-50 text-slate-800 overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
         <div className="p-0 min-h-screen">
           <SharedCommunityDiscussionView 
             community={communityDetails} 

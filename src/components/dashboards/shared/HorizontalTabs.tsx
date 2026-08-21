@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { getStudentByEmail } from "@/services/student.services";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
@@ -29,7 +31,8 @@ import {
   BarChart,
   Star,
   FolderGit2,
-  Settings
+  Settings,
+  HelpCircle
 } from "lucide-react";
 
 interface HorizontalTabsProps {
@@ -54,19 +57,18 @@ const tabConfig = {
   ],
   college: [
     { name: "Overview", path: "/college/dashboard", icon: LayoutDashboard },
-    { name: "Student Analytics", path: "/college/dashboard/students", icon: Users },
+    { name: "Student Analytics", path: "/college/dashboard/students", icon: GraduationCap },
     { name: "Campus Drives", path: "/college/dashboard/campus-drives", icon: Briefcase },
+    { name: "Interventions", path: "/college/dashboard/interventions", icon: Building2 },
     { name: "Community", path: "/college/dashboard/community", icon: Users },
-    { name: "Interventions", path: "/college/dashboard/interventions", icon: Target },
-    { name: "Notice Board", path: "/college/dashboard/notice-board", icon: BookOpen },
-    // { name: "Reports", path: "/college/dashboard/reports", icon: BarChart },
+    { name: "Notice Board", path: "/college/dashboard/notice-board", icon: BarChart },
   ],
   mentor: [
     { name: "Overview", icon: LayoutDashboard, path: "/mentor/dashboard" },
     { name: "Schedule", icon: Calendar, path: "/mentor/dashboard/schedule" },
     { name: "Offerings", icon: Video, path: "/mentor/dashboard/offerings" },
     { name: "Community", icon: Users, path: "/mentor/dashboard/community" },
-    { name: "Requests", icon: Calendar, path: "/mentor/dashboard/requests" },
+    { name: "Requests", icon: HelpCircle, path: "/mentor/dashboard/requests" },
     { name: "Session History", icon: BookOpen, path: "/mentor/dashboard/session-history" },
     { name: "Payouts & Commission", icon: MessageSquare, path: "/mentor/dashboard/payouts" },
     { name: "My Profile", icon: TrendingUp, path: "/mentor/dashboard/profile" },
@@ -74,9 +76,9 @@ const tabConfig = {
   industry: [
     { name: "Overview", icon: LayoutDashboard, path: "/industry/dashboard" },
     { name: "Company Profile", icon: Building2, path: "/industry/dashboard/company-profile" },
-    { name: "Pipeline", icon: Mail, path: "/industry/dashboard/pipeline" },
-    { name: "Projects", icon: FolderGit2, path: "/industry/dashboard/projects" },
-    { name: "Internships", icon: UserCheck, path: "/industry/dashboard/internships" },
+    { name: "Application Pipeline", icon: Mail, path: "/industry/dashboard/pipeline" },
+    { name: "Projects & R&D", icon: FolderGit2, path: "/industry/dashboard/projects" },
+    { name: "Internship Posts", icon: UserCheck, path: "/industry/dashboard/internships" },
     { name: "Job Profiles", icon: Briefcase, path: "/industry/dashboard/jobs" },
     { name: "Community", icon: Users, path: "/industry/dashboard/community" },
     // { name: "Feedback", icon: Star, path: "/industry/dashboard/feedback" },
@@ -87,7 +89,64 @@ const tabConfig = {
 
 export default function HorizontalTabs({ role }: HorizontalTabsProps) {
   const pathname = usePathname();
+  const { currentUser } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (role !== "student" || !currentUser) return;
+    
+    // 1. Try to read from localStorage first
+    const cachedProfile = localStorage.getItem("studentProfile");
+    if (cachedProfile) {
+      try {
+        setProfile(JSON.parse(cachedProfile));
+      } catch (_) {}
+    }
+
+    // 2. Fetch from API
+    const fetchProfile = async () => {
+      try {
+        const studentRes = await getStudentByEmail(currentUser);
+        const data = studentRes?.message?.data || studentRes?.data || {};
+        if (data && Object.keys(data).length > 0) {
+          setProfile(data);
+          localStorage.setItem("studentProfile", JSON.stringify(data));
+        }
+      } catch (err) {
+        console.error("Error fetching student profile for horizontal tabs:", err);
+      }
+    };
+    fetchProfile();
+  }, [role, currentUser]);
+
+  const isFirstOrSecondYear = () => {
+    if (!profile) return false;
+    const yearStr = String(profile.current_year || "").trim();
+    if (yearStr) {
+      const lowerYear = yearStr.toLowerCase();
+      if (lowerYear.includes("first") || lowerYear.includes("second") || lowerYear.includes("1st") || lowerYear.includes("2nd")) {
+        return true;
+      }
+      return false;
+    }
+    // Fallback to academic_year if current_year is empty
+    const yearVal = profile.academic_year;
+    if (yearVal !== undefined && yearVal !== null) {
+      const num = Number(yearVal);
+      if (num === 1 || num === 2) return true;
+    }
+    return false;
+  };
+
   const tabs = tabConfig[role] || tabConfig.student;
+  const filteredTabs = tabs.filter(tab => {
+    if (role === "student" && isFirstOrSecondYear()) {
+      if (tab.name === "Jobs" || tab.name === "Internships") {
+        return false;
+      }
+    }
+    return true;
+  });
 
   const getActiveColor = () => {
     switch (role) {
@@ -101,7 +160,7 @@ export default function HorizontalTabs({ role }: HorizontalTabsProps) {
   return (
     <div className="w-full bg-white rounded-2xl border border-slate-200 p-1.5 shadow-sm mb-6">
       <div className="flex items-center justify-around w-full">
-        {tabs.map((tab) => {
+        {filteredTabs.map((tab) => {
           const Icon = tab.icon;
 
           // Exact match for base dashboard route to prevent it from being active on sub-routes

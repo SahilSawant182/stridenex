@@ -29,6 +29,8 @@ export default function AuthLayout({
   appName = "StrideNex",
   bgImage
 }: AuthLayoutProps) {
+  const backgroundImage = bgImage || "/images/login-page-background.png";
+
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-gradient-to-br from-navy to-royal">
       {/* Animated Background Elements */}
@@ -67,21 +69,19 @@ export default function AuthLayout({
 
       <div className="flex w-full h-screen bg-white overflow-hidden shadow-2xl relative z-10">
         {/* LEFT SIDE - Branding - Fixed, no scroll */}
-        <div className="hidden lg:flex lg:w-[30%] relative flex-col justify-between p-10 overflow-hidden bg-gradient-to-br from-navy to-royal text-white">
+        <div className="hidden lg:flex lg:w-[30%] relative flex-col justify-between p-10 overflow-hidden bg-slate-950 text-white">
           {/* Background Image */}
-          {bgImage && (
+          {backgroundImage && (
             <>
-              <div className="absolute inset-0 bg-black/40 z-10" />
+              <div className="absolute inset-0 bg-gradient-to-b from-slate-950/85 via-slate-950/50 to-slate-950/90 z-10" />
               <img
-                src={bgImage}
+                src={backgroundImage}
                 alt="StrideNex Platform"
-                className="absolute inset-0 w-full h-full object-cover opacity-30"
+                className="absolute inset-0 w-full h-full object-cover opacity-90"
                 loading="lazy"
               />
             </>
           )}
-
-          <div className="absolute inset-0 bg-black/20 z-10" />
 
           {/* Decorative Elements */}
           <div className="absolute -top-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
@@ -115,35 +115,35 @@ export default function AuthLayout({
             </div>
 
             {/* Stats */}
-            <div className="flex gap-4 mt-10">
-              <div>
-                <p className="text-2xl font-bold">10k+</p>
-                <p className="text-[10px] text-white/70 uppercase tracking-wider">Active Students</p>
+            <div className="flex justify-between items-center w-full gap-4 mt-16 text-center">
+              <div className="flex-1">
+                <p className="text-3xl font-extrabold text-white">10k+</p>
+                <p className="text-[10px] text-white/70 uppercase tracking-widest font-bold mt-1">Active Students</p>
               </div>
-              <div>
-                <p className="text-2xl font-bold">500+</p>
-                <p className="text-[10px] text-white/70 uppercase tracking-wider">Institutes</p>
+              <div className="flex-1 border-x border-white/10 px-2">
+                <p className="text-3xl font-extrabold text-white">500+</p>
+                <p className="text-[10px] text-white/70 uppercase tracking-widest font-bold mt-1">Institutes</p>
               </div>
-              <div>
-                <p className="text-2xl font-bold">200+</p>
-                <p className="text-[10px] text-white/70 uppercase tracking-wider">Partners</p>
+              <div className="flex-1">
+                <p className="text-3xl font-extrabold text-white">200+</p>
+                <p className="text-[10px] text-white/70 uppercase tracking-widest font-bold mt-1">Partners</p>
               </div>
             </div>
+          </div>
 
-            {/* Role Icons */}
-            <div className="flex gap-3 mt-10">
-              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
-                <GraduationCap className="w-4 h-4" />
-                <span className="text-xs">Students</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
-                <Building2 className="w-4 h-4" />
-                <span className="text-xs">Institutes</span>
-              </div>
-              <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
-                <Briefcase className="w-4 h-4" />
-                <span className="text-xs">Industry</span>
-              </div>
+          {/* Role Icons - Aligned down, centered and spaced between */}
+          <div className="relative z-20 w-full flex justify-between items-center gap-4 bg-white/5 backdrop-blur-md p-3 rounded-2xl border border-white/10 mt-10">
+            <div className="flex flex-col items-center justify-center flex-1 py-1 text-center border-r border-white/10">
+              <GraduationCap className="w-5 h-5 mb-1 text-orange-400" />
+              <span className="text-xs font-bold tracking-wide">Students</span>
+            </div>
+            <div className="flex flex-col items-center justify-center flex-1 py-1 text-center border-r border-white/10">
+              <Building2 className="w-5 h-5 mb-1 text-blue-400" />
+              <span className="text-xs font-bold tracking-wide">Institutes</span>
+            </div>
+            <div className="flex flex-col items-center justify-center flex-1 py-1 text-center">
+              <Briefcase className="w-5 h-5 mb-1 text-emerald-400" />
+              <span className="text-xs font-bold tracking-wide">Industry</span>
             </div>
           </div>
         </div>
