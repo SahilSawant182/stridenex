@@ -234,7 +234,7 @@ export default function JobsTabContent() {
         if (match) {
           return { ...item, applied_status: match.status };
         }
-        return item;
+        return { ...item, applied_status: item.status || null };
       });
 
       setJobs(mappedJobs);
@@ -442,7 +442,7 @@ export default function JobsTabContent() {
                     {applying === job.name ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : isApplied ? (
-                      "Applied"
+                      job.applied_status || "Applied"
                     ) : (
                       "Apply Now"
                     )}
@@ -576,10 +576,10 @@ export default function JobsTabContent() {
                   handleApply(selectedJob);
                   setShowDetails(false);
                 }}
-                disabled={successfullyApplied.includes(selectedJob.name) || applying === selectedJob.name}
+                disabled={successfullyApplied.includes(selectedJob.name) || (selectedJob.applied_status && selectedJob.applied_status !== "Not Applied") || applying === selectedJob.name}
                 className="h-10 px-6 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl"
               >
-                {successfullyApplied.includes(selectedJob.name) ? "Applied" : "Apply Now"}
+                {(successfullyApplied.includes(selectedJob.name) || (selectedJob.applied_status && selectedJob.applied_status !== "Not Applied")) ? (selectedJob.applied_status || "Applied") : "Apply Now"}
               </Button>
             </div>
           </motion.div>
