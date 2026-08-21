@@ -65,9 +65,7 @@ export default function PipelineTabContent() {
     "HR": [],
     "Rejected": [],
     "Selected": [],
-    "Accepted": [],
-    "Interview Scheduled": [],
-    "Awarded": []
+    "Accepted": []
   });
   
   const [statusCounts, setStatusCounts] = useState<Record<string, number>>({
@@ -77,9 +75,7 @@ export default function PipelineTabContent() {
     "HR": 0,
     "Rejected": 0,
     "Selected": 0,
-    "Accepted": 0,
-    "Interview Scheduled": 0,
-    "Awarded": 0
+    "Accepted": 0
   });
 
   const [loading, setLoading] = useState(false);
@@ -102,27 +98,15 @@ export default function PipelineTabContent() {
   const [updateStatusLoading, setUpdateStatusLoading] = useState(false);
 
   const currentColumns = useMemo(() => {
-    if (opportunityType === "Project") {
-      return [
-        { id: "Applied", title: "Applied", color: "bg-slate-800" },
-        { id: "Shortlisted", title: "Shortlisted", color: "bg-blue-600" },
-        { id: "Interview Scheduled", title: "Interview Scheduled", color: "bg-orange-500" },
-        { id: "Rejected", title: "Rejected", color: "bg-red-600" },
-        { id: "Selected", title: "Selected", color: "bg-emerald-500" },
-        { id: "Accepted", title: "Accepted", color: "bg-teal-600" },
-        { id: "Awarded", title: "Awarded", color: "bg-purple-600" }
-      ];
-    } else {
-      return [
-        { id: "Applied", title: "Applied", color: "bg-slate-800" },
-        { id: "Shortlisted", title: "Shortlisted", color: "bg-blue-600" },
-        { id: "Tech Interview", title: "Tech Interview", color: "bg-orange-500" },
-        { id: "HR", title: "HR", color: "bg-indigo-500" },
-        { id: "Rejected", title: "Rejected", color: "bg-red-600" },
-        { id: "Selected", title: "Selected", color: "bg-emerald-500" },
-        { id: "Accepted", title: "Accepted", color: "bg-teal-600" }
-      ];
-    }
+    return [
+      { id: "Applied", title: "Applied", color: "bg-slate-800" },
+      { id: "Shortlisted", title: "Shortlisted", color: "bg-blue-600" },
+      { id: "Tech Interview", title: "Tech Interview", color: "bg-orange-500" },
+      { id: "HR", title: "HR", color: "bg-indigo-500" },
+      { id: "Rejected", title: "Rejected", color: "bg-red-600" },
+      { id: "Selected", title: "Selected", color: "bg-emerald-500" },
+      { id: "Accepted", title: "Accepted", color: "bg-teal-600" }
+    ];
   }, [opportunityType]);
 
   const handleCardClick = async (candidate: Candidate) => {
@@ -202,8 +186,7 @@ export default function PipelineTabContent() {
           "HR": [],
           "Rejected": [],
           "Selected": [],
-          "Interview Scheduled": [],
-          "Awarded": []
+          "Accepted": []
         };
         
         apiData.forEach((app: any) => {
@@ -277,8 +260,7 @@ export default function PipelineTabContent() {
         "HR": countData.HR || 0,
         "Rejected": countData.Rejected || 0,
         "Selected": countData.Selected || 0,
-        "Interview Scheduled": countData["Interview Scheduled"] || 0,
-        "Awarded": countData.Awarded || 0
+        "Accepted": countData.Accepted || 0
       });
 
     } catch (err: any) {
