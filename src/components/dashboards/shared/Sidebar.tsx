@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { dashboardConfig, type DashboardRole } from "@/config/dashboardNavigation";
 import { useAuth } from "@/context/AuthContext";
 import { buildProfileImageUrl } from "@/services/api.services";
+import { getStudentByEmail } from "@/services/student.services";
 import { LogOut, Settings, HelpCircle, ChevronLeft, ChevronRight, GraduationCap, University, Briefcase, UserCheck, User } from "lucide-react";
 
 const getRoleIcon = (role: string, className: string = "w-4 h-4") => {
@@ -18,7 +19,7 @@ const getRoleIcon = (role: string, className: string = "w-4 h-4") => {
   }
 };
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface SidebarProps {
   role: DashboardRole;
@@ -31,12 +32,68 @@ interface SidebarProps {
 export default function Sidebar({ role, collapsed = false, onToggle, isMobile, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout, fullName, userImage } = useAuth();
+  const { logout, fullName, userImage, currentUser } = useAuth();
   const imageUrl = buildProfileImageUrl(userImage);
   const config = dashboardConfig[role];
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (role !== "student" || !currentUser) return;
+    
+    // 1. Try to read from localStorage first
+    const cachedProfile = localStorage.getItem("studentProfile");
+    if (cachedProfile) {
+      try {
+        setProfile(JSON.parse(cachedProfile));
+      } catch (_) {}
+    }
+
+    // 2. Fetch from API
+    const fetchProfile = async () => {
+      try {
+        const studentRes = await getStudentByEmail(currentUser);
+        const data = studentRes?.message?.data || studentRes?.data || {};
+        if (data && Object.keys(data).length > 0) {
+          setProfile(data);
+          localStorage.setItem("studentProfile", JSON.stringify(data));
+        }
+      } catch (err) {
+        console.error("Error fetching student profile for sidebar:", err);
+      }
+    };
+    fetchProfile();
+  }, [role, currentUser]);
+
+  const isFirstOrSecondYear = () => {
+    if (!profile) return false;
+    const yearStr = String(profile.current_year || "").trim();
+    if (yearStr) {
+      const lowerYear = yearStr.toLowerCase();
+      if (lowerYear.includes("first") || lowerYear.includes("second") || lowerYear.includes("1st") || lowerYear.includes("2nd")) {
+        return true;
+      }
+      return false;
+    }
+    // Fallback to academic_year if current_year is empty
+    const yearVal = profile.academic_year;
+    if (yearVal !== undefined && yearVal !== null) {
+      const num = Number(yearVal);
+      if (num === 1 || num === 2) return true;
+    }
+    return false;
+  };
 
   if (!config) return null;
+
+  const filteredLinks = config.links.filter(link => {
+    if (role === "student" && isFirstOrSecondYear()) {
+      if (link.name === "Jobs" || link.name === "Internships") {
+        return false;
+      }
+    }
+    return true;
+  });
 
   const handleLogoClick = () => {
     if (role) {
@@ -62,7 +119,9 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
 
   const getActiveTabStyles = () => {
     if (isShortsPage) {
-      return "bg-zinc-800 text-white font-semibold shadow-sm";
+      return role === 'student'
+        ? "bg-orange-500/10 text-orange-500 font-semibold shadow-sm"
+        : "bg-zinc-800 text-white font-semibold shadow-sm";
     }
     switch (role) {
       case 'college':
@@ -79,7 +138,7 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
 
   const getActiveIconStyles = () => {
     if (isShortsPage) {
-      return "text-white";
+      return role === 'student' ? "text-orange-500" : "text-white";
     }
     switch (role) {
       case 'college':
@@ -135,9 +194,9 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
 
       {/* Navigation Menu */}
       <div className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto hide-scrollbar">
-        {config.links.map((link) => {
+        {filteredLinks.map((link) => {
           // Exact match for base dashboard route to prevent it from being active on sub-routes
-          const isBaseRoute = link.href === `${config.baseRoute}/dashboard`;
+          const isBaseRoute = link.href === config.baseRoute;
           const isActive = isBaseRoute
             ? pathname === link.href
             : (pathname === link.href || pathname.startsWith(`${link.href}/`));

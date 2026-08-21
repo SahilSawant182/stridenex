@@ -3,14 +3,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, Variants } from "framer-motion";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
-import { AlertTriangle, TrendingDown, Target, Loader2, ChevronDown } from "lucide-react";
+import { AlertTriangle, TrendingDown, Target, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import {
   getCollegeDetails,
   getLowEmployabilityStudents,
-  assignStudentMentor,
-  getMasterData,
   getCollegeEmployabilitySummary
 } from "@/services/college.services";
 
@@ -59,11 +57,8 @@ export default function InterventionsTabContent() {
 
   const [collegeDetails, setCollegeDetails] = useState<any>(null);
   const [studentsList, setStudentsList] = useState<any[]>([]);
-  const [mentorsList, setMentorsList] = useState<any[]>([]);
   const [summaryData, setSummaryData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedMentors, setSelectedMentors] = useState<Record<string, string>>({});
-  const [assigningMap, setAssigningMap] = useState<Record<string, boolean>>({});
 
   const dynamicRecommendations = useMemo(() => {
     const list = [];
@@ -154,21 +149,18 @@ export default function InterventionsTabContent() {
     }
   }, [currentUser]);
 
-  // Load low employability students, mentors and summary
+  // Load low employability students and summary
   useEffect(() => {
-    const fetchStudentsAndMentors = async () => {
+    const fetchStudentsAndSummary = async () => {
       if (!collegeDetails) return;
 
       const collegeName = collegeDetails.college_name || collegeDetails.name;
       if (!collegeName) return;
 
-      const collegeEmail = collegeDetails.email || currentUser || "sanjay9975@gmail.com";
-
       try {
         setLoading(true);
-        const [studentsRes, mentorsRes, summaryRes] = await Promise.allSettled([
+        const [studentsRes, summaryRes] = await Promise.allSettled([
           getLowEmployabilityStudents(collegeName),
-          getMasterData("Mentor"),
           getCollegeEmployabilitySummary(collegeName)
         ]);
 
@@ -178,14 +170,6 @@ export default function InterventionsTabContent() {
           setStudentsList(list);
         } else {
           console.error("Failed to load low employability students:", studentsRes.reason);
-        }
-
-        if (mentorsRes.status === "fulfilled") {
-          const raw = mentorsRes.value?.data ?? mentorsRes.value?.message?.data ?? mentorsRes.value?.message ?? mentorsRes.value;
-          const arr = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
-          setMentorsList(arr);
-        } else {
-          console.error("Failed to load mentors:", mentorsRes.reason);
         }
 
         if (summaryRes.status === "fulfilled") {
@@ -202,33 +186,9 @@ export default function InterventionsTabContent() {
     };
 
     if (collegeDetails || currentUser) {
-      fetchStudentsAndMentors();
+      fetchStudentsAndSummary();
     }
   }, [collegeDetails, currentUser]);
-
-  const handleAssignMentor = async (studentEmail: string, mentorEmail: string) => {
-    if (!studentEmail || !mentorEmail) return;
-
-    try {
-      setAssigningMap(prev => ({ ...prev, [studentEmail]: true }));
-      await assignStudentMentor({
-        student: studentEmail,
-        mentor: mentorEmail
-      });
-      showToast("Mentor assigned successfully!", "success");
-      if (typeof window !== "undefined") {
-        window.alert("Mentor assigned successfully!");
-      }
-    } catch (err: any) {
-      console.error("Failed to assign mentor:", err);
-      showToast(err?.message || "Failed to assign mentor", "error");
-      if (typeof window !== "undefined") {
-        window.alert(`Error: ${err?.message || "Failed to assign mentor"}`);
-      }
-    } finally {
-      setAssigningMap(prev => ({ ...prev, [studentEmail]: false }));
-    }
-  };
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-4">
@@ -314,38 +274,12 @@ export default function InterventionsTabContent() {
                             {student.cgpa !== undefined && student.cgpa !== null && student.cgpa !== 0 && (
                               <>
                                 <span className="text-slate-300 font-normal">|</span>
-                                <span className="text-slate-500 font-medium">CGPA:</span>
+                                <span className="text-slate-500 font-medium">CGPA:</span>       
                                 <span className="text-slate-700 font-bold">{student.cgpa}</span>
                               </>
                             )}
                           </p>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-between sm:justify-end">
-                        <div className="relative flex-1 sm:flex-none w-full sm:w-40 lg:w-36 xl:w-44">
-                          <select
-                            value={selectedMentors[student.email || student.name] || ""}
-                            onChange={(e) => setSelectedMentors(prev => ({ ...prev, [student.email || student.name]: e.target.value }))}
-                            className="w-full appearance-none border border-slate-200 rounded-xl pl-3 pr-8 py-1.5 text-xs font-semibold text-slate-600 bg-white hover:border-slate-300 focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all cursor-pointer truncate"
-                          >
-                            <option value="">Select Mentor</option>
-                            {mentorsList.map((mentor) => (
-                              <option key={mentor.name} value={mentor.name}>
-                                {mentor.mentor_name || mentor.full_name || mentor.name}
-                              </option>
-                            ))}
-                          </select>
-                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2.5 text-slate-400">
-                            <ChevronDown className="w-3.5 h-3.5" />
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleAssignMentor(student.email || student.name, selectedMentors[student.email || student.name])}
-                          disabled={!selectedMentors[student.email || student.name] || assigningMap[student.email || student.name]}
-                          className="text-[10px] font-bold tracking-wide bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-xl transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                        >
-                          {assigningMap[student.email || student.name] ? "Assigning..." : "Assign"}
-                        </button>
                       </div>
                     </div>
                   );

@@ -130,7 +130,7 @@ export default function CommunityDiscussionPage({
   }
 
   return (
-    <div className="w-full min-h-screen bg-[#0E0F10] text-white p-1">
+    <div className="w-full min-h-screen bg-slate-50 text-slate-800 p-1">
       <CommunityDiscussionView
         community={community}
         onBack={() => router.push("/student/dashboard/community")}
