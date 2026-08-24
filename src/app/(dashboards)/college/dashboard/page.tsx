@@ -28,6 +28,7 @@ import ListCard from "@/components/dashboards/shared/ListCard";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
 import { useAuth } from "@/context/AuthContext";
+import SuccessStoriesFooter from "@/components/dashboards/student/SuccessStoriesFooter";
 import {
   getCollegeDetails,
   getPlacementStats,
@@ -921,6 +922,14 @@ export default function CollegeDashboardPage() {
             </div>
           </div>
         </BaseCard>
+      </motion.div>
+
+      {/* Success Stories Footer */}
+      <motion.div variants={item}>
+        <SuccessStoriesFooter 
+          collegeName={collegeDetails?.college_name} 
+          collegeDetailsName={collegeDetails?.name} 
+        />
       </motion.div>
     </motion.div>
   );

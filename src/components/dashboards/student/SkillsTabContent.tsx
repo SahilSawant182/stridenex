@@ -281,6 +281,13 @@ export default function SkillsTabContent() {
     }
   };
 
+  const handleCloseTestModal = () => {
+    setIsTestModalOpen(false);
+    if (testResult && testResult.passed) {
+      window.location.reload();
+    }
+  };
+
   const skillFields: DynamicField[] = [
     {
       name: "skill",
@@ -596,7 +603,7 @@ export default function SkillsTabContent() {
                     </div>
                   </div>
                   <button
-                    onClick={() => setIsTestModalOpen(false)}
+                    onClick={handleCloseTestModal}
                     className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all shadow-sm"
                   >
                     <X className="w-5 h-5" />
@@ -908,7 +915,7 @@ export default function SkillsTabContent() {
                       <>
                         <Button
                           variant="outline"
-                          onClick={() => setIsTestModalOpen(false)}
+                          onClick={handleCloseTestModal}
                           className="px-6 h-12 rounded-xl text-sm font-bold border-slate-200 text-slate-600 hover:bg-slate-200 transition-all"
                         >
                           Cancel
@@ -975,7 +982,7 @@ export default function SkillsTabContent() {
                   ) : (
                     <div className="w-full flex justify-end items-center gap-3">
                       <Button
-                        onClick={() => setIsTestModalOpen(false)}
+                        onClick={handleCloseTestModal}
                         className="px-8 h-12 rounded-xl text-sm font-bold bg-slate-100 text-slate-800 hover:bg-slate-200 transition-all border border-slate-200"
                       >
                         Close Result

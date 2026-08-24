@@ -434,9 +434,24 @@ export default function PathTabContent() {
       if (data && data.skill_test) {
         const skillTestId = data.skill_test;
         setTestResult(data);
-        setIsEvaluating(true);
-        setEvaluationStatus("Evaluating answers...");
-        pollTestResult(skillTestId);
+
+        if (data.feedback_status === "ready") {
+          setIsEvaluating(false);
+          setIsSubmittingTest(false);
+          if (data.passed) {
+            showToast("🎉 Excellent! You passed the assessment and completed the milestone!", "success");
+            setAcquiredSkillName(testSkill);
+            setAcquiredSkillLevel(testLevel);
+            setShowCelebration(true);
+            await fetchData(true); // silent refresh
+          } else {
+            showToast("Assessment not passed. You can review the feedback and retry.", "warning");
+          }
+        } else {
+          setIsEvaluating(true);
+          setEvaluationStatus("Evaluating answers...");
+          pollTestResult(skillTestId);
+        }
       } else {
         showToast("Failed to initiate assessment submission.", "error");
         setIsSubmittingTest(false);
@@ -1065,8 +1080,8 @@ export default function PathTabContent() {
                         setHierarchySkills(null);
                       }}
                       className={`flex-1 sm:flex-initial px-4 py-2 text-xs font-bold rounded-lg transition-all border ${!showMasterSearch
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                         }`}
                     >
                       Recommended
@@ -1080,8 +1095,8 @@ export default function PathTabContent() {
                         fetchMasterCareerPaths("", 1);
                       }}
                       className={`flex-1 sm:flex-initial px-4 py-2 text-xs font-bold rounded-lg transition-all border ${showMasterSearch
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                         }`}
                     >
                       Explore Other Paths
@@ -1225,8 +1240,8 @@ export default function PathTabContent() {
                                     key={pageNum}
                                     onClick={() => fetchMasterCareerPaths(masterSearchQuery, pageNum)}
                                     className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${masterPage === pageNum
-                                        ? 'bg-blue-600 text-white shadow-sm'
-                                        : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                                      ? 'bg-blue-600 text-white shadow-sm'
+                                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                                       }`}
                                   >
                                     {pageNum}
@@ -1482,10 +1497,10 @@ export default function PathTabContent() {
                     <div key={step.num} className="relative pl-8 flex gap-3 flex-col">
                       {/* Circle indicator */}
                       <div className={`absolute left-0 top-0.5 w-6.5 h-6.5 rounded-full flex items-center justify-center text-xs font-bold border transition-all duration-300 ${isCompleted
-                          ? "bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/20"
-                          : isActive
-                            ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20"
-                            : "bg-white border-slate-200 text-slate-400"
+                        ? "bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/20"
+                        : isActive
+                          ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20"
+                          : "bg-white border-slate-200 text-slate-400"
                         }`}>
                         {isCompleted ? <Check className="w-3.5 h-3.5" /> : step.num}
                       </div>

@@ -7,13 +7,61 @@ import { createCategory, getPosts, createPost, getPostDetail, postComment, leave
 interface CommunityDiscussionViewProps {
   community: any;
   onBack: () => void;
+  onRefresh?: () => void;
 }
 
-export default function CommunityDiscussionView({ community, onBack }: CommunityDiscussionViewProps) {
+const SUGGESTED_CATEGORIES = [
+  {
+    name: "Academics",
+    description: "Discuss classes, courses, exams, share lecture notes and study guides.",
+    icon: "📚"
+  },
+  {
+    name: "Placements",
+    description: "Discuss job search, internships, interview experiences, resume reviews, and advice.",
+    icon: "💼"
+  },
+  {
+    name: "Projects",
+    description: "Find project teammates, share progress, post ideas, or collaborate on hackathons.",
+    icon: "🚀"
+  },
+  {
+    name: "Coding",
+    description: "Talk programming languages, framework updates, algorithms, system design, and dev news.",
+    icon: "💻"
+  },
+  {
+    name: "Design",
+    description: "Share layouts, logo design, receive UI/UX feedback, and show off design portfolios.",
+    icon: "🎨"
+  },
+  {
+    name: "General",
+    description: "Get to know peers, discuss campus events, make general announcements, and casual chats.",
+    icon: "💬"
+  }
+];
+
+export default function CommunityDiscussionView({ community, onBack, onRefresh }: CommunityDiscussionViewProps) {
   const [activeTab, setActiveTab] = useState<"categories" | "discussions">("categories");
   const [searchQuery, setSearchQuery] = useState("");
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isSubmittingCategory, setIsSubmittingCategory] = useState(false);
+
+  const [showCustomCategoryForm, setShowCustomCategoryForm] = useState(false);
+  const [selectedSuggestedCategory, setSelectedSuggestedCategory] = useState<number | null>(null);
+  const [customCategoryName, setCustomCategoryName] = useState("");
+  const [customCategoryDescription, setCustomCategoryDescription] = useState("");
+
+  useEffect(() => {
+    if (!isCategoryModalOpen) {
+      setShowCustomCategoryForm(false);
+      setSelectedSuggestedCategory(null);
+      setCustomCategoryName("");
+      setCustomCategoryDescription("");
+    }
+  }, [isCategoryModalOpen]);
   
   const [isTagModalOpen, setIsTagModalOpen] = useState(false);
   const [isSubmittingTag, setIsSubmittingTag] = useState(false);
@@ -51,7 +99,11 @@ export default function CommunityDiscussionView({ community, onBack }: Community
       const successMsg = response?.message?.message || response?.message || "Category created successfully!";
       showToast(typeof successMsg === 'string' ? successMsg : "Category created successfully!", "success");
       setIsCategoryModalOpen(false);
-      // NOTE: For a full UX, we'd trigger a refetch of the community details here
+      if (onRefresh) {
+        onRefresh();
+      } else {
+        window.location.reload();
+      }
     } catch (error: any) {
       const errMsg = error?.response?.data?.message?.message || error?.response?.data?.message || error.message || "Failed to create category";
       const finalMsg = typeof errMsg === 'string' ? errMsg : "Failed to create category";
@@ -653,7 +705,7 @@ export default function CommunityDiscussionView({ community, onBack }: Community
                     <div className="text-center py-10 bg-white rounded-xl border border-slate-200 shadow-sm">
                       <Folder className="w-10 h-10 text-slate-400 mx-auto mb-3" />
                       <h3 className="text-sm font-semibold text-slate-800 mb-1">No categories yet</h3>
-                      <p className="text-xs text-slate-500">This community doesn't have any categories defined.</p>
+                      <p className="text-xs text-slate-500">This community doesn&apos;t have any categories defined.</p>
                     </div>
                   )}
                 </div>
@@ -667,29 +719,142 @@ export default function CommunityDiscussionView({ community, onBack }: Community
         isOpen={isCategoryModalOpen}
         onClose={() => setIsCategoryModalOpen(false)}
         title="Create Category"
-        fields={[
-          {
-            name: "category_name",
-            label: "Category Name",
-            type: "text",
-            required: true,
-            placeholder: "e.g., Technology",
-            colSpan: 2
-          },
-          {
-            name: "description",
-            label: "Description",
-            type: "textarea",
-            required: true,
-            placeholder: "Category description",
-            colSpan: 2
-          }
-        ]}
-        onSubmit={handleCreateCategory}
-        loading={isSubmittingCategory}
+        fields={[]}
+        onSubmit={async () => {}}
+        hideFooter={true}
         headerIcon={Folder}
-        submitText="Create Category"
-      />
+      >
+        <div className="space-y-6">
+          {!showCustomCategoryForm ? (
+            <>
+              <div>
+                <p className="text-sm text-slate-500 mb-4">
+                  Select a suggested category style to quickly set up your channel discussion, or create a completely custom one:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[360px] overflow-y-auto pr-1">
+                  {SUGGESTED_CATEGORIES.map((suggested, index) => {
+                    const isSelected = selectedSuggestedCategory === index;
+                    return (
+                      <button
+                        key={suggested.name}
+                        onClick={() => setSelectedSuggestedCategory(index)}
+                        className={`text-left p-4 rounded-2xl border transition-all duration-200 focus:outline-none flex gap-3 ${
+                          isSelected
+                            ? "border-[#FF6B00] bg-orange-50/40 shadow-sm"
+                            : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+                        }`}
+                      >
+                        <span className="text-2xl mt-0.5 shrink-0 select-none">
+                          {suggested.icon}
+                        </span>
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
+                            {suggested.name}
+                            {isSelected && (
+                              <span className="inline-block w-2 h-2 rounded-full bg-[#FF6B00]" />
+                            )}
+                          </h4>
+                          <p className="text-xs text-slate-500 leading-normal">
+                            {suggested.description}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 border-t border-slate-100">
+                <div className="flex-1" />
+                <button
+                  onClick={() => setShowCustomCategoryForm(true)}
+                  className="w-full sm:w-auto px-4 py-2 border border-[#FF6B00] hover:bg-orange-50/50 text-[#FF6B00] rounded-xl text-xs font-semibold transition-all active:scale-95 text-center"
+                >
+                  Create Custom Category
+                </button>
+                <button
+                  disabled={selectedSuggestedCategory === null || isSubmittingCategory}
+                  onClick={async () => {
+                    if (selectedSuggestedCategory === null) return;
+                    const cat = SUGGESTED_CATEGORIES[selectedSuggestedCategory];
+                    await handleCreateCategory({
+                      category_name: cat.name,
+                      description: cat.description
+                    });
+                  }}
+                  className={`w-full sm:w-auto px-5 py-2 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center ${
+                    selectedSuggestedCategory === null
+                      ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                      : "bg-[#FF6B00] hover:bg-orange-600 text-white shadow-md shadow-orange-500/20 active:scale-95"
+                  }`}
+                >
+                  {isSubmittingCategory ? "Creating..." : "Create Suggested Category"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <p className="text-sm text-slate-500 mb-4">
+                  Enter a unique name and description for your custom discussion category:
+                </p>
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Category Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={customCategoryName}
+                      onChange={(e) => setCustomCategoryName(e.target.value)}
+                      placeholder="e.g., Marketing, General Q&A"
+                      className="w-full px-4 py-2.5 bg-slate-50/50 hover:bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-sm transition-all focus:outline-none focus:ring-1 focus:ring-[#FF6B00] focus:border-[#FF6B00]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Description <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={customCategoryDescription}
+                      onChange={(e) => setCustomCategoryDescription(e.target.value)}
+                      placeholder="Explain what members should discuss in this category..."
+                      rows={4}
+                      className="w-full px-4 py-2.5 bg-slate-50/50 hover:bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-sm transition-all focus:outline-none focus:ring-1 focus:ring-[#FF6B00] focus:border-[#FF6B00] resize-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 border-t border-slate-100">
+                <button
+                  onClick={() => setShowCustomCategoryForm(false)}
+                  className="w-full sm:w-auto px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-semibold transition-all active:scale-95 text-center"
+                >
+                  Back to Suggestions
+                </button>
+                <div className="flex-1" />
+                <button
+                  disabled={!customCategoryName.trim() || !customCategoryDescription.trim() || isSubmittingCategory}
+                  onClick={async () => {
+                    await handleCreateCategory({
+                      category_name: customCategoryName.trim(),
+                      description: customCategoryDescription.trim()
+                    });
+                  }}
+                  className={`w-full sm:w-auto px-5 py-2 rounded-xl text-xs font-bold transition-all text-center flex items-center justify-center ${
+                    !customCategoryName.trim() || !customCategoryDescription.trim()
+                      ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                      : "bg-[#FF6B00] hover:bg-orange-600 text-white shadow-md shadow-orange-500/20 active:scale-95"
+                  }`}
+                >
+                  {isSubmittingCategory ? "Creating..." : "Create Category"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </DashboardDynamicModal>
 
       <DashboardDynamicModal
         isOpen={isTagModalOpen}

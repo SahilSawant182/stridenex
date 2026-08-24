@@ -62,59 +62,59 @@ export default function CommunityDiscussionPage({
   const [isLoading, setIsLoading] = useState(true);
   const [community, setCommunity] = useState<CommunityDetails | null>(null);
 
-  useEffect(() => {
-    const validateAndLoad = async () => {
-      setIsLoading(true);
-      try {
-        const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
-        const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+  const validateAndLoad = async () => {
+    setIsLoading(true);
+    try {
+      const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+      const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
 
-        const headers: Record<string, string> = {
-          "Content-Type": "application/json",
-        };
-        if (apiKey && apiSecret) {
-          headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
-        }
-
-        const response = await apiService.post(
-          "method/stridenex_app.stridenex_app.doctype.community.community.get_community",
-          { community: communityId }
-        );
-
-        let data = null;
-        if (response?.data) {
-          data = response.data;
-        } else if (response?.message?.data) {
-          data = response.message.data;
-        } else if (response?.message) {
-          data = response.message;
-        }
-
-        let foundComm: CommunityDetails = {
-          id: communityId,
-          name: data?.community_name || formatChannelName(communityId).join(" & "),
-          category: data?.community_type || "Public",
-          description: data?.description || getFallbackDescription(data?.community_type || "Public", data?.community_name || communityId),
-          categories: data?.categories || [],
-          tags: data?.tags || [],
-        };
-
-        setCommunity(foundComm);
-        setIsValidated(true);
-      } catch (err: any) {
-        console.error("Access validation failed:", err);
-        showToast(
-          err?.message || "You must join this community to access the discussions.",
-          "error"
-        );
-        router.push("/student/dashboard/community");
-      } finally {
-        setIsLoading(false);
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (apiKey && apiSecret) {
+        headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
       }
-    };
 
+      const response = await apiService.post(
+        "method/stridenex_app.stridenex_app.doctype.community.community.get_community",
+        { community: communityId }
+      );
+
+      let data = null;
+      if (response?.data) {
+        data = response.data;
+      } else if (response?.message?.data) {
+        data = response.message.data;
+      } else if (response?.message) {
+        data = response.message;
+      }
+
+      let foundComm: CommunityDetails = {
+        id: communityId,
+        name: data?.community_name || formatChannelName(communityId).join(" & "),
+        category: data?.community_type || "Public",
+        description: data?.description || getFallbackDescription(data?.community_type || "Public", data?.community_name || communityId),
+        categories: data?.categories || [],
+        tags: data?.tags || [],
+      };
+
+      setCommunity(foundComm);
+      setIsValidated(true);
+    } catch (err: any) {
+      console.error("Access validation failed:", err);
+      showToast(
+        err?.message || "You must join this community to access the discussions.",
+        "error"
+      );
+      router.push("/student/dashboard/community");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     validateAndLoad();
-  }, [communityId, router, showToast]);
+  }, [communityId]);
 
   if (isLoading) {
     return (
@@ -134,6 +134,7 @@ export default function CommunityDiscussionPage({
       <CommunityDiscussionView
         community={community}
         onBack={() => router.push("/student/dashboard/community")}
+        onRefresh={validateAndLoad}
       />
     </div>
   );

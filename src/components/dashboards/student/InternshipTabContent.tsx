@@ -261,11 +261,22 @@ export default function InternshipTabContent() {
 
       const response = await applyOpportunity(payload);
 
-      if (response && (response.status === 200 || response.status === "200" || response.message?.status === 200)) {
+      const isSuccess = response && (
+        response.status === 200 ||
+        response.status === "200" ||
+        response.message?.status === 200 ||
+        (typeof response.message === 'string' && response.message.toLowerCase().includes('success')) ||
+        (typeof response.message === 'object' && response.message.message?.toLowerCase().includes('success'))
+      );
+
+      if (isSuccess) {
         setSuccessfullyApplied(prev => [...prev, internship.name]);
+        const msg = (typeof response.message === 'string' ? response.message : null) || 
+                    (typeof response.message === 'object' ? response.message.message : null) || 
+                    `Application sent successfully for ${internship.role_name || internship.title || 'the internship'}!`;
         setFeedback({
           type: 'success',
-          message: `Application sent successfully for ${internship.role_name || internship.title || 'the internship'}!`
+          message: msg
         });
         // Refresh the list to update statuses from the server
         fetchInternships();

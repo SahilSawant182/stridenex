@@ -1619,7 +1619,13 @@ export const getSkillTestResult = async (skillTestName: string) => {
       "method/nexedu.api.skill_assessment_ai.get_skill_test_result",
       {
         params: {
-          skill_test_name: skillTestName
+          skill_test_name: skillTestName,
+          _t: Date.now()
+        },
+        headers: {
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache",
+          "Expires": "0"
         }
       }
     );

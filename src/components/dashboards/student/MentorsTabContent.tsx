@@ -93,6 +93,7 @@ interface MentorOffering {
   end_time: string;
   description: string;
   meeting_link?: string;
+  seat_status?: string;
 }
 
 const COLORS = [
@@ -253,9 +254,10 @@ export default function MentorsTabContent() {
     }
   };
 
-  const handleSelectOffering = async (offering: any) => {
+  const handleSelectOffering = async (offering: any, mentorOverride?: Mentor) => {
     setSelectedOfferingForBooking(offering);
-    if (!selectedMentorForBooking) return;
+    const mentor = mentorOverride || selectedMentorForBooking;
+    if (!mentor) return;
     setIsLoadingSlots(true);
     setSelectedSlotForBooking(null);
     setSelectedDate(null);
@@ -264,7 +266,7 @@ export default function MentorsTabContent() {
     setGroupSessionData(null);
     try {
       const response = await getMentorSlotCalendar(
-        selectedMentorForBooking.email,
+        mentor.email,
         offering.name
       );
       const msg = response?.message;
@@ -587,6 +589,23 @@ export default function MentorsTabContent() {
     );
   };
 
+  const isOfferingExpired = (offering: any) => {
+    if (!offering.start_date && !offering.end_date) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (offering.end_date) {
+      const endDate = new Date(offering.end_date);
+      endDate.setHours(0, 0, 0, 0);
+      if (endDate < today) return true;
+    } else if (offering.start_date) {
+      const startDate = new Date(offering.start_date);
+      startDate.setHours(0, 0, 0, 0);
+      if (startDate < today) return true;
+    }
+    return false;
+  };
+
   const fetchMentors = async (page: number = currentPage, search: string = searchQuery) => {
     try {
       setLoading(true);
@@ -729,81 +748,125 @@ export default function MentorsTabContent() {
                 <span>Loading {offeringTypeFilter.toLowerCase()}s...</span>
               </div>
             </div>
-          ) : offerings.length === 0 ? (
-            <div className="text-center py-20 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
-              No {offeringTypeFilter.toLowerCase()}s found.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-              {offerings.map((offering) => (
-                <BaseCard key={offering.name} className="overflow-hidden hover:shadow-lg transition-all flex flex-col h-full border-slate-200 group">
-                  <div className="p-4 flex flex-col h-full gap-3">
-                    <div className="flex justify-between items-start gap-2">
-                      <h3 className="font-semibold text-slate-800 text-sm leading-tight line-clamp-2" title={offering.title}>
-                        {offering.title}
-                      </h3>
-                      <Badge variant="secondary" className="bg-orange-100 text-orange-700 shrink-0 border-0 px-2 py-0.5">
-                        {offering.status}
-                      </Badge>
-                    </div>
+          ) : (() => {
+            const activeOfferings = offerings.filter(o => !isOfferingExpired(o));
+            if (activeOfferings.length === 0) {
+              return (
+                <div className="text-center py-20 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
+                  No {offeringTypeFilter.toLowerCase()}s found.
+                </div>
+              );
+            }
+            return (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                {activeOfferings.map((offering) => {
+                  const isBooked = bookedSessions.some(session => session.offering === offering.name);
+                  const isFull = offering.remaining_seats <= 0 || offering.seat_status === 'full';
+                  return (
+                    <BaseCard key={offering.name} className="overflow-hidden hover:shadow-lg transition-all flex flex-col h-full border-slate-200 group">
+                      <div className="p-4 flex flex-col h-full gap-3">
+                        <div className="flex justify-between items-start gap-2">
+                          <h3 className="font-semibold text-slate-800 text-sm leading-tight line-clamp-2" title={offering.title}>
+                            {offering.title}
+                          </h3>
+                          <div className="flex gap-1 shrink-0">
+                            {isBooked && (
+                              <Badge className="bg-emerald-100 text-emerald-700 border-0 px-2 py-0.5">
+                                Booked
+                              </Badge>
+                            )}
+                            <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-0 px-2 py-0.5">
+                              {offering.status}
+                            </Badge>
+                          </div>
+                        </div>
 
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
-                      <Avatar className="w-6 h-6 shrink-0 ring-1 ring-slate-100 shadow-sm">
-                        <AvatarFallback className="bg-purple-100 text-purple-700 text-xs">
-                          {offering.mentor_full_name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <span className="truncate">{offering.mentor_full_name}</span>
-                    </div>
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <Avatar className="w-6 h-6 shrink-0 ring-1 ring-slate-100 shadow-sm">
+                            <AvatarFallback className="bg-purple-100 text-purple-700 text-xs">
+                              {offering.mentor_full_name ? offering.mentor_full_name.charAt(0).toUpperCase() : "M"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="truncate">{offering.mentor_full_name}</span>
+                        </div>
 
-                    {offering.description && (
-                      <p className="text-xs text-slate-500 line-clamp-2" title={offering.description}>
-                        {offering.description}
-                      </p>
-                    )}
+                        {offering.description && (
+                          <p className="text-xs text-slate-500 line-clamp-2" title={offering.description}>
+                            {offering.description}
+                          </p>
+                        )}
 
-                    <div className="space-y-1.5 text-xs text-slate-500 mt-auto pt-2 border-t border-slate-100">
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3.5 h-3.5 text-orange-500" />
-                        <span>{offering.start_date}</span>
+                        <div className="space-y-1.5 text-xs text-slate-500 mt-auto pt-2 border-t border-slate-100">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-orange-500" />
+                            <span>{offering.start_date}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-orange-500" />
+                            <span>{offering.start_time.substring(0, 5)} ({offering.duration_minutes}m)</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Users className="w-3.5 h-3.5 text-orange-500" />
+                            <span>{offering.remaining_seats} seats left</span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="w-3.5 h-3.5 text-orange-500" />
-                        <span>{offering.start_time.substring(0, 5)} ({offering.duration_minutes}m)</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5 text-orange-500" />
-                        <span>{offering.remaining_seats} seats left</span>
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="p-3 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center mt-auto">
-                    <div className="font-semibold text-slate-900 text-sm">
-                      {offering.price_per_session > 0 ? `₹${offering.price_per_session}` : ""}
-                    </div>
-                    <Button
-                      size="sm"
-                      className="bg-orange-600 hover:bg-orange-700 text-white shadow-sm h-8 px-3 text-xs"
-                      onClick={() => {
-                        const mentorObj = mentors.find(m => m.email === offering.mentor);
-                        if (mentorObj) {
-                          setSelectedMentorForBooking(mentorObj);
-                          setSelectedOfferingForBooking(offering);
-                          setGroupSessionData(offering);
-                          setBookingTopic(offering.title);
-                        } else {
-                          alert("Mentor details not loaded. Please search for the mentor directly.");
-                        }
-                      }}
-                    >
-                      Book Now
-                    </Button>
-                  </div>
-                </BaseCard>
-              ))}
-            </div>
-          )}
+                      <div className="p-3 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center mt-auto">
+                        <div className="font-semibold text-slate-900 text-sm">
+                          {offering.price_per_session > 0 ? `₹${offering.price_per_session}` : ""}
+                        </div>
+                        {isBooked ? (
+                          <Button
+                            size="sm"
+                            disabled
+                            className="bg-slate-100 text-slate-500 border border-slate-200 shadow-sm h-8 px-3 text-xs cursor-not-allowed"
+                          >
+                            Booked
+                          </Button>
+                        ) : isFull ? (
+                          <Button
+                            size="sm"
+                            disabled
+                            className="bg-red-50 text-red-500 border border-red-200 shadow-sm h-8 px-3 text-xs cursor-not-allowed"
+                          >
+                            Full
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            className="bg-orange-600 hover:bg-orange-700 text-white shadow-sm h-8 px-3 text-xs"
+                            onClick={() => {
+                              const mentorObj = mentors.find(m => m.email === offering.mentor) || {
+                                id: offering.mentor,
+                                name: offering.mentor_full_name,
+                                email: offering.mentor,
+                                initials: offering.mentor_full_name ? offering.mentor_full_name.charAt(0).toUpperCase() : "M",
+                                role: "Mentor",
+                                company: "",
+                                expertise: [],
+                                rating: 5,
+                                sessions: 0,
+                                hourlyRate: "",
+                                availability: "",
+                                tags: [],
+                                avatarColor: "bg-purple-600",
+                                profileImage: "",
+                              };
+                              setSelectedMentorForBooking(mentorObj);
+                              handleSelectOffering(offering, mentorObj);
+                            }}
+                          >
+                            Book Now
+                          </Button>
+                        )}
+                      </div>
+                    </BaseCard>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Right Column: Booked Sessions */}
@@ -833,14 +896,14 @@ export default function MentorsTabContent() {
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className={`text-[10px] font-medium border-0 px-2 py-0.5 rounded-sm ${session.priority === 'High' ? 'bg-red-50 text-red-700' :
-                            session.priority === 'Medium' ? 'bg-orange-50 text-orange-700' :
-                              'bg-emerald-50 text-emerald-700'
+                          session.priority === 'Medium' ? 'bg-orange-50 text-orange-700' :
+                            'bg-emerald-50 text-emerald-700'
                           }`}>
                           {session.priority}
                         </Badge>
                         <span className={`text-[10px] font-medium px-2 py-0.5 rounded-sm ${session.status === 'Scheduled' ? 'bg-blue-50 text-blue-700' :
-                            session.status === 'Completed' ? 'bg-emerald-50 text-emerald-700' :
-                              'bg-slate-100 text-slate-700'
+                          session.status === 'Completed' ? 'bg-emerald-50 text-emerald-700' :
+                            'bg-slate-100 text-slate-700'
                           }`}>
                           {session.status}
                         </span>
@@ -1075,64 +1138,70 @@ export default function MentorsTabContent() {
                     <Loader2 className="animate-spin w-8 h-8 mb-4 text-orange-500" />
                     <span>Loading mentor offerings...</span>
                   </div>
-                ) : mentorOfferings.length === 0 ? (
-                  <div className="text-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
-                    No offerings available for this mentor.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <h3 className="text-sm font-semibold text-slate-800 mb-2">Select an Offering</h3>
-                    <div className="grid grid-cols-1 gap-4">
-                      {mentorOfferings.map((offering) => {
-                        const isBooked = offering.offering_type !== "1:1 Mentorship" &&
-                          bookedSessions.some(session => session.offering === offering.name);
+                ) : (() => {
+                  const activeMentorOfferings = mentorOfferings.filter(o => !isOfferingExpired(o));
+                  if (activeMentorOfferings.length === 0) {
+                    return (
+                      <div className="text-center py-12 text-slate-500 bg-white rounded-xl border border-slate-200 border-dashed">
+                        No offerings available for this mentor.
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold text-slate-800 mb-2">Select an Offering</h3>
+                      <div className="grid grid-cols-1 gap-4">
+                        {activeMentorOfferings.map((offering) => {
+                          const isBooked = offering.offering_type !== "1:1 Mentorship" &&
+                            bookedSessions.some(session => session.offering === offering.name);
 
-                        return (
-                          <div
-                            key={offering.name}
-                            onClick={() => {
-                              if (!isBooked) {
-                                handleSelectOffering(offering);
-                              }
-                            }}
-                            className={`p-5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isBooked
-                              ? "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed"
-                              : "bg-white border-slate-200 hover:border-orange-500 hover:shadow-md cursor-pointer"
-                              }`}
-                          >
-                            <div className="flex-1 space-y-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h4 className="font-bold text-slate-800 text-sm">{offering.title}</h4>
-                                <Badge className="bg-orange-50 text-orange-600 border-orange-200 text-[10px] px-2 py-0">
-                                  {offering.offering_type}
-                                </Badge>
-                                <Badge className="bg-blue-50 text-blue-600 border-blue-200 text-[10px] px-2 py-0">
-                                  {offering.category}
-                                </Badge>
-                                {isBooked && (
-                                  <Badge className="bg-slate-100 text-slate-500 border-slate-300 text-[10px] px-2 py-0">
-                                    Booked
+                          return (
+                            <div
+                              key={offering.name}
+                              onClick={() => {
+                                if (!isBooked) {
+                                  handleSelectOffering(offering);
+                                }
+                              }}
+                              className={`p-5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${isBooked
+                                ? "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed"
+                                : "bg-white border-slate-200 hover:border-orange-500 hover:shadow-md cursor-pointer"
+                                }`}
+                            >
+                              <div className="flex-1 space-y-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h4 className="font-bold text-slate-800 text-sm">{offering.title}</h4>
+                                  <Badge className="bg-orange-50 text-orange-600 border-orange-200 text-[10px] px-2 py-0">
+                                    {offering.offering_type}
                                   </Badge>
-                                )}
+                                  <Badge className="bg-blue-50 text-blue-600 border-blue-200 text-[10px] px-2 py-0">
+                                    {offering.category}
+                                  </Badge>
+                                  {isBooked && (
+                                    <Badge className="bg-slate-100 text-slate-500 border-slate-300 text-[10px] px-2 py-0">
+                                      Booked
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-slate-500 line-clamp-2">{offering.description}</p>
+                                <div className="flex gap-4 text-[11px] font-semibold text-slate-400">
+                                  <span>Duration: {offering.duration_minutes} mins</span>
+                                  {offering.max_group_size > 1 && <span>Max Size: {offering.max_group_size}</span>}
+                                </div>
                               </div>
-                              <p className="text-xs text-slate-500 line-clamp-2">{offering.description}</p>
-                              <div className="flex gap-4 text-[11px] font-semibold text-slate-400">
-                                <span>Duration: {offering.duration_minutes} mins</span>
-                                {offering.max_group_size > 1 && <span>Max Size: {offering.max_group_size}</span>}
+                              <div className="text-left sm:text-right shrink-0">
+                                <div className="text-lg font-extrabold text-slate-800">
+                                  {offering.price_per_session ? `₹${offering.price_per_session}` : ""}
+                                </div>
+                                <div className="text-xs text-slate-400">Per Session</div>
                               </div>
                             </div>
-                            <div className="text-left sm:text-right shrink-0">
-                              <div className="text-lg font-extrabold text-slate-800">
-                                {offering.price_per_session ? `₹${offering.price_per_session}` : ""}
-                              </div>
-                              <div className="text-xs text-slate-400">Per Session</div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                )
+                  );
+                })()
               ) : (
                 // Step 2: Slot/Booking Screen
                 <div className="space-y-6">
@@ -1233,13 +1302,18 @@ export default function MentorsTabContent() {
                             onChange={(e) => setBookingTopic(e.target.value)}
                           />
                         </div>
-                        <Button
-                          className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-12 text-base font-bold shadow-xl shadow-indigo-500/10"
-                          onClick={handleConfirmGroupBooking}
-                          disabled={isBooking || groupSessionData.seat_status !== 'open'}
-                        >
-                          {isBooking ? "Booking..." : groupSessionData.seat_status !== 'open' ? "Session Full" : "Join Group Session"}
-                        </Button>
+                        {(() => {
+                          const isOfferingAlreadyBooked = selectedOfferingForBooking && bookedSessions.some(session => session.offering === selectedOfferingForBooking.name);
+                          return (
+                            <Button
+                              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white h-12 text-base font-bold shadow-xl shadow-indigo-500/10"
+                              onClick={handleConfirmGroupBooking}
+                              disabled={isBooking || groupSessionData.seat_status !== 'open' || isOfferingAlreadyBooked}
+                            >
+                              {isBooking ? "Booking..." : isOfferingAlreadyBooked ? "Already Registered" : groupSessionData.seat_status !== 'open' ? "Session Full" : "Join Group Session"}
+                            </Button>
+                          );
+                        })()}
                       </div>
                     </div>
 

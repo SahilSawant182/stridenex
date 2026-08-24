@@ -172,6 +172,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
   const [modalError, setModalError] = useState<string | null>(null);
   const [isResumeDropdownOpen, setIsResumeDropdownOpen] = useState(false);
   const { showToast } = useToast();
+  const [showCompletenessPopup, setShowCompletenessPopup] = useState(false);
 
   // Mentor specific state
   const [mentorData, setMentorData] = useState<any>(() => {
@@ -235,7 +236,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
           localStorage.setItem("studentDetails", JSON.stringify(data));
         }
       }
-      
+
       // Fetch student stats
       const statsRes = await getDashboardStats(email);
       const stats = statsRes?.data || statsRes?.message;
@@ -372,6 +373,96 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
     window.addEventListener("student-stats-updated", handleStatsUpdate);
     return () => window.removeEventListener("student-stats-updated", handleStatsUpdate);
   }, []);
+
+  useEffect(() => {
+    if (role === "student" && statsData) {
+      const completeness = statsData?.profile_completeness;
+      if (completeness !== undefined && completeness !== null && Number(completeness) < 60) {
+        setShowCompletenessPopup(true);
+      } else {
+        setShowCompletenessPopup(false);
+      }
+    }
+  }, [role, statsData]);
+
+  const handleCloseCompletenessPopup = () => {
+    const completeness = statsData?.profile_completeness ?? 0;
+    if (completeness < 50) {
+      showToast(`Your profile completeness is currently at ${completeness}%. You must complete your profile to at least 90% to access all dashboard features.`, "error");
+      setTimeout(() => {
+        setShowCompletenessPopup(true);
+      }, 500);
+    } else {
+      setShowCompletenessPopup(false);
+    }
+  };
+
+  const handleOpenUpdateProfile = () => {
+    setShowCompletenessPopup(false);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseUpdateProfileModal = () => {
+    setIsModalOpen(false);
+    const completeness = statsData?.profile_completeness ?? 0;
+    if (role === "student" && completeness < 50) {
+      setTimeout(() => {
+        setShowCompletenessPopup(true);
+      }, 500);
+    }
+  };
+
+  const renderCompletenessPopup = () => {
+    if (!showCompletenessPopup) return null;
+    return (
+      <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-white rounded-2xl border border-slate-200 shadow-2xl p-6 max-w-md w-full relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 w-24 h-24 bg-orange-100/30 rounded-full blur-2xl pointer-events-none" />
+
+          <div className="flex items-start gap-4 mb-4">
+            <div className="p-3 bg-orange-100 rounded-xl text-orange-600 shrink-0">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-800">
+                Complete Your Profile
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Your profile completeness is currently at <strong className="text-orange-600 font-extrabold">{progressValue}%</strong>. You must complete at least <strong className="text-slate-700">90%</strong> of your profile to access all features.
+              </p>
+            </div>
+          </div>
+
+          {/* Progress Bar in pop-up */}
+          <div className="mb-6 bg-slate-50 border border-slate-100 p-3 rounded-xl">
+            <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+              <span>Completeness</span>
+              <span className="text-orange-600">{progressValue}% / 90%</span>
+            </div>
+            <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-500"
+                style={{ width: `${Math.min(100, (progressValue / 90) * 100)}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleOpenUpdateProfile}
+              className="w-full px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-500/20 active:scale-95 text-center"
+            >
+              Complete Profile Now
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
 
   const studentFields: DynamicField[] = useMemo(() => [
     { name: "first_name", label: "First Name", type: "text", icon: Users, required: true, disabled: true },
@@ -1084,7 +1175,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         {(role === "student" || role === "industry" || role === "college" || role === "mentor") && (
           <DashboardDynamicModal
             isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
+            onClose={handleCloseUpdateProfileModal}
             title={role === "student" || role === "mentor" ? "Update Profile" : role === "college" ? "Edit College Details" : "Edit Company Profile"}
             subtitle={role === "student" ? "Keep your academic details up to date" : role === "mentor" ? "Keep your profile details up to date" : role === "college" ? "Update your college onboarding information" : (customData?.title || "Manage your company's presence")}
             headerIcon={role === "student" || role === "mentor" ? Pen : role === "college" ? Building2 : Building2}
@@ -1101,9 +1192,9 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
                   initials={getInitials()}
                   bgClass={
                     role === "student" ? "bg-gradient-to-tr from-blue-600 to-orange-500" :
-                    role === "college" ? "bg-emerald-600" :
-                    role === "industry" ? "bg-purple-600" :
-                    "bg-violet-600"
+                      role === "college" ? "bg-emerald-600" :
+                        role === "industry" ? "bg-purple-600" :
+                          "bg-violet-600"
                   }
                   size="md"
                 />
@@ -1145,6 +1236,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
             }}
           />
         )}
+        {renderCompletenessPopup()}
       </>
     );
   }
@@ -1274,7 +1366,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
       {(role === "student" || role === "industry" || role === "college" || role === "mentor") && (
         <DashboardDynamicModal
           isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          onClose={handleCloseUpdateProfileModal}
           title={role === "student" || role === "mentor" ? "Update Profile" : role === "college" ? "Edit College Details" : "Edit Company Profile"}
           subtitle={role === "student" ? "Keep your academic details up to date" : role === "mentor" ? "Keep your profile details up to date" : role === "college" ? "Update your college onboarding information" : (customData?.title || "Manage your company's presence")}
           headerIcon={role === "student" || role === "mentor" ? Pen : role === "college" ? Building2 : Building2}
@@ -1291,9 +1383,9 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
                 initials={getInitials()}
                 bgClass={
                   role === "student" ? "bg-gradient-to-tr from-blue-600 to-orange-500" :
-                  role === "college" ? "bg-emerald-600" :
-                  role === "industry" ? "bg-purple-600" :
-                  "bg-violet-600"
+                    role === "college" ? "bg-emerald-600" :
+                      role === "industry" ? "bg-purple-600" :
+                        "bg-violet-600"
                 }
                 size="md"
               />
@@ -1335,6 +1427,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
           }}
         />
       )}
+      {renderCompletenessPopup()}
     </motion.div>
   );
 }
