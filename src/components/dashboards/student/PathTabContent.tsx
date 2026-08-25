@@ -164,6 +164,7 @@ export default function PathTabContent() {
   const [interests, setInterests] = useState<string>("Web Development, Artificial Intelligence");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [skillsInput, setSkillsInput] = useState<string>("");
+  const [showValidationErrors, setShowValidationErrors] = useState<boolean>(false);
 
   // Hierarchy skills retrieved for the selected career path
   const [hierarchySkills, setHierarchySkills] = useState<any>(null);
@@ -504,6 +505,28 @@ export default function PathTabContent() {
 
   // Submit profile details to fetch career recommendations
   const handleGetRecommendations = async () => {
+    setShowValidationErrors(true);
+    if (!degree || !degree.trim()) {
+      showToast("Degree / Qualification is required.", "warning");
+      return;
+    }
+    if (!specialisation || !specialisation.trim()) {
+      showToast("Branch / Specialisation is required.", "warning");
+      return;
+    }
+    if (!academicYear) {
+      showToast("Academic Year is required.", "warning");
+      return;
+    }
+    if (!interests || !interests.trim()) {
+      showToast("Core Interests are required.", "warning");
+      return;
+    }
+    if (!skillsInput || !skillsInput.trim()) {
+      showToast("Please enter the skills you already possess.", "warning");
+      return;
+    }
+
     setLoading(true);
     try {
       const params = {
@@ -523,14 +546,14 @@ export default function PathTabContent() {
         setRecommendedPaths(res.recommended_paths);
         setWizardStep(2);
       } else {
-        showToast("No recommendations found for this profile. Using fallback career paths.", "warning");
-        setRecommendedPaths(defaultRecommended);
+        showToast("No recommendations found for this profile.", "warning");
+        setRecommendedPaths([]);
         setWizardStep(2);
       }
     } catch (err: any) {
       console.error("Failed to get career recommendations:", err);
-      showToast(parseBackendError(err) || "Error generating recommendations. Using fallback paths.", "error");
-      setRecommendedPaths(defaultRecommended);
+      showToast(parseBackendError(err) || "Error generating recommendations.", "error");
+      setRecommendedPaths([]);
       setWizardStep(2);
     } finally {
       setLoading(false);
@@ -654,35 +677,7 @@ export default function PathTabContent() {
     { title: "Data Science Internship", subtitle: "Apply to shortlisted companies", date: "Apr-Jun", status: "upcoming" },
   ];
 
-  const defaultRecommended = [
-    {
-      career: "AI Engineer",
-      category: "AI & Data",
-      confidence: 85,
-      career_stage: "Established",
-      future_demand: "Very High",
-      industry: "Technology",
-      skills: ["Python", "Machine Learning", "Deep Learning", "TensorFlow", "NLP", "Git"]
-    },
-    {
-      career: "Frontend Developer",
-      category: "Web Development",
-      confidence: 90,
-      career_stage: "Growing",
-      future_demand: "High",
-      industry: "Technology",
-      skills: ["HTML", "CSS", "JavaScript", "React", "TypeScript", "TailwindCSS"]
-    },
-    {
-      career: "DevOps Engineer",
-      category: "Cloud",
-      confidence: 65,
-      career_stage: "Established",
-      future_demand: "Very High",
-      industry: "Infrastructure",
-      skills: ["Linux", "Docker", "Kubernetes", "AWS", "CI/CD", "Git"]
-    }
-  ];
+
 
   // Map Active Path
   const pathData = activePath?.data || activePath;
@@ -720,7 +715,7 @@ export default function PathTabContent() {
     : defaultRoadmap;
 
   // Map Recommended / Alternate Paths
-  const rawAlternatePaths = recommendedPaths.length > 0 ? recommendedPaths : defaultRecommended;
+  const rawAlternatePaths = recommendedPaths;
   const alternatePaths = rawAlternatePaths.map((path: any) => ({
     title: path.career || path.career_path || path.path_name || path.title || "Career Path",
     fitScore: typeof path.confidence === 'number' ? path.confidence : (typeof path.fit_score === 'number' ? path.fit_score : 80),
@@ -962,13 +957,16 @@ export default function PathTabContent() {
                   <div>
                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                       <GraduationCap className="w-4 h-4 text-blue-600" />
-                      Degree / Qualification
+                      <span>Degree / Qualification <span className="text-red-500">*</span></span>
                     </label>
                     <select
                       value={degree}
                       onChange={(e) => setDegree(e.target.value)}
-                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700"
+                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${
+                        showValidationErrors && !degree.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
+                      }`}
                     >
+                      <option value="">Select Degree...</option>
                       <option value="B.Tech">Bachelor of Technology (B.Tech)</option>
                       <option value="B.E.">Bachelor of Engineering (B.E.)</option>
                       <option value="M.Tech">Master of Technology (M.Tech)</option>
@@ -977,62 +975,81 @@ export default function PathTabContent() {
                       <option value="B.Sc.">Bachelor of Science (B.Sc)</option>
                       <option value="M.Sc.">Master of Science (M.Sc)</option>
                     </select>
+                    {showValidationErrors && !degree.trim() && (
+                      <span className="text-[10px] font-bold text-red-500 mt-1 block">Degree is required.</span>
+                    )}
                   </div>
 
                   {/* Specialisation */}
                   <div>
                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                       <Briefcase className="w-4 h-4 text-blue-600" />
-                      Branch / Specialisation
+                      <span>Branch / Specialisation <span className="text-red-500">*</span></span>
                     </label>
                     <input
                       type="text"
                       value={specialisation}
                       onChange={(e) => setSpecialisation(e.target.value)}
                       placeholder="e.g. Computer Science, Information Technology"
-                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700"
+                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${
+                        showValidationErrors && !specialisation.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
+                      }`}
                     />
+                    {showValidationErrors && !specialisation.trim() && (
+                      <span className="text-[10px] font-bold text-red-500 mt-1 block">Branch / Specialisation is required.</span>
+                    )}
                   </div>
 
                   {/* Year */}
                   <div>
                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                       <Calendar className="w-4 h-4 text-blue-600" />
-                      Academic Year
+                      <span>Academic Year <span className="text-red-500">*</span></span>
                     </label>
                     <select
                       value={academicYear}
                       onChange={(e) => setAcademicYear(Number(e.target.value))}
-                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700"
+                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${
+                        showValidationErrors && !academicYear ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
+                      }`}
                     >
+                      <option value="">Select Year...</option>
                       <option value="1">First Year (1st)</option>
                       <option value="2">Second Year (2nd)</option>
                       <option value="3">Third Year (3rd)</option>
                       <option value="4">Fourth Year (4th)</option>
                       <option value="5">Graduate / Completed</option>
                     </select>
+                    {showValidationErrors && !academicYear && (
+                      <span className="text-[10px] font-bold text-red-500 mt-1 block">Academic Year is required.</span>
+                    )}
                   </div>
 
                   {/* Interests */}
                   <div>
                     <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                       <Heart className="w-4 h-4 text-blue-600" />
-                      Core Interests (Comma Separated)
+                      <span>Core Interests (Comma Separated) <span className="text-red-500">*</span></span>
                     </label>
                     <input
                       type="text"
                       value={interests}
                       onChange={(e) => setInterests(e.target.value)}
                       placeholder="e.g. Web Dev, AI, Automation, Databases"
-                      className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700"
+                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${
+                        showValidationErrors && !interests.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
+                      }`}
                     />
+                    {showValidationErrors && !interests.trim() && (
+                      <span className="text-[10px] font-bold text-red-500 mt-1 block">Core Interests are required.</span>
+                    )}
                   </div>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                     <BookOpen className="w-4 h-4 text-blue-600" />
-                    What Skills Do You Already Possess? (Comma Separated)
+                    <span>What Skills Do You Already Possess? (Comma Separated) <span className="text-red-500">*</span></span>
                   </label>
                   <p className="text-xs text-slate-500 mb-4">We will use these skills to run gap analysis and offer milestone revision options.</p>
                   <input
@@ -1040,8 +1057,13 @@ export default function PathTabContent() {
                     value={skillsInput}
                     onChange={(e) => setSkillsInput(e.target.value)}
                     placeholder="e.g. HTML, CSS, JavaScript, React, Node.js"
-                    className="w-full px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700"
+                    className={`w-full px-3 py-2.5 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${
+                      showValidationErrors && !skillsInput.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
+                    }`}
                   />
+                  {showValidationErrors && !skillsInput.trim() && (
+                    <span className="text-[10px] font-bold text-red-500 mt-1 block">Please enter the skills you already possess.</span>
+                  )}
                 </div>
 
                 <div className="flex justify-end pt-4 border-t border-slate-100">
@@ -1208,6 +1230,29 @@ export default function PathTabContent() {
                             </div>
                           );
                         })}
+                        {!showMasterSearch && alternatePaths.length === 0 && (
+                          <div className="col-span-2 text-center py-10 px-4 bg-slate-50 border border-dashed border-slate-200 rounded-xl">
+                            <Compass className="w-10 h-10 text-slate-300 mx-auto mb-3 animate-pulse" />
+                            <p className="text-sm font-semibold text-slate-700">
+                              No match found for your profile.
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1 mb-4 max-w-md mx-auto">
+                              We couldn&apos;t generate career recommendations matching your profile degree, interests, and skills. Don&apos;t worry, you can explore other paths directly from our library.
+                            </p>
+                            <button
+                              onClick={() => {
+                                setShowMasterSearch(true);
+                                setSelectedPath(null);
+                                setHierarchySkills(null);
+                                setMasterSearchQuery("");
+                                fetchMasterCareerPaths("", 1);
+                              }}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-all shadow-sm active:scale-98"
+                            >
+                              Explore Other Paths
+                            </button>
+                          </div>
+                        )}
                         {showMasterSearch && filteredMasterPaths.length === 0 && (
                           <div className="col-span-2 text-center py-10 text-slate-400 text-sm font-semibold">
                             No matching career paths found in the master library.
@@ -1375,7 +1420,10 @@ export default function PathTabContent() {
 
                 <div className="flex justify-between pt-4 border-t border-slate-100">
                   <button
-                    onClick={() => setWizardStep(1)}
+                    onClick={() => {
+                      setWizardStep(1);
+                      setShowValidationErrors(false);
+                    }}
                     className="px-4 py-2 border border-slate-300 text-slate-600 text-xs font-semibold rounded-lg hover:bg-slate-50 transition-colors"
                   >
                     Back to Profile
@@ -1529,27 +1577,27 @@ export default function PathTabContent() {
             </div>
 
             {/* Future Working / What's Next Card */}
-            <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-2xl border border-slate-800 shadow-xl p-5 space-y-4 relative overflow-hidden">
-              <div className="absolute right-0 top-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl"></div>
-              <div className="absolute left-0 bottom-0 w-24 h-24 bg-violet-500/10 rounded-full blur-2xl"></div>
+            <div className="bg-gray-100 rounded-2xl border border-gray-300/70 shadow-sm p-5 space-y-4 relative overflow-hidden">
+              <div className="absolute right-0 top-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl"></div>
+              <div className="absolute left-0 bottom-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl"></div>
 
               <div>
-                <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest font-mono bg-blue-900/40 px-2 py-0.5 rounded border border-blue-800/40">Future Workflow</span>
-                <h3 className="text-sm font-bold text-white mt-2">What happens next?</h3>
-                <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">Once onboarding is complete, here is your learning journey:</p>
+                <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest font-mono bg-gray-200/80 px-2 py-0.5 rounded border border-gray-300">Future Journey</span>
+                <h3 className="text-sm font-bold text-slate-800 mt-2">What happens next?</h3>
+                <p className="text-[11px] text-slate-500 mt-1 leading-relaxed font-medium">Once onboarding is complete, here is your learning journey:</p>
               </div>
 
-              {/* Dashed process flow */}
+              {/* Process flow */}
               <div className="space-y-4 pt-2">
                 {futureSteps.map((step, idx) => {
                   const Icon = step.icon;
                   return (
                     <div key={idx} className="flex gap-3 items-start">
-                      <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                        <Icon className="w-4 h-4 text-blue-400" />
+                      <div className="w-8 h-8 rounded-lg bg-white border border-slate-200/60 shadow-sm flex items-center justify-center shrink-0">
+                        <Icon className="w-4 h-4 text-blue-600" />
                       </div>
                       <div>
-                        <h4 className="text-xs font-bold text-slate-200">{step.title}</h4>
+                        <h4 className="text-xs font-bold text-slate-700">{step.title}</h4>
                         <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed font-medium">{step.desc}</p>
                       </div>
                     </div>
