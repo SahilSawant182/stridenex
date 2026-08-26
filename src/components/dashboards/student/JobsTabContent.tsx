@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion, Variants } from "framer-motion";
 import {
   Briefcase,
@@ -471,8 +472,16 @@ export default function JobsTabContent() {
       </motion.div>
 
       {/* Details modal overlay */}
-      {showDetails && selectedJob && (
+      {showDetails && selectedJob && createPortal(
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          {/* StrideNex Logo brought to front */}
+          <div className="absolute top-4 left-6 z-[60] pointer-events-none">
+            <img
+              src="/images/Logo.png"
+              alt="StrideNex Logo"
+              className="w-48 h-12 object-contain drop-shadow-sm"
+            />
+          </div>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -583,11 +592,20 @@ export default function JobsTabContent() {
               </Button>
             </div>
           </motion.div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {showApplyModal && selectedJob && (
+      {showApplyModal && selectedJob && createPortal(
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          {/* StrideNex Logo brought to front */}
+          <div className="absolute top-4 left-6 z-[60] pointer-events-none">
+            <img
+              src="/images/Logo.png"
+              alt="StrideNex Logo"
+              className="w-48 h-12 object-contain drop-shadow-sm"
+            />
+          </div>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -703,7 +721,8 @@ export default function JobsTabContent() {
               </div>
             </form>
           </motion.div>
-        </div>
+        </div>,
+        document.body
       )}
     </motion.div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import {
   Calendar,
@@ -516,8 +517,16 @@ export default function EventsTabContent() {
       </motion.div> */}
 
       {/* Event Details Modal */}
-      {selectedEventForDetails && (
+      {selectedEventForDetails && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          {/* StrideNex Logo brought to front */}
+          <div className="absolute top-4 left-6 z-[110] pointer-events-none">
+            <img
+              src="/images/Logo.png"
+              alt="StrideNex Logo"
+              className="w-48 h-12 object-contain drop-shadow-sm"
+            />
+          </div>
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -626,7 +635,8 @@ export default function EventsTabContent() {
               </Button>
             </div>
           </motion.div>
-        </div>
+        </div>,
+        document.body
       )}
     </motion.div>
   );

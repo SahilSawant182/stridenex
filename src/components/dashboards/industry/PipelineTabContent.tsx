@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion, Variants } from "framer-motion";
 import { useSearchParams, useRouter } from "next/navigation";
 import { 
@@ -531,8 +532,16 @@ export default function PipelineTabContent() {
       </div>
 
       {/* Student Details Modal */}
-      {isModalOpen && (
+      {isModalOpen && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          {/* StrideNex Logo brought to front */}
+          <div className="absolute top-4 left-6 z-[60] pointer-events-none">
+            <img
+              src="/images/Logo.png"
+              alt="StrideNex Logo"
+              className="w-48 h-12 object-contain drop-shadow-sm"
+            />
+          </div>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -648,7 +657,8 @@ export default function PipelineTabContent() {
                )}
             </div>
           </motion.div>
-        </div>
+        </div>,
+        document.body
       )}
     </motion.div>
   );

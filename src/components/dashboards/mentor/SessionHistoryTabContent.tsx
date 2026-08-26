@@ -338,11 +338,6 @@ export default function SessionHistoryTabContent() {
                     
                     <div className="flex flex-col items-end gap-1.5">
                       <span className="text-lg font-bold text-emerald-600">{session.price}</span>
-                      <div className="flex items-center gap-0.5">
-                        {[...Array(5)].map((_, i) => (
-                          <Star key={i} className={`w-3.5 h-3.5 ${i < session.rating ? 'text-yellow-400 fill-yellow-400' : 'text-slate-200'}`} />
-                        ))}
-                      </div>
                       <button 
                         onClick={() => toggleNotes(session.id, session.studentEmail)}
                         className="text-xs font-medium text-slate-500 hover:text-slate-800 flex items-center gap-1 mt-1 transition-colors"

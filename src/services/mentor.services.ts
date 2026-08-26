@@ -289,7 +289,7 @@ export const getSessionHistory = async (mentor: string) => {
   }
 };
 
-export const rescheduleSession = async (payload: { session_name: string; new_date: string; new_from_time: string; new_to_time: string; mentor?: string; student?: string }) => {
+export const rescheduleSession = async (payload: { session_name: string; new_date: string; new_from_time: string; new_to_time: string; reason: string; mentor?: string; student?: string }) => {
   try {
     const response = await apiService.post(
       "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.reschedule_session",

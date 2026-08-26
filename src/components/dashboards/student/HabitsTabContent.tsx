@@ -2,6 +2,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 import {
     Flame,
     CheckCircle2,
@@ -1484,7 +1485,7 @@ export default function HabitsTabContent() {
             />
 
             {/* Badge Celebration Modal */}
-            {newlyUnlockedBadge && (
+            {newlyUnlockedBadge && createPortal(
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
                     <ConfettiEffect />
                     <motion.div
@@ -1535,12 +1536,13 @@ export default function HabitsTabContent() {
                             Awesome! Keep it up
                         </Button>
                     </motion.div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Earned Badge Detail Popup Modal */}
             <AnimatePresence>
-                {selectedBadge && (
+                {selectedBadge && createPortal(
                     <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[9999] p-4" onClick={() => setSelectedBadge(null)}>
                         <motion.div
                             initial={{ scale: 0.9, opacity: 0 }}
@@ -1601,7 +1603,8 @@ export default function HabitsTabContent() {
                                 Close View
                             </Button>
                         </motion.div>
-                    </div>
+                    </div>,
+                    document.body
                 )}
             </AnimatePresence>
         </div>
