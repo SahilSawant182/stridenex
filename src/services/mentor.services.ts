@@ -258,9 +258,10 @@ export const getMonthlyBookedSessions = async (mentor: string) => {
 export const blockTime = async (payload: {
   mentor: string;
   date: string;
-  from_time: string;
-  to_time: string;
-  reason: string;
+  from_time?: string;
+  to_time?: string;
+  reason?: string;
+  whole_day?: 0 | 1;
 }) => {
   try {
     const response = await apiService.post(
