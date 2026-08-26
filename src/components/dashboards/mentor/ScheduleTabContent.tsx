@@ -72,6 +72,7 @@ export default function ScheduleTabContent() {
   const [blockFromTime, setBlockFromTime] = useState("");
   const [blockToTime, setBlockToTime] = useState("");
   const [blockReason, setBlockReason] = useState("");
+  const [blockWholeDay, setBlockWholeDay] = useState(false);
   const [submittingBlock, setSubmittingBlock] = useState(false);
 
   const [rescheduleModalOpen, setRescheduleModalOpen] = useState(false);
@@ -506,7 +507,8 @@ export default function ScheduleTabContent() {
 
   const handleBlockTime = async () => {
     const email = getMentorEmail(currentUser);
-    if (!email || !blockDate || !blockFromTime || !blockToTime) return;
+    if (!email || !blockDate) return;
+    if (!blockWholeDay && (!blockFromTime || !blockToTime)) return;
     try {
       setSubmittingBlock(true);
 
@@ -518,9 +520,10 @@ export default function ScheduleTabContent() {
       await blockTime({
         mentor: email,
         date: blockDate,
-        from_time: formatTimeToSeconds(blockFromTime),
-        to_time: formatTimeToSeconds(blockToTime),
-        reason: blockReason
+        from_time: blockWholeDay ? undefined : formatTimeToSeconds(blockFromTime),
+        to_time: blockWholeDay ? undefined : formatTimeToSeconds(blockToTime),
+        reason: blockReason,
+        whole_day: blockWholeDay ? 1 : 0
       });
 
       showToast("Time blocked successfully.", "success");
@@ -528,6 +531,7 @@ export default function ScheduleTabContent() {
       setBlockFromTime("");
       setBlockToTime("");
       setBlockReason("");
+      setBlockWholeDay(false);
       setBlockModalOpen(false);
 
       if (viewType === 'week') {
@@ -578,13 +582,20 @@ export default function ScheduleTabContent() {
 
   const dynamicAvailabilityGrid = Object.keys(slotCalendar || {}).map(dateStr => {
     const slots = slotCalendar[dateStr];
+    const slotsArr = Array.isArray(slots) ? slots : [];
+
+    // Detect whole-day block: single entry with status "blocked"
+    const isWholeDayBlocked = slotsArr.length === 1 && slotsArr[0].status === 'blocked';
+
     return {
       day: getDayName(dateStr),
-      slots: Array.isArray(slots) ? slots.map(slot => ({
+      isWholeDayBlocked,
+      wholeDayReason: isWholeDayBlocked ? (slotsArr[0].reason || '') : '',
+      slots: slotsArr.map(slot => ({
         time: formatTimeSlot(slot.from_time),
         status: slot.status,
         reason: slot.reason
-      })) : []
+      }))
     };
   });
 
@@ -867,7 +878,20 @@ export default function ScheduleTabContent() {
                 <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-2 border-b border-slate-50 pb-2 last:border-0 last:pb-0">
                   <span className="w-44 text-xs font-bold text-slate-500 tracking-wider shrink-0 mt-1.5">{dayLine.day}</span>
                   <div className="flex flex-wrap items-center gap-2">
-                    {dayLine.slots.length === 0 ? (
+                    {dayLine.isWholeDayBlocked ? (
+                      <div
+                        title={dayLine.wholeDayReason ? `Reason: ${dayLine.wholeDayReason}` : 'Whole day blocked'}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold bg-rose-100 text-rose-700 border border-rose-200 shadow-sm"
+                      >
+                        <span>🚫</span>
+                        <span>Not Available</span>
+                        {dayLine.wholeDayReason ? (
+                          <span className="text-rose-500 font-medium">· {dayLine.wholeDayReason}</span>
+                        ) : (
+                          <span className="text-rose-400 font-medium">· Day Blocked</span>
+                        )}
+                      </div>
+                    ) : dayLine.slots.length === 0 ? (
                       <span className="text-xs text-slate-400 italic mt-1.5">No slots available</span>
                     ) : dayLine.slots.map((slot, j) => {
                       const isBooked = slot.status.includes('booked');
@@ -1032,28 +1056,65 @@ export default function ScheduleTabContent() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">From Time</label>
+              {/* Whole Day Checkbox */}
+              <label className="flex items-center gap-3 cursor-pointer select-none group">
+                <div className="relative">
                   <input
-                    type="time"
-                    value={blockFromTime}
-                    onChange={(e) => setBlockFromTime(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-700"
-                    required
+                    id="block-whole-day"
+                    type="checkbox"
+                    checked={blockWholeDay}
+                    onChange={(e) => {
+                      setBlockWholeDay(e.target.checked);
+                      if (e.target.checked) {
+                        setBlockFromTime("");
+                        setBlockToTime("");
+                      }
+                    }}
+                    className="sr-only"
                   />
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                    blockWholeDay
+                      ? 'bg-orange-500 border-orange-500'
+                      : 'border-slate-300 bg-white group-hover:border-orange-400'
+                  }`}>
+                    {blockWholeDay && (
+                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">To Time</label>
-                  <input
-                    type="time"
-                    value={blockToTime}
-                    onChange={(e) => setBlockToTime(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-700"
-                    required
-                  />
+                  <span className="text-sm font-bold text-slate-700">Whole Day</span>
+                  <p className="text-xs text-slate-400 leading-tight">Block the entire day — no specific time range needed</p>
                 </div>
-              </div>
+              </label>
+
+              {/* Time Fields — hidden when Whole Day is selected */}
+              {!blockWholeDay && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">From Time</label>
+                    <input
+                      type="time"
+                      value={blockFromTime}
+                      onChange={(e) => setBlockFromTime(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-700"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">To Time</label>
+                    <input
+                      type="time"
+                      value={blockToTime}
+                      onChange={(e) => setBlockToTime(e.target.value)}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-700"
+                      required
+                    />
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">Reason (Optional)</label>
@@ -1069,7 +1130,7 @@ export default function ScheduleTabContent() {
 
             <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex gap-3 justify-end">
               <button
-                onClick={() => setBlockModalOpen(false)}
+                onClick={() => { setBlockModalOpen(false); setBlockWholeDay(false); }}
                 className="flex-1 px-4 py-2 text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-sm font-bold transition-colors"
                 disabled={submittingBlock}
               >
@@ -1077,7 +1138,7 @@ export default function ScheduleTabContent() {
               </button>
               <button
                 onClick={handleBlockTime}
-                disabled={!blockDate || !blockFromTime || !blockToTime || submittingBlock}
+                disabled={!blockDate || (!blockWholeDay && (!blockFromTime || !blockToTime)) || submittingBlock}
                 className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-bold transition-colors flex justify-center items-center gap-2"
               >
                 {submittingBlock ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm"}

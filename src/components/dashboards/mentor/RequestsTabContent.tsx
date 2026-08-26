@@ -6,7 +6,6 @@ import {
   UserPlus,
   ShieldCheck,
   CheckCircle,
-  Clock,
   MessageSquare,
   Link as LinkIcon,
   X,
@@ -14,7 +13,7 @@ import {
   Loader2
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { getPendingRequests, suggestAltTime, acceptRequest, declineRequest, getMentorPendingVerifications, verifyAndEndorseSkill, rejectSkillEvidence } from "@/services/mentor.services";
+import { getPendingRequests, acceptRequest, getMentorPendingVerifications, verifyAndEndorseSkill, rejectSkillEvidence } from "@/services/mentor.services";
 import { BASE_DOMAIN } from "@/services/api.services";
 import { Pagination } from "@/components/ui/Pagination";
 import { useToast } from "@/context/ToastContext";
@@ -77,39 +76,8 @@ export default function RequestsTabContent() {
     return verifyQueue.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [verifyQueue, verifyQueuePage]);
 
-  const [altTimeModal, setAltTimeModal] = useState<{ isOpen: boolean; req: any | null }>({ isOpen: false, req: null });
-  const [altDate, setAltDate] = useState("");
-  const [altTime, setAltTime] = useState("");
-  const [submittingAlt, setSubmittingAlt] = useState(false);
   const [acceptingId, setAcceptingId] = useState<string | null>(null);
-  const [decliningId, setDecliningId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
-
-  const openAltTimeModal = (req: any) => {
-    setAltTimeModal({ isOpen: true, req });
-    setAltDate("");
-    setAltTime("");
-  };
-
-  const handleSuggestAltTime = async () => {
-    if (!altDate || !altTime || !altTimeModal.req) return;
-    try {
-      setSubmittingAlt(true);
-      await suggestAltTime({
-        booking_name: altTimeModal.req.name,
-        alt_date: altDate,
-        alt_time: altTime
-      });
-      setAltTimeModal({ isOpen: false, req: null });
-      showToast("Alternate time suggested successfully.", "success");
-      fetchRequests();
-    } catch (err: any) {
-      console.error("Failed to suggest alternate time", err);
-      showToast(err?.message || "Failed to suggest alternate time.", "error");
-    } finally {
-      setSubmittingAlt(false);
-    }
-  };
 
   const handleAcceptRequest = async (req: any) => {
     try {
@@ -136,32 +104,6 @@ export default function RequestsTabContent() {
       showToast(errMsg, "error");
     } finally {
       setAcceptingId(null);
-    }
-  };
-
-  const handleDeclineRequest = async (req: any) => {
-    try {
-      setDecliningId(req.name);
-      const res = await declineRequest({
-        booking_name: req.name
-      });
-      const msg = getFeedbackMessage(res, "Request declined successfully.");
-      setFeedback({
-        type: 'success',
-        message: msg
-      });
-      showToast(msg, "success");
-      fetchRequests();
-    } catch (err: any) {
-      console.error("Failed to decline request", err);
-      const errMsg = err?.message || "Failed to decline request.";
-      setFeedback({
-        type: 'error',
-        message: errMsg
-      });
-      showToast(errMsg, "error");
-    } finally {
-      setDecliningId(null);
     }
   };
 
@@ -434,24 +376,7 @@ export default function RequestsTabContent() {
                           )}{" "}
                           Accept & Schedule
                         </button>
-                        <button
-                          onClick={() => openAltTimeModal(req)}
-                          className="flex-none px-4 py-2 border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors"
-                        >
-                          <Clock className="w-4 h-4" /> Suggest Alt Time
-                        </button>
-                        <button
-                          onClick={() => handleDeclineRequest(req)}
-                          disabled={decliningId === req.name}
-                          className="flex-none px-4 py-2 hover:bg-red-50 disabled:opacity-50 border border-slate-200 text-slate-500 hover:text-red-600 font-bold text-sm rounded-lg flex items-center gap-1.5 transition-colors"
-                        >
-                          {decliningId === req.name ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <X className="w-4 h-4" />
-                          )}{" "}
-                          Decline
-                        </button>
+
                       </div>
                     </div>
                   </motion.div>
@@ -584,56 +509,7 @@ export default function RequestsTabContent() {
         </div>
       </div>
 
-      {/* Suggest Alt Time Modal */}
-      {altTimeModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-sm overflow-hidden flex flex-col">
-            <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
-              <h3 className="font-bold text-slate-800">Suggest Alternate Time</h3>
-              <button onClick={() => setAltTimeModal({ isOpen: false, req: null })} className="text-slate-400 hover:text-slate-600 transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-5 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1.5">Date</label>
-                <input
-                  type="date"
-                  value={altDate}
-                  style={{ textTransform: "uppercase" }}
-                  onChange={(e) => setAltDate(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-600 mb-1.5">Time</label>
-                <input
-                  type="time"
-                  value={altTime}
-                  onChange={(e) => setAltTime(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                />
-              </div>
-            </div>
-            <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex gap-3">
-              <button
-                onClick={() => setAltTimeModal({ isOpen: false, req: null })}
-                className="flex-1 px-4 py-2 text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 rounded-lg text-sm font-bold transition-colors"
-                disabled={submittingAlt}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSuggestAltTime}
-                disabled={!altDate || !altTime || submittingAlt}
-                className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-bold transition-colors flex justify-center items-center gap-2"
-              >
-                {submittingAlt ? <Loader2 className="w-4 h-4 animate-spin" /> : "Submit"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
