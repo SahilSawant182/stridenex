@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 import { Plus, Edit3, Star, Clock, Loader2, AlertCircle, Layout, Tag, Users, Calendar, Timer, FileText, Info } from "lucide-react";
 import { getMentorOfferings, createMentorOffering, updateMentorOffering, createLmsBatchForOffering } from "@/services/mentor.services";
 import { useAuth } from "@/context/AuthContext";
@@ -454,8 +455,16 @@ export default function OfferingsTabContent() {
 
       {/* Create Batch Prompt Modal */}
       <AnimatePresence>
-        {showBatchPrompt && (
+        {showBatchPrompt && createPortal(
           <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4">
+            {/* StrideNex Logo brought to front */}
+            <div className="absolute top-4 left-6 z-[120] pointer-events-none">
+              <img
+                src="/images/Logo.png"
+                alt="StrideNex Logo"
+                className="w-48 h-12 object-contain drop-shadow-sm"
+              />
+            </div>
             <motion.div
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -487,7 +496,8 @@ export default function OfferingsTabContent() {
                 </button>
               </div>
             </motion.div>
-          </div>
+          </div>,
+          document.body
         )}
       </AnimatePresence>
     </div>

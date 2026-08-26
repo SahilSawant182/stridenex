@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle2,
@@ -1608,8 +1609,16 @@ export default function PathTabContent() {
           </div>
           {/* Active Path Confirmation Modal */}
           <AnimatePresence>
-            {showConfirmModal && (
+            {showConfirmModal && createPortal(
               <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-[250] p-4">
+                {/* StrideNex Logo brought to front */}
+                <div className="absolute top-4 left-6 z-[260] pointer-events-none">
+                  <img
+                    src="/images/Logo.png"
+                    alt="StrideNex Logo"
+                    className="w-48 h-12 object-contain drop-shadow-sm"
+                  />
+                </div>
                 <motion.div
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -1643,7 +1652,8 @@ export default function PathTabContent() {
                     </button>
                   </div>
                 </motion.div>
-              </div>
+              </div>,
+              document.body
             )}
           </AnimatePresence>
         </div>
@@ -2135,13 +2145,21 @@ export default function PathTabContent() {
 
       {/* Skill Verification Test Modal */}
       <AnimatePresence>
-        {isTestModalOpen && (
+        {isTestModalOpen && createPortal(
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4"
           >
+            {/* StrideNex Logo brought to front */}
+            <div className="absolute top-4 left-6 z-[110] pointer-events-none">
+              <img
+                src="/images/Logo.png"
+                alt="StrideNex Logo"
+                className="w-48 h-12 object-contain drop-shadow-sm"
+              />
+            </div>
             <motion.div
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -2470,14 +2488,23 @@ export default function PathTabContent() {
                 )}
               </div>
             </motion.div>
-          </motion.div>
+          </motion.div>,
+          document.body
         )}
       </AnimatePresence>
 
       {/* Skill Acquisition Celebration Modal */}
       <AnimatePresence>
-        {showCelebration && (
+        {showCelebration && createPortal(
           <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+            {/* StrideNex Logo brought to front */}
+            <div className="absolute top-4 left-6 z-[210] pointer-events-none">
+              <img
+                src="/images/Logo.png"
+                alt="StrideNex Logo"
+                className="w-48 h-12 object-contain drop-shadow-sm"
+              />
+            </div>
             <ConfettiEffect />
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -2531,7 +2558,8 @@ export default function PathTabContent() {
                 Awesome! Continue Journey
               </button>
             </motion.div>
-          </div>
+          </div>,
+          document.body
         )}
       </AnimatePresence>
     </div>

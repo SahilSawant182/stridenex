@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { getShortsFeed, saveShort, unsaveShort, getSavedShorts, toggleLikeShort, addShortComment, getShortComments, toggleLikeComment, createPlaylist, saveShortToPlaylist, getStudentPlaylists } from "@/services/student.services";
 import { BASE_DOMAIN } from "@/services/api.services";
@@ -1542,8 +1543,16 @@ export default function ShortsTabContent() {
 
       {/* Recommendations Slide-out Drawer */}
       <AnimatePresence>
-        {isRecommendationsOpen && (
+        {isRecommendationsOpen && createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-sm">
+            {/* StrideNex Logo brought to front */}
+            <div className="absolute top-4 left-6 z-[60] pointer-events-none">
+              <img
+                src="/images/Logo.png"
+                alt="StrideNex Logo"
+                className="w-48 h-12 object-contain drop-shadow-sm brightness-125"
+              />
+            </div>
             <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
@@ -1627,14 +1636,23 @@ export default function ShortsTabContent() {
                 </div>
               </div>
             </motion.div>
-          </div>
+          </div>,
+          document.body
         )}
       </AnimatePresence>
 
       {/* Saved List Slide-out Drawer */}
       <AnimatePresence>
-        {isSavedListOpen && (
+        {isSavedListOpen && createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-sm">
+            {/* StrideNex Logo brought to front */}
+            <div className="absolute top-4 left-6 z-[60] pointer-events-none">
+              <img
+                src="/images/Logo.png"
+                alt="StrideNex Logo"
+                className="w-48 h-12 object-contain drop-shadow-sm brightness-125"
+              />
+            </div>
             <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
@@ -1777,14 +1795,23 @@ export default function ShortsTabContent() {
                 )}
               </div>
             </motion.div>
-          </div>
+          </div>,
+          document.body
         )}
       </AnimatePresence>
 
       {/* Redesigned Dark Comments Drawer */}
       <AnimatePresence>
-        {isCommentsOpen && selectedShort && (
+        {isCommentsOpen && selectedShort && createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-end bg-black/60 backdrop-blur-sm">
+            {/* StrideNex Logo brought to front */}
+            <div className="absolute top-4 left-6 z-[60] pointer-events-none">
+              <img
+                src="/images/Logo.png"
+                alt="StrideNex Logo"
+                className="w-48 h-12 object-contain drop-shadow-sm brightness-125"
+              />
+            </div>
             <motion.div 
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
@@ -1857,14 +1884,23 @@ export default function ShortsTabContent() {
                 </Button>
               </div>
             </motion.div>
-          </div>
+          </div>,
+          document.body
         )}
       </AnimatePresence>
 
       {/* Description Modal Overlay */}
       <AnimatePresence>
-        {showDescriptionShort && (
+        {showDescriptionShort && createPortal(
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            {/* StrideNex Logo brought to front */}
+            <div className="absolute top-4 left-6 z-[60] pointer-events-none">
+              <img
+                src="/images/Logo.png"
+                alt="StrideNex Logo"
+                className="w-48 h-12 object-contain drop-shadow-sm brightness-125"
+              />
+            </div>
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -1894,14 +1930,23 @@ export default function ShortsTabContent() {
                 {showDescriptionShort.description || "No description available."}
               </div>
             </motion.div>
-          </div>
+          </div>,
+          document.body
         )}
       </AnimatePresence>
 
       {/* Playlist Modal Overlay */}
       <AnimatePresence>
-        {isPlaylistModalOpen && (
+        {isPlaylistModalOpen && createPortal(
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            {/* StrideNex Logo brought to front */}
+            <div className="absolute top-4 left-6 z-[60] pointer-events-none">
+              <img
+                src="/images/Logo.png"
+                alt="StrideNex Logo"
+                className="w-48 h-12 object-contain drop-shadow-sm brightness-125"
+              />
+            </div>
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -1968,7 +2013,8 @@ export default function ShortsTabContent() {
                 </Button>
               </div>
             </motion.div>
-          </div>
+          </div>,
+          document.body
         )}
       </AnimatePresence>
     </div>

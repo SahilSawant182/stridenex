@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import {
   Star,
@@ -33,7 +34,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/Pagination";
-import { getMentorList, getMentorSlotCalendar, bookMentorSlot, getMentorNextAvailableSlot, getBookedSessions, getMentorOfferings, initiateSessionBooking, verifySessionPayment, getNewGroupWorkshopOfferings } from "@/services/student.services";
+import { getMentorList, getMentorSlotCalendar, bookMentorSlot, getMentorNextAvailableSlot, getBookedSessions, getMentorOfferings, initiateSessionBooking, verifySessionPayment, getNewGroupWorkshopOfferings, getSessionNote } from "@/services/student.services";
+import { submitSessionReview, getSessionReviewStatus } from "@/services/api.services";
 
 // Types
 interface Mentor {
@@ -70,6 +72,8 @@ interface BookedSession {
   to_time: string;
   duration: string;
   offering?: string;
+  // review tracking (resolved client-side)
+  already_reviewed?: boolean;
 }
 
 interface MentorOffering {
@@ -148,6 +152,21 @@ export default function MentorsTabContent() {
   const [error, setError] = useState<string | null>(null);
   const [bookedSessions, setBookedSessions] = useState<BookedSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(true);
+
+  // Review Modal State
+  const [reviewSession, setReviewSession] = useState<BookedSession | null>(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHover, setReviewHover] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewError, setReviewError] = useState<string | null>(null);
+  const [reviewSuccess, setReviewSuccess] = useState(false);
+
+  // View Note Modal State
+  const [viewingNoteSession, setViewingNoteSession] = useState<BookedSession | null>(null);
+  const [sessionNoteText, setSessionNoteText] = useState<string | null>(null);
+  const [isLoadingNote, setIsLoadingNote] = useState<boolean>(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -568,7 +587,30 @@ export default function MentorsTabContent() {
       const response = await getBookedSessions(studentEmail);
 
       if (response && response.message && Array.isArray(response.message)) {
-        setBookedSessions(response.message);
+        const sessions: BookedSession[] = response.message;
+        // Resolve review status for each completed session in parallel
+        const reviewChecks = await Promise.allSettled(
+          sessions
+            .filter(s => s.status === "Completed")
+            .map(async s => {
+              try {
+                const r = await getSessionReviewStatus({ booking_name: s.name });
+                return { name: s.name, already_reviewed: r?.message?.already_reviewed ?? false };
+              } catch {
+                return { name: s.name, already_reviewed: false };
+              }
+            })
+        );
+        const reviewMap: Record<string, boolean> = {};
+        reviewChecks.forEach(result => {
+          if (result.status === "fulfilled") {
+            reviewMap[result.value.name] = result.value.already_reviewed;
+          }
+        });
+        setBookedSessions(sessions.map(s => ({
+          ...s,
+          already_reviewed: reviewMap[s.name] ?? false,
+        })));
       } else {
         setBookedSessions([]);
       }
@@ -577,6 +619,62 @@ export default function MentorsTabContent() {
       setBookedSessions([]);
     } finally {
       setLoadingSessions(false);
+    }
+  };
+
+  const handleOpenReview = (session: BookedSession) => {
+    setReviewSession(session);
+    setReviewRating(0);
+    setReviewHover(0);
+    setReviewText("");
+    setReviewError(null);
+    setReviewSuccess(false);
+  };
+
+  const handleOpenNote = async (session: BookedSession) => {
+    setViewingNoteSession(session);
+    setIsLoadingNote(true);
+    setNoteError(null);
+    setSessionNoteText(null);
+    try {
+      const studentEmail = localStorage.getItem("currentUser") || "";
+      const res = await getSessionNote(session.name, studentEmail);
+      if (res?.message && res.message.status === "success") {
+        setSessionNoteText(res.message.data?.shared_with_student || "");
+      } else {
+        setNoteError(res?.message?.message || "Failed to load session note.");
+      }
+    } catch (err: any) {
+      setNoteError(err?.message || "Failed to load session note.");
+    } finally {
+      setIsLoadingNote(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!reviewSession) return;
+    if (reviewRating < 1) {
+      setReviewError("Please select a star rating.");
+      return;
+    }
+    setIsSubmittingReview(true);
+    setReviewError(null);
+    try {
+      await submitSessionReview({
+        booking_name: reviewSession.name,
+        rating: reviewRating,
+        review: reviewText.trim() || "Great session!",
+      });
+      setReviewSuccess(true);
+      // Mark reviewed locally
+      setBookedSessions(prev =>
+        prev.map(s => s.name === reviewSession.name ? { ...s, already_reviewed: true } : s)
+      );
+      setTimeout(() => setReviewSession(null), 1500);
+    } catch (err: any) {
+      setReviewError(err?.message || "Failed to submit review. Please try again.");
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -917,12 +1015,12 @@ export default function MentorsTabContent() {
 
                     <div>
                       <h4 className="font-medium text-slate-900 text-sm mb-1">{session.topic}</h4>
-                      <p className="text-xs text-slate-500 mb-3 flex items-center gap-1.5">
+                      <p className="text-xs text-slate-500 mb-2 flex items-center gap-1.5">
                         <UserSquare2 className="w-3.5 h-3.5" />
                         {session.mentor}
                       </p>
 
-                      <div className="flex items-center gap-4 text-xs text-slate-600 bg-white rounded-lg border border-slate-100 p-2">
+                      <div className="flex items-center gap-4 text-xs text-slate-600 bg-white rounded-lg border border-slate-100 p-2 mb-2">
                         <div className="flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5 text-orange-500" />
                           <span>{session.session_date}</span>
@@ -931,6 +1029,34 @@ export default function MentorsTabContent() {
                           <Clock className="w-3.5 h-3.5 text-orange-500" />
                           <span>{session.from_time?.substring(0, 5)} - {session.to_time?.substring(0, 5)}</span>
                         </div>
+                      </div>
+
+                      {/* Actions for sessions */}
+                      <div className="flex items-center gap-2 mt-2">
+                        {session.status === 'Completed' && (
+                          session.already_reviewed ? (
+                            <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-100">
+                              <CheckCircle className="w-3 h-3 text-emerald-500" />
+                              Reviewed
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleOpenReview(session)}
+                              className="flex items-center gap-1 text-[10px] font-semibold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-md px-2.5 py-1 transition-colors"
+                            >
+                              <Star className="w-3 h-3 fill-orange-400 text-orange-400" />
+                              Rate Session
+                            </button>
+                          )
+                        )}
+
+                        <button
+                          onClick={() => handleOpenNote(session)}
+                          className="flex items-center gap-1 text-[10px] font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md px-2.5 py-1 transition-colors"
+                        >
+                          <BookOpen className="w-3 h-3 text-blue-500" />
+                          View Note
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1096,9 +1222,233 @@ export default function MentorsTabContent() {
 
 
 
+      {/* ── Review Modal ── */}
+      {reviewSession && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          {/* StrideNex Logo brought to front */}
+          <div className="absolute top-4 left-6 z-[60] pointer-events-none">
+            <img
+              src="/images/Logo.png"
+              alt="StrideNex Logo"
+              className="w-48 h-12 object-contain drop-shadow-sm"
+            />
+          </div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.93, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.93, y: 20 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+          >
+            {/* Header */}
+            <div className="relative px-6 pt-6 pb-4 bg-gradient-to-br from-orange-50 to-amber-50 border-b border-orange-100">
+              <button
+                onClick={() => setReviewSession(null)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+                  <Star className="w-5 h-5 text-orange-500" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-800">Rate this Session</h2>
+                  <p className="text-xs text-slate-500 mt-0.5 truncate max-w-[240px]" title={reviewSession.topic}>
+                    {reviewSession.topic}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-5">
+              {reviewSuccess ? (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex flex-col items-center justify-center py-6 text-center"
+                >
+                  <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
+                    <CheckCircle className="w-7 h-7 text-emerald-600" />
+                  </div>
+                  <h3 className="font-bold text-slate-800 text-base">Review Submitted!</h3>
+                  <p className="text-sm text-slate-500 mt-1">Thank you for your feedback.</p>
+                </motion.div>
+              ) : (
+                <>
+                  {/* Star Rating */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-3">Your Rating <span className="text-red-500">*</span></label>
+                    <div className="flex items-center gap-2 justify-center">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => setReviewRating(star)}
+                          onMouseEnter={() => setReviewHover(star)}
+                          onMouseLeave={() => setReviewHover(0)}
+                          className="transition-transform hover:scale-110 focus:outline-none"
+                        >
+                          <Star
+                            className={`w-8 h-8 transition-colors ${star <= (reviewHover || reviewRating)
+                                ? 'fill-amber-400 text-amber-400'
+                                : 'fill-slate-100 text-slate-300'
+                              }`}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                    {reviewRating > 0 && (
+                      <p className="text-center text-xs text-slate-500 mt-1.5">
+                        {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][reviewRating]}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Review Text */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-500 mb-1.5">Your Review <span className="text-slate-400 font-normal">(optional)</span></label>
+                    <textarea
+                      value={reviewText}
+                      onChange={(e) => setReviewText(e.target.value)}
+                      placeholder="Share your experience with the mentor..."
+                      rows={3}
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 transition resize-none"
+                    />
+                  </div>
+
+                  {reviewError && (
+                    <div className="flex items-center gap-2 text-red-600 text-xs bg-red-50 rounded-lg px-3 py-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      {reviewError}
+                    </div>
+                  )}
+
+                  {/* Session Info */}
+                  <div className="text-xs text-slate-400 bg-slate-50 rounded-lg p-3 flex items-center gap-3">
+                    <Calendar className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                    <span>{reviewSession.session_date}</span>
+                    <Clock className="w-3.5 h-3.5 text-orange-400 shrink-0 ml-2" />
+                    <span>{reviewSession.from_time?.substring(0, 5)} – {reviewSession.to_time?.substring(0, 5)}</span>
+                  </div>
+
+                  {/* Submit */}
+                  <button
+                    onClick={handleSubmitReview}
+                    disabled={isSubmittingReview || reviewRating < 1}
+                    className="w-full h-11 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm shadow-lg shadow-orange-200 transition-all flex items-center justify-center gap-2"
+                  >
+                    {isSubmittingReview ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Submitting...</>
+                    ) : (
+                      <><Star className="w-4 h-4 fill-white" /> Submit Review</>
+                    )}
+                  </button>
+                </>
+              )}
+            </div>
+          </motion.div>
+        </div>,
+        document.body
+      )}
+
+      {/* ── View Note Modal ── */}
+      {viewingNoteSession && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          {/* StrideNex Logo brought to front */}
+          <div className="absolute top-4 left-6 z-[60] pointer-events-none">
+            <img
+              src="/images/Logo.png"
+              alt="StrideNex Logo"
+              className="w-48 h-12 object-contain drop-shadow-sm"
+            />
+          </div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.93, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.93, y: 20 }}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+          >
+            {/* Header */}
+            <div className="relative px-6 pt-6 pb-4 bg-gradient-to-br from-blue-50 to-indigo-50 border-b border-blue-100">
+              <button
+                onClick={() => setViewingNoteSession(null)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                  <BookOpen className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-base font-bold text-slate-800">Mentor's Shared Note</h2>
+                  <p className="text-xs text-slate-500 mt-0.5 truncate max-w-[240px]" title={viewingNoteSession.topic}>
+                    {viewingNoteSession.topic}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              {isLoadingNote ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
+                  <p className="text-sm text-slate-500 font-medium">Fetching shared notes...</p>
+                </div>
+              ) : noteError ? (
+                <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 rounded-lg p-4">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <p className="font-medium">{noteError}</p>
+                </div>
+              ) : sessionNoteText ? (
+                <div className="space-y-3">
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 max-h-[250px] overflow-y-auto">
+                    <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                      {sessionNoteText}
+                    </p>
+                  </div>
+                  <div className="text-[10px] text-slate-400 flex justify-between items-center px-1">
+                    <span>Shared by {viewingNoteSession.mentor}</span>
+                    <span>{viewingNoteSession.session_date}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                  <BookOpen className="w-8 h-8 text-slate-300 mb-2" />
+                  <p className="text-sm text-slate-600 font-semibold">No notes shared yet</p>
+                  <p className="text-xs text-slate-400 mt-1 max-w-[200px]">
+                    The mentor has not shared any preparation or follow-up notes for this session.
+                  </p>
+                </div>
+              )}
+
+              {/* Close Button */}
+              <button
+                onClick={() => setViewingNoteSession(null)}
+                className="w-full h-10 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </motion.div>
+        </div>,
+        document.body
+      )}
+
+
       {/* Booking Modal */}
-      {selectedMentorForBooking && (
+      {selectedMentorForBooking && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          {/* StrideNex Logo brought to front */}
+          <div className="absolute top-4 left-6 z-[60] pointer-events-none">
+            <img
+              src="/images/Logo.png"
+              alt="StrideNex Logo"
+              className="w-48 h-12 object-contain drop-shadow-sm"
+            />
+          </div>
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -1402,7 +1752,7 @@ export default function MentorsTabContent() {
                           className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4"
                         >
                           <div>
-                            <label className="block text-xs font-semibold text-slate-500 mb-1.5">Session Topic / Description (Optional)</label>
+                            <label className="block text-xs font-semibold text-slate-500 mb-1.5">What you expect from session</label>
                             <Input
                               placeholder="e.g. Mock Interview Prep"
                               className="bg-white border-slate-200 text-sm"
@@ -1425,7 +1775,8 @@ export default function MentorsTabContent() {
               )}
             </div>
           </motion.div>
-        </div>
+        </div>,
+        document.body
       )}
     </motion.div>
   );

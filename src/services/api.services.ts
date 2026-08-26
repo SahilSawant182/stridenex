@@ -325,3 +325,31 @@ export const toggleCommentLike = async (payload: { comment: string }) => {
     data: payload,
   });
 };
+
+/**
+ * Submit a rating and review for a completed mentor session booking.
+ * Maps to: submit_review(booking_name, rating, review, skill_highlights)
+ */
+export const submitSessionReview = async (payload: {
+  booking_name: string;
+  rating: number;
+  review: string;
+  skill_highlights?: string;
+}) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.submit_review",
+    data: payload,
+  });
+};
+
+/**
+ * Check if the current student has already reviewed a booking.
+ */
+export const getSessionReviewStatus = async (payload: { booking_name: string }) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.get_review_status",
+    data: payload,
+  });
+};

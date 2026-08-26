@@ -6,6 +6,7 @@ import { getUpcomingSessions, getSlotCalendar, getWeeklyBookedSessions, getMonth
 import { useToast } from "@/context/ToastContext";
 
 import { motion } from "framer-motion";
+import { createPortal } from "react-dom";
 import {
   Calendar,
   Clock,
@@ -82,6 +83,7 @@ export default function ScheduleTabContent() {
   const [rescheduleDate, setRescheduleDate] = useState("");
   const [rescheduleFromTime, setRescheduleFromTime] = useState("");
   const [rescheduleToTime, setRescheduleToTime] = useState("");
+  const [rescheduleReason, setRescheduleReason] = useState("");
   const [submittingReschedule, setSubmittingReschedule] = useState(false);
   const [rescheduleError, setRescheduleError] = useState("");
 
@@ -234,6 +236,7 @@ export default function ScheduleTabContent() {
     setRescheduleDate("");
     setRescheduleFromTime("");
     setRescheduleToTime("");
+    setRescheduleReason("");
     setRescheduleError("");
     setRescheduleModalOpen(true);
   };
@@ -252,6 +255,7 @@ export default function ScheduleTabContent() {
         new_date: rescheduleDate,
         new_from_time: formatTimeToSeconds(rescheduleFromTime),
         new_to_time: formatTimeToSeconds(rescheduleToTime),
+        reason: rescheduleReason,
         mentor: selectedSessionMentor,
         student: selectedSessionStudent
       });
@@ -1030,8 +1034,16 @@ export default function ScheduleTabContent() {
       </motion.div>
 
       {/* Block Time Modal */}
-      {blockModalOpen && (
+      {blockModalOpen && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          {/* StrideNex Logo brought to front */}
+          <div className="absolute top-4 left-6 z-[60] pointer-events-none">
+            <img
+              src="/images/Logo.png"
+              alt="StrideNex Logo"
+              className="w-48 h-12 object-contain drop-shadow-sm"
+            />
+          </div>
           <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden flex flex-col mx-4">
             <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="font-bold text-slate-800 text-lg">Block Time</h3>
@@ -1072,11 +1084,10 @@ export default function ScheduleTabContent() {
                     }}
                     className="sr-only"
                   />
-                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                    blockWholeDay
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${blockWholeDay
                       ? 'bg-orange-500 border-orange-500'
                       : 'border-slate-300 bg-white group-hover:border-orange-400'
-                  }`}>
+                    }`}>
                     {blockWholeDay && (
                       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -1145,12 +1156,21 @@ export default function ScheduleTabContent() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Reschedule Modal */}
-      {rescheduleModalOpen && (
+      {rescheduleModalOpen && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          {/* StrideNex Logo brought to front */}
+          <div className="absolute top-4 left-6 z-[60] pointer-events-none">
+            <img
+              src="/images/Logo.png"
+              alt="StrideNex Logo"
+              className="w-48 h-12 object-contain drop-shadow-sm"
+            />
+          </div>
           <div className="bg-white rounded-xl shadow-lg w-full max-w-md overflow-hidden flex flex-col mx-4">
             <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="font-bold text-slate-800 text-lg">Reschedule Session</h3>
@@ -1204,6 +1224,20 @@ export default function ScheduleTabContent() {
                   />
                 </div>
               </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">
+                  Reason for Rescheduling <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={rescheduleReason}
+                  onChange={(e) => setRescheduleReason(e.target.value)}
+                  placeholder="e.g. Emergency came up, need to move to next week..."
+                  rows={3}
+                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 font-medium text-slate-700 resize-none"
+                  required
+                />
+              </div>
             </div>
 
             <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex gap-3 justify-end">
@@ -1216,19 +1250,28 @@ export default function ScheduleTabContent() {
               </button>
               <button
                 onClick={submitReschedule}
-                disabled={!rescheduleDate || !rescheduleFromTime || !rescheduleToTime || submittingReschedule}
+                disabled={!rescheduleDate || !rescheduleFromTime || !rescheduleToTime || !rescheduleReason.trim() || submittingReschedule}
                 className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-bold transition-colors flex justify-center items-center gap-2"
               >
                 {submittingReschedule ? <Loader2 className="w-4 h-4 animate-spin" /> : "Confirm"}
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Set Availability Modal */}
-      {availabilityModalOpen && (
+      {availabilityModalOpen && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          {/* StrideNex Logo brought to front */}
+          <div className="absolute top-4 left-6 z-[60] pointer-events-none">
+            <img
+              src="/images/Logo.png"
+              alt="StrideNex Logo"
+              className="w-48 h-12 object-contain drop-shadow-sm"
+            />
+          </div>
           <div className="bg-white rounded-xl shadow-lg w-full max-w-lg overflow-hidden flex flex-col mx-4 max-h-[90vh]">
             <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <h3 className="font-bold text-slate-800 text-lg">Configure Availability</h3>
@@ -1410,12 +1453,21 @@ export default function ScheduleTabContent() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Prep Notes Modal */}
-      {notesModalOpen && (
+      {notesModalOpen && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          {/* StrideNex Logo brought to front */}
+          <div className="absolute top-4 left-6 z-[60] pointer-events-none">
+            <img
+              src="/images/Logo.png"
+              alt="StrideNex Logo"
+              className="w-48 h-12 object-contain drop-shadow-sm"
+            />
+          </div>
           <div className="bg-white rounded-xl shadow-lg w-full max-w-lg overflow-hidden flex flex-col mx-4 max-h-[90vh]">
             <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
               <div>
@@ -1510,7 +1562,8 @@ export default function ScheduleTabContent() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

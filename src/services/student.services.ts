@@ -651,9 +651,6 @@ export const getStudentBadges = async (studentEmail: string) => {
 };
 
 
-/**
- * Get booked sessions for a student.
- */
 export const getBookedSessions = async (studentEmail: string) => {
   try {
     const response = await apiService.get(
@@ -665,6 +662,22 @@ export const getBookedSessions = async (studentEmail: string) => {
     throw error;
   }
 };
+
+/**
+ * Fetch shared session notes for a booking.
+ */
+export const getSessionNote = async (sessionName: string, studentEmail: string) => {
+  try {
+    const response = await apiService.get(
+      `method/stridenex_app.stridenex_app.doctype.mentor_session_booking.mentor_session_booking.get_session_note?session_name=${encodeURIComponent(sessionName)}&student=${encodeURIComponent(studentEmail)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching session note:", error);
+    throw error;
+  }
+};
+
 
 /**
  * Fetch group session and workshop offerings.
