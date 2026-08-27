@@ -14,6 +14,7 @@ interface OnboardingLayoutProps {
   onSkip?: () => void;
   showSkip?: boolean;
   appName?: string;
+  bgImage?: string | null;
 }
 
 export default function OnboardingLayout({
@@ -24,8 +25,10 @@ export default function OnboardingLayout({
   description,
   onSkip,
   showSkip = true,
-  appName = "StrideNex"
+  appName = "StrideNex",
+  bgImage
 }: OnboardingLayoutProps) {
+  const backgroundImage = bgImage || "/images/login-page-background.png";
 
   const getStepCompletion = () => {
     if (totalSteps <= 0) return 0;
@@ -35,7 +38,19 @@ export default function OnboardingLayout({
   return (
     <div className="flex flex-col lg:flex-row w-screen h-screen overflow-hidden">
       {/* LEFT SIDE - Branding */}
-      <div className="hidden lg:flex lg:w-[30%] h-full relative bg-gradient-to-br from-navy to-royal overflow-hidden">
+      <div className="hidden lg:flex lg:w-[30%] h-full relative bg-slate-950 overflow-hidden">
+        {/* Background Image */}
+        {backgroundImage && (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-b from-slate-950/85 via-slate-950/50 to-slate-950/90 z-10" />
+            <img
+              src={backgroundImage}
+              alt="StrideNex Platform"
+              className="absolute inset-0 w-full h-full object-cover opacity-90"
+              loading="lazy"
+            />
+          </>
+        )}
         {/* Decorative Elements */}
         <div className="absolute inset-0">
           <div className="absolute -top-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>

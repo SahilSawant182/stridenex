@@ -929,6 +929,7 @@ export default function CollegeDashboardPage() {
         <SuccessStoriesFooter 
           collegeName={collegeDetails?.college_name} 
           collegeDetailsName={collegeDetails?.name} 
+          hideShareButton={true}
         />
       </motion.div>
     </motion.div>
