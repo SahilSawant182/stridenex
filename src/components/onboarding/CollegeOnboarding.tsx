@@ -12,10 +12,11 @@ import { BASE_URL } from "@/services/api.services";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Plus, Trash2, Loader2 } from "lucide-react";
 import axios from "axios";
 import { ContactPersonsTable } from "@/components/ContactPersonsTable";
 import { validateEmail } from "@/lib/validators";
+import Dropdown from "@/components/ui/Dropdown";
 import {
   sendMobileOTP,
   verifyMobileOTP,
@@ -90,6 +91,18 @@ export default function CollegeOnboarding({
     { stream: "" }
   ]);
 
+  const [selectedCourseTypes, setSelectedCourseTypes] = useState<string[]>([]);
+  const [selectedStreams, setSelectedStreams] = useState<string[]>([]);
+  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [coursesList, setCoursesList] = useState<any[]>([]);
+  const [addedCoursesTable, setAddedCoursesTable] = useState<Array<{
+    id: string;
+    course_type: string;
+    stream: string;
+    course: string;
+    department: any;
+  }>>([]);
+
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const [emailVerificationCode, setEmailVerificationCode] = useState("");
@@ -99,9 +112,9 @@ export default function CollegeOnboarding({
   const [emailTimer, setEmailTimer] = useState(0);
   const [mobileTimer, setMobileTimer] = useState(0);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState({  
     college_name: "",
-    trust__governing_body: "",
+    trust__governing_body: "",             
     year_of_establishment: "",
     intake_capacity: "",
     country: "India",
@@ -356,6 +369,18 @@ export default function CollegeOnboarding({
           setCourses(resData.courses.map((c: any) => ({
             stream: c.stream || ""
           })));
+
+          const initialTable = resData.courses.map((c: any, index: number) => {
+            const tempId = `init-${index}-${Math.random().toString(36).substring(7)}`;
+            return {
+              id: tempId,
+              course_type: c.course_type || "",
+              stream: c.stream || "",
+              course: c.course || c.course_name || "",
+              department: c.department ? (typeof c.department === 'string' ? c.department.split(',').map((d:string)=>d.trim()) : c.department) : []
+            };
+          });
+          setAddedCoursesTable(initialTable);
         }
       }
     } catch (err) {
@@ -467,6 +492,59 @@ export default function CollegeOnboarding({
     setCourses([...courses, { stream: "" }]);
   };
 
+  const handleAddCourses = async () => {
+    if (selectedCourses.length === 0) return;
+
+    const newRows = [...addedCoursesTable];
+
+    for (const courseName of selectedCourses) {
+      if (newRows.some(row => row.course === courseName)) continue;
+
+      const courseDetails = coursesList.find(c => c.name === courseName);
+      if (!courseDetails) continue;
+
+      const tempId = Math.random().toString(36).substring(7);
+
+      const newRow = {
+        id: tempId,
+        course_type: courseDetails.course_type,
+        stream: courseDetails.stream,
+        course: courseDetails.name,
+        department: []
+      };
+
+      newRows.push(newRow);
+    }
+
+    setAddedCoursesTable(newRows);
+    setSelectedCourses([]);
+
+    if (fieldErrors.courses) {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.courses;
+        return newErrors;
+      });
+    }
+  };
+
+  const handleDepartmentChange = (rowId: string, value: any) => {
+    setAddedCoursesTable(prev => prev.map(row =>
+      row.id === rowId ? { ...row, department: value } : row
+    ));
+    if (fieldErrors.courses) {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.courses;
+        return newErrors;
+      });
+    }
+  };
+
+  const handleRemoveCourseRow = (rowId: string) => {
+    setAddedCoursesTable(prev => prev.filter(row => row.id !== rowId));
+  };
+
   const toggleDesignationDropdown = (index: number) => {
     setOpenDesignationDropdown(openDesignationDropdown === index ? null : index);
   };
@@ -564,8 +642,9 @@ export default function CollegeOnboarding({
 
   const validateStep4 = (): boolean => {
     const errors: Record<string, string> = {};
-    const validCourses = courses.filter(course => course.stream);
-    if (validCourses.length === 0) errors.courses = "Please select at least one stream";
+    if (addedCoursesTable.length === 0) {
+      errors.courses = "Please add at least one course";
+    }
     const invalidContact = contactPersons.some(
       person => !person.title || !person.first_name || !person.last_name || !person.designation || !person.contact_no
     );
@@ -588,7 +667,12 @@ export default function CollegeOnboarding({
       email: person.email
     }));
 
-    const validCourses = courses.filter(course => course.stream);
+    const formattedCourses = addedCoursesTable.map(row => ({
+      course_type: row.course_type,
+      stream: row.stream,
+      course: row.course,
+      department: Array.isArray(row.department) ? row.department.join(",") : row.department
+    }));
     const userEmail = localStorage.getItem("userEmail") || formData.email;
 
     return {
@@ -613,7 +697,7 @@ export default function CollegeOnboarding({
       is_active: formData.isActive ? 1 : 0,
       approved_status: formData.approvedStatus || "Pending",
       contact_details: formattedContactPersons,
-      courses: validCourses.map(course => ({ stream: course.stream })),
+      courses: formattedCourses,
       is_admin: 0
     };
   };
@@ -1393,49 +1477,141 @@ export default function CollegeOnboarding({
   };
 
   const renderStep4 = () => {
-    const step4Fields: FormField[] = [
-      {
-        fieldname: "streams",
-        label: "Streams",
-        fieldtype: "Data",
-        required: true,
-        placeholder: "Select streams",
-        layout: "full",
-        multiSelect: true,
-        apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
-        apiParams: { doctype: "Stream" },
-        mapOptions: (data) => {
-          const items = data.data || data || [];
-          return items.map((item: any) => ({ value: item.name, label: item.name }));
-        }
-      },
-    ];
-
     return (
       <div className="space-y-6">
-        <div className="relative">
-          <DynamicForm
-            fields={step4Fields}
-            onSubmit={() => { }}
-            buttonLabel=""
-            loading={loading}
-            errors={fieldErrors}
-            initialValues={{ streams: courses.filter(c => c.stream).map(c => c.stream) }}
-            onChange={(data) => {
-              const selectedStreams = data.streams || [];
-              if (selectedStreams.length > 0) {
-                setCourses(selectedStreams.map((stream: string) => ({ stream })));
-              } else {
-                setCourses([{ stream: "" }]);
-              }
-              if (fieldErrors.courses) {
-                const updatedErrors = { ...fieldErrors };
-                delete updatedErrors.courses;
-                setFieldErrors(updatedErrors);
-              }
-              setError("");
-            }}
-          />
+        <div className="relative space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+            <div>
+              <Dropdown
+                id="course_type"
+                label="Course Type"
+                placeholder="Select Course Type"
+                endpoint={`${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`}
+                params={{ doctype: "Course Type" }}
+                value={selectedCourseTypes}
+                onChange={(val) => {
+                  setSelectedCourseTypes(val);
+                  setSelectedCourses([]);
+                }}
+                multiSelect={true}
+                searchable={true}
+                modalTitle="Select Course Type"
+              />
+            </div>
+            <div>
+              <Dropdown
+                id="stream"
+                label="Stream"
+                placeholder="Select Stream"
+                endpoint={`${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`}
+                params={{ doctype: "Stream" }}
+                value={selectedStreams}
+                onChange={(val) => {
+                  setSelectedStreams(val);
+                  setSelectedCourses([]);
+                }}
+                multiSelect={true}
+                searchable={true}
+                modalTitle="Select Stream"
+              />
+            </div>
+            <div>
+              <Dropdown
+                key={`course-dropdown-${selectedCourseTypes.join(",")}-${selectedStreams.join(",")}`}
+                id="course"
+                label="Course"
+                placeholder={selectedCourseTypes.length === 0 || selectedStreams.length === 0 ? "Select Course Type & Stream first" : "Select Course"}
+                endpoint={`${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_courses_by_type`}
+                params={{
+                  course_type: selectedCourseTypes.join(","),
+                  stream: selectedStreams.join(",")
+                }}
+                mapOptions={(data) => {
+                  const courses = data?.data?.courses || data?.courses || data?.message?.data?.courses || [];
+                  setCoursesList(courses);
+                  return courses.map((c: any) => ({
+                    value: c.name,
+                    label: c.course_name || c.name
+                  }));
+                }}
+                value={selectedCourses}
+                onChange={setSelectedCourses}
+                multiSelect={true}
+                searchable={true}
+                disabled={selectedCourseTypes.length === 0 || selectedStreams.length === 0}
+                modalTitle="Select Course"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              onClick={handleAddCourses}
+              disabled={selectedCourses.length === 0}
+              variant="accent"
+              className="flex items-center gap-1 text-xs px-3 py-1.5"
+            >
+              <Plus className="w-3.5 h-3.5" /> Add Course
+            </Button>
+          </div>
+
+          {addedCoursesTable.length > 0 && (
+            <div className="mt-4 border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 font-medium">Course Type</th>
+                    <th className="px-4 py-3 font-medium">Stream</th>
+                    <th className="px-4 py-3 font-medium">Course</th>
+                    <th className="px-4 py-3 font-medium">Department</th>
+                    <th className="px-4 py-3 font-medium text-center w-16">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+                  {addedCoursesTable.map((row) => (
+                    <tr key={row.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3 font-medium text-slate-900">{row.course_type || "—"}</td>
+                      <td className="px-4 py-3 text-slate-500">{row.stream || "—"}</td>
+                      <td className="px-4 py-3 text-slate-500">{row.course || "—"}</td>
+                      <td className="px-4 py-3">
+                        <Dropdown
+                          id={`dept-${row.id}`}
+                          placeholder="Select Department"
+                          endpoint={`${BASE_URL}method/stridenex_app.stridenex_app.doctype.college_department.college_department.get_departments_by_course`}
+                          params={{
+                            courses: row.course
+                          }}
+                          mapOptions={(data) => {
+                            const depts = data?.data || data?.message?.data || [];
+                            return depts.map((d: any) => ({
+                              value: d.name,
+                              label: d.department_name || d.name
+                            }));
+                          }}
+                          value={row.department}
+                          onChange={(val) => handleDepartmentChange(row.id, val)}
+                          searchable={true}
+                          multiSelect={true}
+                          modalTitle="Select Department"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCourseRow(row.id)}
+                          className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
           {fieldErrors.courses && (
             <p className="text-xs text-red-500 mt-1">{fieldErrors.courses}</p>
           )}

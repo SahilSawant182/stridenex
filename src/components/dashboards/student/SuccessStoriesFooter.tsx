@@ -23,10 +23,12 @@ import { getSuccessStories, createSuccessStory, getStudentByEmail } from "@/serv
 
 export default function SuccessStoriesFooter({ 
   collegeName, 
-  collegeDetailsName 
+  collegeDetailsName,
+  hideShareButton = false
 }: { 
   collegeName?: string; 
   collegeDetailsName?: string;
+  hideShareButton?: boolean;
 }) {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
@@ -280,13 +282,15 @@ export default function SuccessStoriesFooter({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button 
-            onClick={() => setIsOpen(true)}
-            className="bg-orange-500 hover:bg-orange-600 text-white font-bold flex items-center gap-2 px-4 py-2 rounded-xl text-xs shadow-sm transition-all duration-200 hover:-translate-y-0.5"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            Share Your Story
-          </Button>
+          {!hideShareButton && (
+            <Button 
+              onClick={() => setIsOpen(true)}
+              className="bg-orange-500 hover:bg-orange-600 text-white font-bold flex items-center gap-2 px-4 py-2 rounded-xl text-xs shadow-sm transition-all duration-200 hover:-translate-y-0.5"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              Share Your Story
+            </Button>
+          )}
 
           {stories.length > 0 && (
             <div className="flex gap-2">
@@ -315,9 +319,11 @@ export default function SuccessStoriesFooter({
         <div className="text-center py-10 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center">
           <Sparkles className="w-8 h-8 text-slate-300 mb-2" />
           <p className="text-slate-500 mb-2 font-semibold text-xs">No success stories shared yet.</p>
-          <Button onClick={() => setIsOpen(true)} variant="outline" className="border-orange-500 text-orange-500 hover:bg-orange-50/50 text-xs px-3 h-8 rounded-lg">
-            Be the first to share!
-          </Button>
+          {!hideShareButton && (
+            <Button onClick={() => setIsOpen(true)} variant="outline" className="border-orange-500 text-orange-500 hover:bg-orange-50/50 text-xs px-3 h-8 rounded-lg">
+              Be the first to share!
+            </Button>
+          )}
         </div>
       ) : (
         <div 
