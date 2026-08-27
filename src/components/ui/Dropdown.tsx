@@ -64,7 +64,7 @@ export default function Dropdown({
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
-        containerRef.current && 
+        containerRef.current &&
         !containerRef.current.contains(event.target as Node) &&
         (!modalRef.current || !modalRef.current.contains(event.target as Node))
       ) {
@@ -81,8 +81,8 @@ export default function Dropdown({
     if (optionsProp) {
       const mapped = Array.isArray(optionsProp)
         ? optionsProp.map((opt) =>
-            typeof opt === "string" ? { value: opt, label: opt } : opt
-          )
+          typeof opt === "string" ? { value: opt, label: opt } : opt
+        )
         : [];
       setOptions(mapped);
       setFetched(true);
@@ -155,22 +155,28 @@ export default function Dropdown({
             data = responseData.data;
           } else if (responseData.message && Array.isArray(responseData.message)) {
             data = responseData.message;
+          } else {
+            data = responseData;
           }
         }
       }
 
-      const mappedOptions = mapOptions ? mapOptions(data) : data.map((item: any) => ({
-        value: item.name || item.value || String(item),
-        label: item.label || item.name || item.value || String(item)
-      }));
+      const mappedOptions = mapOptions
+        ? mapOptions(data)
+        : (Array.isArray(data)
+          ? data.map((item: any) => ({
+            value: item.name || item.value || String(item),
+            label: item.label || item.name || item.value || String(item)
+          }))
+          : []);
 
       setOptions(mappedOptions);
-      setHasNext(nextFlag || data.length === 20);
+      setHasNext(nextFlag || (Array.isArray(data) && data.length === 20));
       setHasPrev(prevFlag || pageNum > 1);
       setTotalPages(totalPgs);
       setPage(pageNum);
       setFetched(true);
-      
+
       if (mappedOptions.length === 0) {
         setFetchError("No options available");
       }
@@ -219,13 +225,13 @@ export default function Dropdown({
     e.stopPropagation();
     const currentValues = Array.isArray(value) ? value : [];
     let newValues: string[];
-    
+
     if (currentValues.includes(selectedValue)) {
       newValues = currentValues.filter(v => v !== selectedValue);
     } else {
       newValues = [...currentValues, selectedValue];
     }
-    
+
     onChange(newValues);
   };
 
@@ -273,15 +279,13 @@ export default function Dropdown({
           {label} {required && <span className="text-red-500">*</span>}
         </Label>
       )}
-      
+
       {/* Dropdown trigger button */}
       <div
         onClick={handleClick}
-        className={`w-full min-h-10 px-3 py-2 rounded-md border ${
-          error ? "border-red-500" : fetchError ? "border-red-500" : "border-slate-200"
-        } bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent cursor-pointer flex flex-wrap items-center gap-1 relative hover:border-slate-300 transition-colors ${
-          disabled ? "bg-slate-50 cursor-not-allowed opacity-60" : ""
-        }`}
+        className={`w-full min-h-10 px-3 py-2 rounded-md border ${error ? "border-red-500" : fetchError ? "border-red-500" : "border-slate-200"
+          } bg-white text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent cursor-pointer flex flex-wrap items-center gap-1 relative hover:border-slate-300 transition-colors ${disabled ? "bg-slate-50 cursor-not-allowed opacity-60" : ""
+          }`}
       >
         {multiSelect && Array.isArray(value) && value.length > 0 ? (
           <div className="flex flex-wrap items-center gap-1 flex-1 pr-6">
@@ -312,7 +316,7 @@ export default function Dropdown({
       {/* Dropdown menu */}
       {isOpen && mounted && typeof window !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={() => { setIsOpen(false); setSearchTerm(""); }}>
-          <div 
+          <div
             ref={modalRef}
             className="w-full max-w-md bg-white rounded-3xl border border-slate-100 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in fade-in-0 zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
@@ -371,29 +375,26 @@ export default function Dropdown({
                   <div
                     key={option.value}
                     onClick={(e) => multiSelect ? handleMultiSelect(option.value, e) : handleSingleSelect(option.value)}
-                    className={`flex items-center justify-between px-4 py-3 rounded-2xl cursor-pointer transition-all mb-0.5 ${
-                      isSelected(option.value) 
-                        ? 'bg-accent/5 text-accent font-semibold' 
-                        : 'hover:bg-slate-50 text-slate-600'
-                    }`}
+                    className={`flex items-center justify-between px-4 py-3 rounded-2xl cursor-pointer transition-all mb-0.5 ${isSelected(option.value)
+                      ? 'bg-accent/5 text-accent font-semibold'
+                      : 'hover:bg-slate-50 text-slate-600'
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       {multiSelect ? (
-                        <div className={`w-4.5 h-4.5 rounded-lg border flex items-center justify-center ${
-                          isSelected(option.value) 
-                            ? "bg-accent border-accent" 
-                            : "border-slate-300"
-                        }`}>
+                        <div className={`w-4.5 h-4.5 rounded-lg border flex items-center justify-center ${isSelected(option.value)
+                          ? "bg-accent border-accent"
+                          : "border-slate-300"
+                          }`}>
                           {isSelected(option.value) && (
                             <Check className="w-3 h-3 text-white" />
                           )}
                         </div>
                       ) : (
-                        <div className={`w-4.5 h-4.5 rounded-full border flex items-center justify-center ${
-                          isSelected(option.value) 
-                            ? "border-accent" 
-                            : "border-slate-300"
-                        }`}>
+                        <div className={`w-4.5 h-4.5 rounded-full border flex items-center justify-center ${isSelected(option.value)
+                          ? "border-accent"
+                          : "border-slate-300"
+                          }`}>
                           {isSelected(option.value) && (
                             <div className="w-2.5 h-2.5 rounded-full bg-accent" />
                           )}
@@ -413,15 +414,14 @@ export default function Dropdown({
                   type="button"
                   disabled={!hasPrev || loading}
                   onClick={() => fetchOptions(page - 1, searchTerm)}
-                  className={`px-3 py-1.5 rounded-xl border transition-all ${
-                    hasPrev 
-                      ? "bg-white border-slate-200 hover:bg-slate-100 text-slate-700 font-bold" 
-                      : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl border transition-all ${hasPrev
+                    ? "bg-white border-slate-200 hover:bg-slate-100 text-slate-700 font-bold"
+                    : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                    }`}
                 >
                   Previous
                 </button>
-                
+
                 <span className="font-bold text-slate-700">
                   Page {page} of {totalPages}
                 </span>
@@ -430,11 +430,10 @@ export default function Dropdown({
                   type="button"
                   disabled={!hasNext || loading}
                   onClick={() => fetchOptions(page + 1, searchTerm)}
-                  className={`px-3 py-1.5 rounded-xl border transition-all ${
-                    hasNext 
-                      ? "bg-white border-slate-200 hover:bg-slate-100 text-slate-700 font-bold" 
-                      : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
-                  }`}
+                  className={`px-3 py-1.5 rounded-xl border transition-all ${hasNext
+                    ? "bg-white border-slate-200 hover:bg-slate-100 text-slate-700 font-bold"
+                    : "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
+                    }`}
                 >
                   Next
                 </button>
