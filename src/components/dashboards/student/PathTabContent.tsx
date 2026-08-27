@@ -176,6 +176,7 @@ export default function PathTabContent() {
   const [collapsedChecklists, setCollapsedChecklists] = useState<Record<string, boolean>>({});
 
   // Skill Assessment Test States
+  const [mounted, setMounted] = useState(false);
   const [isTestModalOpen, setIsTestModalOpen] = useState(false);
   const [testQuestions, setTestQuestions] = useState<any[]>([]);
   const [testSkill, setTestSkill] = useState<string>("");
@@ -281,6 +282,7 @@ export default function PathTabContent() {
   };
 
   useEffect(() => {
+    setMounted(true);
     fetchData();
     fetchSkills();
   }, []);
@@ -1608,54 +1610,56 @@ export default function PathTabContent() {
             </div>
           </div>
           {/* Active Path Confirmation Modal */}
-          <AnimatePresence>
-            {showConfirmModal && createPortal(
-              <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-[250] p-4">
-                {/* StrideNex Logo brought to front */}
-                <div className="absolute top-4 left-6 z-[260] pointer-events-none">
-                  <img
-                    src="/images/Logo.png"
-                    alt="StrideNex Logo"
-                    className="w-48 h-12 object-contain drop-shadow-sm"
-                  />
+          {mounted && createPortal(
+            <AnimatePresence>
+              {showConfirmModal && (
+                <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-[250] p-4">
+                  {/* StrideNex Logo brought to front */}
+                  <div className="absolute top-4 left-6 z-[260] pointer-events-none">
+                    <img
+                      src="/images/Logo.png"
+                      alt="StrideNex Logo"
+                      className="w-48 h-12 object-contain drop-shadow-sm"
+                    />
+                  </div>
+                  <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.9, opacity: 0 }}
+                    className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-100 shadow-2xl relative flex flex-col items-center text-center animate-in fade-in zoom-in duration-200"
+                  >
+                    <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
+                      <AlertCircle className="w-8 h-8 animate-pulse" />
+                    </div>
+
+                    <h3 className="text-lg font-bold text-slate-800 mb-2">
+                      Set as Active Career Path?
+                    </h3>
+
+                    <p className="text-xs font-semibold text-slate-500 mb-6 leading-relaxed px-2">
+                      Are you sure you want to select <span className="text-slate-800 font-bold">"{selectedPath?.career || selectedPath?.title || selectedPath?.path_name || 'this path'}"</span>? This path will be set as your Active Journey, and you will need to continue with it to build your profile.
+                    </p>
+
+                    <div className="flex gap-3 w-full">
+                      <button
+                        onClick={() => setShowConfirmModal(false)}
+                        className="flex-1 h-11 border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-all active:scale-98"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleStartPersonalizedRoadmap(true)}
+                        className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-500/10 active:scale-98"
+                      >
+                        Yes, Activate Path
+                      </button>
+                    </div>
+                  </motion.div>
                 </div>
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  className="bg-white rounded-3xl p-6 max-w-md w-full border border-slate-100 shadow-2xl relative flex flex-col items-center text-center animate-in fade-in zoom-in duration-200"
-                >
-                  <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
-                    <AlertCircle className="w-8 h-8 animate-pulse" />
-                  </div>
-
-                  <h3 className="text-lg font-bold text-slate-800 mb-2">
-                    Set as Active Career Path?
-                  </h3>
-
-                  <p className="text-xs font-semibold text-slate-500 mb-6 leading-relaxed px-2">
-                    Are you sure you want to select <span className="text-slate-800 font-bold">"{selectedPath?.career || selectedPath?.title || selectedPath?.path_name || 'this path'}"</span>? This path will be set as your Active Journey, and you will need to continue with it to build your profile.
-                  </p>
-
-                  <div className="flex gap-3 w-full">
-                    <button
-                      onClick={() => setShowConfirmModal(false)}
-                      className="flex-1 h-11 border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-all active:scale-98"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={() => handleStartPersonalizedRoadmap(true)}
-                      className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl transition-all shadow-md shadow-blue-500/10 active:scale-98"
-                    >
-                      Yes, Activate Path
-                    </button>
-                  </div>
-                </motion.div>
-              </div>,
-              document.body
-            )}
-          </AnimatePresence>
+              )}
+            </AnimatePresence>,
+            document.body
+          )}
         </div>
       ) : (
 
@@ -2144,14 +2148,15 @@ export default function PathTabContent() {
       )}
 
       {/* Skill Verification Test Modal */}
-      <AnimatePresence>
-        {isTestModalOpen && createPortal(
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4"
-          >
+      {mounted && createPortal(
+        <AnimatePresence>
+          {isTestModalOpen && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4"
+            >
             {/* StrideNex Logo brought to front */}
             <div className="absolute top-4 left-6 z-[110] pointer-events-none">
               <img
@@ -2488,80 +2493,83 @@ export default function PathTabContent() {
                 )}
               </div>
             </motion.div>
-          </motion.div>,
-          document.body
+          </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+    )}
 
       {/* Skill Acquisition Celebration Modal */}
-      <AnimatePresence>
-        {showCelebration && createPortal(
-          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
-            {/* StrideNex Logo brought to front */}
-            <div className="absolute top-4 left-6 z-[210] pointer-events-none">
-              <img
-                src="/images/Logo.png"
-                alt="StrideNex Logo"
-                className="w-48 h-12 object-contain drop-shadow-sm"
-              />
-            </div>
-            <ConfettiEffect />
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-3xl p-8 max-w-sm w-full border border-slate-100 shadow-2xl relative overflow-hidden flex flex-col items-center"
-            >
-              <button
-                onClick={() => setShowCelebration(false)}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <motion.div
-                animate={{ rotate: [0, 10, -10, 10, 0] }}
-                transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse" }}
-                className="w-20 h-20 rounded-2xl bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/25 mb-6 overflow-hidden"
-              >
-                <Award className="w-10 h-10" />
-              </motion.div>
-
-              <span className="text-[10px] font-extrabold uppercase tracking-widest text-orange-500 mb-2">
-                New Milestone Achieved!
-              </span>
-              <h3 className="text-xl font-black text-slate-800 text-center mb-1">
-                Congrats! You have acquired the skill
-              </h3>
-              <p className="text-xs font-semibold text-slate-500 mb-4">
-                Skill Verified Successfully
-              </p>
-
-              <div className="text-sm font-semibold text-slate-700 text-center bg-slate-50 rounded-2xl p-4 border border-slate-100 mb-6 w-full">
-                <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
-                  Acquired Skill
-                </div>
-                <div className="text-base font-bold text-slate-800">
-                  {acquiredSkillName}
-                </div>
-                {acquiredSkillLevel && (
-                  <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 uppercase tracking-wider">
-                    {acquiredSkillLevel}
-                  </span>
-                )}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {showCelebration && (
+            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
+              {/* StrideNex Logo brought to front */}
+              <div className="absolute top-4 left-6 z-[210] pointer-events-none">
+                <img
+                  src="/images/Logo.png"
+                  alt="StrideNex Logo"
+                  className="w-48 h-12 object-contain drop-shadow-sm"
+                />
               </div>
-
-              <button
-                onClick={() => setShowCelebration(false)}
-                className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold h-12 rounded-2xl shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-95 transition-transform"
+              <ConfettiEffect />
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white rounded-3xl p-8 max-w-sm w-full border border-slate-100 shadow-2xl relative overflow-hidden flex flex-col items-center"
               >
-                Awesome! Continue Journey
-              </button>
-            </motion.div>
-          </div>,
-          document.body
-        )}
-      </AnimatePresence>
+                <button
+                  onClick={() => setShowCelebration(false)}
+                  className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+
+                <motion.div
+                  animate={{ rotate: [0, 10, -10, 10, 0] }}
+                  transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse" }}
+                  className="w-20 h-20 rounded-2xl bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-500 text-white flex items-center justify-center shadow-lg shadow-orange-500/25 mb-6 overflow-hidden"
+                >
+                  <Award className="w-10 h-10" />
+                </motion.div>
+
+                <span className="text-[10px] font-extrabold uppercase tracking-widest text-orange-500 mb-2">
+                  New Milestone Achieved!
+                </span>
+                <h3 className="text-xl font-black text-slate-800 text-center mb-1">
+                  Congrats! You have acquired the skill
+                </h3>
+                <p className="text-xs font-semibold text-slate-500 mb-4">
+                  Skill Verified Successfully
+                </p>
+
+                <div className="text-sm font-semibold text-slate-700 text-center bg-slate-50 rounded-2xl p-4 border border-slate-100 mb-6 w-full">
+                  <div className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">
+                    Acquired Skill
+                  </div>
+                  <div className="text-base font-bold text-slate-800">
+                    {acquiredSkillName}
+                  </div>
+                  {acquiredSkillLevel && (
+                    <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-100 text-orange-700 uppercase tracking-wider">
+                      {acquiredSkillLevel}
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => setShowCelebration(false)}
+                  className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold h-12 rounded-2xl shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-95 transition-transform"
+                >
+                  Awesome! Continue Journey
+                </button>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }

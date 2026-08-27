@@ -148,7 +148,7 @@ export default function OfferingsTabContent() {
 
     if (isGroupOrWorkshop) {
       fields.push(
-        { name: "batch_details", label: "Batch Details", type: "textarea", icon: FileText, required: false, colSpan: 2, placeholder: "Specific info about this batch (optional)" }
+        { name: "batch_details", label: "Batch Details", type: "textarea", icon: FileText, required: true, colSpan: 2, placeholder: "Specific info about this batch" }
       );
     }
 
