@@ -13,6 +13,7 @@ import InternshipsWidget from "@/components/dashboards/widgets/InternshipsWidget
 import { useAuth } from "@/context/AuthContext";
 import { getDashboardStats, getStudentByEmail, getStudentInternshipList, getLearningActivity, getTodaysOpportunityAlerts } from "@/services/student.services";
 import SuccessStoriesFooter from "@/components/dashboards/student/SuccessStoriesFooter";
+import StudentGuidelineTour from "@/components/dashboards/student/StudentGuidelineTour";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -100,14 +101,14 @@ export default function StudentDashboardPage() {
         const res = await getTodaysOpportunityAlerts(currentUser);
         console.log("Student opportunity alerts response:", res);
         const data = res?.data || res?.message;
-        
+
         let alertsArray: any[] = [];
         if (Array.isArray(data)) {
           alertsArray = data;
         } else if (data && Array.isArray(data.alerts)) {
           alertsArray = data.alerts;
         }
-        
+
         if (alertsArray.length > 0) {
           const mapped = alertsArray.map((item: any) => ({
             type: item.type || "warning",
@@ -162,16 +163,16 @@ export default function StudentDashboardPage() {
         const res = await getStudentInternshipList(currentUser, course, department, academicYear);
         const dataContainer = (res?.data && typeof res.data === 'object' && !Array.isArray(res.data)) ? res : (res?.message && typeof res.message === 'object' ? res.message : res);
         const internshipData = dataContainer?.data?.internships || dataContainer?.internships || [];
-        
+
         // Match mapping function
         const mapped = internshipData.slice(0, 3).map((item: any, index: number) => {
           const matches = [91, 84, 76];
           const match = matches[index % matches.length];
-          
+
           let ringColor = "border-emerald-500";
           let matchColor = "text-emerald-600";
           let bgColor = "bg-emerald-50";
-          
+
           if (match < 80) {
             ringColor = "border-orange-500";
             matchColor = "text-orange-600";
@@ -226,60 +227,61 @@ export default function StudentDashboardPage() {
 
 
   return (
-    <motion.div
-      variants={container}
-      initial="hidden"
-      animate="show"
-      className="space-y-6"
-    >
-      {/* Stats Grid */}
-      <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <StatsWidget
-          title="Employability Score"
-          data={{ 
-            value: statsData?.employability_score !== undefined ? statsData.employability_score : 73, 
-            max: 100, 
-            change: 8, 
-            changeLabel: "this month" 
-          }}
-        />
-        <StatsWidget
-          title="Profile Completeness"
-          data={{ 
-            value: statsData?.profile_completeness !== undefined ? `${statsData.profile_completeness}%` : "78%", 
-            change: 12, 
-            changeLabel: "this week" 
-          }}
-        />
-        <StatsWidget
-          title="Total Skills"
-          data={{ 
-            value: statsData?.total_skills !== undefined ? statsData.total_skills : 3 
-          }}
-        />
-        <StatsWidget
-          title="CGPA"
-          data={{ 
-            value: statsData?.cgpa !== undefined ? statsData.cgpa : 0, 
-            change: statsData?.backlog !== undefined ? statsData.backlog : 0, 
-            changeLabel: "Backlogs", 
-            trend: statsData?.backlog > 0 ? "down" : "up" 
-          }}
-        />
-      </motion.div>
+    <>
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="space-y-6"
+      >
+        {/* Stats Grid */}
+        <motion.div variants={item} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+          <StatsWidget
+            title="Employability Score"
+            data={{
+              value: statsData?.employability_score !== undefined ? statsData.employability_score : 73,
+              max: 100,
+              change: 8,
+              changeLabel: "this month"
+            }}
+          />
+          <StatsWidget
+            title="Profile Completeness"
+            data={{
+              value: statsData?.profile_completeness !== undefined ? `${statsData.profile_completeness}%` : "78%",
+              change: 12,
+              changeLabel: "this week"
+            }}
+          />
+          <StatsWidget
+            title="Total Skills"
+            data={{
+              value: statsData?.total_skills !== undefined ? statsData.total_skills : 3
+            }}
+          />
+          <StatsWidget
+            title="CGPA"
+            data={{
+              value: statsData?.cgpa !== undefined ? statsData.cgpa : 0,
+              change: statsData?.backlog !== undefined ? statsData.backlog : 0,
+              changeLabel: "Backlogs",
+              trend: statsData?.backlog > 0 ? "down" : "up"
+            }}
+          />
+        </motion.div>
 
-      {/* Main Content Grid */}
-      <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-        {/* Left Column (3/3 width since AI Coach is hidden) */}
-        <div className="lg:col-span-3">
-          {/* Learning Activity Heatmap */}
-          <div className="h-full">
-            <LearningActivityGraph data={learningActivityData} />
+        {/* Main Content Grid */}
+        <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+          {/* Left Column (3/3 width since AI Coach is hidden) */}
+          <div className="lg:col-span-3">
+            {/* Learning Activity Heatmap */}
+            <div className="h-full">
+              <LearningActivityGraph data={learningActivityData} />
+            </div>
           </div>
-        </div>
 
-        {/* Right Column (1/3 width) - Hidden for now as requested */}
-        {/* <div>
+          {/* Right Column (1/3 width) - Hidden for now as requested */}
+          {/* <div>
           <div className="h-full">
             <CoachWidget
               data={{
@@ -289,33 +291,35 @@ export default function StudentDashboardPage() {
             />
           </div>
         </div> */}
-      </motion.div>
+        </motion.div>
 
-      {/* Bottom Row */}
-      <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        <SkillsWidget />
+        {/* Bottom Row */}
+        <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+          <SkillsWidget />
 
-        <AlertsWidget
-          data={{
-            blocks: opportunityAlerts,
-            agenda: [
-              { icon: "education", text: "ML Module Ch.2 — due Feb 25" },
-              { icon: "call", text: "Mentor: Kavya Reddy — Feb 27 4PM" },
-              { icon: "write", text: "AI Assessment: ML — Feb 28" }
-            ]
-          }}
-        />
-      </motion.div>
+          <AlertsWidget
+            data={{
+              blocks: opportunityAlerts,
+              agenda: [
+                { icon: "education", text: "ML Module Ch.2 — due Feb 25" },
+                { icon: "call", text: "Mentor: Kavya Reddy — Feb 27 4PM" },
+                { icon: "write", text: "AI Assessment: ML — Feb 28" }
+              ]
+            }}
+          />
+        </motion.div>
 
-      {/* Internships Row */}
-      <motion.div variants={item}>
-        <InternshipsWidget data={internshipsData.length > 0 ? internshipsData : undefined} />
-      </motion.div>
+        {/* Internships Row */}
+        <motion.div variants={item}>
+          <InternshipsWidget data={internshipsData.length > 0 ? internshipsData : undefined} />
+        </motion.div>
 
-      {/* Success Stories Footer */}
-      <motion.div variants={item}>
-        <SuccessStoriesFooter />
+        {/* Success Stories Footer */}
+        <motion.div variants={item}>
+          <SuccessStoriesFooter />
+        </motion.div>
       </motion.div>
-    </motion.div>
+      {currentUser && <StudentGuidelineTour studentEmail={currentUser!} />}
+    </>
   );
 }

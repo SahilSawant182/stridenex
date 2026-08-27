@@ -1648,3 +1648,44 @@ export const getSkillTestResult = async (skillTestName: string) => {
     throw error;
   }
 };
+
+/**
+ * Fetch guidelines/onboarding steps for student.
+ */
+export const getStudentGuidelines = async (module: string, tab: string | null, studentEmail: string) => {
+  try {
+    const params: any = {
+      module,
+      tab: tab || "",
+      student: studentEmail
+    };
+
+    const response = await apiService.get(
+      "method/stridenex_app.stridenex_app.doctype.student_guidelines.student_guidelines.get_guidelines",
+      { params }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching student guidelines:", error);
+    throw error;
+  }
+};
+
+/**
+ * Complete a student guideline/onboarding step.
+ */
+export const completeStudentGuidelineStep = async (guidelineName: string, studentEmail: string) => {
+  try {
+    const response = await apiService.post(
+      "method/stridenex_app.stridenex_app.doctype.student_guidelines.student_guidelines.complete_onboarding",
+      {
+        guideline: guidelineName,
+        student: studentEmail
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error completing student guideline step:", error);
+    throw error;
+  }
+};

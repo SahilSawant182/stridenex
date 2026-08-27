@@ -283,6 +283,7 @@ export default function HabitsTabContent() {
     const [badges, setBadges] = useState<BadgeItem[]>([]);
     const [newlyUnlockedBadge, setNewlyUnlockedBadge] = useState<BadgeItem | null>(null);
     const [selectedBadge, setSelectedBadge] = useState<BadgeItem | null>(null);
+    const [mounted, setMounted] = useState(false);
 
     // Modal states
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -510,6 +511,7 @@ export default function HabitsTabContent() {
     };
 
     useEffect(() => {
+        setMounted(true);
         fetchData();
     }, []);
 
@@ -1485,128 +1487,135 @@ export default function HabitsTabContent() {
             />
 
             {/* Badge Celebration Modal */}
-            {newlyUnlockedBadge && createPortal(
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-                    <ConfettiEffect />
-                    <motion.div
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        className="bg-white rounded-3xl p-8 max-w-sm w-full border border-slate-100 shadow-2xl relative overflow-hidden flex flex-col items-center"
-                    >
-                        <button
-                            onClick={() => setNewlyUnlockedBadge(null)}
-                            className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
+            {mounted && createPortal(
+                <AnimatePresence>
+                    {newlyUnlockedBadge && (
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+                            <ConfettiEffect />
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                className="bg-white rounded-3xl p-8 max-w-sm w-full border border-slate-100 shadow-2xl relative overflow-hidden flex flex-col items-center"
+                            >
+                                <button
+                                    onClick={() => setNewlyUnlockedBadge(null)}
+                                    className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
 
-                        <motion.div
-                            animate={{ rotate: [0, 10, -10, 10, 0] }}
-                            transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse" }}
-                            className={`w-24 h-24 rounded-3xl bg-gradient-to-br ${newlyUnlockedBadge.color_theme === 'Bronze' ? 'from-amber-600 to-amber-800' :
-                                newlyUnlockedBadge.color_theme === 'Silver' ? 'from-slate-400 to-slate-600' :
-                                    newlyUnlockedBadge.color_theme === 'Gold' ? 'from-yellow-500 via-amber-500 to-yellow-600' :
-                                        newlyUnlockedBadge.color_theme === 'Platinum' ? 'from-sky-400 via-indigo-500 to-purple-600' :
-                                            'from-cyan-400 via-teal-400 to-blue-600'
-                                } text-white flex items-center justify-center shadow-xl shadow-orange-500/25 mb-6 overflow-hidden`}
-                        >
-                            {(() => {
-                                if (newlyUnlockedBadge.badge_icon) {
-                                    return <img src={getImageUrl(newlyUnlockedBadge.badge_icon)} alt={newlyUnlockedBadge.badge_name} className="w-full h-full object-cover" />;
-                                }
-                                const Icon = getBadgeIcon(newlyUnlockedBadge.streak_count);
-                                return <Icon className="w-12 h-12" />;
-                            })()}
-                        </motion.div>
+                                <motion.div
+                                    animate={{ rotate: [0, 10, -10, 10, 0] }}
+                                    transition={{ duration: 1.5, repeat: Infinity, repeatType: "reverse" }}
+                                    className={`w-24 h-24 rounded-3xl bg-gradient-to-br ${newlyUnlockedBadge.color_theme === 'Bronze' ? 'from-amber-600 to-amber-800' :
+                                        newlyUnlockedBadge.color_theme === 'Silver' ? 'from-slate-400 to-slate-600' :
+                                            newlyUnlockedBadge.color_theme === 'Gold' ? 'from-yellow-500 via-amber-500 to-yellow-600' :
+                                                newlyUnlockedBadge.color_theme === 'Platinum' ? 'from-sky-400 via-indigo-500 to-purple-600' :
+                                                    'from-cyan-400 via-teal-400 to-blue-600'
+                                        } text-white flex items-center justify-center shadow-xl shadow-orange-500/25 mb-6 overflow-hidden`}
+                                >
+                                    {(() => {
+                                        if (newlyUnlockedBadge.badge_icon) {
+                                            return <img src={getImageUrl(newlyUnlockedBadge.badge_icon)} alt={newlyUnlockedBadge.badge_name} className="w-full h-full object-cover" />;
+                                        }
+                                        const Icon = getBadgeIcon(newlyUnlockedBadge.streak_count);
+                                        return <Icon className="w-12 h-12" />;
+                                    })()}
+                                </motion.div>
 
-                        <span className="text-[10px] font-extrabold uppercase tracking-widest text-orange-500 mb-2">New Achievement!</span>
-                        <h3 className="text-xl font-black text-slate-800 text-center mb-1">
-                            {newlyUnlockedBadge.badge_name}
-                        </h3>
-                        <p className="text-sm font-semibold text-slate-500 mb-4">{newlyUnlockedBadge.streak_count}-Day Streak Milestone</p>
+                                <span className="text-[10px] font-extrabold uppercase tracking-widest text-orange-500 mb-2">New Achievement!</span>
+                                <h3 className="text-xl font-black text-slate-800 text-center mb-1">
+                                    {newlyUnlockedBadge.badge_name}
+                                </h3>
+                                <p className="text-sm font-semibold text-slate-500 mb-4">{newlyUnlockedBadge.streak_count}-Day Streak Milestone</p>
 
-                        <p className="text-sm text-slate-600 text-center bg-slate-50 rounded-2xl p-4 border border-slate-100 mb-6 font-medium">
-                            &quot;{newlyUnlockedBadge.description}&quot;
-                        </p>
+                                <p className="text-sm text-slate-600 text-center bg-slate-50 rounded-2xl p-4 border border-slate-100 mb-6 font-medium">
+                                    &quot;{newlyUnlockedBadge.description}&quot;
+                                </p>
 
-                        <Button
-                            onClick={() => setNewlyUnlockedBadge(null)}
-                            className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold h-12 rounded-2xl shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-95 transition-transform"
-                        >
-                            Awesome! Keep it up
-                        </Button>
-                    </motion.div>
-                </div>,
+                                <Button
+                                    onClick={() => setNewlyUnlockedBadge(null)}
+                                    className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold h-12 rounded-2xl shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-95 transition-transform"
+                                >
+                                    Awesome! Keep it up
+                                </Button>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>,
                 document.body
             )}
 
             {/* Earned Badge Detail Popup Modal */}
-            <AnimatePresence>
-                {selectedBadge && createPortal(
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[9999] p-4" onClick={() => setSelectedBadge(null)}>
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            transition={{ type: "spring", damping: 25, stiffness: 350 }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="bg-white rounded-3xl p-8 max-w-sm w-full border border-slate-100 shadow-2xl relative overflow-hidden flex flex-col items-center"
-                        >
-                            <button
-                                onClick={() => setSelectedBadge(null)}
-                                className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-
+            {mounted && createPortal(
+                <AnimatePresence>
+                    {selectedBadge && (
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[9999] p-4" onClick={() => setSelectedBadge(null)}>
                             <motion.div
-                                initial={{ y: -10, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                transition={{ delay: 0.1 }}
-                                className={`w-32 h-32 rounded-3xl bg-gradient-to-br ${selectedBadge.color_theme === 'Bronze' ? 'from-amber-500 to-amber-700 shadow-amber-500/25' :
-                                    selectedBadge.color_theme === 'Silver' ? 'from-slate-400 to-slate-600 shadow-slate-500/25' :
-                                        selectedBadge.color_theme === 'Gold' ? 'from-yellow-400 via-amber-500 to-yellow-600 shadow-yellow-500/25' :
-                                            selectedBadge.color_theme === 'Platinum' ? 'from-sky-400 via-indigo-500 to-purple-600 shadow-indigo-500/25' :
-                                                'from-cyan-400 via-teal-400 to-blue-600 shadow-cyan-500/25'
-                                    } text-white flex items-center justify-center shadow-2xl mb-6 overflow-hidden transform hover:rotate-3 transition-transform duration-300`}
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                transition={{ type: "spring", damping: 25, stiffness: 350 }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="bg-white rounded-3xl p-8 max-w-sm w-full border border-slate-100 shadow-2xl relative overflow-hidden flex flex-col items-center"
                             >
-                                {(() => {
-                                    if (selectedBadge.badge_icon) {
-                                        return <img src={getImageUrl(selectedBadge.badge_icon)} alt={selectedBadge.badge_name} className="w-full h-full object-cover" />;
-                                    }
-                                    const Icon = getBadgeIcon(selectedBadge.streak_count);
-                                    return <Icon className="w-16 h-16" />;
-                                })()}
+                                <button
+                                    onClick={() => setSelectedBadge(null)}
+                                    className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+
+                                <motion.div
+                                    initial={{ y: -10, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    transition={{ delay: 0.1 }}
+                                    className={`w-32 h-32 rounded-3xl bg-gradient-to-br ${selectedBadge.color_theme === 'Bronze' ? 'from-amber-500 to-amber-700 shadow-amber-500/25' :
+                                        selectedBadge.color_theme === 'Silver' ? 'from-slate-400 to-slate-600 shadow-slate-500/25' :
+                                            selectedBadge.color_theme === 'Gold' ? 'from-yellow-400 via-amber-500 to-yellow-600 shadow-yellow-500/25' :
+                                                selectedBadge.color_theme === 'Platinum' ? 'from-sky-400 via-indigo-500 to-purple-600 shadow-indigo-500/25' :
+                                                    'from-cyan-400 via-teal-400 to-blue-600 shadow-cyan-500/25'
+                                        } text-white flex items-center justify-center shadow-2xl mb-6 overflow-hidden transform hover:rotate-3 transition-transform duration-300`}
+                                >
+                                    {(() => {
+                                        if (selectedBadge.badge_icon) {
+                                            return <img src={getImageUrl(selectedBadge.badge_icon)} alt={selectedBadge.badge_name} className="w-full h-full object-cover" />;
+                                        }
+                                        const Icon = getBadgeIcon(selectedBadge.streak_count);
+                                        return <Icon className="w-16 h-16" />;
+                                    })()}
+                                </motion.div>
+
+                                <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1.5">Earned Badge</span>
+                                <h3 className="text-xl font-black text-slate-800 text-center mb-1">
+                                    {selectedBadge.badge_name}
+                                </h3>
+                                <p className="text-xs font-bold text-slate-400 mb-4">{selectedBadge.streak_count}-Day Streak Milestone</p>
+
+                                <p className="text-sm text-slate-600 text-center bg-slate-50/80 rounded-2xl p-4 border border-slate-100/60 mb-6 font-semibold w-full">
+                                    &quot;{selectedBadge.description}&quot;
+                                </p>
+
+                                {selectedBadge.earned_date && (
+                                    <div className="text-xs font-bold text-slate-500 bg-emerald-50 text-emerald-700 px-3.5 py-2 rounded-xl border border-emerald-100/50 flex items-center gap-1.5 mb-6">
+                                        <Sparkles className="w-3.5 h-3.5" />
+                                        <span>Unlocked on {new Date(selectedBadge.earned_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                                    </div>
+                                )}
+
+                                <Button
+                                    onClick={() => setSelectedBadge(null)}
+                                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 rounded-2xl shadow-lg transition-transform active:scale-95"
+                                >
+                                    Close View
+                                </Button>
                             </motion.div>
-
-                            <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1.5">Earned Badge</span>
-                            <h3 className="text-xl font-black text-slate-800 text-center mb-1">
-                                {selectedBadge.badge_name}
-                            </h3>
-                            <p className="text-xs font-bold text-slate-400 mb-4">{selectedBadge.streak_count}-Day Streak Milestone</p>
-
-                            <p className="text-sm text-slate-600 text-center bg-slate-50/80 rounded-2xl p-4 border border-slate-100/60 mb-6 font-semibold w-full">
-                                &quot;{selectedBadge.description}&quot;
-                            </p>
-
-                            {selectedBadge.earned_date && (
-                                <div className="text-xs font-bold text-slate-500 bg-emerald-50 text-emerald-700 px-3.5 py-2 rounded-xl border border-emerald-100/50 flex items-center gap-1.5 mb-6">
-                                    <Sparkles className="w-3.5 h-3.5" />
-                                    <span>Unlocked on {new Date(selectedBadge.earned_date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-                                </div>
-                            )}
-
-                            <Button
-                                onClick={() => setSelectedBadge(null)}
-                                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 rounded-2xl shadow-lg transition-transform active:scale-95"
-                            >
-                                Close View
-                            </Button>
-                        </motion.div>
-                    </div>,
-                    document.body
-                )}
-            </AnimatePresence>
+                        </div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
         </div>
     );
 }
