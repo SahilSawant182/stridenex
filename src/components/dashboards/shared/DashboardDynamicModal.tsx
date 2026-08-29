@@ -34,6 +34,7 @@ export interface DynamicField {
   disabled?: boolean;
   multiple?: boolean;
   apiEndpoint?: string;
+  apiMethod?: "GET" | "POST";
   apiParams?: Record<string, any>;
   mapOptions?: (data: any) => Array<{ value: string; label: string }>;
   allowCustom?: boolean;
@@ -503,13 +504,20 @@ function DynamicFieldItem({
     try {
       let responseData;
 
-      if (field.apiEndpoint.includes('master.get_master_data')) {
+      if (field.apiEndpoint.includes('master.get_master_data') && field.apiMethod !== 'GET') {
         const body = {
           ...(field.apiParams || {}),
           search: searchTxt,
           page: pageNum
         };
         responseData = await apiService.post(field.apiEndpoint, body);
+      } else if (field.apiMethod === 'GET') {
+        responseData = await apiService.get(field.apiEndpoint, {
+          ...(field.apiParams || {}),
+          page: pageNum,
+          page_size: 20,
+          search: searchTxt
+        });
       } else {
         responseData = await apiService.post(field.apiEndpoint, {
           ...(field.apiParams || {}),
@@ -565,7 +573,7 @@ function DynamicFieldItem({
 
       let mapped = [];
       if (field.mapOptions) {
-        mapped = field.mapOptions(data);
+        mapped = field.mapOptions(responseData || data);
       } else {
         mapped = Array.isArray(data) ? data.map((item: any) => ({
           value: item.name || item.value || item,
