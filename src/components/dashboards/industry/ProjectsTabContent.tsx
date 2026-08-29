@@ -22,7 +22,7 @@ import { useIndustry } from "@/context/IndustryContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { Pagination } from "@/components/ui/Pagination";
 import ApplicationsPipelineModal from "./ApplicationsPipelineModal";
-import { calculateEndDate } from "@/utils/date.utils";
+import { calculateEndDate, getLocalDateString } from "@/utils/date.utils";
 import { useToast } from "@/context/ToastContext";
 
 import { useSearchParams, useRouter } from "next/navigation";
@@ -121,9 +121,9 @@ export default function ProjectsTabContent() {
     { name: "industry", label: "Industry", type: "text", icon: Layers, required: true, placeholder: "e.g. Razorpay Technologies", disabled: true },
     { name: "status", label: "Status", type: "select", icon: Zap, options: ["Active", "Completed", "Disable"], required: true, placeholder: "Select Status" },
     { name: "duration", label: "Duration (Days)", type: "number", icon: Clock, required: true, placeholder: "e.g. 30" },
-    { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase", min: new Date().toISOString().split('T')[0] },
+    { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase", min: getLocalDateString() },
     { name: "end_date", label: "End Date", type: "date", icon: Calendar, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
-    { name: "application_deadline", label: "Application Deadline", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase", max: modalValues.start_date },
+    { name: "application_deadline", label: "Application Deadline", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase", min: getLocalDateString(), max: modalValues.start_date },
     { name: "course", label: "Course", type: "select", icon: Briefcase, options: courseOptions, required: true, placeholder: "Select Courses", multiple: true },
     { name: "department", label: "Department", type: "select", icon: Briefcase, options: departmentOptions, required: true, placeholder: "Select Departments", multiple: true },
     { name: "academic_year", label: "Academic Year", type: "select", icon: Calendar, options: ["2", "3", "4"], required: true, placeholder: "Select Years", multiple: true },

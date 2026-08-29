@@ -921,6 +921,17 @@ export default function PathTabContent() {
           {/* Main Wizard Card */}
           <div className="flex-1 min-w-0 bg-white rounded-2xl border border-slate-200/60 shadow-sm p-8">
 
+            {/* Go back button */}
+            {(activePath?.type === "active_plan" || activePath?.data?.has_active_plan) && (
+              <button
+                onClick={() => setInWizardMode(false)}
+                className="mb-6 flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors"
+              >
+                <ArrowRight className="w-4 h-4 rotate-180" />
+                Go back to active path
+              </button>
+            )}
+
             {/* Header & Steps indicators */}
             <div className="flex items-center justify-between mb-8 pb-6 border-b border-slate-100">
               <div>

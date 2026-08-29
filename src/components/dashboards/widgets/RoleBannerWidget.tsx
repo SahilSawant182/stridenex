@@ -224,6 +224,13 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
   const [dashboardSummary, setDashboardSummary] = useState<any>(null);
   const [collegeFormState, setCollegeFormState] = useState<any>({});
   const [mentorFormState, setMentorFormState] = useState<any>({});
+  const [studentFormState, setStudentFormState] = useState<any>({});
+  const [studentDepartmentOptions, setStudentDepartmentOptions] = useState<Array<{
+    value: string;
+    label: string;
+    academicYears: string;
+    semester: string;
+  }>>([]);
 
   const fetchStudentData = async () => {
     const email = currentUser || (typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail")) : "") || "";
@@ -481,17 +488,107 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
     { name: "email_id", label: "Email ID", type: "email", icon: Mail, required: true, disabled: true, colSpan: 2 },
     { name: "mobile_no", label: "Mobile No", type: "text", icon: Phone, required: true },
     { name: "college", label: "College", type: "text", icon: Building2, required: true, disabled: true, colSpan: 2 },
-    { name: "department", label: "Department", type: "text", icon: Shield, required: true },
-    { name: "stream", label: "Stream", type: "text", icon: Layers, required: true },
-    { name: "course", label: "Course", type: "text", icon: GraduationCap, required: true },
-    { name: "semester", label: "Semester", type: "text", icon: Calendar, required: true },
+    { 
+      name: "course_type", 
+      label: "Course Type", 
+      type: "select", 
+      icon: GraduationCap, 
+      required: true,
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: { doctype: "Course Type" },
+      mapOptions: (data: any) => {
+        let items = Array.isArray(data) ? data : (data?.data?.data || data?.message?.data || data?.message || data?.data || []);
+        items = Array.isArray(items) ? items : [];
+        return items.map((item: any) => ({ value: item.name || item.course_type, label: item.course_type || item.name }));
+      }
+    },
+    { 
+      name: "stream", 
+      label: "Stream", 
+      type: "select", 
+      icon: Layers, 
+      required: true,
+      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
+      apiParams: { doctype: "Stream" },
+      mapOptions: (data: any) => {
+        let items = Array.isArray(data) ? data : (data?.data?.data || data?.message?.data || data?.message || data?.data || []);
+        items = Array.isArray(items) ? items : [];
+        return items.map((item: any) => ({ value: item.name, label: item.name }));
+      }
+    },
+    { 
+      name: "course", 
+      label: "Course", 
+      type: "select", 
+      icon: GraduationCap, 
+      required: true,
+      disabled: !studentFormState.stream || !studentFormState.course_type,
+      apiEndpoint: (studentFormState.stream && studentFormState.course_type)
+        ? "method/stridenex_app.api_stridenex_app.college.master.get_courses_by_type"
+        : undefined,
+      apiParams: (studentFormState.stream && studentFormState.course_type) ? {
+        stream: studentFormState.stream,
+        course_type: studentFormState.course_type
+      } : undefined,
+      mapOptions: (data: any) => {
+        const courses = data?.data?.courses || data?.courses || data?.message?.data?.courses || [];
+        return courses.map((item: any) => ({ value: item.name, label: item.course_name || item.name }));
+      }
+    },
+    { 
+      name: "department", 
+      label: "Department", 
+      type: "select", 
+      icon: Shield, 
+      required: true,
+      disabled: !studentFormState.course,
+      apiEndpoint: studentFormState.course
+        ? "method/stridenex_app.stridenex_app.doctype.college_department.college_department.get_departments_by_course"
+        : undefined,
+      apiParams: studentFormState.course ? {
+        courses: studentFormState.course
+      } : undefined,
+      mapOptions: (data: any) => {
+        const depts = data?.data || data?.message?.data || [];
+        const deptOptions = depts.map((d: any) => ({
+          value: d.name,
+          label: d.department_name || d.name,
+          academicYears: d.academic_years || "",
+          semester: d.semester || "" // Will fallback to empty if missing
+        }));
+        setStudentDepartmentOptions(deptOptions);
+        return deptOptions.map(({ value, label }: { value: string; label: string }) => ({ value, label }));
+      }
+    },
+    { 
+      name: "semester", 
+      label: "Semester", 
+      type: "select", 
+      icon: Calendar, 
+      required: true,
+      disabled: !studentFormState.department,
+      apiEndpoint: studentFormState.department
+        ? "method/stridenex_app.api_stridenex_app.student.masters.get_semester"
+        : undefined,
+      apiMethod: "GET",
+      apiParams: studentFormState.department ? {
+        semester: studentDepartmentOptions.find(d => d.value === studentFormState.department)?.semester || ""
+      } : undefined,
+      mapOptions: (data: any) => {
+        const semesters = data.data || data || [];
+        return semesters.map((sem: any) => ({
+          value: sem.name,
+          label: sem.name
+        }));
+      }
+    },
     { name: "current_year", label: "Current Year", type: "select", icon: Target, options: ["First Year", "Second Year", "Third Year", "Final Year"], required: true },
     { name: "date_of_birth", label: "Date of Birth", type: "date", icon: Calendar, required: true, textTransform: "uppercase" },
     { name: "gender", label: "Gender", type: "select", icon: Users, options: ["Male", "Female", "Other"], required: true, disabled: true },
     { name: "linkedin", label: "LinkedIn URL", type: "url", icon: Linkedin },
     { name: "github", label: "GitHub URL", type: "url", icon: Github },
     { name: "cgpa", label: "CGPA", type: "number", icon: Award, required: true },
-  ], []);
+  ], [studentFormState.course_type, studentFormState.stream, studentFormState.course, studentFormState.department, studentDepartmentOptions]);
 
   const mentorFields: DynamicField[] = useMemo(() => [
     {
@@ -918,12 +1015,19 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
     const [firstName = "", ...lastNameParts] = (fullName || "").split(" ");
     const lastName = lastNameParts.join(" ");
 
+    const extractString = (val: any, key: string) => {
+      if (Array.isArray(val)) return val.length > 0 ? (val[0][key] || val[0].name || val[0]) : "";
+      if (val && typeof val === "object") return val[key] || val.name || "";
+      return val || "";
+    };
+
     return {
       // API Data
-      department: studentData?.department || "",
-      stream: studentData?.stream || "",
-      course: studentData?.course || "",
-      semester: studentData?.semester || "",
+      course_type: extractString(studentData?.course_type || studentData?.courses_type, "course_type"),
+      department: extractString(studentData?.department, "department"),
+      stream: extractString(studentData?.stream, "stream"),
+      course: extractString(studentData?.course, "course"),
+      semester: extractString(studentData?.semester, "semester"),
       current_year: mapYearToWord(studentData?.current_year || studentData?.academic_year) || "",
       date_of_birth: studentData?.date_of_birth || "",
       mobile_no: studentData?.mobile_no || "",
@@ -946,6 +1050,9 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
     }
     if (isModalOpen && role === "mentor") {
       setMentorFormState(computedInitialValues);
+    }
+    if (isModalOpen && role === "student") {
+      setStudentFormState(computedInitialValues);
     }
   }, [isModalOpen, role, computedInitialValues]);
 
@@ -1212,6 +1319,29 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
               </div>
             }
             onValuesChange={(updatedValues, changedFieldName) => {
+              if (role === "student") {
+                const sideEffects: any = {};
+                if (changedFieldName === "course_type") {
+                  sideEffects.course = "";
+                  sideEffects.department = "";
+                  sideEffects.semester = "";
+                }
+                if (changedFieldName === "stream") {
+                  sideEffects.course = "";
+                  sideEffects.department = "";
+                  sideEffects.semester = "";
+                }
+                if (changedFieldName === "course") {
+                  sideEffects.department = "";
+                  sideEffects.semester = "";
+                }
+                if (changedFieldName === "department") {
+                  sideEffects.semester = "";
+                }
+                const newFormState = { ...updatedValues, ...sideEffects };
+                setStudentFormState(newFormState);
+                return sideEffects;
+              }
               if (role === "college") {
                 const sideEffects: any = {};
                 if (changedFieldName === "state") {
@@ -1403,6 +1533,29 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
             </div>
           }
           onValuesChange={(updatedValues, changedFieldName) => {
+            if (role === "student") {
+              const sideEffects: any = {};
+              if (changedFieldName === "course_type") {
+                sideEffects.course = "";
+                sideEffects.department = "";
+                sideEffects.semester = "";
+              }
+              if (changedFieldName === "stream") {
+                sideEffects.course = "";
+                sideEffects.department = "";
+                sideEffects.semester = "";
+              }
+              if (changedFieldName === "course") {
+                sideEffects.department = "";
+                sideEffects.semester = "";
+              }
+              if (changedFieldName === "department") {
+                sideEffects.semester = "";
+              }
+              const newFormState = { ...updatedValues, ...sideEffects };
+              setStudentFormState(newFormState);
+              return sideEffects;
+            }
             if (role === "college") {
               const sideEffects: any = {};
               if (changedFieldName === "state") {

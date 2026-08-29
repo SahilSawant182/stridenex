@@ -214,9 +214,28 @@ export default function ProjectsTabContent() {
         }
       }
 
+      let appsList: any[] = [];
+      if (studentEmail) {
+        try {
+          const resApps = await getStudentApplications({ student: studentEmail, opportunity_type: "Project" });
+          appsList = resApps?.data?.data || resApps?.message?.data || resApps?.data || resApps?.message || [];
+          setStudentApplications(Array.isArray(appsList) ? appsList : []);
+        } catch (err) {
+          console.error("Error fetching student applications list:", err);
+        }
+      }
+
       const response = await getStudentProjectList(studentEmail, course, department, academicYear, search);
       const dataContainer = (response?.data && typeof response.data === 'object' && !Array.isArray(response.data)) ? response : (response?.message && typeof response.message === 'object' ? response.message : response);
-      const mappedProjects = dataContainer?.data?.projects || dataContainer?.projects || [];
+      const projectsData = dataContainer?.data?.projects || dataContainer?.projects || [];
+      
+      const mappedProjects = (Array.isArray(projectsData) ? projectsData : []).map((item: any) => {
+        const match = appsList.find(app => app.project === item.name);
+        if (match) {
+          return { ...item, applied_status: match.status };
+        }
+        return item;
+      });
 
       const stats = dataContainer?.data?.statistics || dataContainer?.statistics || {};
       const activeProjectsCount = mappedProjects.filter(

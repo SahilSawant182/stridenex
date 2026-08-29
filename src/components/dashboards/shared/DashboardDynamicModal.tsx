@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiService } from "@/services/api.services";
 import { parseBackendError } from "@/utils/error.utils";
-import { disableToDateBeforeFromDate } from "@/utils/date.utils";
+import { disableToDateBeforeFromDate, getLocalDateString } from "@/utils/date.utils";
 
 const getOneDayPrior = (dateStr: string): string => {
   if (!dateStr) return "";
@@ -34,6 +34,7 @@ export interface DynamicField {
   disabled?: boolean;
   multiple?: boolean;
   apiEndpoint?: string;
+  apiMethod?: "GET" | "POST";
   apiParams?: Record<string, any>;
   mapOptions?: (data: any) => Array<{ value: string; label: string }>;
   allowCustom?: boolean;
@@ -250,6 +251,34 @@ export default function DashboardDynamicModal({
 
         if (isEmpty) {
           newErrors[field.name] = "required";
+        }
+      }
+
+      // Date min/max validation
+      if (field.type === "date" && formData[field.name]) {
+        const dateVal = formData[field.name];
+        const initialVal = initialValues?.[field.name];
+
+        // Only validate if the user changed the date from its initial value
+        if (dateVal !== initialVal) {
+          // Determine min constraint
+          let minValue = field.min;
+          if (field.name === "end_date" || field.name === "to_date") {
+            minValue = disableToDateBeforeFromDate(formData.start_date || formData.from_date) || getLocalDateString();
+          }
+
+          // Determine max constraint
+          let maxValue = field.max;
+          if (field.name === "regDeadline") {
+            maxValue = getOneDayPrior(formData.driveDate);
+          }
+
+          if (minValue && dateVal < minValue) {
+            newErrors[field.name] = `Date cannot be before ${minValue}`;
+          }
+          if (maxValue && dateVal > maxValue) {
+            newErrors[field.name] = `Date cannot be after ${maxValue}`;
+          }
         }
       }
     });
@@ -475,13 +504,20 @@ function DynamicFieldItem({
     try {
       let responseData;
 
-      if (field.apiEndpoint.includes('master.get_master_data')) {
+      if (field.apiEndpoint.includes('master.get_master_data') && field.apiMethod !== 'GET') {
         const body = {
           ...(field.apiParams || {}),
           search: searchTxt,
           page: pageNum
         };
         responseData = await apiService.post(field.apiEndpoint, body);
+      } else if (field.apiMethod === 'GET') {
+        responseData = await apiService.get(field.apiEndpoint, {
+          ...(field.apiParams || {}),
+          page: pageNum,
+          page_size: 20,
+          search: searchTxt
+        });
       } else {
         responseData = await apiService.post(field.apiEndpoint, {
           ...(field.apiParams || {}),
@@ -537,7 +573,7 @@ function DynamicFieldItem({
 
       let mapped = [];
       if (field.mapOptions) {
-        mapped = field.mapOptions(data);
+        mapped = field.mapOptions(responseData || data);
       } else {
         mapped = Array.isArray(data) ? data.map((item: any) => ({
           value: item.name || item.value || item,
@@ -890,7 +926,7 @@ function DynamicFieldItem({
             disabled={field.disabled}
             min={
               field.type === "date" && (field.name === "end_date" || field.name === "to_date")
-                ? disableToDateBeforeFromDate(formData.start_date || formData.from_date)
+                ? disableToDateBeforeFromDate(formData.start_date || formData.from_date) || getLocalDateString()
                 : field.min
             }
             max={
@@ -905,7 +941,7 @@ function DynamicFieldItem({
       </div>
       {errors[field.name] && (
         <p className="text-[10px] font-bold text-red-500 ml-1 mt-1 animate-pulse">
-          * This field is mandatory
+          {errors[field.name] === "required" ? "* This field is mandatory" : errors[field.name]}
         </p>
       )}
     </div>

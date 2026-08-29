@@ -747,5 +747,28 @@ export const getOfferTemplates = async (industry?: string) => {
     throw error;
   }
 };
+export const updateOfferTemplate = async (data: any) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.offer_template.offer_template.update_offer_template`,
+      data
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating offer template:", error);
+    throw error;
+  }
+};
 
-
+export const deleteOfferTemplate = async (name: string) => {
+  try {
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.offer_template.offer_template.delete_offer_template`,
+      { name }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error deleting offer template:", error);
+    throw error;
+  }
+};

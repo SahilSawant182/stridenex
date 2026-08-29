@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail, Send, Copy, Check, FileText, Sparkles, ShieldCheck, Zap,
   Loader2, Plus, X, ChevronDown, ChevronUp, FilePlus2, BadgeCheck,
-  Calendar, DollarSign, Clock, Tag, Eye, RefreshCw,
+  Calendar, DollarSign, Clock, Tag, Eye, RefreshCw, Edit2, Trash2
 } from "lucide-react";
 import { useIndustry } from "@/context/IndustryContext";
 import {
@@ -13,6 +13,8 @@ import {
   getInvitationTemplate,
   createOfferTemplate,
   getOfferTemplates,
+  updateOfferTemplate,
+  deleteOfferTemplate,
   OfferTemplatePayload,
 } from "@/services/industry.services";
 
@@ -78,6 +80,7 @@ export default function SettingsTabContent() {
   const [templates, setTemplates] = useState<OfferTemplate[]>([]);
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const companyName = industryData?.company_name ?? "";
 
@@ -152,15 +155,57 @@ export default function SettingsTabContent() {
     if (!companyName) { alert("Company name not found."); return; }
     try {
       setSubmitting(true);
-      const payload: OfferTemplatePayload = { ...form, link_ewqm: companyName };
-      await createOfferTemplate(payload);
+      const payload: any = { ...form, link_ewqm: companyName };
+      if (editingId) {
+        payload.name = editingId;
+        await updateOfferTemplate(payload);
+      } else {
+        await createOfferTemplate(payload);
+      }
       setForm({ ...EMPTY_FORM });
       setShowForm(false);
+      setEditingId(null);
       await fetchTemplates();
     } catch (err: any) {
       console.error(err);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleEdit = (t: OfferTemplate, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setForm({
+      template_name: t.template_name || "",
+      template_code: t.template_code || "",
+      link_ewqm: t.link_ewqm || "",
+      select_egwf: t.select_egwf || "Internship",
+      status: t.status || "Active",
+      subject: t.subject || "",
+      salutation: t.salutation || "",
+      body: t.body || "",
+      compensation_type: t.compensation_type || "Stipend",
+      compensation_amount: t.compensation_amount || 0,
+      currency: t.currency || "INR",
+      duration: t.duration || "",
+      effective_from: t.effective_from || "",
+      effective_to: t.effective_to || "",
+    });
+    setEditingId(t.name || null);
+    setShowForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (t: OfferTemplate, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!t.name) return;
+    if (window.confirm(`Are you sure you want to delete the template "${t.template_name}"?`)) {
+      try {
+        await deleteOfferTemplate(t.name);
+        await fetchTemplates();
+      } catch (err: any) {
+        console.error(err);
+      }
     }
   };
 
@@ -245,7 +290,14 @@ export default function SettingsTabContent() {
               className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 transition-all disabled:opacity-50">
               <RefreshCw className={`w-4 h-4 ${templatesLoading ? "animate-spin" : ""}`} />
             </button>
-            <button onClick={() => setShowForm(v => !v)}
+            <button onClick={() => {
+                const nextState = !showForm;
+                setShowForm(nextState);
+                if (!nextState) {
+                  setEditingId(null);
+                  setForm({ ...EMPTY_FORM });
+                }
+              }}
               className="flex items-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-violet-500/20 active:scale-95">
               {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
               {showForm ? "Cancel" : "New Template"}
@@ -262,7 +314,7 @@ export default function SettingsTabContent() {
                 <div className="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
                   <FilePlus2 className="w-4 h-4 text-violet-600" />
                 </div>
-                <span className="font-bold text-slate-800">New Offer Letter Template</span>
+                <span className="font-bold text-slate-800">{editingId ? "Edit Offer Letter Template" : "New Offer Letter Template"}</span>
               </div>
 
               <form onSubmit={handleSubmit} className="p-6 space-y-6">
@@ -283,9 +335,8 @@ export default function SettingsTabContent() {
                   <Field label="Opportunity Type">
                     <select value={form.select_egwf} onChange={e => set("select_egwf", e.target.value)} className={inputCls}>
                       <option>Internship</option>
-                      <option>Full-Time</option>
-                      <option>Part-Time</option>
                       <option>Project</option>
+                      <option>Job</option>
                     </select>
                   </Field>
                   <Field label="Status">
@@ -358,7 +409,7 @@ export default function SettingsTabContent() {
                   <button type="submit" disabled={submitting}
                     className="flex items-center gap-2 px-6 py-3 bg-violet-600 hover:bg-violet-700 disabled:opacity-70 text-white font-bold rounded-xl transition-all shadow-md shadow-violet-500/20 active:scale-95 cursor-pointer disabled:cursor-not-allowed">
                     {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <BadgeCheck className="w-4 h-4" />}
-                    {submitting ? "Saving..." : "Save Template"}
+                    {submitting ? "Saving..." : editingId ? "Update Template" : "Save Template"}
                   </button>
                 </div>
               </form>
@@ -404,9 +455,18 @@ export default function SettingsTabContent() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 ml-4 shrink-0">
+                    <div className="flex items-center gap-2 ml-4 shrink-0">
+                      <button onClick={(e) => handleEdit(t, e)} title="Edit Template"
+                        className="p-1.5 hover:bg-slate-200/50 rounded-lg text-slate-400 hover:text-blue-600 transition-colors">
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button onClick={(e) => handleDelete(t, e)} title="Delete Template"
+                        className="p-1.5 hover:bg-red-50 rounded-lg text-slate-400 hover:text-red-500 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      <div className="h-4 w-px bg-slate-200 mx-1"></div>
                       <Badge label={t.status} color={statusColor(t.status)} />
-                      {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                      {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400 ml-1" /> : <ChevronDown className="w-4 h-4 text-slate-400 ml-1" />}
                     </div>
                   </button>
 

@@ -25,7 +25,7 @@ import { getInternshipList, createInternship, updateInternship, deleteInternship
 import { useIndustry } from "@/context/IndustryContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { Pagination } from "@/components/ui/Pagination";
-import { calculateEndDate } from "@/utils/date.utils";
+import { calculateEndDate, getLocalDateString } from "@/utils/date.utils";
 import { useToast } from "@/context/ToastContext";
 
 import { useSearchParams } from "next/navigation";
@@ -143,9 +143,9 @@ export default function InternshipsTabContent() {
     { name: "payment_mode", label: "Payment", type: "select", icon: IndianRupee, options: ["Paid", "Unpaid"], required: true, placeholder: "Select Payment Mode" },
     { name: "stipend", label: "Stipend (Monthly)", type: "number", icon: IndianRupee, required: modalValues.payment_mode === "Paid", placeholder: "e.g. 15000", disabled: modalValues.payment_mode === "Unpaid" },
     { name: "duration", label: "Duration (Days)", type: "number", icon: Clock, required: true, placeholder: "e.g. 90" },
-    { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase", min: new Date().toISOString().split('T')[0] },
+    { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase", min: getLocalDateString() },
     { name: "end_date", label: "End Date", type: "date", icon: Calendar, placeholder: "DD/MM/YYYY", textTransform: "uppercase" },
-    { name: "application_deadline", label: "Application Deadline", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase", max: modalValues.start_date },
+    { name: "application_deadline", label: "Application Deadline", type: "date", icon: Calendar, required: true, placeholder: "DD/MM/YYYY", textTransform: "uppercase", min: getLocalDateString(), max: modalValues.start_date },
     { name: "openings", label: "Openings", type: "number", icon: Users, required: true, placeholder: "e.g. 10" },
     { name: "status", label: "Status", type: "select", icon: Zap, options: ["Active", "Draft", "Closed"], required: true, placeholder: "Select Status" },
     { name: "course", label: "Course", type: "select", icon: Briefcase, options: courseOptions, required: true, placeholder: "Select Courses", multiple: true },
