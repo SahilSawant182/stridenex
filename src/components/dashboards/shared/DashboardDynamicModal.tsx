@@ -513,10 +513,12 @@ function DynamicFieldItem({
         responseData = await apiService.post(field.apiEndpoint, body);
       } else if (field.apiMethod === 'GET') {
         responseData = await apiService.get(field.apiEndpoint, {
-          ...(field.apiParams || {}),
-          page: pageNum,
-          page_size: 20,
-          search: searchTxt
+          params: {
+            ...(field.apiParams || {}),
+            page: pageNum,
+            page_size: 20,
+            search: searchTxt
+          }
         });
       } else {
         responseData = await apiService.post(field.apiEndpoint, {
