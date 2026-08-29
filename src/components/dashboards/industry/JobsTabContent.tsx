@@ -28,6 +28,7 @@ import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/sha
 import { Pagination } from "@/components/ui/Pagination";
 import { useToast } from "@/context/ToastContext";
 import { useSearchParams } from "next/navigation";
+import { getLocalDateString } from "@/utils/date.utils";
 
 
 
@@ -127,7 +128,7 @@ export default function JobsTabContent() {
     { name: "salary_from", label: "Salary From (LPA)", type: "number", icon: IndianRupee, required: true, placeholder: "e.g. 400000" },
     { name: "salary_to", label: "Salary To (LPA)", type: "number", icon: IndianRupee, required: true, placeholder: "e.g. 700000" },
     { name: "openings", label: "Openings", type: "number", icon: Users, required: true, placeholder: "e.g. 3" },
-    { name: "last_date", label: "Last Date to Apply", type: "date", icon: Calendar, required: true, placeholder: "YYYY-MM-DD", textTransform: "uppercase", min: new Date().toISOString().split('T')[0] },
+    { name: "last_date", label: "Last Date to Apply", type: "date", icon: Calendar, required: true, placeholder: "YYYY-MM-DD", textTransform: "uppercase", min: getLocalDateString() },
     { name: "contact_person", label: "Contact Person", type: "text", icon: User, required: false, placeholder: "e.g. John Doe" },
     { name: "contact_email", label: "Contact Email", type: "email", icon: Mail, required: false, placeholder: "e.g. john@example.com" },
     { name: "contact_phone", label: "Contact Phone", type: "text", icon: Phone, required: false, placeholder: "e.g. 9876543210" },

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { apiService } from "@/services/api.services";
 import { parseBackendError } from "@/utils/error.utils";
-import { disableToDateBeforeFromDate } from "@/utils/date.utils";
+import { disableToDateBeforeFromDate, getLocalDateString } from "@/utils/date.utils";
 
 const getOneDayPrior = (dateStr: string): string => {
   if (!dateStr) return "";
@@ -250,6 +250,34 @@ export default function DashboardDynamicModal({
 
         if (isEmpty) {
           newErrors[field.name] = "required";
+        }
+      }
+
+      // Date min/max validation
+      if (field.type === "date" && formData[field.name]) {
+        const dateVal = formData[field.name];
+        const initialVal = initialValues?.[field.name];
+
+        // Only validate if the user changed the date from its initial value
+        if (dateVal !== initialVal) {
+          // Determine min constraint
+          let minValue = field.min;
+          if (field.name === "end_date" || field.name === "to_date") {
+            minValue = disableToDateBeforeFromDate(formData.start_date || formData.from_date) || getLocalDateString();
+          }
+
+          // Determine max constraint
+          let maxValue = field.max;
+          if (field.name === "regDeadline") {
+            maxValue = getOneDayPrior(formData.driveDate);
+          }
+
+          if (minValue && dateVal < minValue) {
+            newErrors[field.name] = `Date cannot be before ${minValue}`;
+          }
+          if (maxValue && dateVal > maxValue) {
+            newErrors[field.name] = `Date cannot be after ${maxValue}`;
+          }
         }
       }
     });
@@ -890,7 +918,7 @@ function DynamicFieldItem({
             disabled={field.disabled}
             min={
               field.type === "date" && (field.name === "end_date" || field.name === "to_date")
-                ? disableToDateBeforeFromDate(formData.start_date || formData.from_date)
+                ? disableToDateBeforeFromDate(formData.start_date || formData.from_date) || getLocalDateString()
                 : field.min
             }
             max={
@@ -905,7 +933,7 @@ function DynamicFieldItem({
       </div>
       {errors[field.name] && (
         <p className="text-[10px] font-bold text-red-500 ml-1 mt-1 animate-pulse">
-          * This field is mandatory
+          {errors[field.name] === "required" ? "* This field is mandatory" : errors[field.name]}
         </p>
       )}
     </div>
