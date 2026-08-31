@@ -54,7 +54,10 @@ export default function StudentDashboardPage() {
   });
   const [internshipsData, setInternshipsData] = useState<any[]>([]);
   const [learningActivityData, setLearningActivityData] = useState<any>(null);
-  const [opportunityAlerts, setOpportunityAlerts] = useState<any[]>([]);
+  const [opportunityAlerts, setOpportunityAlerts] = useState<{
+    newPostings: any[];
+    deadlineAlerts: any[];
+  }>({ newPostings: [], deadlineAlerts: [] });
 
   useEffect(() => {
     if (!currentUser) return;
@@ -102,22 +105,13 @@ export default function StudentDashboardPage() {
         console.log("Student opportunity alerts response:", res);
         const data = res?.data || res?.message;
 
-        let alertsArray: any[] = [];
-        if (Array.isArray(data)) {
-          alertsArray = data;
-        } else if (data && Array.isArray(data.alerts)) {
-          alertsArray = data.alerts;
-        }
-
-        if (alertsArray.length > 0) {
-          const mapped = alertsArray.map((item: any) => ({
-            type: item.type || "warning",
-            message: item.message || item.title || item.opportunity_title || item.heading || "Opportunity Alert",
-            detail: item.detail || item.description || item.detail_text || item.text || ""
-          }));
-          setOpportunityAlerts(mapped);
+        if (data) {
+          setOpportunityAlerts({
+            newPostings: data.new_postings || [],
+            deadlineAlerts: data.deadline_alerts || []
+          });
         } else {
-          setOpportunityAlerts([]);
+          setOpportunityAlerts({ newPostings: [], deadlineAlerts: [] });
         }
       } catch (error) {
         console.error("Error fetching opportunity alerts:", error);
@@ -297,16 +291,7 @@ export default function StudentDashboardPage() {
         <motion.div variants={item} className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
           <SkillsWidget />
 
-          <AlertsWidget
-            data={{
-              blocks: opportunityAlerts,
-              agenda: [
-                { icon: "education", text: "ML Module Ch.2 — due Feb 25" },
-                { icon: "call", text: "Mentor: Kavya Reddy — Feb 27 4PM" },
-                { icon: "write", text: "AI Assessment: ML — Feb 28" }
-              ]
-            }}
-          />
+          <AlertsWidget data={opportunityAlerts} />
         </motion.div>
 
         {/* Internships Row */}

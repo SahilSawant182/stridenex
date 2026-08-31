@@ -106,9 +106,6 @@ export default function ProjectsTabContent() {
       }
       const apiData = data.message?.data || data.data || data.message || [];
       let options = Array.isArray(apiData) ? apiData.map((item: any) => item.name || item.department_name || item.department || item) : [];
-      if (doctype === "Courses") {
-        options = ["All", ...options];
-      }
       setter(options);
     } catch (err) {
       console.error(`Error fetching ${doctype} options:`, err);

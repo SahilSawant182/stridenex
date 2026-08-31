@@ -97,9 +97,6 @@ export default function JobsTabContent() {
         mapField = Array.isArray(extraPayload.fields) ? extraPayload.fields[0] : extraPayload.fields;
       }
       let options = Array.isArray(apiData) ? apiData.map((item: any) => item[mapField] || item.name || item.department_name || item.department || item) : [];
-      if (doctype === "Courses") {
-        options = ["All", ...options];
-      }
       setter(options);
     } catch (err) {
       console.error(`Error fetching ${doctype} options:`, err);

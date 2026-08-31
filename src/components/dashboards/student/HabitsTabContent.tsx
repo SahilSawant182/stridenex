@@ -805,7 +805,6 @@ export default function HabitsTabContent() {
 
             // Find the habit to get plan name if not provided
             const habit = pendingHabits.find(h => h.id === habitId);
-            const actualPlanName = planName || habit?.plan_name;
 
             // Optimistically update UI - remove the habit from pending list immediately
             setPendingHabits(prev => prev.filter(habit => habit.id !== habitId));
@@ -813,16 +812,11 @@ export default function HabitsTabContent() {
             await logDailyHabits({
                 student: studentEmail,
                 logs: [{
-                    habit_id: habitId,
+                    habit: habitId,
                     value: value,
                     date: new Date().toISOString().split('T')[0]
                 }]
             });
-
-            // Call complete habit plan status API if plan name is available
-            if (actualPlanName && habit) {
-                await completeHabitPlanStatus(actualPlanName, habit.habit_name, studentEmail);
-            }
 
             // Refresh data to ensure consistency with backend
             fetchData();

@@ -2008,19 +2008,18 @@ export default function CampusDrivesTabContent() {
                             <th className="py-3 px-4">Backlogs</th>
                             <th className="py-3 px-4">Package Offered</th>
                             <th className="py-3 px-4">Offer Status</th>
-                            <th className="py-3 px-5 text-right">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-slate-700">
                           {drivePlacementLoading ? (
                             <tr>
-                              <td colSpan={7} className="py-12 text-center text-slate-400 font-semibold">
+                              <td colSpan={6} className="py-12 text-center text-slate-400 font-semibold">
                                 <Loader2 className="w-6 h-6 animate-spin text-orange-500 mx-auto mb-2" />
                                 Loading selected candidates...
                               </td>
                             </tr>
                           ) : drivePlacementList.filter((r: any) => r.status === "Selected" || r.status === "Placed").length === 0 ? (
-                            <tr><td colSpan={7} className="py-10 text-center">
+                            <tr><td colSpan={6} className="py-10 text-center">
                               <Users className="w-10 h-10 text-slate-300 mx-auto mb-2" />
                               <p className="text-xs text-slate-400 font-semibold">No selected students</p>
                             </td></tr>
@@ -2046,9 +2045,6 @@ export default function CampusDrivesTabContent() {
                                 </td>
                                 <td className="py-3.5 px-4">
                                   <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-200 px-2 py-0.5 rounded-full">Accepted</span>
-                                </td>
-                                <td className="py-3.5 px-5 text-right">
-                                  <button onClick={() => showToast(`Viewing offer for ${fullName}`, "info")} className="text-xs font-bold text-blue-600 hover:text-blue-700 underline underline-offset-2 transition-colors">View Offer</button>
                                 </td>
                               </tr>
                             );

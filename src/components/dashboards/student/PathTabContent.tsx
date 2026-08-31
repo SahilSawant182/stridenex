@@ -159,10 +159,10 @@ export default function PathTabContent() {
   const [detailsLoading, setDetailsLoading] = useState<boolean>(false);
 
   // Student Profile fields
-  const [degree, setDegree] = useState<string>("B.Tech");
-  const [specialisation, setSpecialisation] = useState<string>("Computer Science");
+  const [degree, setDegree] = useState<string>("");
+  const [specialisation, setSpecialisation] = useState<string>("");
   const [academicYear, setAcademicYear] = useState<number>(3);
-  const [interests, setInterests] = useState<string>("Web Development, Artificial Intelligence");
+  const [interests, setInterests] = useState<string>("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [skillsInput, setSkillsInput] = useState<string>("");
   const [showValidationErrors, setShowValidationErrors] = useState<boolean>(false);
@@ -973,22 +973,15 @@ export default function PathTabContent() {
                       <GraduationCap className="w-4 h-4 text-blue-600" />
                       <span>Degree / Qualification <span className="text-red-500">*</span></span>
                     </label>
-                    <select
+                    <input
+                      type="text"
                       value={degree}
                       onChange={(e) => setDegree(e.target.value)}
+                      placeholder="e.g. B.Tech, B.Sc, M.Tech, BCA, MBA"
                       className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${
                         showValidationErrors && !degree.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
                       }`}
-                    >
-                      <option value="">Select Degree...</option>
-                      <option value="B.Tech">Bachelor of Technology (B.Tech)</option>
-                      <option value="B.E.">Bachelor of Engineering (B.E.)</option>
-                      <option value="M.Tech">Master of Technology (M.Tech)</option>
-                      <option value="B.C.A.">Bachelor of Computer Applications (BCA)</option>
-                      <option value="M.C.A.">Master of Computer Applications (MCA)</option>
-                      <option value="B.Sc.">Bachelor of Science (B.Sc)</option>
-                      <option value="M.Sc.">Master of Science (M.Sc)</option>
-                    </select>
+                    />
                     {showValidationErrors && !degree.trim() && (
                       <span className="text-[10px] font-bold text-red-500 mt-1 block">Degree is required.</span>
                     )}
@@ -1004,7 +997,7 @@ export default function PathTabContent() {
                       type="text"
                       value={specialisation}
                       onChange={(e) => setSpecialisation(e.target.value)}
-                      placeholder="e.g. Computer Science, Information Technology"
+                      placeholder="e.g. Computer Science, Electronics, Mechanical, Civil"
                       className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${
                         showValidationErrors && !specialisation.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
                       }`}
@@ -1049,7 +1042,7 @@ export default function PathTabContent() {
                       type="text"
                       value={interests}
                       onChange={(e) => setInterests(e.target.value)}
-                      placeholder="e.g. Web Dev, AI, Automation, Databases"
+                      placeholder="e.g. Machine Learning, Web Development, Cybersecurity, Cloud Computing"
                       className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${
                         showValidationErrors && !interests.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
                       }`}

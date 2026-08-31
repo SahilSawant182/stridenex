@@ -283,7 +283,7 @@ export default function ApplicationsPipelineModal({
                         onChange={(e) => setSelectedStatus(e.target.value)}
                         className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none transition-all hover:bg-white hover:border-blue-200 cursor-pointer"
                       >
-                        {pipelineColumns.map(col => (
+                        {pipelineColumns.filter(col => col.id !== "Accepted").map(col => (
                           <option key={col.id} value={col.id}>{col.title}</option>
                         ))}
                       </select>

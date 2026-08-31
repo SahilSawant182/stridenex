@@ -625,7 +625,7 @@ export default function PipelineTabContent() {
                            onChange={(e) => setSelectedStatus(e.target.value)}
                            className="w-full pl-11 pr-10 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/50 appearance-none transition-all hover:bg-white hover:border-purple-200 cursor-pointer"
                          >
-                            {currentColumns.map(col => (
+                            {currentColumns.filter(col => col.id !== "Accepted").map(col => (
                               <option key={col.id} value={col.id}>{col.title}</option>
                             ))}
                          </select>
