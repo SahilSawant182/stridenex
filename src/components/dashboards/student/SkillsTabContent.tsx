@@ -39,11 +39,11 @@ interface SkillRow {
 
 const getCategoryStyle = (category: string) => {
   const styles: Record<string, string> = {
-    Technical: "bg-slate-100 text-slate-600",
-    Cognitive: "bg-purple-100 text-purple-600",
-    "Soft Skill": "bg-emerald-100 text-emerald-600"
+    Technical: "bg-blue-50 text-blue-600 border-blue-100",
+    Cognitive: "bg-purple-50 text-purple-600 border-purple-100",
+    "Soft Skill": "bg-emerald-50 text-emerald-600 border-emerald-100"
   };
-  return styles[category] || styles.Technical;
+  return styles[category] || "bg-slate-50 text-slate-600 border-slate-100";
 };
 
 const getLevelStyle = (level: string, type: string) => {
@@ -406,34 +406,47 @@ export default function SkillsTabContent() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="bg-white rounded-xl border border-slate-200/60 shadow-sm overflow-hidden"
+        className="bg-white rounded-[2rem] border border-slate-200/60 shadow-lg shadow-slate-200/40 overflow-hidden relative mt-8"
       >
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-          <h3 className="text-sm font-bold text-slate-800">Full Skill Ledger</h3>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-orange-50/50 to-transparent rounded-bl-full -z-10 pointer-events-none" />
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white/50 backdrop-blur-sm">
+          <div>
+            <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
+              <Award className="w-5 h-5 text-orange-500" /> Full Skill Ledger
+            </h3>
+            <p className="text-xs font-semibold text-slate-500 mt-1">Manage and track your verified proficiencies</p>
+          </div>
           <Button
             onClick={() => setIsModalOpen(true)}
-            className="bg-orange-500 hover:bg-orange-600 text-white h-9 rounded-xl text-xs font-bold gap-2 shadow-lg shadow-orange-500/20 active:scale-95 transition-all"
+            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white h-10 px-5 rounded-xl text-xs font-bold gap-2 shadow-lg shadow-orange-500/30 active:scale-95 transition-all border border-orange-400"
           >
             <Plus className="w-4 h-4" />
             Add New Skill
           </Button>
         </div>
-        <div className="overflow-x-auto overflow-y-auto max-h-[360px] custom-scrollbar">
-          <table className="w-full text-left border-collapse relative">
-            <thead className="sticky top-0 z-10 bg-slate-50 shadow-sm shadow-slate-100/50 outline outline-1 outline-slate-100">
-              <tr>
-                {['Skill', 'Category', 'Level', 'Evidence', 'Endorsements', 'AI Verified', 'Last Demo'].map((header) => (
-                  <th key={header} className="py-3 px-6 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    {header}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="text-sm divide-y divide-slate-100">
+        <div className="p-4 pt-0 pb-6">
+          <div className="overflow-x-auto overflow-y-auto max-h-[630px] custom-scrollbar rounded-2xl border border-slate-100/50 shadow-sm">
+            <table className="w-full text-left border-collapse">
+              <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm border-b border-slate-200">
+                <tr>
+                  {['Skill Details', 'Proficiency', 'Evidence & Endorsements', 'Verification', 'Last Demo'].map((header) => (
+                    <th key={header} className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest first:pl-8 last:pr-8">
+                      {header}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="text-sm divide-y divide-slate-100 bg-white">
               {skillRows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
-                    No skills found in your ledger. Click "Add New Skill" to get started.
+                  <td colSpan={5} className="py-16">
+                    <div className="flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border border-slate-100 border-dashed py-10 w-full max-w-md mx-auto">
+                      <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm border border-slate-100">
+                        <FileText className="w-8 h-8 text-slate-300" />
+                      </div>
+                      <p className="text-sm font-bold text-slate-600">No skills documented yet</p>
+                      <p className="text-xs font-medium text-slate-400 text-center mt-1">Start building your profile by adding your first skill to the ledger.</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -441,29 +454,59 @@ export default function SkillsTabContent() {
                   <tr
                     key={row.id}
                     onClick={() => setSelectedSkill(row)}
-                    className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                    className="hover:bg-gradient-to-r hover:from-orange-50/50 hover:to-amber-50/30 transition-all duration-300 group cursor-pointer relative"
                   >
-                    <td className="py-4 px-6 font-semibold text-slate-800">{row.name}</td>
-                    <td className="py-4 px-6">
-                      <span className={`px-2.5 py-1 rounded-md text-[11px] font-medium ${getCategoryStyle(row.categoryType)}`}>
-                        {row.category}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className={getLevelStyle(row.level, row.levelType)}>{row.level}</span>
-                    </td>
-                    <td className="py-4 px-6 font-semibold text-slate-800">{row.evidence} items</td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm font-semibold text-slate-800">{row.endorsements}</span>
-                        <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                    <td className="py-5 px-6 first:pl-8 last:pr-8">
+                      <div className="flex flex-col gap-1.5">
+                        <span className="font-bold text-slate-800 text-sm flex items-center gap-2 group-hover:text-orange-600 transition-colors">
+                          <div className={`w-2 h-2 rounded-full ${row.categoryType === 'Technical' ? 'bg-blue-500 shadow-[0_0_4px_rgba(59,130,246,0.5)]' : row.categoryType === 'Soft Skill' ? 'bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.5)]' : 'bg-purple-500 shadow-[0_0_4px_rgba(168,85,247,0.5)]'} group-hover:scale-125 transition-transform duration-300`}></div>
+                          {row.name}
+                        </span>
+                        <span className={`w-fit px-2 py-0.5 rounded-md text-[9px] font-bold tracking-wider uppercase border shadow-sm ${getCategoryStyle(row.categoryType)}`}>
+                          {row.category}
+                        </span>
                       </div>
                     </td>
-                    <td className="py-4 px-6">
+                    <td className="py-5 px-6 first:pl-8 last:pr-8">
+                      <div className="flex flex-col gap-2">
+                        <span className={`px-2.5 py-1 w-fit rounded-lg text-[10px] uppercase tracking-wider border shadow-sm ${
+                          row.levelType === 'Advanced' ? 'bg-orange-50 text-orange-600 border-orange-200 font-black' :
+                          row.levelType === 'Intermediate' ? 'bg-blue-50 text-blue-600 border-blue-200 font-bold' :
+                          'bg-slate-50 text-slate-600 border-slate-200 font-semibold'
+                        }`}>
+                          {row.level}
+                        </span>
+                        {/* Mini visual gauge */}
+                        <div className="flex gap-1.5 ml-1">
+                          <div className={`w-3 h-1 rounded-full transition-colors duration-500 ${row.levelType ? (row.levelType === 'Advanced' ? 'bg-orange-500' : row.levelType === 'Intermediate' ? 'bg-blue-500' : 'bg-slate-400') : 'bg-slate-400'}`}></div>
+                          <div className={`w-3 h-1 rounded-full transition-colors duration-500 delay-75 ${(row.levelType === 'Intermediate' || row.levelType === 'Advanced') ? (row.levelType === 'Advanced' ? 'bg-orange-500' : 'bg-blue-500') : 'bg-slate-200'}`}></div>
+                          <div className={`w-3 h-1 rounded-full transition-colors duration-500 delay-150 ${row.levelType === 'Advanced' ? 'bg-orange-500' : 'bg-slate-200'}`}></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-5 px-6 first:pl-8 last:pr-8">
+                      <div className="flex items-center gap-3">
+                        {/* Gamified Evidence/Endorsements items */}
+                        <div className="flex items-center gap-2 bg-gradient-to-br from-slate-50 to-white px-3 py-1.5 rounded-xl border border-slate-200 group-hover:border-slate-300 group-hover:shadow-md transition-all">
+                          <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 shadow-inner">
+                            <FileText className="w-3 h-3" />
+                          </div>
+                          <span className="text-xs font-black text-slate-700">{row.evidence}</span>
+                        </div>
+                        <div className="flex items-center gap-2 bg-gradient-to-br from-amber-50 to-orange-50/50 px-3 py-1.5 rounded-xl border border-amber-200 group-hover:border-amber-400 group-hover:shadow-md transition-all">
+                          <div className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center shadow-inner">
+                            <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                          </div>
+                          <span className="text-xs font-black text-amber-700">{row.endorsements}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-5 px-6 first:pl-8 last:pr-8">
                       {row.aiVerified ? (
-                        <div className="flex items-center gap-1 text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md w-fit">
-                          <ShieldCheck className="w-3 h-3" />
-                          <span className="text-[11px] font-bold">Verified</span>
+                        <div className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-50 to-emerald-100/50 border border-emerald-200 px-3 py-1.5 rounded-xl w-fit shadow-sm relative overflow-hidden group/badge hover:shadow-md transition-all cursor-default">
+                          <div className="absolute inset-0 bg-white/40 w-full h-full -translate-x-full group-hover/badge:animate-[shimmer_1.5s_infinite] skew-x-12" />
+                          <ShieldCheck className="w-4 h-4 text-emerald-600 relative z-10" />
+                          <span className="text-[10px] uppercase tracking-wider font-black text-emerald-700 relative z-10">Verified</span>
                         </div>
                       ) : (
                         <Button
@@ -472,18 +515,24 @@ export default function SkillsTabContent() {
                             e.stopPropagation();
                             handleVerifySkillDirect(row.name, row.level);
                           }}
-                          className="bg-orange-500 hover:bg-orange-600 text-white h-7 px-3 rounded-lg text-[10px] font-bold shadow-sm shadow-orange-500/20 active:scale-95 transition-all"
+                          className="bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white h-8 px-4 rounded-xl text-[10px] font-bold shadow-md shadow-slate-900/20 active:scale-95 transition-all flex items-center gap-1.5 border border-slate-700"
                         >
-                          Verify Skill
+                          <Sparkles className="w-3.5 h-3.5 text-orange-400" /> Verify Now
                         </Button>
                       )}
                     </td>
-                    <td className="py-4 px-6 text-slate-500 text-xs font-medium">{row.lastDemo}</td>
+                    <td className="py-5 px-6 first:pl-8 last:pr-8">
+                      <div className="flex items-center gap-2 text-slate-400 text-[11px] font-semibold uppercase tracking-wider group-hover:text-slate-600 transition-colors">
+                        <Clock className="w-3.5 h-3.5 opacity-40" />
+                        {row.lastDemo}
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
+          </div>
         </div>
       </motion.div>
 

@@ -360,9 +360,16 @@ export default function PathTabContent() {
 
   const handleTogglePoint = async (milestoneTitle: string, pointTitle: string, currentStatus: string) => {
     if (!pathData?.enrollment_id) return;
+
+    const newCompleted = currentStatus !== 'Completed';
+    
+    if (newCompleted) {
+      const confirmMessage = `Are you sure you want to mark the point "${pointTitle}" as complete?`;
+      if (!window.confirm(confirmMessage)) return;
+    }
+
     try {
       setLoading(true);
-      const newCompleted = currentStatus !== 'Completed';
       const res = await completeMilestonePoint({
         enrollment: pathData.enrollment_id,
         milestone_title: milestoneTitle,
@@ -1334,7 +1341,7 @@ export default function PathTabContent() {
                   >
                     <div className="flex justify-between items-center pb-3 border-b border-slate-200">
                       <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4 text-blue-600 animate-spin" />
+                        <Sparkles className={`w-4 h-4 text-blue-600 ${detailsLoading ? 'animate-spin' : ''}`} />
                         SkillAgent Hierarchy Analysis: {selectedPath.title}
                       </h4>
                       {detailsLoading && <Loader2 className="w-4 h-4 animate-spin text-blue-600" />}
@@ -1449,45 +1456,71 @@ export default function PathTabContent() {
 
                 {hierarchySkills && (
                   <div className="space-y-4">
-                    <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 font-mono">Hierarchical Gap Assessment</h4>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Target className="w-5 h-5 text-indigo-500" />
+                      <h4 className="text-sm font-bold text-slate-800">Hierarchical Gap Assessment</h4>
+                    </div>
 
-                    {[
-                      { label: "Foundation Tiers", matched: hierarchySkills.foundation_skills?.filter((s: string) => selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [], missing: hierarchySkills.foundation_skills?.filter((s: string) => !selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [] },
-                      { label: "Core Domains", matched: hierarchySkills.core_domain_skills?.filter((s: string) => selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [], missing: hierarchySkills.core_domain_skills?.filter((s: string) => !selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [] },
-                      { label: "Industry Applications", matched: hierarchySkills.industry_skills?.filter((s: string) => selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [], missing: hierarchySkills.industry_skills?.filter((s: string) => !selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [] },
-                      { label: "Emerging Fields", matched: hierarchySkills.emerging_skills?.filter((s: string) => selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [], missing: hierarchySkills.emerging_skills?.filter((s: string) => !selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [] },
-                    ].map((group, idx) => (
-                      <div key={idx} className="bg-white border border-slate-150 rounded-xl p-4 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-sm">
-                        <div className="border-r border-slate-100 pr-4">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">{group.label} - Matched</span>
-                          <div className="flex flex-wrap gap-1">
-                            {group.matched.length > 0 ? (
-                              group.matched.map((s: string) => (
-                                <span key={s} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded border border-emerald-100">
-                                  {s}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-[11px] text-slate-400 italic">None matched</span>
-                            )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[
+                        { label: "Foundation Tiers", icon: <BookOpen className="w-4 h-4 text-blue-500" />, matched: hierarchySkills.foundation_skills?.filter((s: string) => selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [], missing: hierarchySkills.foundation_skills?.filter((s: string) => !selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [] },
+                        { label: "Core Domains", icon: <Briefcase className="w-4 h-4 text-indigo-500" />, matched: hierarchySkills.core_domain_skills?.filter((s: string) => selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [], missing: hierarchySkills.core_domain_skills?.filter((s: string) => !selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [] },
+                        { label: "Industry Applications", icon: <GraduationCap className="w-4 h-4 text-emerald-500" />, matched: hierarchySkills.industry_skills?.filter((s: string) => selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [], missing: hierarchySkills.industry_skills?.filter((s: string) => !selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [] },
+                        { label: "Emerging Fields", icon: <Sparkles className="w-4 h-4 text-orange-500" />, matched: hierarchySkills.emerging_skills?.filter((s: string) => selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [], missing: hierarchySkills.emerging_skills?.filter((s: string) => !selectedSkills.some(k => k.toLowerCase() === s.toLowerCase())) || [] },
+                      ].map((group, idx) => (
+                        <div key={idx} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                          <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
+                          <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
+                            <div className="w-8 h-8 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center">
+                              {group.icon}
+                            </div>
+                            <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider">{group.label}</h5>
+                          </div>
+                          
+                          <div className="space-y-4">
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Matched</span>
+                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{group.matched.length}</span>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {group.matched.length > 0 ? (
+                                  group.matched.map((s: string) => (
+                                    <span key={s} className="px-2.5 py-1 bg-emerald-50/50 text-emerald-700 text-[11px] font-bold rounded-lg border border-emerald-100/50 flex items-center gap-1">
+                                      <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                                      {s}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-[11px] text-slate-400 italic bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100/50">None matched</span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Gap (To Learn)</span>
+                                <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full">{group.missing.length}</span>
+                              </div>
+                              <div className="flex flex-wrap gap-1.5">
+                                {group.missing.length > 0 ? (
+                                  group.missing.map((s: string) => (
+                                    <span key={s} className="px-2.5 py-1 bg-slate-50 text-slate-700 text-[11px] font-bold rounded-lg border border-slate-200/60 flex items-center gap-1">
+                                      <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                                      {s}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1 bg-emerald-50/30 px-2.5 py-1 rounded-lg border border-emerald-100/50">
+                                    <Check className="w-3 h-3" /> Fully covered!
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">{group.label} - Gap</span>
-                          <div className="flex flex-wrap gap-1">
-                            {group.missing.length > 0 ? (
-                              group.missing.map((s: string) => (
-                                <span key={s} className="px-2 py-0.5 bg-rose-50 text-rose-700 text-xs font-semibold rounded border border-rose-100">
-                                  {s}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-[11px] text-emerald-600 font-bold">🎉 Fully covered!</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
 
@@ -1756,49 +1789,140 @@ export default function PathTabContent() {
 
             {/* Acquired Skills and Missing Skills details */}
             {pathData && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 pt-4 border-t border-slate-100">
-                {/* Acquired Skills */}
-                <div className="bg-emerald-50/30 rounded-xl p-4 border border-emerald-100/60">
-                  <h4 className="text-xs font-bold text-emerald-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5 font-mono">
-                    ✅ Acquired Skills
-                  </h4>
-                  {Array.isArray(pathData.matched_skills) && pathData.matched_skills.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {pathData.matched_skills.map((matched: any, idx: number) => {
-                        const skillName = matched.skill || matched.name || "";
-                        const skillLevel = matched.current_level || matched.level || "Beginner";
-                        return (
-                          <span key={idx} className="inline-flex items-center px-2.5 py-1 bg-white text-slate-700 text-xs font-semibold rounded-md border border-emerald-200/60 shadow-sm">
-                            {skillName} <span className="ml-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1 rounded">{skillLevel}</span>
-                          </span>
-                        );
-                      })}
+              <div className="mb-6 pt-4 border-t border-slate-100 space-y-4">
+                {/* Journey Progress Bar */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-100/40 to-transparent rounded-bl-full -z-10" />
+                  <div className="flex justify-between items-end mb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <Award className="w-5 h-5 text-blue-500" /> Skill Acquisition Journey
+                      </h3>
+                      <p className="text-[11px] text-slate-500 font-semibold mt-0.5">As you complete milestones, skills will dynamically move here.</p>
                     </div>
-                  ) : (
-                    <p className="text-xs font-medium text-slate-400 italic">No acquired skills yet</p>
-                  )}
+                    <div className="text-right flex items-baseline gap-1">
+                      <span className="text-2xl font-black text-blue-600">
+                        {Array.isArray(pathData.matched_skills) ? pathData.matched_skills.length : 0}
+                      </span>
+                      <span className="text-xs font-bold text-slate-400">
+                        / {(Array.isArray(pathData.matched_skills) ? pathData.matched_skills.length : 0) + (Array.isArray(pathData.missing_skills) ? pathData.missing_skills.length : 0)} Skills
+                      </span>
+                    </div>
+                  </div>
+                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden flex shadow-inner">
+                    <motion.div 
+                      className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full relative overflow-hidden"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${((Array.isArray(pathData.matched_skills) ? pathData.matched_skills.length : 0) / Math.max(1, (Array.isArray(pathData.matched_skills) ? pathData.matched_skills.length : 0) + (Array.isArray(pathData.missing_skills) ? pathData.missing_skills.length : 0))) * 100}%` }}
+                      transition={{ duration: 1.5, ease: "easeOut" }}
+                    >
+                      <div className="absolute inset-0 bg-white/20 w-full h-full" style={{ backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)', transform: 'skewX(-20deg)', animation: 'shimmer 2s infinite' }}></div>
+                    </motion.div>
+                  </div>
                 </div>
 
-                {/* Missing Skills */}
-                <div className="bg-rose-50/30 rounded-xl p-4 border border-rose-100/60">
-                  <h4 className="text-xs font-bold text-rose-800 uppercase tracking-wider mb-2.5 flex items-center gap-1.5 font-mono">
-                    ⚠️ Missing Skills to Acquire
-                  </h4>
-                  {Array.isArray(pathData.missing_skills) && pathData.missing_skills.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                      {pathData.missing_skills.map((missing: any, idx: number) => {
-                        const skillName = missing.skill || missing.name || "";
-                        const skillLevel = missing.required_level || missing.level || "Beginner";
-                        return (
-                          <span key={idx} className="inline-flex items-center px-2.5 py-1 bg-white text-slate-700 text-xs font-semibold rounded-md border border-rose-200/60 shadow-sm">
-                            {skillName} <span className="ml-1 text-[10px] font-bold text-rose-600 bg-rose-50 px-1 rounded">{skillLevel}</span>
-                          </span>
-                        );
-                      })}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Acquired Skills */}
+                  <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-100/40 to-transparent rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-sm">
+                          <CheckCircle2 className="w-4 h-4" />
+                        </div>
+                        Your Acquired Skills
+                      </h4>
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100 uppercase tracking-wider">
+                        {Array.isArray(pathData.matched_skills) ? pathData.matched_skills.length : 0} Mastered
+                      </span>
                     </div>
-                  ) : (
-                    <p className="text-xs font-medium text-emerald-600 italic">🎉 All skills matched! You are fully qualified.</p>
-                  )}
+                    
+                    {Array.isArray(pathData.matched_skills) && pathData.matched_skills.length > 0 ? (
+                      <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                        <AnimatePresence>
+                          {pathData.matched_skills.map((matched: any) => {
+                            const skillName = matched.skill || matched.name || "";
+                            const skillLevel = matched.current_level || matched.level || "Beginner";
+                            return (
+                              <motion.div 
+                                layout 
+                                layoutId={`skill-chip-${skillName}`} 
+                                key={skillName}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                className="flex items-center justify-between px-4 py-3 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-xl transition-colors shadow-sm cursor-default"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.6)]"></div>
+                                  <span className="text-xs font-bold text-slate-700">{skillName}</span>
+                                </div>
+                                <span className="text-[9px] font-bold text-slate-500 bg-slate-50 px-2 py-1 rounded-md border border-slate-100 uppercase tracking-wider">{skillLevel}</span>
+                              </motion.div>
+                            );
+                          })}
+                        </AnimatePresence>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8 bg-slate-50/50 rounded-xl border border-slate-100 border-dashed h-[150px]">
+                        <Compass className="w-8 h-8 text-slate-300 mb-2" />
+                        <p className="text-xs font-medium text-slate-400">No acquired skills documented yet</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Missing Skills */}
+                  <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-rose-100/40 to-transparent rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shadow-sm">
+                          <Target className="w-4 h-4" />
+                        </div>
+                        Skills to Acquire
+                      </h4>
+                      <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100 uppercase tracking-wider">
+                        {Array.isArray(pathData.missing_skills) ? pathData.missing_skills.length : 0} Left
+                      </span>
+                    </div>
+                    
+                    {Array.isArray(pathData.missing_skills) && pathData.missing_skills.length > 0 ? (
+                      <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                        <AnimatePresence>
+                          {pathData.missing_skills.map((missing: any) => {
+                            const skillName = missing.skill || missing.name || "";
+                            const skillLevel = missing.required_level || missing.level || "Beginner";
+                            return (
+                              <motion.div 
+                                layout 
+                                layoutId={`skill-chip-${skillName}`} 
+                                key={skillName}
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, scale: 0.8 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                                className="flex items-center justify-between px-4 py-3 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 rounded-xl transition-colors shadow-sm cursor-default"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_4px_rgba(244,63,94,0.6)]"></div>
+                                  <span className="text-xs font-bold text-slate-700">{skillName}</span>
+                                </div>
+                                <span className="text-[9px] font-bold text-slate-500 bg-slate-50 px-2 py-1 rounded-md border border-slate-100 uppercase tracking-wider">{skillLevel}</span>
+                              </motion.div>
+                            );
+                          })}
+                        </AnimatePresence>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-8 bg-slate-50/50 rounded-xl border border-slate-100 border-dashed h-[150px]">
+                        <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-2 shadow-sm">
+                          <Check className="w-5 h-5" />
+                        </div>
+                        <p className="text-xs font-bold text-emerald-600">All skills matched! You are fully qualified.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

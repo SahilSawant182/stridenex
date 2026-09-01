@@ -274,6 +274,10 @@ export default function PipelineTabContent() {
 
   const handleChangeStatus = async () => {
     if (!selectedCandidate) return;
+
+    const confirmMessage = `Are you sure you want to change ${selectedCandidate.name}'s status to ${selectedStatus}?`;
+    if (!window.confirm(confirmMessage)) return;
+
     try {
       setUpdateStatusLoading(true);
       await updateApplicationStatus(selectedCandidate.id, selectedStatus);
