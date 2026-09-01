@@ -353,7 +353,7 @@ export default function StudentOnboarding({
       apiEndpoint: (formData.college && formData.courses && formData.stream && formData.course) ? `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data` : undefined,
       apiParams: (formData.college && formData.courses && formData.stream && formData.course) ? {
         doctype: "College Program Details",
-        fields: ["department", "academic_years", "semester"],
+        fields: ["department"],
         filters: [
           ["college", "=", formData.college],
           ["course_type", "=", formData.courses],
