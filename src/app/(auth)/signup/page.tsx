@@ -13,6 +13,7 @@ import DynamicForm from "@/components/forms/DynamicForm";
 import { FormField } from "@/types/doctypes.types";
 import { Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 
 type UserRole = "student" | "mentor" | "college" | "industry" | null;
 
@@ -26,7 +27,8 @@ export default function SignupPage() {
   const [formValues, setFormValues] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<UserRole>("student");
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [shakeRole, setShakeRole] = useState(false);
   const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   const { isAuthenticated } = useAuth();
@@ -161,6 +163,12 @@ export default function SignupPage() {
 
     if (data.password && data.confirmPassword && data.password !== data.confirmPassword) {
       newFieldErrors.confirmPassword = "Passwords do not match";
+    }
+
+    if (!selectedRole) {
+      newFieldErrors.role = "Please select a role to continue";
+      setShakeRole(true);
+      setTimeout(() => setShakeRole(false), 500);
     }
 
     if (!acceptTerms) {
@@ -310,9 +318,13 @@ export default function SignupPage() {
         />
 
         {/* Role Selection Cards - Smaller size with centered text */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium text-slate-700 text-center block w-full">
-            I want to join as
+        <motion.div 
+          className="space-y-3 pt-2"
+          animate={shakeRole ? { x: [-10, 10, -10, 10, -5, 5, 0] } : {}}
+          transition={{ duration: 0.4 }}
+        >
+          <Label className="text-sm font-bold text-slate-800 text-center block w-full">
+            Select your role to join as <span className="text-red-500">*</span>
           </Label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {roles.map((role) => {
@@ -322,33 +334,40 @@ export default function SignupPage() {
                 <button
                   key={role.id}
                   type="button"
-                  onClick={() => setSelectedRole(role.id as UserRole)}
-                  className={`relative p-2.5 rounded-xl border-2 transition-all duration-200 group ${isSelected
-                    ? `border-${role.color} bg-gradient-to-br ${role.gradient} bg-opacity-10 shadow-md`
-                    : 'border-slate-200 hover:border-slate-300 bg-white hover:shadow-sm'
-                    }`}
+                  onClick={() => {
+                    setSelectedRole(role.id as UserRole);
+                    setFieldErrors(prev => {
+                      const { role, ...rest } = prev;
+                      return rest;
+                    });
+                  }}
+                  className={`relative p-2.5 rounded-xl border-2 transition-all duration-200 group cursor-pointer ${
+                    isSelected
+                      ? `border-${role.color} bg-gradient-to-br ${role.gradient} bg-opacity-10 shadow-md transform -translate-y-0.5`
+                      : fieldErrors.role 
+                        ? 'border-red-300 bg-red-50 hover:border-red-400' 
+                        : 'border-slate-200 bg-slate-50 hover:border-accent/40 hover:bg-white hover:shadow-sm'
+                  }`}
                 >
                   <div className="flex flex-col items-center text-center">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-all ${isSelected
-                      ? 'bg-white/20'
-                      : `bg-${role.color}/10 group-hover:bg-${role.color}/20`
-                      }`}>
-                      <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : `text-${role.color}`
-                        }`} />
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-all ${
+                      isSelected
+                        ? 'bg-white/20'
+                        : `bg-white shadow-sm border border-slate-100 group-hover:border-slate-200`
+                    }`}>
+                      <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : `text-${role.color}`}`} />
                     </div>
-                    <p className={`text-xs font-semibold mb-0.5 ${isSelected ? 'text-white' : 'text-slate-900'
-                      }`}>
+                    <p className={`text-xs font-semibold mb-0.5 ${isSelected ? 'text-white' : 'text-slate-900'}`}>
                       {role.label}
                     </p>
-                    <p className={`text-[9px] leading-tight ${isSelected ? 'text-white/80' : 'text-slate-500'
-                      }`}>
+                    <p className={`text-[9px] leading-tight ${isSelected ? 'text-white/80' : 'text-slate-500'}`}>
                       {role.description}
                     </p>
                   </div>
 
                   {/* Selected indicator */}
                   {isSelected && (
-                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-md">
+                    <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-white rounded-full flex items-center justify-center shadow-md border border-slate-100">
                       <svg className="w-2.5 h-2.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
@@ -358,7 +377,10 @@ export default function SignupPage() {
               );
             })}
           </div>
-        </div>
+          {fieldErrors.role && (
+            <p className="text-xs font-semibold text-red-500 text-center animate-pulse">{fieldErrors.role}</p>
+          )}
+        </motion.div>
 
         <div className="space-y-1">
           <div className="flex items-start gap-3">
