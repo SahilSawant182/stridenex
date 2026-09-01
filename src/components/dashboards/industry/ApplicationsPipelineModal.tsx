@@ -68,6 +68,10 @@ export default function ApplicationsPipelineModal({
 
   const handleUpdateApplicationStatus = async () => {
     if (!selectedApplication) return;
+
+    const confirmMessage = `Are you sure you want to change ${selectedApplication.student}'s status to ${selectedStatus}?`;
+    if (!window.confirm(confirmMessage)) return;
+
     setUpdateStatusLoading(true);
     try {
       await updateProjectApplicationStatus({
