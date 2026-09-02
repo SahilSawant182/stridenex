@@ -3,13 +3,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { CommunityCard } from "@/components/dashboards/shared/CommunityCard";
 import { FeedCard } from "@/components/dashboards/shared/FeedCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
 import { apiService, getCommunities, joinCommunity, leaveCommunity } from "@/services/api.services";
 import { useToast } from "@/context/ToastContext";
-import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { Loader2, AlertCircle, RefreshCw, X, ShieldCheck } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Email and Name Formatting Helper (returns name parts for line breaks)
 const formatChannelName = (name: string): string[] => {
@@ -136,6 +137,13 @@ export default function CommunityTabContent() {
   const [joinedCommunities, setJoinedCommunities] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Terms and conditions state
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+
   const { showToast } = useToast();
 
   const fetchChannels = async () => {
@@ -198,18 +206,29 @@ export default function CommunityTabContent() {
       return;
     }
 
+    // Open Terms modal instead of directly joining
+    setSelectedCommunityId(communityId);
+    setTermsAccepted(false);
+    setShowTermsModal(true);
+  };
+
+  const confirmJoinCommunity = async () => {
+    if (!selectedCommunityId || !termsAccepted) return;
+
     const email = typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || "") : "";
+    setIsJoining(true);
 
     try {
       // Join
       const response = await joinCommunity({
-        community: communityId,
+        community: selectedCommunityId,
         student: email
       });
       
       if (response?.message?.success || response?.message === "Success" || response?.data) {
-        setJoinedCommunities((prev) => [...prev, communityId]);
+        setJoinedCommunities((prev) => [...prev, selectedCommunityId]);
         showToast("Successfully joined!", "success");
+        setShowTermsModal(false);
         fetchChannels(); // Refresh the list
       } else {
         throw new Error("Failed to join community");
@@ -217,6 +236,8 @@ export default function CommunityTabContent() {
     } catch (err: any) {
       console.error(err);
       showToast(err?.message || "Operation failed", "error");
+    } finally {
+      setIsJoining(false);
     }
   };
 
@@ -322,6 +343,100 @@ export default function CommunityTabContent() {
           ))}
         </div>
       </motion.div>
+
+      {/* Terms & Conditions Modal */}
+      <AnimatePresence>
+        {showTermsModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+            onClick={() => !isJoining && setShowTermsModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col"
+            >
+              {/* Header */}
+              <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                    <ShieldCheck className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-800">Community Guidelines</h2>
+                    <p className="text-xs text-slate-500 font-medium">Please read before joining</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => !isJoining && setShowTermsModal(false)}
+                  className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all shadow-sm"
+                  disabled={isJoining}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Terms Content */}
+              <div className="p-6 max-h-[400px] overflow-y-auto custom-scrollbar text-sm text-slate-600 space-y-4">
+                <p>Welcome to our community! To ensure a safe, collaborative, and professional environment, we ask all members to adhere to the following guidelines:</p>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li><strong>Respect Everyone:</strong> Treat all members with respect. Harassment, discrimination, or abusive language will not be tolerated.</li>
+                  <li><strong>No Spam or Self-Promotion:</strong> Keep discussions relevant to the community topic. Do not post spam or unsolicited promotional material.</li>
+                  <li><strong>Protect Privacy:</strong> Do not share personal information of others or sensitive data without explicit permission.</li>
+                  <li><strong>Constructive Feedback:</strong> When reviewing others' work or answering questions, be constructive, helpful, and kind.</li>
+                  <li><strong>Compliance:</strong> By joining this community, you agree to comply with StrideNex's overarching Terms of Use and Privacy Policy.</li>
+                </ul>
+                <p>Failure to follow these rules may result in temporary suspension or permanent removal from the community.</p>
+              </div>
+
+              {/* Footer */}
+              <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-4">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="community-terms"
+                    checked={termsAccepted}
+                    onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                    disabled={isJoining}
+                    className="mt-0.5"
+                  />
+                  <label htmlFor="community-terms" className="text-sm text-slate-700 leading-snug cursor-pointer font-medium">
+                    I have read and agree to follow the community guidelines and terms of use.
+                  </label>
+                </div>
+                
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    onClick={() => setShowTermsModal(false)}
+                    disabled={isJoining}
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmJoinCommunity}
+                    disabled={!termsAccepted || isJoining}
+                    className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-md shadow-blue-600/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {isJoining ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Joining...
+                      </>
+                    ) : (
+                      "Accept & Join"
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
