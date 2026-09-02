@@ -35,6 +35,7 @@ interface OnboardingFormData {
   district: string;
   college: string;
   collegeName: string;
+  otherCollege: string;
   department: string;
   academicYear: string;
   dateOfBirth: string;
@@ -104,6 +105,7 @@ export default function StudentOnboarding({
     district: "",
     college: "",
     collegeName: "",
+    otherCollege: "",
     department: "",
     academicYear: "",
     dateOfBirth: "",
@@ -121,6 +123,9 @@ export default function StudentOnboarding({
     hasReferral: false,
     referal_code: ""
   });
+
+  const OTHER_COLLEGE_VALUE = "Other";
+  const isOtherCollegeSelected = formData.college === OTHER_COLLEGE_VALUE;
 
   useEffect(() => {
     const savedEmail = currentUser || localStorage.getItem("userEmail") || "";
@@ -262,12 +267,25 @@ export default function StudentOnboarding({
       },
       mapOptions: (data) => {
         const colleges = data.data || data || [];
-        return colleges.map((college: any) => ({
+        const collegeOptions = colleges.map((college: any) => ({
           value: college.name,
           label: college.college_name || college.name
         }));
+
+        return [
+          ...collegeOptions,
+          { value: OTHER_COLLEGE_VALUE, label: "Other" }
+        ];
       }
     },
+    ...(isOtherCollegeSelected ? [{
+      fieldname: "otherCollege",
+      label: "College Name",
+      fieldtype: "Data",
+      required: true,
+      placeholder: "Enter full college name",
+      layout: "half" as const
+    }] : []),
     {
       fieldname: "courses",
       label: "Course Type",
@@ -300,7 +318,7 @@ export default function StudentOnboarding({
         doctype: "College Program Details",
         fields: ["stream"],
         filters: [
-          ["college", "=", formData.college],
+          ...(!isOtherCollegeSelected ? [["college", "=", formData.college]] : []),
           ["course_type", "=", formData.courses]
         ],
         limit_page_length: 1000
@@ -327,7 +345,7 @@ export default function StudentOnboarding({
         doctype: "College Program Details",
         fields: ["course"],
         filters: [
-          ["college", "=", formData.college],
+          ...(!isOtherCollegeSelected ? [["college", "=", formData.college]] : []),
           ["course_type", "=", formData.courses],
           ["stream", "=", formData.stream]
         ],
@@ -351,22 +369,31 @@ export default function StudentOnboarding({
       placeholder: "Select department",
       layout: "half",
       apiEndpoint: (formData.college && formData.courses && formData.stream && formData.course) ? `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data` : undefined,
-      apiParams: (formData.college && formData.courses && formData.stream && formData.course) ? {
-        doctype: "College Program Details",
-        fields: ["department"],
-        filters: [
-          ["college", "=", formData.college],
-          ["course_type", "=", formData.courses],
-          ["stream", "=", formData.stream],
-          ["course", "=", formData.course]
-        ],
-        limit_page_length: 1000
-      } : undefined,
+      apiParams: (formData.college && formData.courses && formData.stream && formData.course)
+        ? isOtherCollegeSelected
+          ? {
+            doctype: "College Department",
+            fields: ["department_name", "academic_years", "semester"],
+            filters: [["course", "=", formData.course]],
+            limit_page_length: 1000
+          }
+          : {
+            doctype: "College Program Details",
+            fields: ["department"],
+            filters: [
+              ["college", "=", formData.college],
+              ["course_type", "=", formData.courses],
+              ["stream", "=", formData.stream],
+              ["course", "=", formData.course]
+            ],
+            limit_page_length: 1000
+          }
+        : undefined,
       mapOptions: (data) => {
         const departments = data.data || data || [];
         const deptOptions = departments.map((dept: any) => ({
-          value: dept.department || dept.name,
-          label: dept.department || dept.name,
+          value: dept.department || dept.department_name || dept.name,
+          label: dept.department || dept.department_name || dept.name,
           academicYears: dept.academic_years || "3",
           semester: dept.semester || "Semester 1"
         }));
@@ -397,9 +424,6 @@ export default function StudentOnboarding({
       apiEndpoint: formData.department
         ? `${BASE_URL}method/stridenex_app.api_stridenex_app.student.masters.get_semester`
         : undefined,
-      apiParams: formData.department ? {
-        semester: departmentOptions.find(d => d.value === formData.department)?.semester || ""
-      } : undefined,
       mapOptions: (data) => {
         console.log("Semester data received:", data);
 
@@ -720,6 +744,13 @@ export default function StudentOnboarding({
       errors.college = collegeValidation.error || "College is required";
     }
 
+    if (isOtherCollegeSelected) {
+      const otherCollegeValidation = validateRequired(formData.otherCollege, "College name");
+      if (!otherCollegeValidation.isValid) {
+        errors.otherCollege = otherCollegeValidation.error || "College name is required";
+      }
+    }
+
     const departmentValidation = validateRequired(formData.department, "Department");
     if (!departmentValidation.isValid) {
       errors.department = departmentValidation.error || "Department is required";
@@ -833,7 +864,8 @@ export default function StudentOnboarding({
         email_id: localStorage.getItem("userEmail") || formData.email || "",
         stream: formData.stream || "Engineering",
         courses_type: coursesTypeArray.length > 0 ? coursesTypeArray : [{ course_type: "PG" }],
-        college: formData.college || "DRK",
+        college: isOtherCollegeSelected ? "" : (formData.college || "DRK"),
+        other_college: isOtherCollegeSelected ? formData.otherCollege.trim() : "",
         course: formData.course || "BA",
         department: formData.department || "Dispatch",
         academic_year: academicYearValue,
@@ -1209,6 +1241,7 @@ export default function StudentOnboarding({
           state: newData.state ?? prev.state,
           district: newData.district ?? prev.district,
           college: newData.college ?? prev.college,
+          otherCollege: newData.otherCollege ?? prev.otherCollege,
           department: newData.department ?? prev.department,
           academicYear: newData.academicYear ?? prev.academicYear,
           stream: newData.stream ?? prev.stream,
@@ -1252,6 +1285,7 @@ export default function StudentOnboarding({
             state: formData.state,
             district: formData.district,
             college: formData.college,
+            otherCollege: formData.otherCollege,
             department: formData.department,
             academicYear: formData.academicYear,
             stream: formData.stream,
@@ -1282,9 +1316,9 @@ export default function StudentOnboarding({
 
             // Define field dependencies and what should reset when they change
             const fieldDependencies: Record<string, string[]> = {
-              state: ["district", "college", "courses", "stream", "course", "department", "academicYear", "semester"],
-              district: ["college", "courses", "stream", "course", "department", "academicYear", "semester"],
-              college: ["courses", "stream", "course", "department", "academicYear", "semester"],
+              state: ["district", "college", "otherCollege", "courses", "stream", "course", "department", "academicYear", "semester"],
+              district: ["college", "otherCollege", "courses", "stream", "course", "department", "academicYear", "semester"],
+              college: ["otherCollege", "courses", "stream", "course", "department", "academicYear", "semester"],
               courses: ["stream", "course", "department", "academicYear", "semester"],
               stream: ["course", "department", "academicYear", "semester"],
               course: ["department", "semester"],
@@ -1293,9 +1327,9 @@ export default function StudentOnboarding({
 
             // Fields that need their errors cleared when parent changes
             const errorDependencies: Record<string, string[]> = {
-              state: ["district", "college", "courses", "stream", "course", "department", "semester"],
-              district: ["college", "courses", "stream", "course", "department", "semester"],
-              college: ["courses", "stream", "course", "department", "semester"],
+              state: ["district", "college", "otherCollege", "courses", "stream", "course", "department", "semester"],
+              district: ["college", "otherCollege", "courses", "stream", "course", "department", "semester"],
+              college: ["otherCollege", "courses", "stream", "course", "department", "semester"],
               courses: ["stream", "course", "department", "semester"],
               stream: ["course", "department", "semester"],
               course: ["department", "semester"],
