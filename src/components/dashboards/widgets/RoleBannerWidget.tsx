@@ -39,7 +39,8 @@ import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/sha
 import { useToast } from "@/context/ToastContext";
 import { OperatingHoursTable, OperatingHour } from "@/components/dashboards/shared/OperatingHoursTable";
 import ProfileImageUploader from "@/components/profile/ProfileImageUploader";
-import { buildProfileImageUrl, BASE_DOMAIN } from "@/services/api.services";
+import MarksheetUploader from "@/components/profile/MarksheetUploader";
+import { buildProfileImageUrl, uploadFileApi, BASE_DOMAIN } from "@/services/api.services";
 
 
 import { createPortal } from "react-dom";
@@ -588,6 +589,18 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
     { name: "linkedin", label: "LinkedIn URL", type: "url", icon: Linkedin },
     { name: "github", label: "GitHub URL", type: "url", icon: Github },
     { name: "cgpa", label: "CGPA", type: "number", icon: Award, required: true },
+    {
+      name: "marksheet",
+      label: "Upload Marksheet / Result",
+      type: "custom",
+      colSpan: 2,
+      customRender: (formData, onChange) => (
+        <MarksheetUploader
+          value={formData.marksheet}
+          onChange={(val) => onChange(val)}
+        />
+      )
+    },
   ], [studentFormState.course_type, studentFormState.stream, studentFormState.course, studentFormState.department, studentDepartmentOptions]);
 
   const mentorFields: DynamicField[] = useMemo(() => [
@@ -857,7 +870,23 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
     setModalError(null);
     try {
       if (role === "student") {
-        const payload = { ...formData, name: currentUser };
+        let marksheetUrl = formData.marksheet;
+
+        if (formData.marksheet instanceof File) {
+          const uploadRes = await uploadFileApi(
+            formData.marksheet,
+            "Student",
+            currentUser,
+            "marksheet"
+          );
+          marksheetUrl = uploadRes.file_url || uploadRes.file_name;
+        }
+
+        const payload = {
+          ...formData,
+          marksheet: marksheetUrl || null,
+          name: currentUser
+        };
         await updateStudent(currentUser, payload);
         await fetchStudentData();
       } else if (role === "industry") {
@@ -1036,6 +1065,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
       github: studentData?.github || "",
       gender: studentData?.gender || "",
       cgpa: studentData?.cgpa || "",
+      marksheet: studentData?.marksheet || studentData?.marksheet_file || "",
 
       // Local Storage priority
       first_name: firstName || studentData?.first_name || "",
