@@ -1,7 +1,7 @@
 // components/dashboards/shared/CommunityCard.tsx
 "use client";
 
-import { Lock, Globe, Check, Plus } from "lucide-react";
+import { Lock, Globe, Check, Plus, Clock } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ interface CommunityCardProps {
     creation?: string;
     memberCount?: number;
     messageCount?: number;
+    status?: string;
   };
   isJoined?: boolean;
   action?: string;
@@ -84,7 +85,9 @@ export function CommunityCard({ community, isJoined = false, action, onJoin, cla
     if (!owner) return "";
     if (owner === "Administrator") return "Administrator";
     return owner.split("@")[0];
-  };  return (
+  };
+
+  return (
     <BaseCard className={`${className} group flex flex-col justify-between overflow-hidden relative`}>
       {/* Decorative accent top line */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -146,7 +149,16 @@ export function CommunityCard({ community, isJoined = false, action, onJoin, cla
 
         {/* Dynamic Action Button */}
         <div className="mt-auto pt-4 border-t border-slate-100/60">
-          {(isJoined || action === "leave") ? (
+          {(action === "pending" || action === "Pending" || community.status === "Pending") ? (
+            <Button
+              disabled
+              variant="outline"
+              className="w-full h-10 border-amber-200 bg-amber-50/70 text-amber-700 font-semibold text-sm rounded-lg flex items-center justify-center gap-2 shadow-sm cursor-not-allowed opacity-90"
+            >
+              <Clock className="w-4 h-4 text-amber-600" />
+              Pending Approval
+            </Button>
+          ) : (isJoined || action === "leave") ? (
             <Button
               onClick={() => onJoin?.(community.id)}
               variant="outline"
@@ -161,7 +173,7 @@ export function CommunityCard({ community, isJoined = false, action, onJoin, cla
               className="w-full h-10 border border-accent/25 hover:border-accent bg-accent/5 hover:bg-accent text-accent hover:text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all duration-200"
             >
               <Plus className="w-4 h-4" />
-              {community.category === "Private" ? "Join Private Space" : "Join Community"}
+              {community.category === "Private" ? "Request to Join" : "Join Community"}
             </Button>
           )}
         </div>
