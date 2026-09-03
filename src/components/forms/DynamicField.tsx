@@ -237,6 +237,8 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
             data = responseData;
           } else if (responseData.data && Array.isArray(responseData.data)) {
             data = responseData.data;
+          } else if (responseData.data?.data && Array.isArray(responseData.data.data)) {
+            data = responseData.data.data;
           } else if (responseData.message && Array.isArray(responseData.message)) {
             data = responseData.message;
           } else if (responseData.message?.data && Array.isArray(responseData.message.data)) {
@@ -248,15 +250,13 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
       }
 
       let mappedOptions = [];
-      if (data.length > 0) {
-        if (field.mapOptions) {
-          mappedOptions = field.mapOptions(data);
-        } else {
-          mappedOptions = data.map((item: any) => ({
-            value: item.name || item.value || item,
-            label: item.label || item.name || item.value || item
-          }));
-        }
+      if (field.mapOptions) {
+        mappedOptions = field.mapOptions(data.length > 0 ? data : responseData);
+      } else if (data.length > 0) {
+        mappedOptions = data.map((item: any) => ({
+          value: item.name || item.value || item,
+          label: item.label || item.name || item.value || item
+        }));
       }
 
       setOptions(mappedOptions);
