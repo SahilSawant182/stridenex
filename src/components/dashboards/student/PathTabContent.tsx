@@ -31,7 +31,10 @@ import {
   RefreshCw,
   SkipForward,
   Award,
-  ShieldCheck
+  ShieldCheck,
+  Download,
+  Eye,
+  FileText
 } from "lucide-react";
 import {
   getStudentCareerPath,
@@ -201,6 +204,56 @@ export default function PathTabContent() {
   const [acquiredSkillName, setAcquiredSkillName] = useState("");
   const [acquiredSkillLevel, setAcquiredSkillLevel] = useState("");
 
+  // PDF Report states
+  const [showReportPreview, setShowReportPreview] = useState(false);
+  const [reportBlobUrl, setReportBlobUrl] = useState<string | null>(null);
+  const [isReportLoading, setIsReportLoading] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+
+  const handlePreviewReport = async () => {
+    setIsReportLoading(true);
+    setShowReportPreview(true);
+    setReportError(null);
+    setReportBlobUrl(null);
+    try {
+      const studentEmail = localStorage.getItem("currentUser") || "ac1@gmail.com";
+      const url = `https://devstridenex.quantcloud.in/api/method/nexedu.path_finder.app_api.get_career_path_pdf?student=${encodeURIComponent(studentEmail)}`;
+
+      const response = await fetch(url);
+
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const data = await response.json();
+        throw new Error(data.message || data.error || "Failed to generate PDF. Server returned JSON instead of PDF.");
+      }
+
+      if (!response.ok) {
+        throw new Error(`Server returned error: ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      if (blob.size === 0) {
+        throw new Error("Empty PDF received");
+      }
+
+      const blobUrl = URL.createObjectURL(blob);
+      setReportBlobUrl(blobUrl);
+    } catch (err: any) {
+      console.error("Error fetching report:", err);
+      setReportError(err.message || "Failed to load report. Please try again.");
+    } finally {
+      setIsReportLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (reportBlobUrl) {
+        URL.revokeObjectURL(reportBlobUrl);
+      }
+    };
+  }, [reportBlobUrl]);
+
   const fetchData = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
@@ -362,7 +415,7 @@ export default function PathTabContent() {
     if (!pathData?.enrollment_id) return;
 
     const newCompleted = currentStatus !== 'Completed';
-    
+
     if (newCompleted) {
       const confirmMessage = `Are you sure you want to mark the point "${pointTitle}" as complete?`;
       if (!window.confirm(confirmMessage)) return;
@@ -985,9 +1038,8 @@ export default function PathTabContent() {
                       value={degree}
                       onChange={(e) => setDegree(e.target.value)}
                       placeholder="e.g. B.Tech, B.Sc, M.Tech, BCA, MBA"
-                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${
-                        showValidationErrors && !degree.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
-                      }`}
+                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${showValidationErrors && !degree.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
+                        }`}
                     />
                     {showValidationErrors && !degree.trim() && (
                       <span className="text-[10px] font-bold text-red-500 mt-1 block">Degree is required.</span>
@@ -1005,9 +1057,8 @@ export default function PathTabContent() {
                       value={specialisation}
                       onChange={(e) => setSpecialisation(e.target.value)}
                       placeholder="e.g. Computer Science, Electronics, Mechanical, Civil"
-                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${
-                        showValidationErrors && !specialisation.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
-                      }`}
+                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${showValidationErrors && !specialisation.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
+                        }`}
                     />
                     {showValidationErrors && !specialisation.trim() && (
                       <span className="text-[10px] font-bold text-red-500 mt-1 block">Branch / Specialisation is required.</span>
@@ -1023,9 +1074,8 @@ export default function PathTabContent() {
                     <select
                       value={academicYear}
                       onChange={(e) => setAcademicYear(Number(e.target.value))}
-                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${
-                        showValidationErrors && !academicYear ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
-                      }`}
+                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${showValidationErrors && !academicYear ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
+                        }`}
                     >
                       <option value="">Select Year...</option>
                       <option value="1">First Year (1st)</option>
@@ -1050,9 +1100,8 @@ export default function PathTabContent() {
                       value={interests}
                       onChange={(e) => setInterests(e.target.value)}
                       placeholder="e.g. Machine Learning, Web Development, Cybersecurity, Cloud Computing"
-                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${
-                        showValidationErrors && !interests.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
-                      }`}
+                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${showValidationErrors && !interests.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
+                        }`}
                     />
                     {showValidationErrors && !interests.trim() && (
                       <span className="text-[10px] font-bold text-red-500 mt-1 block">Core Interests are required.</span>
@@ -1071,9 +1120,8 @@ export default function PathTabContent() {
                     value={skillsInput}
                     onChange={(e) => setSkillsInput(e.target.value)}
                     placeholder="e.g. HTML, CSS, JavaScript, React, Node.js"
-                    className={`w-full px-3 py-2.5 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${
-                      showValidationErrors && !skillsInput.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
-                    }`}
+                    className={`w-full px-3 py-2.5 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${showValidationErrors && !skillsInput.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
+                      }`}
                   />
                   {showValidationErrors && !skillsInput.trim() && (
                     <span className="text-[10px] font-bold text-red-500 mt-1 block">Please enter the skills you already possess.</span>
@@ -1476,7 +1524,7 @@ export default function PathTabContent() {
                             </div>
                             <h5 className="text-xs font-bold text-slate-700 uppercase tracking-wider">{group.label}</h5>
                           </div>
-                          
+
                           <div className="space-y-4">
                             <div>
                               <div className="flex items-center justify-between mb-2">
@@ -1496,7 +1544,7 @@ export default function PathTabContent() {
                                 )}
                               </div>
                             </div>
-                            
+
                             <div>
                               <div className="flex items-center justify-between mb-2">
                                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Gap (To Learn)</span>
@@ -1720,13 +1768,22 @@ export default function PathTabContent() {
                 </div>
               </div>
 
-              <button
-                onClick={() => setInWizardMode(true)}
-                className="px-3 py-1.5 border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1 shadow-sm"
-              >
-                <Compass className="w-3.5 h-3.5" />
-                Switch Career Path
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePreviewReport}
+                  className="px-3 py-1.5 border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1 shadow-sm"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Preview Report
+                </button>
+                <button
+                  onClick={() => setInWizardMode(true)}
+                  className="px-3 py-1.5 border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold transition-all duration-200 flex items-center gap-1 shadow-sm"
+                >
+                  <Compass className="w-3.5 h-3.5" />
+                  Switch Career Path
+                </button>
+              </div>
             </div>
 
             {isPathCompleted && (
@@ -1810,7 +1867,7 @@ export default function PathTabContent() {
                     </div>
                   </div>
                   <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden flex shadow-inner">
-                    <motion.div 
+                    <motion.div
                       className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full relative overflow-hidden"
                       initial={{ width: 0 }}
                       animate={{ width: `${((Array.isArray(pathData.matched_skills) ? pathData.matched_skills.length : 0) / Math.max(1, (Array.isArray(pathData.matched_skills) ? pathData.matched_skills.length : 0) + (Array.isArray(pathData.missing_skills) ? pathData.missing_skills.length : 0))) * 100}%` }}
@@ -1836,7 +1893,7 @@ export default function PathTabContent() {
                         {Array.isArray(pathData.matched_skills) ? pathData.matched_skills.length : 0} Mastered
                       </span>
                     </div>
-                    
+
                     {Array.isArray(pathData.matched_skills) && pathData.matched_skills.length > 0 ? (
                       <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                         <AnimatePresence>
@@ -1844,9 +1901,9 @@ export default function PathTabContent() {
                             const skillName = matched.skill || matched.name || "";
                             const skillLevel = matched.current_level || matched.level || "Beginner";
                             return (
-                              <motion.div 
-                                layout 
-                                layoutId={`skill-chip-${skillName}`} 
+                              <motion.div
+                                layout
+                                layoutId={`skill-chip-${skillName}`}
                                 key={skillName}
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
@@ -1886,7 +1943,7 @@ export default function PathTabContent() {
                         {Array.isArray(pathData.missing_skills) ? pathData.missing_skills.length : 0} Left
                       </span>
                     </div>
-                    
+
                     {Array.isArray(pathData.missing_skills) && pathData.missing_skills.length > 0 ? (
                       <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                         <AnimatePresence>
@@ -1894,9 +1951,9 @@ export default function PathTabContent() {
                             const skillName = missing.skill || missing.name || "";
                             const skillLevel = missing.required_level || missing.level || "Beginner";
                             return (
-                              <motion.div 
-                                layout 
-                                layoutId={`skill-chip-${skillName}`} 
+                              <motion.div
+                                layout
+                                layoutId={`skill-chip-${skillName}`}
                                 key={skillName}
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
@@ -2285,347 +2342,347 @@ export default function PathTabContent() {
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4"
             >
-            {/* StrideNex Logo brought to front */}
-            <div className="absolute top-4 left-6 z-[110] pointer-events-none">
-              <img
-                src="/images/Logo.png"
-                alt="StrideNex Logo"
-                className="w-48 h-12 object-contain drop-shadow-sm"
-              />
-            </div>
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-100"
-            >
-              {/* Header */}
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-200/50">
-                    {testResult ? (
-                      <ShieldCheck className="w-6 h-6 text-white" />
-                    ) : (
-                      <Sparkles className="w-6 h-6 text-white animate-pulse" />
-                    )}
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-800">
-                      {testResult ? "Verification Result" : "Skill Verification Test"}
-                    </h2>
-                    <p className="text-sm text-slate-500 font-semibold">
-                      {testSkill} • Level: {testLevel}
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsTestModalOpen(false)}
-                  disabled={isSubmittingTest}
-                  className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all shadow-sm disabled:opacity-50"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+              {/* StrideNex Logo brought to front */}
+              <div className="absolute top-4 left-6 z-[110] pointer-events-none">
+                <img
+                  src="/images/Logo.png"
+                  alt="StrideNex Logo"
+                  className="w-48 h-12 object-contain drop-shadow-sm"
+                />
               </div>
-
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                {isEvaluating ? (
-                  <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-4">
-                    <Loader2 className="w-10 h-10 animate-spin text-orange-500" />
-                    <span className="text-sm font-semibold tracking-wider uppercase text-slate-700">{evaluationStatus}</span>
-                    <span className="text-xs text-slate-400 italic">This usually takes around 5-10 seconds...</span>
-                  </div>
-                ) : !testResult ? (
-                  // Question View
-                  <div className="space-y-6">
-                    {/* Progress Bar */}
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div
-                        className="bg-orange-500 h-full transition-all duration-300"
-                        style={{
-                          width: `${((currentQuestionIndex + 1) / (testQuestions.length || 1)) * 100}%`,
-                        }}
-                      />
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                className="bg-white rounded-[2rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-100"
+              >
+                {/* Header */}
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-200/50">
+                      {testResult ? (
+                        <ShieldCheck className="w-6 h-6 text-white" />
+                      ) : (
+                        <Sparkles className="w-6 h-6 text-white animate-pulse" />
+                      )}
                     </div>
-
-                    <div className="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-widest font-mono">
-                      <span>Progress</span>
-                      <span>Question {currentQuestionIndex + 1} of {testQuestions.length}</span>
-                    </div>
-
-                    {/* Question Card */}
-                    <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                      <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-orange-100 text-orange-600 uppercase tracking-widest mb-3 font-mono">
-                        {testQuestions[currentQuestionIndex]?.difficulty || "Medium"}
-                      </span>
-                      <h3 className="text-base font-bold text-slate-800 leading-snug">
-                        {testQuestions[currentQuestionIndex]?.question}
-                      </h3>
-                    </div>
-
-                    {/* Options List / Text Box */}
-                    {testQuestions[currentQuestionIndex]?.type === "mcq" ? (
-                      <div className="space-y-3">
-                        {testQuestions[currentQuestionIndex]?.options?.map((option: string, oIdx: number) => {
-                          const isSelected = userAnswers[currentQuestionIndex] === option;
-                          return (
-                            <div
-                              key={oIdx}
-                              onClick={() => {
-                                setUserAnswers(prev => ({
-                                  ...prev,
-                                  [currentQuestionIndex]: option
-                                }));
-                              }}
-                              className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center gap-4 ${isSelected
-                                ? "border-orange-500 bg-orange-50/30 text-orange-950 font-bold shadow-md shadow-orange-500/5"
-                                : "border-slate-200 hover:border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
-                                }`}
-                            >
-                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? "border-orange-500 bg-orange-500 text-white" : "border-slate-300"
-                                }`}>
-                                {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
-                              </div>
-                              <span className="text-sm font-semibold leading-tight">{option}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <textarea
-                          value={userAnswers[currentQuestionIndex] || ""}
-                          onChange={(e) => {
-                            setUserAnswers(prev => ({
-                              ...prev,
-                              [currentQuestionIndex]: e.target.value
-                            }));
-                          }}
-                          placeholder="Type your answer here..."
-                          rows={6}
-                          className="w-full px-4 py-3.5 rounded-[1.5rem] border border-slate-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all font-semibold text-sm text-slate-900 resize-none outline-none min-h-[150px]"
-                        />
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  // Result Scorecard View
-                  <div className="space-y-6">
-                    {/* Circle Score & Status */}
-                    <div className="flex flex-col items-center justify-center py-4 bg-slate-50 rounded-3xl border border-slate-100">
-                      <div className="relative flex items-center justify-center">
-                        <svg className="w-24 h-24 transform -rotate-90">
-                          <circle
-                            cx="48"
-                            cy="48"
-                            r="40"
-                            className="stroke-slate-200"
-                            strokeWidth="8"
-                            fill="transparent"
-                          />
-                          <circle
-                            cx="48"
-                            cy="48"
-                            r="40"
-                            className={testResult.passed ? "stroke-emerald-500" : "stroke-rose-500"}
-                            strokeWidth="8"
-                            fill="transparent"
-                            strokeDasharray="251.2"
-                            strokeDashoffset={251.2 - (251.2 * (testResult.score || 0)) / 100}
-                          />
-                        </svg>
-                        <div className="absolute flex flex-col items-center justify-center">
-                          <span className="text-2xl font-black text-slate-800">{testResult.score}%</span>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Score</span>
-                        </div>
-                      </div>
-
-                      <div className={`mt-4 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${testResult.passed
-                        ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                        : "bg-rose-100 text-rose-700 border border-rose-200"
-                        }`}>
-                        {testResult.passed ? "Verification Passed" : "Verification Failed"}
-                      </div>
-
-                      <p className="text-xs text-slate-500 mt-2 font-medium">
-                        Correct Answers: <span className="font-bold text-slate-800">{testResult.total_correct}</span> / {testResult.total_questions}
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-800">
+                        {testResult ? "Verification Result" : "Skill Verification Test"}
+                      </h2>
+                      <p className="text-sm text-slate-500 font-semibold">
+                        {testSkill} • Level: {testLevel}
                       </p>
                     </div>
+                  </div>
+                  <button
+                    onClick={() => setIsTestModalOpen(false)}
+                    disabled={isSubmittingTest}
+                    className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all shadow-sm disabled:opacity-50"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
 
-                    {/* Summary feedback */}
-                    {testResult.feedback?.summary && (
-                      <div className="space-y-2">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 font-mono">AI Assessment Summary</h4>
-                        <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 text-sm font-semibold text-slate-700 leading-relaxed">
-                          {testResult.feedback.summary}
-                        </div>
+                {/* Content */}
+                <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                  {isEvaluating ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-4">
+                      <Loader2 className="w-10 h-10 animate-spin text-orange-500" />
+                      <span className="text-sm font-semibold tracking-wider uppercase text-slate-700">{evaluationStatus}</span>
+                      <span className="text-xs text-slate-400 italic">This usually takes around 5-10 seconds...</span>
+                    </div>
+                  ) : !testResult ? (
+                    // Question View
+                    <div className="space-y-6">
+                      {/* Progress Bar */}
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-orange-500 h-full transition-all duration-300"
+                          style={{
+                            width: `${((currentQuestionIndex + 1) / (testQuestions.length || 1)) * 100}%`,
+                          }}
+                        />
                       </div>
-                    )}
 
-                    {/* Strengths & Gaps */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {testResult.feedback?.strengths && testResult.feedback.strengths.length > 0 && (
-                        <div className="space-y-2">
-                          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 text-emerald-600 font-mono">Strengths</h4>
-                          <div className="p-4 bg-emerald-50/30 rounded-2xl border border-emerald-100/50 space-y-2">
-                            {testResult.feedback.strengths.map((str: string, sIdx: number) => (
-                              <div key={sIdx} className="flex gap-2 text-xs font-semibold text-slate-700 leading-tight">
-                                <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                                <span>{str}</span>
+                      <div className="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-widest font-mono">
+                        <span>Progress</span>
+                        <span>Question {currentQuestionIndex + 1} of {testQuestions.length}</span>
+                      </div>
+
+                      {/* Question Card */}
+                      <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                        <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-orange-100 text-orange-600 uppercase tracking-widest mb-3 font-mono">
+                          {testQuestions[currentQuestionIndex]?.difficulty || "Medium"}
+                        </span>
+                        <h3 className="text-base font-bold text-slate-800 leading-snug">
+                          {testQuestions[currentQuestionIndex]?.question}
+                        </h3>
+                      </div>
+
+                      {/* Options List / Text Box */}
+                      {testQuestions[currentQuestionIndex]?.type === "mcq" ? (
+                        <div className="space-y-3">
+                          {testQuestions[currentQuestionIndex]?.options?.map((option: string, oIdx: number) => {
+                            const isSelected = userAnswers[currentQuestionIndex] === option;
+                            return (
+                              <div
+                                key={oIdx}
+                                onClick={() => {
+                                  setUserAnswers(prev => ({
+                                    ...prev,
+                                    [currentQuestionIndex]: option
+                                  }));
+                                }}
+                                className={`p-4 rounded-2xl border cursor-pointer transition-all flex items-center gap-4 ${isSelected
+                                  ? "border-orange-500 bg-orange-50/30 text-orange-950 font-bold shadow-md shadow-orange-500/5"
+                                  : "border-slate-200 hover:border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+                                  }`}
+                              >
+                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? "border-orange-500 bg-orange-500 text-white" : "border-slate-300"
+                                  }`}>
+                                  {isSelected && <Check className="w-3 h-3 stroke-[3]" />}
+                                </div>
+                                <span className="text-sm font-semibold leading-tight">{option}</span>
                               </div>
-                            ))}
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <textarea
+                            value={userAnswers[currentQuestionIndex] || ""}
+                            onChange={(e) => {
+                              setUserAnswers(prev => ({
+                                ...prev,
+                                [currentQuestionIndex]: e.target.value
+                              }));
+                            }}
+                            placeholder="Type your answer here..."
+                            rows={6}
+                            className="w-full px-4 py-3.5 rounded-[1.5rem] border border-slate-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-500/10 transition-all font-semibold text-sm text-slate-900 resize-none outline-none min-h-[150px]"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    // Result Scorecard View
+                    <div className="space-y-6">
+                      {/* Circle Score & Status */}
+                      <div className="flex flex-col items-center justify-center py-4 bg-slate-50 rounded-3xl border border-slate-100">
+                        <div className="relative flex items-center justify-center">
+                          <svg className="w-24 h-24 transform -rotate-90">
+                            <circle
+                              cx="48"
+                              cy="48"
+                              r="40"
+                              className="stroke-slate-200"
+                              strokeWidth="8"
+                              fill="transparent"
+                            />
+                            <circle
+                              cx="48"
+                              cy="48"
+                              r="40"
+                              className={testResult.passed ? "stroke-emerald-500" : "stroke-rose-500"}
+                              strokeWidth="8"
+                              fill="transparent"
+                              strokeDasharray="251.2"
+                              strokeDashoffset={251.2 - (251.2 * (testResult.score || 0)) / 100}
+                            />
+                          </svg>
+                          <div className="absolute flex flex-col items-center justify-center">
+                            <span className="text-2xl font-black text-slate-800">{testResult.score}%</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Score</span>
+                          </div>
+                        </div>
+
+                        <div className={`mt-4 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${testResult.passed
+                          ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                          : "bg-rose-100 text-rose-700 border border-rose-200"
+                          }`}>
+                          {testResult.passed ? "Verification Passed" : "Verification Failed"}
+                        </div>
+
+                        <p className="text-xs text-slate-500 mt-2 font-medium">
+                          Correct Answers: <span className="font-bold text-slate-800">{testResult.total_correct}</span> / {testResult.total_questions}
+                        </p>
+                      </div>
+
+                      {/* Summary feedback */}
+                      {testResult.feedback?.summary && (
+                        <div className="space-y-2">
+                          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 font-mono">AI Assessment Summary</h4>
+                          <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50 text-sm font-semibold text-slate-700 leading-relaxed">
+                            {testResult.feedback.summary}
                           </div>
                         </div>
                       )}
 
-                      {testResult.feedback?.gaps && testResult.feedback.gaps.length > 0 && (
+                      {/* Strengths & Gaps */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {testResult.feedback?.strengths && testResult.feedback.strengths.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 text-emerald-600 font-mono">Strengths</h4>
+                            <div className="p-4 bg-emerald-50/30 rounded-2xl border border-emerald-100/50 space-y-2">
+                              {testResult.feedback.strengths.map((str: string, sIdx: number) => (
+                                <div key={sIdx} className="flex gap-2 text-xs font-semibold text-slate-700 leading-tight">
+                                  <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                                  <span>{str}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {testResult.feedback?.gaps && testResult.feedback.gaps.length > 0 && (
+                          <div className="space-y-2">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 text-amber-600 font-mono font-bold">Areas to Improve</h4>
+                            <div className="p-4 bg-amber-50/30 rounded-2xl border border-amber-100/50 space-y-2">
+                              {testResult.feedback.gaps.map((gap: string, gIdx: number) => (
+                                <div key={gIdx} className="flex gap-2 text-xs font-semibold text-slate-700 leading-tight">
+                                  <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                                  <span>{gap}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Next Steps */}
+                      {testResult.feedback?.next_step && (
                         <div className="space-y-2">
-                          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 text-amber-600 font-mono font-bold">Areas to Improve</h4>
-                          <div className="p-4 bg-amber-50/30 rounded-2xl border border-amber-100/50 space-y-2">
-                            {testResult.feedback.gaps.map((gap: string, gIdx: number) => (
-                              <div key={gIdx} className="flex gap-2 text-xs font-semibold text-slate-700 leading-tight">
-                                <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
-                                <span>{gap}</span>
+                          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 text-blue-600 font-mono">Recommended Next Steps</h4>
+                          <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex gap-3">
+                            <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
+                              <Sparkles className="w-4 h-4" />
+                            </div>
+                            <p className="text-xs font-semibold text-slate-600 leading-relaxed">
+                              {testResult.feedback.next_step}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Breakdown section */}
+                      {testResult.breakdown && testResult.breakdown.length > 0 && (
+                        <div className="space-y-4">
+                          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 font-mono">Question Breakdown</h4>
+                          <div className="space-y-3">
+                            {testResult.breakdown.map((item: any, bIdx: number) => (
+                              <div key={bIdx} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+                                <div className="flex justify-between items-start gap-4">
+                                  <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-200 text-slate-700 uppercase tracking-widest font-mono">
+                                    Question {item.index || bIdx + 1}
+                                  </span>
+                                  <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest font-mono ${item.is_correct
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "bg-rose-100 text-rose-700"
+                                    }`}>
+                                    {item.is_correct ? "Correct" : "Incorrect"} ({item.answer_score || 0} pts)
+                                  </span>
+                                </div>
+                                <h5 className="text-sm font-bold text-slate-800 leading-snug">
+                                  {item.question}
+                                </h5>
+                                <div className="p-3 bg-white rounded-xl border border-slate-100 text-xs text-slate-700">
+                                  <span className="font-bold block text-slate-400 text-[10px] uppercase tracking-widest mb-1 font-mono">Your Answer</span>
+                                  {item.selected_answer || <span className="italic text-slate-400">Empty</span>}
+                                </div>
+                                {item.evaluation_comment && (
+                                  <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100/30 text-xs text-slate-700 leading-relaxed">
+                                    <span className="font-bold block text-blue-500 text-[10px] uppercase tracking-widest mb-1 font-mono">AI Evaluation</span>
+                                    {item.evaluation_comment}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
                         </div>
                       )}
                     </div>
+                  )}
+                </div>
 
-                    {/* Next Steps */}
-                    {testResult.feedback?.next_step && (
-                      <div className="space-y-2">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 text-blue-600 font-mono">Recommended Next Steps</h4>
-                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 flex gap-3">
-                          <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
-                            <Sparkles className="w-4 h-4" />
-                          </div>
-                          <p className="text-xs font-semibold text-slate-600 leading-relaxed">
-                            {testResult.feedback.next_step}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Breakdown section */}
-                    {testResult.breakdown && testResult.breakdown.length > 0 && (
-                      <div className="space-y-4">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1 font-mono">Question Breakdown</h4>
-                        <div className="space-y-3">
-                          {testResult.breakdown.map((item: any, bIdx: number) => (
-                            <div key={bIdx} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
-                              <div className="flex justify-between items-start gap-4">
-                                <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-200 text-slate-700 uppercase tracking-widest font-mono">
-                                  Question {item.index || bIdx + 1}
-                                </span>
-                                <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest font-mono ${item.is_correct
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-rose-100 text-rose-700"
-                                  }`}>
-                                  {item.is_correct ? "Correct" : "Incorrect"} ({item.answer_score || 0} pts)
-                                </span>
-                              </div>
-                              <h5 className="text-sm font-bold text-slate-800 leading-snug">
-                                {item.question}
-                              </h5>
-                              <div className="p-3 bg-white rounded-xl border border-slate-100 text-xs text-slate-700">
-                                <span className="font-bold block text-slate-400 text-[10px] uppercase tracking-widest mb-1 font-mono">Your Answer</span>
-                                {item.selected_answer || <span className="italic text-slate-400">Empty</span>}
-                              </div>
-                              {item.evaluation_comment && (
-                                <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100/30 text-xs text-slate-700 leading-relaxed">
-                                  <span className="font-bold block text-blue-500 text-[10px] uppercase tracking-widest mb-1 font-mono">AI Evaluation</span>
-                                  {item.evaluation_comment}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Footer */}
-              <div className="p-4 px-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
-                {isEvaluating ? (
-                  <div className="w-full flex justify-end">
-                    <button
-                      disabled
-                      className="px-8 h-12 rounded-xl text-sm font-bold bg-orange-500/50 text-white flex items-center gap-2 cursor-not-allowed"
-                    >
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Evaluating...
-                    </button>
-                  </div>
-                ) : !testResult ? (
-                  <>
-                    <button
-                      onClick={() => {
-                        if (currentQuestionIndex > 0) {
-                          setCurrentQuestionIndex(prev => prev - 1);
-                        } else {
-                          setIsTestModalOpen(false);
-                        }
-                      }}
-                      className="px-6 h-12 rounded-xl text-sm font-bold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all active:scale-95"
-                    >
-                      {currentQuestionIndex > 0 ? "Back" : "Cancel"}
-                    </button>
-
-                    {currentQuestionIndex < testQuestions.length - 1 ? (
+                {/* Footer */}
+                <div className="p-4 px-6 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  {isEvaluating ? (
+                    <div className="w-full flex justify-end">
+                      <button
+                        disabled
+                        className="px-8 h-12 rounded-xl text-sm font-bold bg-orange-500/50 text-white flex items-center gap-2 cursor-not-allowed"
+                      >
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Evaluating...
+                      </button>
+                    </div>
+                  ) : !testResult ? (
+                    <>
                       <button
                         onClick={() => {
-                          if (!userAnswers[currentQuestionIndex]) {
-                            showToast("Please select/type an answer to proceed", "warning");
-                            return;
+                          if (currentQuestionIndex > 0) {
+                            setCurrentQuestionIndex(prev => prev - 1);
+                          } else {
+                            setIsTestModalOpen(false);
                           }
-                          setCurrentQuestionIndex(prev => prev + 1);
                         }}
-                        className="px-8 h-12 rounded-xl text-sm font-bold bg-orange-500 text-white hover:bg-orange-600 transition-all shadow-xl shadow-orange-500/10 flex items-center gap-2 active:scale-95"
+                        className="px-6 h-12 rounded-xl text-sm font-bold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all active:scale-95"
                       >
-                        Next Question
-                        <ChevronRight className="w-4 h-4" />
+                        {currentQuestionIndex > 0 ? "Back" : "Cancel"}
                       </button>
-                    ) : (
+
+                      {currentQuestionIndex < testQuestions.length - 1 ? (
+                        <button
+                          onClick={() => {
+                            if (!userAnswers[currentQuestionIndex]) {
+                              showToast("Please select/type an answer to proceed", "warning");
+                              return;
+                            }
+                            setCurrentQuestionIndex(prev => prev + 1);
+                          }}
+                          className="px-8 h-12 rounded-xl text-sm font-bold bg-orange-500 text-white hover:bg-orange-600 transition-all shadow-xl shadow-orange-500/10 flex items-center gap-2 active:scale-95"
+                        >
+                          Next Question
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleSubmitTest}
+                          disabled={isSubmittingTest}
+                          className="px-8 h-12 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/10 flex items-center gap-2 disabled:opacity-50 active:scale-95"
+                        >
+                          {isSubmittingTest ? (
+                            <>
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                              Submitting...
+                            </>
+                          ) : (
+                            <>
+                              <Check className="w-5 h-5" />
+                              Submit Assessment
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <div className="w-full flex justify-end">
                       <button
-                        onClick={handleSubmitTest}
-                        disabled={isSubmittingTest}
-                        className="px-8 h-12 rounded-xl text-sm font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/10 flex items-center gap-2 disabled:opacity-50 active:scale-95"
+                        onClick={() => setIsTestModalOpen(false)}
+                        className="px-8 h-12 rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10 active:scale-95"
                       >
-                        {isSubmittingTest ? (
-                          <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                            Submitting...
-                          </>
-                        ) : (
-                          <>
-                            <Check className="w-5 h-5" />
-                            Submit Assessment
-                          </>
-                        )}
+                        Close Result
                       </button>
-                    )}
-                  </>
-                ) : (
-                  <div className="w-full flex justify-end">
-                    <button
-                      onClick={() => setIsTestModalOpen(false)}
-                      className="px-8 h-12 rounded-xl text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10 active:scale-95"
-                    >
-                      Close Result
-                    </button>
-                  </div>
-                )}
-              </div>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>,
-      document.body
-    )}
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
 
       {/* Skill Acquisition Celebration Modal */}
       {mounted && createPortal(
@@ -2692,6 +2749,95 @@ export default function PathTabContent() {
                 >
                   Awesome! Continue Journey
                 </button>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* PDF Report Preview Modal */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {showReportPreview && (
+            <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-[250] p-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="bg-white rounded-2xl w-full max-w-5xl h-[90vh] flex flex-col shadow-2xl overflow-hidden relative"
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-white z-10 shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-800 leading-tight">Career Path Report</h3>
+                      <p className="text-xs font-medium text-slate-500">Detailed breakdown of your customized journey</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {reportBlobUrl && (
+                      <button
+                        onClick={() => {
+                          const link = document.createElement("a");
+                          link.href = reportBlobUrl;
+                          link.download = `Career_Path_Report.pdf`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                        }}
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-bold transition-all shadow-sm shadow-emerald-500/20 flex items-center gap-2 active:scale-95"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download PDF
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowReportPreview(false)}
+                      className="w-10 h-10 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700 flex items-center justify-center transition-colors active:scale-95"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Content Area */}
+                <div className="flex-1 bg-slate-50/50 relative">
+                  {isReportLoading && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-20">
+                      <Loader2 className="w-10 h-10 text-emerald-500 animate-spin mb-4" />
+                      <h4 className="text-sm font-bold text-slate-700">Generating Your Report...</h4>
+                      <p className="text-xs text-slate-500 mt-1">This might take a moment.</p>
+                    </div>
+                  )}
+
+                  {reportError && !isReportLoading && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-20 p-8 text-center">
+                      <div className="w-16 h-16 rounded-full bg-red-50 text-red-500 flex items-center justify-center mb-4">
+                        <AlertCircle className="w-8 h-8" />
+                      </div>
+                      <h4 className="text-base font-bold text-slate-800 mb-2">Failed to load report</h4>
+                      <p className="text-sm text-red-600 max-w-md font-medium">{reportError}</p>
+                      <button
+                        onClick={handlePreviewReport}
+                        className="mt-6 px-6 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-colors active:scale-95"
+                      >
+                        Try Again
+                      </button>
+                    </div>
+                  )}
+
+                  {reportBlobUrl && !isReportLoading && (
+                    <iframe
+                      src={`${reportBlobUrl}#toolbar=0&navpanes=0&view=FitH`}
+                      className="w-full h-full border-0"
+                      title="PDF Preview"
+                    />
+                  )}
+                </div>
               </motion.div>
             </div>
           )}
