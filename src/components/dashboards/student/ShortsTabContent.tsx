@@ -89,8 +89,8 @@ interface RecommendedShort {
 
 // Sample video URLs
 const videoUrls = [
-  "https://www.w3schools.com/html/mov_bbb.mp4",
-  "https://www.w3schools.com/html/movie.mp4",
+  "https://storage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+  "https://storage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
   "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
   "https://storage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
   "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
@@ -281,6 +281,9 @@ function VideoPlayer({
   useEffect(() => {
     if (isActive) {
       setPlaying(true);
+      if (playerRef.current) {
+        playerRef.current.seekTo(0);
+      }
     }
   }, [isActive]);
 
@@ -372,9 +375,7 @@ function VideoPlayer({
               attributes: {
                 controlsList: 'nodownload',
                 disablePictureInPicture: true,
-                style: { objectFit: 'cover', width: '100%', height: '100%', pointerEvents: 'none' },
-                autoPlay: true,
-                muted: true,
+                style: { objectFit: 'cover', width: '100%', height: '100%', pointerEvents: 'none', transform: 'translateZ(0)', WebkitTransform: 'translateZ(0)' },
                 playsInline: true
               }
             }
@@ -435,7 +436,7 @@ export default function ShortsTabContent() {
   const [commentsLoading, setCommentsLoading] = useState<boolean>(false);
   const [newCommentText, setNewCommentText] = useState("");
   const [replyingTo, setReplyingTo] = useState<{ id: string; name?: string; author: string } | null>(null);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [isRecommendationsOpen, setIsRecommendationsOpen] = useState(false);
   const [isSavedListOpen, setIsSavedListOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1260,7 +1261,7 @@ export default function ShortsTabContent() {
           }}
         >
           {displayedShorts.map((short) => {
-            const isActive = activeVideoId === short.id;
+            const isActive = String(activeVideoId) === String(short.id);
             const isLiked = likedItems.includes(String(short.id));
             const isSaved = savedItems.includes(String(short.id));
 
