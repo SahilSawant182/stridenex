@@ -427,13 +427,20 @@ export default function StudentOnboarding({
       mapOptions: (data) => {
         console.log("Semester data received:", data);
 
-        // Handle the response structure: { message: "...", data: [...] }
-        const semesters = data.data || data || [];
+        const semesters = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.data)
+            ? data.data
+            : Array.isArray(data?.data?.data)
+              ? data.data.data
+              : Array.isArray(data?.message?.data)
+                ? data.message.data
+                : [];
 
         // Map each semester object to { value, label } format
         return semesters.map((sem: any) => ({
-          value: sem.name,
-          label: sem.name  // Use the name as both value and label
+          value: sem.name || sem.value || sem,
+          label: sem.name || sem.label || sem
         }));
       },
       disabled: !formData.department
@@ -852,10 +859,8 @@ export default function StudentOnboarding({
         career_interest: interest
       }));
 
-      // Extract just the number from academicYear (e.g., "2 Years" -> "2")
-      let academicYearValue = formData.academicYear || "1";
-      const numericMatch = academicYearValue.match(/\d+/);
-      academicYearValue = numericMatch ? numericMatch[0] : "1";
+      // academicYear is already a valid label (e.g. "Forth Year") — use as-is
+      const academicYearValue = formData.academicYear || "First Year";
 
       const payload = {
         first_name: localStorage.getItem("userFirstName") || formData.firstName || "Test",
@@ -1379,7 +1384,8 @@ export default function StudentOnboarding({
               );
 
               if (selectedDept) {
-                const academicYearValue = `${selectedDept.academicYears} Years`;
+                // academicYears is already a label like "Forth Year" — use it directly
+                const academicYearValue = selectedDept.academicYears;
 
                 // Update academic year separately
                 setFormData(prev => ({
