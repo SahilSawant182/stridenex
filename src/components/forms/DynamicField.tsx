@@ -185,6 +185,10 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
         });
         responseData = response.data;
       }
+      else if (field.apiEndpoint.includes('student.masters.get_semester')) {
+        response = await axios.get(field.apiEndpoint);
+        responseData = response.data;
+      }
       else {
         response = await axios.get(field.apiEndpoint, {
           params: {

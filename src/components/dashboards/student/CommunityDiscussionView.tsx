@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, MessageSquare, Plus, Folder, Hash, Search, FileText, Send, User, Heart, X } from "lucide-react";
+import { ArrowLeft, MessageSquare, Plus, Folder, Hash, Search, FileText, Send, User, Heart, X, Users, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/context/ToastContext";
 import DashboardDynamicModal from "@/components/dashboards/shared/DashboardDynamicModal";
-import { createCategory, getPosts, createPost, getPostDetail, postComment, leaveCommunity, apiService } from "@/services/api.services";
+import { createCategory, getPosts, createPost, getPostDetail, postComment, leaveCommunity, apiService, updateCommunityMemberStatus } from "@/services/api.services";
 interface CommunityDiscussionViewProps {
   community: any;
   onBack: () => void;
@@ -44,7 +44,7 @@ const SUGGESTED_CATEGORIES = [
 ];
 
 export default function CommunityDiscussionView({ community, onBack, onRefresh }: CommunityDiscussionViewProps) {
-  const [activeTab, setActiveTab] = useState<"categories" | "discussions">("categories");
+  const [activeTab, setActiveTab] = useState<"categories" | "discussions" | "members">("categories");
   const [searchQuery, setSearchQuery] = useState("");
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isSubmittingCategory, setIsSubmittingCategory] = useState(false);
@@ -80,6 +80,49 @@ export default function CommunityDiscussionView({ community, onBack, onRefresh }
   const [newComment, setNewComment] = useState("");
   const [replyingToCommentId, setReplyingToCommentId] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+
+  const [membersList, setMembersList] = useState<any[]>(community?.members || []);
+  const [approvingMemberId, setApprovingMemberId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (community?.members) {
+      setMembersList(community.members);
+    }
+  }, [community?.members]);
+
+  const handleApproveMember = async (memberDocName: string) => {
+    if (!memberDocName) return;
+    try {
+      setApprovingMemberId(memberDocName);
+      const response = await updateCommunityMemberStatus({
+        name: memberDocName,
+        status: "Approved",
+      });
+
+      if (response?.message?.success === false || response?.success === false) {
+        throw new Error(response?.message?.message || response?.message || "Failed to approve member");
+      }
+
+      showToast("Member approved successfully!", "success");
+      
+      setMembersList((prev) =>
+        prev.map((m) =>
+          (m.name === memberDocName || m.id === memberDocName)
+            ? { ...m, status: "Approved" }
+            : m
+        )
+      );
+
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.message?.message || error?.response?.data?.message || error.message || "Failed to approve member";
+      showToast(typeof errMsg === "string" ? errMsg : "Failed to approve member", "error");
+    } finally {
+      setApprovingMemberId(null);
+    }
+  };
 
   const { showToast } = useToast();
 
@@ -352,6 +395,15 @@ export default function CommunityDiscussionView({ community, onBack, onRefresh }
               >
                 <Folder className={`w-4 h-4 ${activeTab === "categories" ? "text-blue-500" : ""}`} />
                 Categories
+              </button>
+              <button 
+                onClick={() => setActiveTab("members")}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  activeTab === "members" ? "bg-slate-100 text-slate-900" : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
+                }`}
+              >
+                <Users className={`w-4 h-4 ${activeTab === "members" ? "text-blue-500" : ""}`} />
+                Members
               </button>
             </div>
           </div>
@@ -660,6 +712,14 @@ export default function CommunityDiscussionView({ community, onBack, onRefresh }
                 >
                   Categories
                 </button>
+                <button 
+                  onClick={() => setActiveTab("members")}
+                  className={`pb-3 text-sm font-semibold transition-colors border-b-2 ${
+                    activeTab === "members" ? "text-[#FF6B00] border-[#FF6B00]" : "text-slate-500 border-transparent hover:text-slate-800"
+                  }`}
+                >
+                  Members
+                </button>
               </div>
 
               {/* Tab Content */}
@@ -706,6 +766,70 @@ export default function CommunityDiscussionView({ community, onBack, onRefresh }
                       <Folder className="w-10 h-10 text-slate-400 mx-auto mb-3" />
                       <h3 className="text-sm font-semibold text-slate-800 mb-1">No categories yet</h3>
                       <p className="text-xs text-slate-500">This community doesn&apos;t have any categories defined.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "members" && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-bold text-slate-800 mb-4">Community Members ({membersList.length})</h3>
+                  {membersList.length > 0 ? (
+                    membersList.map((member: any, idx: number) => {
+                      const memberId = member.name || member.id;
+                      const isPending = member.status === 'Pending' || member.status !== 'Approved';
+                      const isApproving = approvingMemberId === memberId;
+
+                      return (
+                        <div key={idx} className="flex items-center justify-between p-4 bg-white border border-slate-200/80 rounded-xl hover:border-slate-300 shadow-sm transition-colors">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-full bg-slate-50 border border-slate-200 flex items-center justify-center font-bold text-slate-800">
+                              {(member.member || "G")[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-bold text-slate-800">{member.member}</h4>
+                              <p className="text-xs text-slate-500">Joined on {member.joined_on ? new Date(member.joined_on).toLocaleDateString() : 'N/A'}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className={`px-2 py-1 rounded text-[10px] font-bold tracking-wider uppercase ${
+                              member.role === 'Admin' ? 'bg-blue-50 border border-blue-100 text-blue-600' : 'bg-slate-100 text-slate-600 border border-slate-200'
+                            }`}>
+                              {member.role || "Member"}
+                            </span>
+                            <span className={`px-2 py-1 rounded text-[10px] font-bold tracking-wider uppercase ${
+                              member.status === 'Approved' ? 'bg-green-50 border border-green-100 text-green-600' : 'bg-yellow-50 border border-yellow-100 text-yellow-600'
+                            }`}>
+                              {member.status || "Pending"}
+                            </span>
+
+                            {isPending && (
+                              <button
+                                onClick={() => handleApproveMember(memberId)}
+                                disabled={isApproving}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
+                              >
+                                {isApproving ? (
+                                  <>
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    Approving...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Check className="w-3.5 h-3.5" />
+                                    Approve
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-10 bg-white rounded-xl border border-slate-200 shadow-sm">
+                      <h3 className="text-sm font-semibold text-slate-800 mb-1">No members found</h3>
+                      <p className="text-xs text-slate-500">This community doesn&apos;t have any members yet.</p>
                     </div>
                   )}
                 </div>

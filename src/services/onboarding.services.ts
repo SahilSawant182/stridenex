@@ -39,6 +39,7 @@ export interface CreateStudentPayload {
   github?: string;
   linkedin?: string;
   resume?: File | null;
+  other_college?: string;
 }
 
 export interface OtpResponse {

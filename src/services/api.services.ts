@@ -353,3 +353,11 @@ export const getSessionReviewStatus = async (payload: { booking_name: string }) 
     data: payload,
   });
 };
+
+export const updateCommunityMemberStatus = async (payload: { name: string; status: string }) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.community_member.community_member.update_community_member_status",
+    data: payload,
+  });
+};

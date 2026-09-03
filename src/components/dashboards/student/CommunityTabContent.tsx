@@ -3,13 +3,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { CommunityCard } from "@/components/dashboards/shared/CommunityCard";
 import { FeedCard } from "@/components/dashboards/shared/FeedCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
 import { apiService, getCommunities, joinCommunity, leaveCommunity } from "@/services/api.services";
 import { useToast } from "@/context/ToastContext";
-import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { Loader2, AlertCircle, RefreshCw, X, ShieldCheck, Lock } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Email and Name Formatting Helper (returns name parts for line breaks)
 const formatChannelName = (name: string): string[] => {
@@ -136,6 +137,13 @@ export default function CommunityTabContent() {
   const [joinedCommunities, setJoinedCommunities] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Terms and conditions state
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [selectedCommunityId, setSelectedCommunityId] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+
   const { showToast } = useToast();
 
   const fetchChannels = async () => {
@@ -193,30 +201,89 @@ export default function CommunityTabContent() {
   const handleJoinCommunity = async (communityId: string) => {
     const community = communities.find(c => c.id === communityId);
     
+    if (community?.action === 'pending' || community?.action === 'Pending' || community?.status === 'Pending') {
+      showToast("Your request to join this community is pending owner approval.", "info");
+      return;
+    }
+
     if (community?.action === 'leave' || joinedCommunities.includes(communityId) || community?.isMember) {
       router.push(`/student/community/${communityId}`);
       return;
     }
 
+    // Open Terms modal instead of directly joining
+    setSelectedCommunityId(communityId);
+    setTermsAccepted(false);
+    setShowTermsModal(true);
+  };
+
+  const confirmJoinCommunity = async () => {
+    if (!selectedCommunityId || !termsAccepted) return;
+
     const email = typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || "") : "";
+    setIsJoining(true);
 
     try {
+      const targetCommunity = communities.find(c => c.id === selectedCommunityId);
+      const isPrivate = targetCommunity?.category === "Private";
+
       // Join
       const response = await joinCommunity({
-        community: communityId,
+        community: selectedCommunityId,
         student: email
       });
+
+      const resMessageObj = response?.message;
+      const resSuccess = resMessageObj?.success ?? response?.success;
+      const responseText = typeof resMessageObj?.message === "string" 
+        ? resMessageObj.message 
+        : (typeof resMessageObj === "string" ? resMessageObj : "");
+
+      // Handle explicit pending response
+      if (resSuccess === false || responseText.toLowerCase().includes("already pending")) {
+        if (responseText.toLowerCase().includes("already pending")) {
+          showToast(responseText || "Membership request is already pending owner approval.", "info");
+          setCommunities((prev) =>
+            prev.map((c) => (c.id === selectedCommunityId ? { ...c, action: "pending" } : c))
+          );
+          setShowTermsModal(false);
+          fetchChannels();
+          return;
+        }
+        throw new Error(responseText || "Failed to join community");
+      }
       
-      if (response?.message?.success || response?.message === "Success" || response?.data) {
-        setJoinedCommunities((prev) => [...prev, communityId]);
-        showToast("Successfully joined!", "success");
+      if (resSuccess || response?.message === "Success" || response?.data) {
+        if (isPrivate) {
+          showToast("Join request sent! Pending owner approval.", "info");
+          setCommunities((prev) =>
+            prev.map((c) => (c.id === selectedCommunityId ? { ...c, action: "pending" } : c))
+          );
+        } else {
+          setJoinedCommunities((prev) => [...prev, selectedCommunityId]);
+          showToast("Successfully joined!", "success");
+        }
+        setShowTermsModal(false);
         fetchChannels(); // Refresh the list
       } else {
-        throw new Error("Failed to join community");
+        throw new Error(responseText || "Failed to join community");
       }
     } catch (err: any) {
       console.error(err);
-      showToast(err?.message || "Operation failed", "error");
+      const errMsg = err?.response?.data?.message?.message || err?.response?.data?.message || err?.message || "Operation failed";
+      const errMsgStr = typeof errMsg === "string" ? errMsg : "Operation failed";
+
+      if (errMsgStr.toLowerCase().includes("already pending")) {
+        showToast(errMsgStr, "info");
+        setCommunities((prev) =>
+          prev.map((c) => (c.id === selectedCommunityId ? { ...c, action: "pending" } : c))
+        );
+        setShowTermsModal(false);
+      } else {
+        showToast(errMsgStr, "error");
+      }
+    } finally {
+      setIsJoining(false);
     }
   };
 
@@ -322,6 +389,121 @@ export default function CommunityTabContent() {
           ))}
         </div>
       </motion.div>
+
+      {/* Terms & Conditions Modal */}
+      <AnimatePresence>
+        {showTermsModal && (() => {
+          const selectedCommunity = communities.find((c) => c.id === selectedCommunityId);
+          const isSelectedPrivate = selectedCommunity?.category === "Private";
+
+          return (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+              onClick={() => !isJoining && setShowTermsModal(false)}
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col"
+              >
+                {/* Header */}
+                <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 ${isSelectedPrivate ? "bg-purple-600" : "bg-blue-600"} rounded-xl flex items-center justify-center shadow-md`}>
+                      {isSelectedPrivate ? <Lock className="w-5 h-5 text-white" /> : <ShieldCheck className="w-5 h-5 text-white" />}
+                    </div>
+                    <div>
+                      <h2 className="text-lg font-bold text-slate-800">
+                        {isSelectedPrivate ? "Request to Join Private Space" : "Community Guidelines"}
+                      </h2>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {isSelectedPrivate ? "Requires owner approval to access" : "Please read before joining"}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => !isJoining && setShowTermsModal(false)}
+                    className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all shadow-sm"
+                    disabled={isJoining}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Terms Content */}
+                <div className="p-6 max-h-[400px] overflow-y-auto custom-scrollbar text-sm text-slate-600 space-y-4">
+                  {isSelectedPrivate && (
+                    <div className="bg-purple-50 border border-purple-200/70 rounded-xl p-3.5 text-xs text-purple-900 flex items-start gap-2.5 shadow-sm">
+                      <Lock className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <strong className="block font-bold mb-0.5">Private Community Approval</strong>
+                        This is a private community. Submitting this request will send your profile for approval to the community owner.
+                      </div>
+                    </div>
+                  )}
+
+                  <p>Welcome to our community! To ensure a safe, collaborative, and professional environment, we ask all members to adhere to the following guidelines:</p>
+                  <ul className="list-disc pl-5 space-y-2">
+                    <li><strong>Respect Everyone:</strong> Treat all members with respect. Harassment, discrimination, or abusive language will not be tolerated.</li>
+                    <li><strong>No Spam or Self-Promotion:</strong> Keep discussions relevant to the community topic. Do not post spam or unsolicited promotional material.</li>
+                    <li><strong>Protect Privacy:</strong> Do not share personal information of others or sensitive data without explicit permission.</li>
+                    <li><strong>Constructive Feedback:</strong> When reviewing others' work or answering questions, be constructive, helpful, and kind.</li>
+                    <li><strong>Compliance:</strong> By joining this community, you agree to comply with StrideNex's overarching Terms of Use and Privacy Policy.</li>
+                  </ul>
+                  <p>Failure to follow these rules may result in temporary suspension or permanent removal from the community.</p>
+                </div>
+
+                {/* Footer */}
+                <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="community-terms"
+                      checked={termsAccepted}
+                      onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                      disabled={isJoining}
+                      className="mt-0.5"
+                    />
+                    <label htmlFor="community-terms" className="text-sm text-slate-700 leading-snug cursor-pointer font-medium">
+                      I have read and agree to follow the community guidelines and terms of use.
+                    </label>
+                  </div>
+                  
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      onClick={() => setShowTermsModal(false)}
+                      disabled={isJoining}
+                      className="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={confirmJoinCommunity}
+                      disabled={!termsAccepted || isJoining}
+                      className={`px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 ${
+                        isSelectedPrivate ? "bg-purple-600 hover:bg-purple-700 shadow-purple-600/20" : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20"
+                      }`}
+                    >
+                      {isJoining ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          {isSelectedPrivate ? "Sending Request..." : "Joining..."}
+                        </>
+                      ) : (
+                        isSelectedPrivate ? "Accept & Request to Join" : "Accept & Join"
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </motion.div>
   );
 }

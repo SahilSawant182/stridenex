@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Plus, Loader2, X, Search, Globe, Lock } from "lucide-react";
+import { Users, Plus, Loader2, X, Search, Globe, Lock, ShieldCheck } from "lucide-react";
 import { createCommunity, getCommunities, getCommunity } from "@/services/api.services";
 import SharedCommunityDiscussionView from "./SharedCommunityDiscussionView";
 import { useToast } from "@/context/ToastContext";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface SharedCommunityTabContentProps {
   userType: "mentor" | "college" | "industry";
@@ -39,6 +40,7 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
     community_type: "Public",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   useEffect(() => {
     fetchCommunities();
@@ -80,11 +82,11 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
         user_type: capitalizedUserType,
         community_owner: email,
       });
-      
       const successMsg = response?.message?.message || response?.data?.message || "Community created successfully!";
       showToast(successMsg, "success");
       setIsModalOpen(false);
       setFormData({ community_name: "", description: "", community_type: "Public" });
+      setTermsAccepted(false);
       fetchCommunities();
     } catch (error: any) {
       const errMsg = error?.response?.data?.message?.message || error?.response?.data?.message || error.message || "Failed to create community";
@@ -174,7 +176,10 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
           </p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setTermsAccepted(false);
+            setIsModalOpen(true);
+          }}
           className="bg-accent hover:bg-accent-hover text-white px-5 py-2.5 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 shadow-sm shadow-accent/20"
         >
           <Plus className="w-5 h-5" />
@@ -328,6 +333,36 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
                       </button>
                     </div>
                   </div>
+
+                  {/* Creator Guidelines */}
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <ShieldCheck className="w-4 h-4 text-accent" />
+                      <label className="block text-sm font-bold text-slate-700">Creator Guidelines</label>
+                    </div>
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 text-xs text-slate-600 space-y-2 mb-4 h-32 overflow-y-auto custom-scrollbar">
+                      <p>As a community creator, you are responsible for maintaining a positive and professional environment. By creating this community, you agree to:</p>
+                      <ul className="list-disc pl-4 space-y-1">
+                        <li><strong>Moderate Content:</strong> Ensure discussions remain constructive and relevant to the community's purpose.</li>
+                        <li><strong>Prevent Abuse:</strong> Promptly address and remove any form of harassment, hate speech, or inappropriate content.</li>
+                        <li><strong>Respect Privacy:</strong> Safeguard members' personal information and do not share data outside the community.</li>
+                        <li><strong>Stay Active:</strong> Actively engage with members and foster a collaborative atmosphere.</li>
+                        <li><strong>Compliance:</strong> Adhere to all platform policies. StrideNex reserves the right to suspend or remove communities that violate these guidelines.</li>
+                      </ul>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        id="creator-terms"
+                        checked={termsAccepted}
+                        onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                        disabled={isSubmitting}
+                        className="mt-0.5"
+                      />
+                      <label htmlFor="creator-terms" className="text-sm text-slate-700 leading-snug cursor-pointer font-medium">
+                        I have read and agree to follow the creator guidelines and terms of use.
+                      </label>
+                    </div>
+                  </div>
                 </form>
               </div>
               
@@ -343,8 +378,8 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
                 <button
                   type="submit"
                   form="create-community-form"
-                  disabled={isSubmitting}
-                  className="px-6 py-2.5 rounded-xl font-semibold text-white bg-accent hover:bg-accent-hover transition-colors flex items-center gap-2 disabled:opacity-70"
+                  disabled={isSubmitting || !termsAccepted}
+                  className="px-6 py-2.5 rounded-xl font-semibold text-white bg-accent hover:bg-accent-hover transition-colors flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
                     <>
