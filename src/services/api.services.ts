@@ -168,6 +168,60 @@ export const uploadProfilePicture = async (file: File): Promise<{ file_url: stri
   return { file_url: payload.file_url, file_name: payload.file_name };
 };
 
+/**
+ * Upload a document/file to Frappe via upload_file_api endpoint.
+ */
+export const uploadFileApi = async (
+  file: File,
+  doctype: string = "Student",
+  docname: string = "",
+  fieldname: string = "marksheet"
+): Promise<{ file_url: string; file_name: string }> => {
+  const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+  const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+
+  const formData = new FormData();
+  formData.append("file", file);
+  if (doctype) formData.append("doctype", doctype);
+  if (docname) formData.append("docname", docname);
+  if (fieldname) formData.append("fieldname", fieldname);
+  formData.append("is_private", "0");
+
+  const headers: Record<string, string> = {};
+  if (apiKey && apiSecret) {
+    headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+  }
+
+  const response = await fetch(
+    `${BASE_DOMAIN}/api/method/stridenex_app.api_stridenex_app.app.upload_file_api`,
+    {
+      method: "POST",
+      headers,
+      body: formData,
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok || data?.http_status_code >= 400) {
+    const msg =
+      data?.message?.message ||
+      data?.message ||
+      data?.exception ||
+      `Upload failed (HTTP ${response.status})`;
+    throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+  }
+
+  const payload = data?.data ?? data?.message ?? data;
+  const fileUrl = payload?.file_url || payload?.message?.file_url || (typeof payload === "string" ? payload : "");
+
+  return {
+    file_url: fileUrl,
+    file_name: payload?.file_name || payload?.name || file.name,
+  };
+};
+
+
 export const getSkillScore = async (data: { student: string }) => {
   return apiRequest({
     url: "method/nexedu.skill_ledger.doctype.student_skill.student_skill.get_skill_score",
