@@ -80,10 +80,10 @@ interface StatsData {
         current: number;
         longest: number;
     };
-    last30Days: {
+    todayProgress: {
         done: number;
         partial: number;
-        missed: number;
+        remaining: number;
         completionRate: number;
     };
     thisWeek: {
@@ -272,7 +272,7 @@ export default function HabitsTabContent() {
     const { checkAndConsume, hasQuota, getRemaining, entitlements } = useEntitlements();
     const [statsData, setStatsData] = useState<StatsData>({
         streak: { current: 0, longest: 0 },
-        last30Days: { done: 0, partial: 0, missed: 0, completionRate: 0 },
+        todayProgress: { done: 0, partial: 0, remaining: 0, completionRate: 0 },
         thisWeek: { completed: 0, total: 0, days: [] }
     });
     const [habitPlans, setHabitPlans] = useState<HabitPlan[]>([]);
@@ -574,28 +574,24 @@ export default function HabitsTabContent() {
                     }));
                 }
 
-                // Map last 30 days data
-                if (data.last_30_days && Array.isArray(data.last_30_days)) {
-                    const doneCount = data.last_30_days.filter((day: any) => day.status === 'done').length;
-                    const partialCount = data.last_30_days.filter((day: any) => day.status === 'partial').length;
-                    const missedCount = data.last_30_days.filter((day: any) => day.status === 'none' || day.status === 'missed').length;
+                // Map today's progress data
+                if (data.today_done !== undefined) {
+                    const doneCount = data.today_done || 0;
+                    const partialCount = data.today_partial || 0;
+                    const remainingCount = data.today_remaining || 0;
 
-                    // Calculate average completion rate from active habits
+                    const totalDue = doneCount + remainingCount;
                     let calculatedRate = 0;
-                    if (data.habits && Array.isArray(data.habits)) {
-                        const allHabits = data.habits.flatMap((p: any) => p.habits || []);
-                        if (allHabits.length > 0) {
-                            const sumRates = allHabits.reduce((acc: number, h: any) => acc + (h.completion_rate || 0), 0);
-                            calculatedRate = sumRates / allHabits.length;
-                        }
+                    if (totalDue > 0) {
+                        calculatedRate = (doneCount / totalDue) * 100;
                     }
 
                     setStatsData(prev => ({
                         ...prev,
-                        last30Days: {
+                        todayProgress: {
                             done: doneCount,
                             partial: partialCount,
-                            missed: missedCount,
+                            remaining: remainingCount,
                             completionRate: calculatedRate
                         }
                     }));
@@ -866,10 +862,10 @@ export default function HabitsTabContent() {
         }
     };
 
-    const last30DaysItems = [
-        { key: 'done', label: 'Done', value: statsData.last30Days.done },
-        { key: 'partial', label: 'Partial', value: statsData.last30Days.partial },
-        { key: 'missed', label: 'Missed', value: statsData.last30Days.missed }
+    const todayProgressItems = [
+        { key: 'done', label: 'Done', value: statsData.todayProgress.done },
+        { key: 'partial', label: 'Partial', value: statsData.todayProgress.partial },
+        { key: 'remaining', label: 'Remaining', value: statsData.todayProgress.remaining }
     ];
 
     if (loading) {
@@ -913,9 +909,9 @@ export default function HabitsTabContent() {
                     <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-100/30 rounded-full blur-2xl -mr-5 -mt-5" />
                     <div className="flex items-center justify-between">
                         <div className="space-y-1.5">
-                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">30-Day Completion</span>
+                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400">Today's Progress</span>
                             <div className="flex items-baseline gap-1">
-                                <span className="text-4xl font-black text-slate-800">{statsData.last30Days.completionRate.toFixed(1)}%</span>
+                                <span className="text-4xl font-black text-slate-800">{statsData.todayProgress.completionRate.toFixed(1)}%</span>
                             </div>
                         </div>
                         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/10 transform hover:scale-105 transition-transform duration-200">
@@ -923,11 +919,11 @@ export default function HabitsTabContent() {
                         </div>
                     </div>
                     <div className="mt-4 space-y-2.5">
-                        <Progress value={statsData.last30Days.completionRate} className="h-1.5 bg-slate-100" indicatorColor="bg-emerald-500" />
+                        <Progress value={statsData.todayProgress.completionRate} className="h-1.5 bg-slate-100" indicatorColor="bg-emerald-500" />
                         <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
-                            <span>Done: <strong className="text-emerald-600">{statsData.last30Days.done}</strong></span>
-                            <span>Partial: <strong className="text-amber-600">{statsData.last30Days.partial}</strong></span>
-                            <span>Missed: <strong className="text-rose-600">{statsData.last30Days.missed}</strong></span>
+                            <span>Done: <strong className="text-emerald-600">{statsData.todayProgress.done}</strong></span>
+                            <span>Partial: <strong className="text-amber-600">{statsData.todayProgress.partial}</strong></span>
+                            <span>Remaining: <strong className="text-rose-600">{statsData.todayProgress.remaining}</strong></span>
                         </div>
                     </div>
                 </div>
