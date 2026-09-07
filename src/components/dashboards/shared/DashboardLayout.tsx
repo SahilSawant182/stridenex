@@ -13,7 +13,7 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children, role }: DashboardLayoutProps) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isInitialized } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -27,10 +27,18 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
   }, [isShortsPage]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (isInitialized && !isAuthenticated) {
       router.push("/login");
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isInitialized, router]);
+
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return null; // Return null while redirecting
@@ -38,7 +46,7 @@ export default function DashboardLayout({ children, role }: DashboardLayoutProps
 
   return (
     <div className={`min-h-screen flex transition-colors duration-300 ${isShortsPage ? 'bg-[#0f0f0f]' : 'bg-slate-50'}`}>
-      <Sidebar 
+      <Sidebar
         role={role} 
         collapsed={isSidebarCollapsed} 
         onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
