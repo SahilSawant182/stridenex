@@ -199,6 +199,12 @@ export default function PathTabContent() {
   const [failedPathTitle, setFailedPathTitle] = useState<string>("");
   const [failedEnrollmentName, setFailedEnrollmentName] = useState<string>("");
 
+  const [showGuideBanner, setShowGuideBanner] = useState<boolean>(false);
+
+  const dismissGuide = () => {
+    setShowGuideBanner(false);
+  };
+
   // Skill acquisition celebration states
   const [showCelebration, setShowCelebration] = useState(false);
   const [acquiredSkillName, setAcquiredSkillName] = useState("");
@@ -975,6 +981,88 @@ export default function PathTabContent() {
 
   return (
     <div>
+      <AnimatePresence>
+        {showGuideBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, scale: 0.95, height: 0, overflow: 'hidden' }}
+            className="mb-8 w-full max-w-[1360px] mx-auto px-4"
+          >
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 md:p-8 text-white relative overflow-hidden shadow-lg border border-blue-500/50">
+              {/* Background Accents */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-400/20 rounded-full blur-2xl -translate-x-1/2 translate-y-1/2" />
+              
+              <button 
+                onClick={dismissGuide}
+                className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-all"
+                title="Dismiss Guide"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
+                    <Sparkles className="w-6 h-6 text-blue-100" />
+                  </div>
+                  <h2 className="text-xl md:text-2xl font-bold tracking-tight">Welcome to Your AI Skill Path</h2>
+                </div>
+                
+                <p className="text-blue-100 text-sm md:text-base max-w-2xl mb-8 leading-relaxed">
+                  Your personalized roadmap to your dream career. The Skill Path analyzes your current abilities, identifies the gap to your target role, and provides actionable milestones to help you build a verifiable Skill Ledger.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-5 border border-white/10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="bg-blue-500/30 p-2 rounded-lg">
+                        <Target className="w-5 h-5 text-blue-200" />
+                      </div>
+                      <h3 className="font-bold text-sm">1. Select a Career</h3>
+                    </div>
+                    <p className="text-xs text-blue-100/80 leading-relaxed">Choose a target career path. Our AI will analyze the industry requirements and map out the exact skills you need.</p>
+                  </div>
+
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-5 border border-white/10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="bg-indigo-500/30 p-2 rounded-lg">
+                        <Compass className="w-5 h-5 text-indigo-200" />
+                      </div>
+                      <h3 className="font-bold text-sm">2. Follow Milestones</h3>
+                    </div>
+                    <p className="text-xs text-blue-100/80 leading-relaxed">Complete curated tasks across Foundation, Core, and Advanced levels. Learn at your own pace with a structured roadmap.</p>
+                  </div>
+
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-5 border border-white/10">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="bg-emerald-500/30 p-2 rounded-lg">
+                        <Award className="w-5 h-5 text-emerald-200" />
+                      </div>
+                      <h3 className="font-bold text-sm">3. Earn Verified Skills</h3>
+                    </div>
+                    <p className="text-xs text-blue-100/80 leading-relaxed">Take skill assessments to prove your competency. Build your Skill Ledger and unlock premium job opportunities.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {!showGuideBanner && (
+        <div className="w-full max-w-[1360px] mx-auto px-4 mb-4 flex justify-end">
+          <button 
+            onClick={() => setShowGuideBanner(true)}
+            className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors border border-blue-100"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            How Skill Path Works
+          </button>
+        </div>
+      )}
+
       {inWizardMode ? (
         /* WIZARD FLOW SCREEN */
         <div className="flex flex-col lg:flex-row gap-6 items-start w-full max-w-[1360px] mx-auto px-4">
@@ -997,9 +1085,9 @@ export default function PathTabContent() {
               <div>
                 <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-blue-600 animate-pulse" />
-                  AI Career Pathfinder Onboarding
+                  AI Career Pathfinder
                 </h2>
-                <p className="text-xs text-slate-500 mt-1">Design your custom, gap-optimized milestone learning path</p>
+                <p className="text-xs text-slate-500 mt-1">Let's find the perfect roadmap to your dream career</p>
               </div>
 
               {/* Steps indicator */}
@@ -1145,9 +1233,9 @@ export default function PathTabContent() {
               <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                      <Compass className="w-4 h-4 text-blue-600" />
-                      {showMasterSearch ? "AI Career Knowledgebase Library" : "Recommended Career Paths (Retrieved/Generated by AI Agents)"}
+                    <h3 className="text-base font-bold text-slate-800 flex items-center gap-2">
+                      <Compass className="w-5 h-5 text-blue-600" />
+                      {showMasterSearch ? "Career Knowledgebase Library" : "AI Recommended Career Paths"}
                     </h3>
                     <p className="text-xs text-slate-400 mt-1 font-medium">
                       {showMasterSearch
@@ -1388,9 +1476,13 @@ export default function PathTabContent() {
                     className="bg-slate-50 rounded-xl border border-slate-150 p-6 space-y-4 shadow-inner"
                   >
                     <div className="flex justify-between items-center pb-3 border-b border-slate-200">
-                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 group relative">
                         <Sparkles className={`w-4 h-4 text-blue-600 ${detailsLoading ? 'animate-spin' : ''}`} />
                         SkillAgent Hierarchy Analysis: {selectedPath.title}
+                        <AlertCircle className="w-3.5 h-3.5 text-slate-400 cursor-help" />
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all shadow-lg text-center z-10 pointer-events-none normal-case tracking-normal">
+                          Our AI breaks down this career into Foundation, Core, and Advanced skills to give you a clear roadmap.
+                        </div>
                       </h4>
                       {detailsLoading && <Loader2 className="w-4 h-4 animate-spin text-blue-600" />}
                     </div>
@@ -2294,7 +2386,7 @@ export default function PathTabContent() {
                               {enrollingPath === path.title ? (
                                 <Loader2 className="w-3 h-3 animate-spin text-slate-500" />
                               ) : null}
-                              <span>Standard Setup</span>
+                              <span>Start Standard Path</span>
                             </button>
                             <button
                               onClick={(e) => {

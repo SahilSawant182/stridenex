@@ -14,7 +14,7 @@ export default function CollegeDashboardSubLayout({
     const isOverview = pathname === "/college/dashboard" || pathname === "/college/dashboard/";
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6 pb-12">
+        <div className="max-w-[1440px] mx-auto space-y-6 pb-12">
             {/* Banner */}
             <RoleBannerWidget role="college" onlyModal={!isOverview} />
 
