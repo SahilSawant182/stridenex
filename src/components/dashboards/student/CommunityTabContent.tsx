@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { CommunityCard } from "@/components/dashboards/shared/CommunityCard";
 import { FeedCard } from "@/components/dashboards/shared/FeedCard";
@@ -387,13 +388,14 @@ export default function CommunityTabContent() {
       </motion.div>
 
       {/* Terms & Conditions Modal */}
-      <AnimatePresence>
-        {showTermsModal && (() => {
-          const selectedCommunity = communities.find((c) => c.id === selectedCommunityId);
-          const isSelectedPrivate = selectedCommunity?.category === "Private";
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {showTermsModal && (() => {
+            const selectedCommunity = communities.find((c) => c.id === selectedCommunityId);
+            const isSelectedPrivate = selectedCommunity?.category === "Private";
 
-          return (
-            <motion.div
+            return (
+              <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -497,9 +499,11 @@ export default function CommunityTabContent() {
                 </div>
               </motion.div>
             </motion.div>
-          );
-        })()}
-      </AnimatePresence>
+            );
+          })()}
+        </AnimatePresence>,
+        document.body
+      )}
     </motion.div>
   );
 }

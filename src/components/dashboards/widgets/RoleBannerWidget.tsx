@@ -569,7 +569,8 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         semester: studentDepartmentOptions.find(d => d.value === studentFormState.department)?.semester || ""
       } : undefined,
       mapOptions: (data: any) => {
-        const semesters = data.data || data || [];
+        let semesters = Array.isArray(data) ? data : (data?.data?.data || data?.message?.data || data?.message || data?.data || []);
+        semesters = Array.isArray(semesters) ? semesters : [];
         return semesters.map((sem: any) => ({
           value: sem.name,
           label: sem.name
@@ -716,7 +717,10 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
       colSpan: 2,
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "University" },
-      mapOptions: (data) => data.map((u: any) => ({ value: u.name, label: u.name }))
+      mapOptions: (data: any) => {
+        const items = Array.isArray(data) ? data : (data?.data?.data || data?.message?.data || data?.message || data?.data || []);
+        return (Array.isArray(items) ? items : []).map((u: any) => ({ value: u.name, label: u.name }));
+      }
     },
     {
       name: "college_type",
@@ -726,7 +730,10 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
       required: true,
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "College Type" },
-      mapOptions: (data) => data.map((ct: any) => ({ value: ct.name, label: ct.name }))
+      mapOptions: (data: any) => {
+        const items = Array.isArray(data) ? data : (data?.data?.data || data?.message?.data || data?.message || data?.data || []);
+        return (Array.isArray(items) ? items : []).map((ct: any) => ({ value: ct.name, label: ct.name }));
+      }
     },
     { name: "website", label: "Website", type: "url", icon: Globe, required: false },
     {
@@ -737,7 +744,10 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
       required: true,
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "State" },
-      mapOptions: (data) => data.map((s: any) => ({ value: s.name, label: s.name }))
+      mapOptions: (data: any) => {
+        const items = Array.isArray(data) ? data : (data?.data?.data || data?.message?.data || data?.message || data?.data || []);
+        return (Array.isArray(items) ? items : []).map((s: any) => ({ value: s.name, label: s.name }));
+      }
     },
     {
       name: "district",
@@ -754,7 +764,10 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         order_by: "district_name asc",
         limit_page_length: 1000
       } : undefined,
-      mapOptions: (data) => data.map((d: any) => ({ value: d.name, label: d.district_name || d.name }))
+      mapOptions: (data: any) => {
+        const items = Array.isArray(data) ? data : (data?.data?.data || data?.message?.data || data?.message || data?.data || []);
+        return (Array.isArray(items) ? items : []).map((d: any) => ({ value: d.name, label: d.district_name || d.name }));
+      }
     },
     {
       name: "taluka",
@@ -771,7 +784,10 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         order_by: "tahsil_name asc",
         limit_page_length: 1000
       } : undefined,
-      mapOptions: (data) => data.map((t: any) => ({ value: t.name, label: t.name }))
+      mapOptions: (data: any) => {
+        const items = Array.isArray(data) ? data : (data?.data?.data || data?.message?.data || data?.message || data?.data || []);
+        return (Array.isArray(items) ? items : []).map((t: any) => ({ value: t.name, label: t.name }));
+      }
     },
     {
       name: "city",
@@ -788,7 +804,10 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         order_by: "city_name asc",
         limit_page_length: 1000
       } : undefined,
-      mapOptions: (data) => data.map((c: any) => ({ value: c.name, label: c.name }))
+      mapOptions: (data: any) => {
+        const items = Array.isArray(data) ? data : (data?.data?.data || data?.message?.data || data?.message || data?.data || []);
+        return (Array.isArray(items) ? items : []).map((c: any) => ({ value: c.name, label: c.name }));
+      }
     },
   ], [collegeFormState]);
 

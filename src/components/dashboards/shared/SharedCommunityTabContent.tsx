@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Users, Plus, Loader2, X, Search, Globe, Lock, ShieldCheck } from "lucide-react";
 import { createCommunity, getCommunities, getCommunity } from "@/services/api.services";
@@ -251,10 +252,11 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
       )}
 
       {/* Create Modal */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {isModalOpen && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+              <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -265,7 +267,7 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white w-full max-w-lg rounded-2xl shadow-xl relative z-10 overflow-hidden flex flex-col max-h-[90vh]"
+              className="bg-white w-full max-w-lg rounded-2xl shadow-xl relative z-[101] overflow-hidden flex flex-col max-h-[90vh]"
             >
               <div className="flex items-center justify-between p-5 border-b border-slate-100">
                 <h2 className="text-lg font-bold text-slate-800">Create Community</h2>
@@ -393,8 +395,10 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
               </div>
             </motion.div>
           </div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
