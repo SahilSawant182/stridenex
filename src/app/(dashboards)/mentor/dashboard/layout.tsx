@@ -10,7 +10,7 @@ export default function MentorDashboardSubLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-12">
+    <div className="max-w-[1440px] mx-auto space-y-6 pb-12">
       {/* Banner */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

@@ -16,7 +16,7 @@ export default function IndustryDashboardSubLayout({
 
     return (
         <IndustryProvider>
-            <div className="max-w-7xl mx-auto space-y-6 pb-12">
+            <div className="max-w-[1440px] mx-auto space-y-6 pb-12">
                 {/* Banner */}
                 {isOverview && (
                     <motion.div
