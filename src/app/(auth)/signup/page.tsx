@@ -24,6 +24,7 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [allowPromotionalNews, setAllowPromotionalNews] = useState(true);
   const [formValues, setFormValues] = useState<any>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -204,41 +205,42 @@ export default function SignupPage() {
         email: data.email,
         password: data.password,
         role: rolePayload,
+        allow_promotional_news: allowPromotionalNews ? 1 : 0,
       }),
     })
       .then(response => response.json())
       .then(responseData => {
-      if (responseData?.message === "User created successfully") {
-        localStorage.setItem("userEmail", data.email);
-        localStorage.setItem("userFirstName", data.firstName);
-        localStorage.setItem("userLastName", data.lastName);
-        localStorage.setItem("userPassword", data.password);
+        if (responseData?.message === "User created successfully") {
+          localStorage.setItem("userEmail", data.email);
+          localStorage.setItem("userFirstName", data.firstName);
+          localStorage.setItem("userLastName", data.lastName);
+          localStorage.setItem("userPassword", data.password);
 
-        // Navigate based on selected role
-        if (selectedRole === "student") {
-          router.push("/onboarding/student");
-        } else if (selectedRole === "mentor") {
-          router.push("/onboarding/mentor");
-        } else if (selectedRole === "college") {
-          router.push("/onboarding/college");
-        } else if (selectedRole === "industry") {
-          router.push("/onboarding/industry");
-        }
-      } else {
-        // Handle different error structures
-        const errorMsg = responseData?.message ||
-          responseData?.message?.error ||
-          "Signup failed";
-
-        if (errorMsg.toLowerCase().includes("user already exists") || errorMsg.toLowerCase().includes("email already registered")) {
-          setFieldErrors(prev => ({ ...prev, email: "User already exists with this email" }));
-          setError("");
+          // Navigate based on selected role
+          if (selectedRole === "student") {
+            router.push("/onboarding/student");
+          } else if (selectedRole === "mentor") {
+            router.push("/onboarding/mentor");
+          } else if (selectedRole === "college") {
+            router.push("/onboarding/college");
+          } else if (selectedRole === "industry") {
+            router.push("/onboarding/industry");
+          }
         } else {
-          setError(errorMsg);
+          // Handle different error structures
+          const errorMsg = responseData?.message ||
+            responseData?.message?.error ||
+            "Signup failed";
+
+          if (errorMsg.toLowerCase().includes("user already exists") || errorMsg.toLowerCase().includes("email already registered")) {
+            setFieldErrors(prev => ({ ...prev, email: "User already exists with this email" }));
+            setError("");
+          } else {
+            setError(errorMsg);
+          }
+          setLoading(false);
         }
-        setLoading(false);
-      }
-    })
+      })
       .catch(err => {
         console.error("Fetch error:", err);
         setError("An error occurred during signup");
@@ -316,7 +318,7 @@ export default function SignupPage() {
         />
 
         {/* Role Selection Cards - Smaller size with centered text */}
-        <motion.div 
+        <motion.div
           className="space-y-3 pt-2"
           animate={shakeRole ? { x: [-10, 10, -10, 10, -5, 5, 0] } : {}}
           transition={{ duration: 0.4 }}
@@ -339,20 +341,18 @@ export default function SignupPage() {
                       return rest;
                     });
                   }}
-                  className={`relative p-2.5 rounded-xl border-2 transition-all duration-200 group cursor-pointer ${
-                    isSelected
-                      ? `border-${role.color} bg-gradient-to-br ${role.gradient} bg-opacity-10 shadow-md transform -translate-y-0.5`
-                      : fieldErrors.role 
-                        ? 'border-red-300 bg-red-50 hover:border-red-400' 
-                        : 'border-slate-200 bg-slate-50 hover:border-accent/40 hover:bg-white hover:shadow-sm'
-                  }`}
+                  className={`relative p-2.5 rounded-xl border-2 transition-all duration-200 group cursor-pointer ${isSelected
+                    ? `border-${role.color} bg-gradient-to-br ${role.gradient} bg-opacity-10 shadow-md transform -translate-y-0.5`
+                    : fieldErrors.role
+                      ? 'border-red-300 bg-red-50 hover:border-red-400'
+                      : 'border-slate-200 bg-slate-50 hover:border-accent/40 hover:bg-white hover:shadow-sm'
+                    }`}
                 >
                   <div className="flex flex-col items-center text-center">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-all ${
-                      isSelected
-                        ? 'bg-white/20'
-                        : `bg-white shadow-sm border border-slate-100 group-hover:border-slate-200`
-                    }`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center mb-1.5 transition-all ${isSelected
+                      ? 'bg-white/20'
+                      : `bg-white shadow-sm border border-slate-100 group-hover:border-slate-200`
+                      }`}>
                       <Icon className={`w-4 h-4 ${isSelected ? 'text-white' : `text-${role.color}`}`} />
                     </div>
                     <p className={`text-xs font-semibold mb-0.5 ${isSelected ? 'text-white' : 'text-slate-900'}`}>
@@ -419,6 +419,20 @@ export default function SignupPage() {
           {fieldErrors.terms && (
             <p className="text-xs text-red-500 ml-7">{fieldErrors.terms}</p>
           )}
+        </div>
+
+        <div className="space-y-1">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="promotional"
+              checked={allowPromotionalNews}
+              onCheckedChange={(checked) => setAllowPromotionalNews(checked as boolean)}
+              className="mt-0.5"
+            />
+            <Label htmlFor="promotional" className="text-sm text-slate-600 leading-relaxed cursor-pointer">
+              Allow promotional news from the StrideNex
+            </Label>
+          </div>
         </div>
 
         {/* Create Account Button */}
