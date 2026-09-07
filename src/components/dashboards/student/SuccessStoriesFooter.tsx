@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Quote,
@@ -11,7 +12,8 @@ import {
   ChevronRight,
   Award,
   TrendingUp,
-  X
+  X,
+  AlertCircle
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
@@ -20,33 +22,35 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { getSuccessStories, createSuccessStory, getStudentByEmail } from "@/services/student.services";
+import { useRouter } from "next/navigation";
 
-export default function SuccessStoriesFooter({ 
-  collegeName, 
+export default function SuccessStoriesFooter({
+  collegeName,
   collegeDetailsName,
   hideShareButton = false
-}: { 
-  collegeName?: string; 
+}: {
+  collegeName?: string;
   collegeDetailsName?: string;
   hideShareButton?: boolean;
 }) {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
-  
+  const router = useRouter();
+
   const [stories, setStories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [studentProfile, setStudentProfile] = useState<any>(null);
-  
+
   // Modal state
   const [isOpen, setIsOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  
+
   // Form fields state
   const [outcomeCategory, setOutcomeCategory] = useState("Placement");
   const [outcomeTitle, setOutcomeTitle] = useState("");
   const [outcomeMetric, setOutcomeMetric] = useState("");
+  const [metricError, setMetricError] = useState("");
   const [testimonial, setTestimonial] = useState("");
-  const [status, setStatus] = useState("Published");
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [isAutoplayStopped, setIsAutoplayStopped] = useState(false);
@@ -69,7 +73,7 @@ export default function SuccessStoriesFooter({
           fetchedStories = res.data;
         }
       }
-      
+
       let filtered = fetchedStories.filter(s => s && s.testimonial);
       if (collegeName || collegeDetailsName) {
         const cName = (collegeName || "").toLowerCase().trim();
@@ -147,7 +151,19 @@ export default function SuccessStoriesFooter({
       showToast("Testimonial is required.", "warning");
       return;
     }
-    
+
+    if (outcomeMetric.trim()) {
+      const metric = outcomeMetric.trim();
+      // Allow optional currency symbol (Rs, ₹, $), spaces, digits (with optional decimals),
+      // optional range (e.g. 10 - 12), and must end with LPA (case insensitive).
+      const lpaRegex = /^(?:rs\.?|₹|\$)?\s*\d+(?:\.\d+)?\s*(?:-\s*\d+(?:\.\d+)?\s*)?LPA$/i;
+
+      if (!lpaRegex.test(metric)) {
+        setMetricError("Please format the package properly with numbers (e.g., '12 LPA', '10.5 LPA').");
+        return;
+      }
+    }
+
     try {
       setSubmitting(true);
       const payload = {
@@ -156,9 +172,9 @@ export default function SuccessStoriesFooter({
         outcome_title: outcomeTitle,
         outcome_metric: outcomeMetric || null,
         testimonial: testimonial,
-        status: status
+        status: "Published"
       };
-      
+
       const res = await createSuccessStory(payload);
       if (res) {
         showToast("Success story published successfully!", "success");
@@ -166,7 +182,6 @@ export default function SuccessStoriesFooter({
         setOutcomeTitle("");
         setOutcomeMetric("");
         setTestimonial("");
-        setStatus("Published");
         fetchStories();
       }
     } catch (error: any) {
@@ -258,8 +273,8 @@ export default function SuccessStoriesFooter({
     setIsAutoplayStopped(true);
     if (scrollContainerRef.current) {
       const { scrollLeft, clientWidth } = scrollContainerRef.current;
-      const scrollTo = direction === "left" 
-        ? scrollLeft - clientWidth / 2 
+      const scrollTo = direction === "left"
+        ? scrollLeft - clientWidth / 2
         : scrollLeft + clientWidth / 2;
       scrollContainerRef.current.scrollTo({ left: scrollTo, behavior: "smooth" });
     }
@@ -283,7 +298,7 @@ export default function SuccessStoriesFooter({
         </div>
         <div className="flex items-center gap-3">
           {!hideShareButton && (
-            <Button 
+            <Button
               onClick={() => setIsOpen(true)}
               className="bg-orange-500 hover:bg-orange-600 text-white font-bold flex items-center gap-2 px-4 py-2 rounded-xl text-xs shadow-sm transition-all duration-200 hover:-translate-y-0.5"
             >
@@ -294,17 +309,17 @@ export default function SuccessStoriesFooter({
 
           {stories.length > 0 && (
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="icon" 
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() => scroll("left")}
                 className="w-8 h-8 rounded-lg border-slate-200 hover:bg-slate-50 shadow-sm active:scale-95 transition-all bg-white"
               >
                 <ChevronLeft className="w-4 h-4 text-slate-600" />
               </Button>
-              <Button 
-                variant="outline" 
-                size="icon" 
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() => scroll("right")}
                 className="w-8 h-8 rounded-lg border-slate-200 hover:bg-slate-50 shadow-sm active:scale-95 transition-all bg-white"
               >
@@ -326,7 +341,7 @@ export default function SuccessStoriesFooter({
           )}
         </div>
       ) : (
-        <div 
+        <div
           ref={scrollContainerRef}
           className="flex gap-6 overflow-x-auto scrollbar-none scroll-smooth pb-4 snap-x snap-mandatory w-full"
           onMouseEnter={() => setIsAutoplayStopped(true)}
@@ -340,13 +355,13 @@ export default function SuccessStoriesFooter({
             const cardTheme = getCategoryColors(story.outcome_category);
 
             return (
-              <div 
-                key={story.id || index} 
+              <div
+                key={story.id || index}
                 className="w-full sm:w-[calc(50%-12px)] lg:w-[calc(33.333%-16px)] shrink-0 snap-start"
               >
                 <BaseCard className={`overflow-hidden hover:shadow-lg hover:border-slate-300 transition-all duration-300 border-slate-200 bg-white h-[180px] flex flex-col justify-between relative group rounded-xl border-l-[4px] ${cardTheme.border}`}>
                   <div className="absolute inset-0 bg-gradient-to-br from-slate-50/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                  
+
                   <div className="p-4 flex flex-col justify-between h-full space-y-2 relative z-10">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -396,145 +411,185 @@ export default function SuccessStoriesFooter({
         </div>
       )}
 
-      {/* Creation Dialog Modal */}
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
-              className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999]"
-            />
-            
-            {/* Modal Center Wrapper */}
-            <div className="fixed inset-0 flex items-center justify-center p-4 z-[1000] pointer-events-none">
-              {/* Modal Content */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                transition={{ type: "spring", duration: 0.4 }}
-                className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-100 w-full max-w-lg max-h-[85vh] flex flex-col pointer-events-auto"
-              >
-                {/* Header */}
-                <div className="bg-gradient-to-r from-orange-500 to-amber-500 p-6 relative text-white flex-shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setIsOpen(false)}
-                    className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                  <div className="flex items-center gap-3">
-                    <div className="bg-white/20 p-2 rounded-xl">
-                      <Sparkles className="w-6 h-6 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold">Share Your Success Story</h2>
-                      <p className="text-white/80 text-sm mt-0.5">Inspire the StrideNex community with your achievement</p>
-                    </div>
-                  </div>
-                </div>
+      {/* Call to Action */}
+      {!hideShareButton && (
+        <div className="mt-8">
+          <BaseCard className="bg-gradient-to-r from-orange-50 to-amber-50 border-orange-100 overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-orange-200/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-amber-200/20 rounded-full blur-2xl -translate-x-1/2 translate-y-1/2" />
 
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 bg-white">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Outcome Category</label>
-                    <select
-                      value={outcomeCategory}
-                      onChange={(e) => setOutcomeCategory(e.target.value)}
-                      className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white"
-                    >
-                      <option value="Placement">Placement</option>
-                      <option value="Startup">Startup</option>
-                      <option value="Internship">Internship</option>
-                      <option value="Higher Studies">Higher Studies</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Status</label>
-                    <select
-                      value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                      className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white"
-                    >
-                      <option value="Draft">Draft</option>
-                      <option value="Published">Published</option>
-                      <option value="Archived">Archived</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Outcome Title</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. SDE @ Google, ML Engineer @ Microsoft"
-                      value={outcomeTitle}
-                      onChange={(e) => setOutcomeTitle(e.target.value)}
-                      className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white text-slate-800"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Outcome Metric / Package (Optional)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. ₹42 LPA, ₹12 LPA"
-                      value={outcomeMetric}
-                      onChange={(e) => setOutcomeMetric(e.target.value)}
-                      className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white text-slate-800"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Testimonial</label>
-                    <textarea
-                      required
-                      rows={4}
-                      placeholder="Share your experience and how StrideNex helped you achieve your goals..."
-                      value={testimonial}
-                      onChange={(e) => setTestimonial(e.target.value)}
-                      className="w-full p-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm resize-none bg-white text-slate-800"
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setIsOpen(false)}
-                      className="px-4 py-2 text-sm font-semibold border-slate-200 text-slate-600 hover:bg-slate-50"
-                      disabled={submitting}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      className="px-6 py-2 text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2"
-                      disabled={submitting}
-                    >
-                      {submitting ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          Publishing...
-                        </>
-                      ) : (
-                        "Publish Story"
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              </motion.div>
+            <div className="relative p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 mb-1">Your Success Story Starts Today</h2>
+                <p className="text-slate-500 max-w-xl text-xs font-medium">
+                  Join 10,000+ students building their future on StrideNex
+                </p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <Button 
+                  onClick={() => router.push("/student/dashboard/path")}
+                  className="bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm rounded-xl px-5 py-2.5 active:scale-95 transition-all"
+                >
+                  Start Your Path
+                </Button>
+                <Button
+                  onClick={() => setIsOpen(true)}
+                  variant="outline"
+                  className="border-orange-200 text-orange-600 hover:bg-orange-100/50 hover:text-orange-700 hover:border-orange-300 font-semibold text-sm rounded-xl px-5 py-2.5 transition-all"
+                >
+                  Share Your Story
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
             </div>
-          </>
-        )}
-      </AnimatePresence>
+          </BaseCard>
+        </div>
+      )}
+
+      {/* Creation Dialog Modal */}
+      {typeof window !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {isOpen && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsOpen(false)}
+                className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999]"
+              />
+
+              {/* Modal Center Wrapper */}
+              <div className="fixed inset-0 flex items-center justify-center p-4 z-[1000] pointer-events-none">
+                {/* Modal Content */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                  transition={{ type: "spring", duration: 0.4 }}
+                  className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-100 w-full max-w-lg max-h-[85vh] flex flex-col pointer-events-auto"
+                >
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-orange-500 to-amber-500 p-6 relative text-white flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setIsOpen(false)}
+                      className="absolute top-4 right-4 text-white/80 hover:text-white transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                    <div className="flex items-center gap-3">
+                      <div className="bg-white/20 p-2 rounded-xl">
+                        <Sparkles className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h2 className="text-xl font-bold">Share Your Success Story</h2>
+                        <p className="text-white/80 text-sm mt-0.5">Inspire the StrideNex community with your achievement</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Form */}
+                  <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 bg-white">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Outcome Category</label>
+                      <select
+                        value={outcomeCategory}
+                        onChange={(e) => setOutcomeCategory(e.target.value)}
+                        className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white"
+                      >
+                        <option value="Placement">Placement</option>
+                        <option value="Startup">Startup</option>
+                        <option value="Internship">Internship</option>
+                        <option value="Higher Studies">Higher Studies</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Outcome Title</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. SDE @ Google, ML Engineer @ Microsoft"
+                        value={outcomeTitle}
+                        onChange={(e) => setOutcomeTitle(e.target.value)}
+                        className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white text-slate-800"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">
+                        Outcome Metric / Package (Optional)
+                        <span className="block text-xs text-slate-500 font-normal mt-0.5">Please format as "[Number] LPA" (e.g. 12 LPA, 50 LPA)</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 12 LPA"
+                        value={outcomeMetric}
+                        onChange={(e) => {
+                          setOutcomeMetric(e.target.value);
+                          if (metricError) setMetricError("");
+                        }}
+                        className={`w-full h-10 px-3 rounded-lg border focus:outline-none focus:ring-2 focus:border-transparent text-sm bg-white text-slate-800 transition-colors ${metricError
+                            ? "border-rose-300 focus:ring-rose-500/30"
+                            : "border-slate-200 focus:ring-orange-500"
+                          }`}
+                      />
+                      {metricError && (
+                        <p className="text-rose-500 text-xs mt-1.5 font-medium flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {metricError}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Testimonial</label>
+                      <textarea
+                        required
+                        rows={4}
+                        placeholder="Share your experience and how StrideNex helped you achieve your goals..."
+                        value={testimonial}
+                        onChange={(e) => setTestimonial(e.target.value)}
+                        className="w-full p-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm resize-none bg-white text-slate-800"
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-3 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsOpen(false)}
+                        className="px-4 py-2 text-sm font-semibold border-slate-200 text-slate-600 hover:bg-slate-50"
+                        disabled={submitting}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        className="px-6 py-2 text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2"
+                        disabled={submitting}
+                      >
+                        {submitting ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Publishing...
+                          </>
+                        ) : (
+                          "Publish Story"
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </motion.div>
+              </div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }
