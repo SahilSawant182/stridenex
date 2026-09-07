@@ -400,7 +400,7 @@ export default function StudentOnboarding({
 
     {
       fieldname: "academicYear",
-      label: "Academic Year",
+      label: "Academic Years",
       fieldtype: "Data",
       required: false,
       placeholder: "Academic years",
@@ -828,7 +828,7 @@ export default function StudentOnboarding({
       const formattedMobile = mobileVal ? `+91-${mobileVal}` : "";
 
       // Format courses type as array of objects
-      const coursesTypeArray = typeof formData.courses === "string" 
+      const coursesTypeArray = typeof formData.courses === "string"
         ? (formData.courses ? [{ course_type: formData.courses }] : [])
         : Array.isArray(formData.courses)
           ? formData.courses.map((course: string) => ({ course_type: course }))

@@ -426,7 +426,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
     if (!showCompletenessPopup) return null;
     return createPortal(
       <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-        
+
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -482,11 +482,11 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
     { name: "email_id", label: "Email ID", type: "email", icon: Mail, required: true, disabled: true, colSpan: 2 },
     { name: "mobile_no", label: "Mobile No", type: "text", icon: Phone, required: true },
     { name: "college", label: "College", type: "text", icon: Building2, required: true, disabled: true, colSpan: 2 },
-    { 
-      name: "course_type", 
-      label: "Course Type", 
-      type: "select", 
-      icon: GraduationCap, 
+    {
+      name: "course_type",
+      label: "Course Type",
+      type: "select",
+      icon: GraduationCap,
       required: true,
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "Course Type" },
@@ -496,11 +496,11 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         return items.map((item: any) => ({ value: item.name || item.course_type, label: item.course_type || item.name }));
       }
     },
-    { 
-      name: "stream", 
-      label: "Stream", 
-      type: "select", 
-      icon: Layers, 
+    {
+      name: "stream",
+      label: "Stream",
+      type: "select",
+      icon: Layers,
       required: true,
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "Stream" },
@@ -510,11 +510,11 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         return items.map((item: any) => ({ value: item.name, label: item.name }));
       }
     },
-    { 
-      name: "course", 
-      label: "Course", 
-      type: "select", 
-      icon: GraduationCap, 
+    {
+      name: "course",
+      label: "Course",
+      type: "select",
+      icon: GraduationCap,
       required: true,
       disabled: !studentFormState.stream || !studentFormState.course_type,
       apiEndpoint: (studentFormState.stream && studentFormState.course_type)
@@ -529,11 +529,11 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         return courses.map((item: any) => ({ value: item.name, label: item.course_name || item.name }));
       }
     },
-    { 
-      name: "department", 
-      label: "Department", 
-      type: "select", 
-      icon: Shield, 
+    {
+      name: "department",
+      label: "Department",
+      type: "select",
+      icon: Shield,
       required: true,
       disabled: !studentFormState.course,
       apiEndpoint: studentFormState.course
@@ -554,11 +554,11 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         return deptOptions.map(({ value, label }: { value: string; label: string }) => ({ value, label }));
       }
     },
-    { 
-      name: "semester", 
-      label: "Semester", 
-      type: "select", 
-      icon: Calendar, 
+    {
+      name: "semester",
+      label: "Semester",
+      type: "select",
+      icon: Calendar,
       required: true,
       disabled: !studentFormState.department,
       apiEndpoint: studentFormState.department
@@ -578,7 +578,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
     },
     { name: "current_year", label: "Current Year", type: "select", icon: Target, options: ["First Year", "Second Year", "Third Year", "Final Year"], required: true },
     { name: "date_of_birth", label: "Date of Birth", type: "date", icon: Calendar, required: true, textTransform: "uppercase" },
-    { name: "gender", label: "Gender", type: "select", icon: Users, options: ["Male", "Female", "Other"], required: true, disabled: true },
+    { name: "gender", label: "Gender", type: "select", icon: Users, options: ["Male", "Female", "Other"], required: true },
     { name: "linkedin", label: "LinkedIn URL", type: "url", icon: Linkedin },
     { name: "github", label: "GitHub URL", type: "url", icon: Github },
     { name: "cgpa", label: "CGPA", type: "number", icon: Award, required: true },
@@ -1427,8 +1427,8 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
           </div>
           <div>
             <p className={`text-[10px] ${config.textColor} font-medium uppercase tracking-wider mb-0.5 flex items-center gap-1`}>
-              {config.greeting} {role !== "industry" && <span>👋</span>}
-              <span className="ml-2 text-xs bg-white/10 px-2 py-0.5 rounded-full">
+              {role !== "student" && config.greeting} {role !== "industry" && role !== "student" && <span>👋</span>}
+              <span className={`${role !== "student" ? "ml-2" : ""} text-xs bg-white/10 px-2 py-0.5 rounded-full`}>
                 {config.roleName}
               </span>
             </p>
