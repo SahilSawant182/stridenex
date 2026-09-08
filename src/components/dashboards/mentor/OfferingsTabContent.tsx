@@ -135,8 +135,8 @@ export default function OfferingsTabContent() {
 
     if (isGroupOrWorkshop) {
       fields.push(
-        { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, colSpan: 1, placeholder: "DD/MM/YYYY", textTransform: "uppercase", min: new Date().toISOString().split('T')[0] },
-        { name: "end_date", label: "End Date", type: "date", icon: Calendar, required: true, colSpan: 1, placeholder: "DD/MM/YYYY", textTransform: "uppercase", min: modalValues.start_date },
+        { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, colSpan: 1, placeholder: "DD-MM-YYYY", textTransform: "uppercase", min: new Date().toISOString().split('T')[0] },
+        { name: "end_date", label: "End Date", type: "date", icon: Calendar, required: true, colSpan: 1, placeholder: "DD-MM-YYYY", textTransform: "uppercase", min: modalValues.start_date },
         { name: "start_time", label: "Start Time", type: "time", icon: Timer, required: true, colSpan: 1 },
         { name: "end_time", label: "End Time", type: "time", icon: Timer, required: true, colSpan: 1 }
       );

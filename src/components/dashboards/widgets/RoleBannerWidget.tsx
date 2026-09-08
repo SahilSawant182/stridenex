@@ -105,7 +105,7 @@ const roleConfig = {
     defaultProgress: 68
   },
   mentor: {
-    greeting: "Good Morning",
+    greeting: "",
     roleName: "Verified Mentor",
     icon: Users,
     gradient: "from-[#2e1065] to-[#4c1d95]", // Deep violet
@@ -1446,7 +1446,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
           </div>
           <div>
             <p className={`text-[10px] ${config.textColor} font-medium uppercase tracking-wider mb-0.5 flex items-center gap-1`}>
-              {role !== "student" && config.greeting} {role !== "industry" && role !== "student" && <span>👋</span>}
+              {role !== "student" && config.greeting} {role !== "industry" && role !== "student" && role !== "mentor" && <span>👋</span>}
               <span className={`${role !== "student" ? "ml-2" : ""} text-xs bg-white/10 px-2 py-0.5 rounded-full`}>
                 {config.roleName}
               </span>

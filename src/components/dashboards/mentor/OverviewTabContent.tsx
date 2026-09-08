@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import dayjs, { Dayjs } from 'dayjs';
+import { format } from "date-fns";
+
 import { useAuth } from "@/context/AuthContext";
 import { getUpcomingSessions, getPendingRequests, rescheduleSession, getMentorDashboardStats, getMentorPendingVerifications, getMentorDashboardData } from "@/services/mentor.services";
 import { useToast } from "@/context/ToastContext";
+import { DatePicker } from "@/components/ui/date-picker";
 
 import { motion } from "framer-motion";
 import { createPortal } from "react-dom";
@@ -673,61 +672,12 @@ export default function OverviewTabContent() {
               <div>
                 <label className="block text-xs font-bold text-slate-600 mb-1.5 uppercase tracking-wider">New Date</label>
                 <div className="relative w-full">
-                  <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <DatePicker
-                      value={rescheduleDate ? dayjs(rescheduleDate) : null}
-                      onChange={(newValue: Dayjs | null) => {
-                        if (newValue) {
-                          setRescheduleDate(newValue.format('YYYY-MM-DD'));
-                        } else {
-                          setRescheduleDate("");
-                        }
-                      }}
-                      format="DD/MM/YYYY"
-                      slotProps={{
-                        textField: {
-                          fullWidth: true,
-                          placeholder: "Select Date",
-                          required: true,
-                          size: "small",
-                          sx: {
-                            '& .MuiInputBase-root': {
-                              backgroundColor: 'white',
-                              borderRadius: '0.5rem',
-                              fontSize: '0.875rem',
-                              color: '#334155',
-                              fontWeight: 500,
-                              padding: '0',
-                              border: '1px solid #e2e8f0',
-                              fontFamily: 'inherit',
-                              transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-                            },
-                            '& .MuiInputBase-root.Mui-focused': {
-                              boxShadow: '0 0 0 2px rgba(249, 115, 22, 0.2)',
-                              borderColor: '#f97316',
-                            },
-                            '& .MuiInputBase-input': {
-                              padding: '0.5rem 0.75rem',
-                              height: 'auto',
-                              boxSizing: 'border-box',
-                            },
-                            '& .MuiInputBase-input::placeholder': {
-                              color: '#94a3b8',
-                              opacity: 1,
-                            },
-                            '& .MuiOutlinedInput-notchedOutline': {
-                              border: 'none',
-                            },
-                            '& .MuiIconButton-root': {
-                              padding: '4px',
-                              marginRight: '4px',
-                              color: '#94a3b8',
-                            }
-                          },
-                        }
-                      }}
-                    />
-                  </LocalizationProvider>
+                  <DatePicker
+                    value={rescheduleDate || ""}
+                    onChange={(dateStr) => setRescheduleDate(dateStr || "")}
+                    className="w-full h-10 px-4 py-2 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all text-sm font-medium text-slate-700 uppercase"
+                    required
+                  />
                 </div>
               </div>
 

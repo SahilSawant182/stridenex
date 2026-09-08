@@ -452,7 +452,7 @@ export default function StudentOnboarding({
       label: "Date of Birth",
       fieldtype: "Date",
       required: true,
-      placeholder: "DD/MM/YYYY",
+      placeholder: "DD-MM-YYYY",
       layout: "half",
       inputClassName: "uppercase"
     },

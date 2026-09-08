@@ -297,8 +297,8 @@ export default function HabitsTabContent() {
     // Habit fields for dynamic modal
     const habitFields: DynamicField[] = [
         { name: "plan_name", label: "Plan Name", type: "text", icon: Target, required: true, colSpan: 2, placeholder: "e.g., Daily Coding Challenge", disabled: !!habitToEdit },
-        { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "MM/DD/YYYY", textTransform: "uppercase" },
-        { name: "end_date", label: "End Date", type: "date", icon: Calendar, placeholder: "MM/DD/YYYY", textTransform: "uppercase" },
+        { name: "start_date", label: "Start Date", type: "date", icon: Calendar, required: true, placeholder: "DD-MM-YYYY", textTransform: "uppercase" },
+        { name: "end_date", label: "End Date", type: "date", icon: Calendar, placeholder: "DD-MM-YYYY", textTransform: "uppercase" },
         // { name: "linked_path", label: "Linked Path", type: "text", icon: Link, placeholder: "e.g., /career/software-engineering" },
         {
             name: "habits",

@@ -7,10 +7,7 @@ import {
   Loader2, Plus, X, ChevronDown, ChevronUp, FilePlus2, BadgeCheck,
   Calendar, DollarSign, Clock, Tag, Eye, RefreshCw, Edit2, Trash2
 } from "lucide-react";
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import dayjs, { Dayjs } from 'dayjs';
+
 import { useIndustry } from "@/context/IndustryContext";
 import {
   generateEmailTemplate,
@@ -21,6 +18,9 @@ import {
   deleteOfferTemplate,
   OfferTemplatePayload,
 } from "@/services/industry.services";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { toast } from "sonner";
+import { DatePicker } from "@/components/ui/date-picker";
 
 /* ─── types ─────────────────────────────────────────────── */
 interface OfferTemplate {
@@ -402,118 +402,18 @@ export default function SettingsTabContent() {
                       placeholder="e.g. 6 Months" className={inputCls} />
                   </Field>
                   <Field label="Effective From">
-                    <div className="relative w-full">
-                      <LocalizationProvider dateAdapter={AdapterDayjs}>
-                        <DatePicker
-                          value={form.effective_from ? dayjs(form.effective_from) : null}
-                          onChange={(newValue: Dayjs | null) => {
-                            if (newValue) {
-                              set("effective_from", newValue.format('YYYY-MM-DD'));
-                            } else {
-                              set("effective_from", "");
-                            }
-                          }}
-                          format="DD/MM/YYYY"
-                          slotProps={{
-                            textField: {
-                              fullWidth: true,
-                              placeholder: "Select Date",
-                              size: "small",
-                              sx: {
-                                '& .MuiInputBase-root': {
-                                  backgroundColor: 'white',
-                                  borderRadius: '0.75rem',
-                                  fontSize: '0.875rem',
-                                  color: '#334155',
-                                  padding: '0',
-                                  border: '1px solid #e2e8f0',
-                                  fontFamily: 'inherit',
-                                  transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-                                },
-                                '& .MuiInputBase-root.Mui-focused': {
-                                  boxShadow: '0 0 0 2px rgba(124, 58, 237, 0.2)',
-                                  borderColor: '#7c3aed',
-                                },
-                                '& .MuiInputBase-input': {
-                                  padding: '0.625rem 1rem',
-                                  height: 'auto',
-                                  boxSizing: 'border-box',
-                                },
-                                '& .MuiInputBase-input::placeholder': {
-                                  color: '#94a3b8',
-                                  opacity: 1,
-                                },
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                  border: 'none',
-                                },
-                                '& .MuiIconButton-root': {
-                                  padding: '4px',
-                                  marginRight: '4px',
-                                  color: '#94a3b8',
-                                }
-                              },
-                            }
-                          }}
-                        />
-                      </LocalizationProvider>
-                    </div>
+                    <DatePicker 
+                      value={form.effective_from} 
+                      onChange={(dateStr) => set("effective_from", dateStr || "")} 
+                      className={inputCls} 
+                    />
                   </Field>
                   <Field label="Effective To">
-                    <div className="relative w-full">
-                      <LocalizationProvider dateAdapter={AdapterDayjs}>
-                        <DatePicker
-                          value={form.effective_to ? dayjs(form.effective_to) : null}
-                          onChange={(newValue: Dayjs | null) => {
-                            if (newValue) {
-                              set("effective_to", newValue.format('YYYY-MM-DD'));
-                            } else {
-                              set("effective_to", "");
-                            }
-                          }}
-                          format="DD/MM/YYYY"
-                          slotProps={{
-                            textField: {
-                              fullWidth: true,
-                              placeholder: "Select Date",
-                              size: "small",
-                              sx: {
-                                '& .MuiInputBase-root': {
-                                  backgroundColor: 'white',
-                                  borderRadius: '0.75rem',
-                                  fontSize: '0.875rem',
-                                  color: '#334155',
-                                  padding: '0',
-                                  border: '1px solid #e2e8f0',
-                                  fontFamily: 'inherit',
-                                  transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-                                },
-                                '& .MuiInputBase-root.Mui-focused': {
-                                  boxShadow: '0 0 0 2px rgba(124, 58, 237, 0.2)',
-                                  borderColor: '#7c3aed',
-                                },
-                                '& .MuiInputBase-input': {
-                                  padding: '0.625rem 1rem',
-                                  height: 'auto',
-                                  boxSizing: 'border-box',
-                                },
-                                '& .MuiInputBase-input::placeholder': {
-                                  color: '#94a3b8',
-                                  opacity: 1,
-                                },
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                  border: 'none',
-                                },
-                                '& .MuiIconButton-root': {
-                                  padding: '4px',
-                                  marginRight: '4px',
-                                  color: '#94a3b8',
-                                }
-                              },
-                            }
-                          }}
-                        />
-                      </LocalizationProvider>
-                    </div>
+                    <DatePicker 
+                      value={form.effective_to} 
+                      onChange={(dateStr) => set("effective_to", dateStr || "")} 
+                      className={inputCls} 
+                    />
                   </Field>
                 </div>
 

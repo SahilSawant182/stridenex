@@ -17,7 +17,9 @@ export default function ConditionalLayout({
     const isPublicPage = pathname === '/' ||
         pathname?.startsWith('/about') ||
         pathname?.startsWith('/privacy-policy') ||
-        pathname?.startsWith('/terms-of-use')
+        pathname?.startsWith('/terms-of-use') ||
+        pathname?.startsWith('/blogs') ||
+        pathname?.startsWith('/bloggers');
 
     // Only show navbar and footer on public pages
     if (isPublicPage) {

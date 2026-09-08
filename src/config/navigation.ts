@@ -270,7 +270,12 @@ about: {
     ]
   },
   
-  
+  blogs: {
+    label: "Blogs",
+    href: "/blogs",
+    icon: Newspaper,
+    sections: []
+  },
   
   join: {
     label: "Join Us",

@@ -7,6 +7,7 @@ import { X, Loader2, Save, LucideIcon, ChevronDown, Check, Search, Plus } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import { apiService } from "@/services/api.services";
 import { parseBackendError } from "@/utils/error.utils";
 import { disableToDateBeforeFromDate, getLocalDateString } from "@/utils/date.utils";
@@ -902,33 +903,48 @@ function DynamicFieldItem({
             }
             setFormData(finalData);
           })
-        ) : (
-          <Input
-            name={field.name}
-            type={field.type}
-            value={formData[field.name] !== undefined && formData[field.name] !== null ? formData[field.name] : ""}
-            onChange={handleChange}
-            onFocus={() => {
-              if (field.onFocus) field.onFocus(field.name);
-              if (onFieldFocus) onFieldFocus(field.name);
-            }}
-            placeholder={field.placeholder}
-            required={field.required}
-            disabled={field.disabled}
-            min={
-              field.type === "date" && (field.name === "end_date" || field.name === "to_date")
-                ? disableToDateBeforeFromDate(formData.start_date || formData.from_date) || getLocalDateString()
-                : field.min
-            }
-            max={
-              field.type === "date" && field.name === "regDeadline"
-                ? getOneDayPrior(formData.driveDate)
-                : field.max
-            }
-            style={(field.textTransform || (field as any).testTransform) ? { textTransform: field.textTransform || (field as any).testTransform } : {}}
-            className={`${field.icon ? 'pl-12' : 'px-4'} h-12 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-slate-900 ${(field.textTransform || (field as any).testTransform) === 'uppercase' ? 'placeholder:uppercase' : ''} disabled:bg-slate-50 disabled:text-slate-500`}
-          />
-        )}
+          ) : field.type === "date" ? (
+            <DatePicker
+              value={formData[field.name] || ""}
+              onChange={(dateStr) => {
+                const e = { target: { name: field.name, value: dateStr || "" } };
+                handleChange(e as any);
+              }}
+              placeholder={field.placeholder}
+              required={field.required}
+              disabled={field.disabled}
+              minDate={
+                (field.name === "end_date" || field.name === "to_date")
+                  ? new Date(disableToDateBeforeFromDate(formData.start_date || formData.from_date) || getLocalDateString())
+                  : field.min ? new Date(field.min) : undefined
+              }
+              maxDate={
+                field.name === "regDeadline"
+                  ? new Date(getOneDayPrior(formData.driveDate))
+                  : field.max ? new Date(field.max) : undefined
+              }
+              hideIcon={!!field.icon}
+              className={`${field.icon ? 'pl-12' : 'px-4'} h-12 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-slate-900 ${(field.textTransform || (field as any).testTransform) === 'uppercase' ? 'uppercase placeholder:uppercase' : ''} disabled:bg-slate-50 disabled:text-slate-500`}
+            />
+          ) : (
+            <Input
+              name={field.name}
+              type={field.type}
+              value={formData[field.name] !== undefined && formData[field.name] !== null ? formData[field.name] : ""}
+              onChange={handleChange}
+              onFocus={() => {
+                if (field.onFocus) field.onFocus(field.name);
+                if (onFieldFocus) onFieldFocus(field.name);
+              }}
+              placeholder={field.placeholder}
+              required={field.required}
+              disabled={field.disabled}
+              min={field.min}
+              max={field.max}
+              style={(field.textTransform || (field as any).testTransform) ? { textTransform: field.textTransform || (field as any).testTransform } : {}}
+              className={`${field.icon ? 'pl-12' : 'px-4'} h-12 rounded-2xl border ${errors[field.name] ? 'border-red-500 bg-red-50/10' : 'border-slate-200'} focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all font-semibold text-slate-900 ${(field.textTransform || (field as any).testTransform) === 'uppercase' ? 'uppercase placeholder:uppercase' : ''} disabled:bg-slate-50 disabled:text-slate-500`}
+            />
+          )}
       </div>
       {errors[field.name] && (
         <p className="text-[10px] font-bold text-red-500 ml-1 mt-1 animate-pulse">
