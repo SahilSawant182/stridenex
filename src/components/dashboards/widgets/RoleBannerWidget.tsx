@@ -476,127 +476,6 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
     );
   };
 
-  const studentFields: DynamicField[] = useMemo(() => [
-    { name: "first_name", label: "First Name", type: "text", icon: Users, required: true, disabled: true },
-    { name: "last_name", label: "Last Name", type: "text", icon: Users, required: true, disabled: true },
-    { name: "email_id", label: "Email ID", type: "email", icon: Mail, required: true, disabled: true, colSpan: 2 },
-    { name: "mobile_no", label: "Mobile No", type: "text", icon: Phone, required: true },
-    { name: "college", label: "College", type: "text", icon: Building2, required: true, disabled: true, colSpan: 2 },
-    {
-      name: "course_type",
-      label: "Course Type",
-      type: "select",
-      icon: GraduationCap,
-      required: true,
-      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
-      apiParams: { doctype: "Course Type" },
-      mapOptions: (data: any) => {
-        let items = Array.isArray(data) ? data : (data?.data?.data || data?.message?.data || data?.message || data?.data || []);
-        items = Array.isArray(items) ? items : [];
-        return items.map((item: any) => ({ value: item.name || item.course_type, label: item.course_type || item.name }));
-      }
-    },
-    {
-      name: "stream",
-      label: "Stream",
-      type: "select",
-      icon: Layers,
-      required: true,
-      apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
-      apiParams: { doctype: "Stream" },
-      mapOptions: (data: any) => {
-        let items = Array.isArray(data) ? data : (data?.data?.data || data?.message?.data || data?.message || data?.data || []);
-        items = Array.isArray(items) ? items : [];
-        return items.map((item: any) => ({ value: item.name, label: item.name }));
-      }
-    },
-    {
-      name: "course",
-      label: "Course",
-      type: "select",
-      icon: GraduationCap,
-      required: true,
-      disabled: !studentFormState.stream || !studentFormState.course_type,
-      apiEndpoint: (studentFormState.stream && studentFormState.course_type)
-        ? "method/stridenex_app.api_stridenex_app.college.master.get_courses_by_type"
-        : undefined,
-      apiParams: (studentFormState.stream && studentFormState.course_type) ? {
-        stream: studentFormState.stream,
-        course_type: studentFormState.course_type
-      } : undefined,
-      mapOptions: (data: any) => {
-        const courses = data?.data?.courses || data?.courses || data?.message?.data?.courses || [];
-        return courses.map((item: any) => ({ value: item.name, label: item.course_name || item.name }));
-      }
-    },
-    {
-      name: "department",
-      label: "Department",
-      type: "select",
-      icon: Shield,
-      required: true,
-      disabled: !studentFormState.course,
-      apiEndpoint: studentFormState.course
-        ? "method/stridenex_app.stridenex_app.doctype.college_department.college_department.get_departments_by_course"
-        : undefined,
-      apiParams: studentFormState.course ? {
-        courses: studentFormState.course
-      } : undefined,
-      mapOptions: (data: any) => {
-        const depts = data?.data || data?.message?.data || [];
-        const deptOptions = depts.map((d: any) => ({
-          value: d.name,
-          label: d.department_name || d.name,
-          academicYears: d.academic_years || "",
-          semester: d.semester || "" // Will fallback to empty if missing
-        }));
-        setStudentDepartmentOptions(deptOptions);
-        return deptOptions.map(({ value, label }: { value: string; label: string }) => ({ value, label }));
-      }
-    },
-    {
-      name: "semester",
-      label: "Semester",
-      type: "select",
-      icon: Calendar,
-      required: true,
-      disabled: !studentFormState.department,
-      apiEndpoint: studentFormState.department
-        ? "method/stridenex_app.api_stridenex_app.student.masters.get_semester"
-        : undefined,
-      apiMethod: "GET",
-      apiParams: studentFormState.department ? {
-        semester: studentDepartmentOptions.find(d => d.value === studentFormState.department)?.semester || ""
-      } : undefined,
-      mapOptions: (data: any) => {
-        let semesters = Array.isArray(data) ? data : (data?.data?.data || data?.message?.data || data?.message || data?.data || []);
-        semesters = Array.isArray(semesters) ? semesters : [];
-        return semesters.map((sem: any) => ({
-          value: sem.name,
-          label: sem.name
-        }));
-      }
-    },
-    { name: "current_year", label: "Current Year", type: "select", icon: Target, options: ["First Year", "Second Year", "Third Year", "Final Year"], required: true },
-    { name: "date_of_birth", label: "Date of Birth", type: "date", icon: Calendar, required: true, textTransform: "uppercase" },
-    { name: "gender", label: "Gender", type: "select", icon: Users, options: ["Male", "Female", "Other"], required: true },
-    { name: "linkedin", label: "LinkedIn URL", type: "url", icon: Linkedin },
-    { name: "github", label: "GitHub URL", type: "url", icon: Github },
-    { name: "cgpa", label: "CGPA", type: "number", icon: Award, required: true },
-    {
-      name: "marksheet",
-      label: "Upload Marksheet / Result",
-      type: "custom",
-      colSpan: 2,
-      customRender: (formData, onChange) => (
-        <MarksheetUploader
-          value={formData.marksheet}
-          onChange={(val) => onChange(val)}
-        />
-      )
-    },
-  ], [studentFormState.course_type, studentFormState.stream, studentFormState.course, studentFormState.department, studentDepartmentOptions]);
-
   const mentorFields: DynamicField[] = useMemo(() => [
     {
       name: "first_name", label: "First Name", type: "text",
@@ -879,29 +758,8 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
   const handleUpdateProfile = async (formData: any) => {
     if (!currentUser) return;
     setModalLoading(true);
-    setModalError(null);
     try {
-      if (role === "student") {
-        let marksheetUrl = formData.marksheet;
-
-        if (formData.marksheet instanceof File) {
-          const uploadRes = await uploadFileApi(
-            formData.marksheet,
-            "Student",
-            currentUser,
-            "marksheet"
-          );
-          marksheetUrl = uploadRes.file_url || uploadRes.file_name;
-        }
-
-        const payload = {
-          ...formData,
-          marksheet: marksheetUrl || null,
-          name: currentUser
-        };
-        await updateStudent(currentUser, payload);
-        await fetchStudentData();
-      } else if (role === "industry") {
+      if (role === "industry") {
         // Transform the payload to match the requested nested structure
         const transformedPayload = {
           ...formData,
@@ -1332,15 +1190,15 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
   if (onlyModal) {
     return (
       <>
-        {(role === "student" || role === "industry" || role === "college" || role === "mentor") && (
+        {(role === "industry" || role === "college" || role === "mentor") && (
           <DashboardDynamicModal
             isOpen={isModalOpen}
             onClose={handleCloseUpdateProfileModal}
-            title={role === "student" || role === "mentor" ? "Update Profile" : role === "college" ? "Edit College Details" : "Edit Company Profile"}
-            subtitle={role === "student" ? "Keep your academic details up to date" : role === "mentor" ? "Keep your profile details up to date" : role === "college" ? "Update your college onboarding information" : (customData?.title || "Manage your company's presence")}
-            headerIcon={role === "student" || role === "mentor" ? Pen : role === "college" ? Building2 : Building2}
-            iconBgColor={role === "student" ? "bg-orange-500" : role === "college" ? "bg-emerald-600" : role === "mentor" ? "bg-violet-600" : "bg-blue-600"}
-            fields={role === "student" ? studentFields : role === "college" ? collegeFields : role === "mentor" ? mentorFields : (customData?.fields || industryFields)}
+            title={role === "mentor" ? "Update Profile" : role === "college" ? "Edit College Details" : "Edit Company Profile"}
+            subtitle={role === "mentor" ? "Keep your profile details up to date" : role === "college" ? "Update your college onboarding information" : (customData?.title || "Manage your company's presence")}
+            headerIcon={role === "mentor" ? Pen : Building2}
+            iconBgColor={role === "college" ? "bg-emerald-600" : role === "mentor" ? "bg-violet-600" : "bg-blue-600"}
+            fields={role === "college" ? collegeFields : role === "mentor" ? mentorFields : (customData?.fields || industryFields)}
             initialValues={computedInitialValues}
             onSubmit={handleUpdateProfile}
             loading={modalLoading}
@@ -1351,39 +1209,15 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
                   currentImageUrl={userImage}
                   initials={getInitials()}
                   bgClass={
-                    role === "student" ? "bg-gradient-to-tr from-blue-600 to-orange-500" :
-                      role === "college" ? "bg-emerald-600" :
-                        role === "industry" ? "bg-purple-600" :
-                          "bg-violet-600"
+                    role === "college" ? "bg-emerald-600" :
+                      role === "industry" ? "bg-purple-600" :
+                        "bg-violet-600"
                   }
                   size="md"
                 />
               </div>
             }
             onValuesChange={(updatedValues, changedFieldName) => {
-              if (role === "student") {
-                const sideEffects: any = {};
-                if (changedFieldName === "course_type") {
-                  sideEffects.course = "";
-                  sideEffects.department = "";
-                  sideEffects.semester = "";
-                }
-                if (changedFieldName === "stream") {
-                  sideEffects.course = "";
-                  sideEffects.department = "";
-                  sideEffects.semester = "";
-                }
-                if (changedFieldName === "course") {
-                  sideEffects.department = "";
-                  sideEffects.semester = "";
-                }
-                if (changedFieldName === "department") {
-                  sideEffects.semester = "";
-                }
-                const newFormState = { ...updatedValues, ...sideEffects };
-                setStudentFormState(newFormState);
-                return sideEffects;
-              }
               if (role === "college") {
                 const sideEffects: any = {};
                 if (changedFieldName === "state") {
@@ -1458,7 +1292,15 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
                   <Shield className="w-3 h-3" /> VERIFIED
                 </span>
               )}
-              {(role === "student" || role === "industry" || role === "college" || role === "mentor") && (
+              {role === "student" && (
+                <Link
+                  href="/student/dashboard/resume"
+                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group/edit"
+                >
+                  <Pen className="w-[18px] h-[18px] text-white/50 group-hover/edit:text-white transition-colors" strokeWidth={2.5} />
+                </Link>
+              )}
+              {(role === "industry" || role === "college" || role === "mentor") && (
                 <button
                   onClick={() => {
                     if (role === "college") {
@@ -1476,13 +1318,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
               )}
               {role === "student" && !onlyModal && (
                 <div className="flex items-center gap-2 ml-2">
-                  <Link
-                    href="/student/dashboard/resume"
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-500/20 active:scale-95 whitespace-nowrap"
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    Create Resume
-                  </Link>
+
 
                   <Link
                     href="/student/dashboard?preview=resume"
@@ -1546,15 +1382,15 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         </div>
       )}
 
-      {(role === "student" || role === "industry" || role === "college" || role === "mentor") && (
+      {(role === "industry" || role === "college" || role === "mentor") && (
         <DashboardDynamicModal
           isOpen={isModalOpen}
           onClose={handleCloseUpdateProfileModal}
-          title={role === "student" || role === "mentor" ? "Update Profile" : role === "college" ? "Edit College Details" : "Edit Company Profile"}
-          subtitle={role === "student" ? "Keep your academic details up to date" : role === "mentor" ? "Keep your profile details up to date" : role === "college" ? "Update your college onboarding information" : (customData?.title || "Manage your company's presence")}
-          headerIcon={role === "student" || role === "mentor" ? Pen : role === "college" ? Building2 : Building2}
-          iconBgColor={role === "student" ? "bg-orange-500" : role === "college" ? "bg-emerald-600" : role === "mentor" ? "bg-violet-600" : "bg-blue-600"}
-          fields={role === "student" ? studentFields : role === "college" ? collegeFields : role === "mentor" ? mentorFields : (customData?.fields || industryFields)}
+          title={role === "mentor" ? "Update Profile" : role === "college" ? "Edit College Details" : "Edit Company Profile"}
+          subtitle={role === "mentor" ? "Keep your profile details up to date" : role === "college" ? "Update your college onboarding information" : (customData?.title || "Manage your company's presence")}
+          headerIcon={role === "mentor" ? Pen : Building2}
+          iconBgColor={role === "college" ? "bg-emerald-600" : role === "mentor" ? "bg-violet-600" : "bg-blue-600"}
+          fields={role === "college" ? collegeFields : role === "mentor" ? mentorFields : (customData?.fields || industryFields)}
           initialValues={computedInitialValues}
           onSubmit={handleUpdateProfile}
           loading={modalLoading}
@@ -1565,39 +1401,15 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
                 currentImageUrl={userImage}
                 initials={getInitials()}
                 bgClass={
-                  role === "student" ? "bg-gradient-to-tr from-blue-600 to-orange-500" :
-                    role === "college" ? "bg-emerald-600" :
-                      role === "industry" ? "bg-purple-600" :
-                        "bg-violet-600"
+                  role === "college" ? "bg-emerald-600" :
+                    role === "industry" ? "bg-purple-600" :
+                      "bg-violet-600"
                 }
                 size="md"
               />
             </div>
           }
           onValuesChange={(updatedValues, changedFieldName) => {
-            if (role === "student") {
-              const sideEffects: any = {};
-              if (changedFieldName === "course_type") {
-                sideEffects.course = "";
-                sideEffects.department = "";
-                sideEffects.semester = "";
-              }
-              if (changedFieldName === "stream") {
-                sideEffects.course = "";
-                sideEffects.department = "";
-                sideEffects.semester = "";
-              }
-              if (changedFieldName === "course") {
-                sideEffects.department = "";
-                sideEffects.semester = "";
-              }
-              if (changedFieldName === "department") {
-                sideEffects.semester = "";
-              }
-              const newFormState = { ...updatedValues, ...sideEffects };
-              setStudentFormState(newFormState);
-              return sideEffects;
-            }
             if (role === "college") {
               const sideEffects: any = {};
               if (changedFieldName === "state") {

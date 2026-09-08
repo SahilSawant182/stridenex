@@ -15,12 +15,14 @@ import {
   Sparkles,
   CheckCircle2,
   ExternalLink,
-  Loader2
+  Loader2,
+  UserCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { useToast } from "@/context/ToastContext";
 import { getStudentByEmail, updateStudent } from "@/services/student.services";
+import StudentProfileForm from "./StudentProfileForm";
 
 // Interfaces
 interface Education {
@@ -38,6 +40,7 @@ interface Certificate {
   issuing_organization: string;
   issue_date: string;
   expiry_date: string;
+  mode: string;
   certificate_file: string;
 }
 
@@ -64,6 +67,19 @@ interface Project {
 export default function ResumeTabContent() {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
+
+  // Tab State
+  const [activeTab, setActiveTab] = useState<"profile" | "resume">("profile");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (window.location.pathname.includes("/resume")) {
+        setActiveTab("resume");
+      } else {
+        setActiveTab("profile");
+      }
+    }
+  }, []);
 
   // Local state representing filled data
   const [educationList, setEducationList] = useState<Education[]>([]);
@@ -131,7 +147,14 @@ export default function ResumeTabContent() {
       const payload = {
         ...studentProfile,
         table_apwt: updatedEducation,
-        certificates: updatedCertificates,
+        certificates: updatedCertificates.map(item => ({
+          certificate_name: item.certificate_name,
+          issuing_organization: item.issuing_organization,
+          issue_date: item.issue_date,
+          expiry_date: item.expiry_date,
+          mode: item.mode,
+          certificate_file: item.certificate_file || ""
+        })),
         internship: updatedInternships.map(item => ({
           company_name: item.company_name,
           job_title: item.job_title,
@@ -177,6 +200,7 @@ export default function ResumeTabContent() {
     { name: "issuing_organization", label: "Issuing Organization", type: "text", placeholder: "e.g., Amazon Web Services", required: true },
     { name: "issue_date", label: "Issue Date", type: "date", required: true, textTransform: "uppercase", testTransform: "uppercase" },
     { name: "expiry_date", label: "End Date", type: "date", required: false, textTransform: "uppercase", testTransform: "uppercase" },
+    { name: "mode", label: "Mode of Attendance", type: "select", options: ["Remote", "Hybrid", "Onsite"], required: true },
     { name: "certificate_file", label: "Certificate File / URL", type: "url", placeholder: "e.g., https://credential-url.com", required: false }
   ];
 
@@ -274,6 +298,7 @@ export default function ResumeTabContent() {
         issuing_organization: data.issuing_organization,
         issue_date: data.issue_date,
         expiry_date: data.expiry_date || "",
+        mode: data.mode,
         certificate_file: data.certificate_file || ""
       };
       if (editingIndex !== null) {
@@ -390,34 +415,56 @@ export default function ResumeTabContent() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-4 border border-slate-200/60 shadow-sm rounded-2xl">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-500">
-            <FileText className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-slate-800">Resume Builder</h2>
-            <p className="text-xs text-slate-500">Manage and preview your academic and professional credentials</p>
-          </div>
-        </div>
-
-        <Button
-          onClick={() => saveResumeToServer(educationList, certificatesList, internshipList, projectList)}
-          className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold gap-2 px-6 shadow-sm active:scale-95 transition-all w-full sm:w-auto"
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden w-full">
+      {/* Tabs Header */}
+      <div className="flex border-b border-slate-100 bg-slate-50">
+        <button
+          onClick={() => setActiveTab("profile")}
+          className={`flex items-center gap-2 px-8 py-4 text-sm font-bold transition-all border-b-2 ${
+            activeTab === "profile" 
+              ? "border-orange-500 text-orange-500 bg-white" 
+              : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+          }`}
         >
-          <CheckCircle2 className="w-4 h-4" />
-          Update Resume
-        </Button>
+          <UserCircle className="w-5 h-5" />
+          Update Profile
+        </button>
+        <button
+          onClick={() => setActiveTab("resume")}
+          className={`flex items-center gap-2 px-8 py-4 text-sm font-bold transition-all border-b-2 ${
+            activeTab === "resume" 
+              ? "border-orange-500 text-orange-500 bg-white" 
+              : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+          }`}
+        >
+          <FileText className="w-5 h-5" />
+          Manage Resume
+        </button>
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="space-y-8"
-      >
-            {/* 1. Education Details */}
+      <AnimatePresence mode="wait">
+        {activeTab === "profile" ? (
+          <motion.div
+            key="profile"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <StudentProfileForm />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="resume"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <div className="w-full">
+              <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+                <h2 className="text-xl font-bold text-slate-800">Manage Resume</h2>
+                <p className="text-slate-500 text-sm mt-1">Manage and preview your academic and professional credentials.</p>
+              </div>
+              <div className="p-6 space-y-8 bg-white">
             <div className="bg-white border border-slate-200/60 shadow-sm rounded-2xl overflow-hidden">
               <div className="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                 <div className="flex items-center gap-2">
@@ -517,6 +564,7 @@ export default function ResumeTabContent() {
                           <th className="py-3 px-4">No.</th>
                           <th className="py-3 px-4">Certificate Name</th>
                           <th className="py-3 px-4">Issuing Organization</th>
+                          <th className="py-3 px-4">Mode</th>
                           <th className="py-3 px-4">Issue Date</th>
                           <th className="py-3 px-4">End Date</th>
                           <th className="py-3 px-4">Certificate File</th>
@@ -529,6 +577,7 @@ export default function ResumeTabContent() {
                             <td className="py-4 px-4 text-slate-400 font-bold">{idx + 1}</td>
                             <td className="py-4 px-4 font-bold text-slate-800">{row.certificate_name}</td>
                             <td className="py-4 px-4">{row.issuing_organization}</td>
+                            <td className="py-4 px-4 font-semibold text-slate-700">{row.mode}</td>
                             <td className="py-4 px-4">{row.issue_date}</td>
                             <td className="py-4 px-4">{row.expiry_date || "No Expiry"}</td>
                             <td className="py-4 px-4">
@@ -736,7 +785,22 @@ export default function ResumeTabContent() {
                 )}
               </div>
             </div>
-      </motion.div>
+            
+            {/* Update Resume Button at the bottom */}
+            <div className="p-6 border-t border-slate-100 bg-white flex justify-end">
+              <Button
+                onClick={() => saveResumeToServer(educationList, certificatesList, internshipList, projectList)}
+                className="bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-bold gap-2 px-8 py-2.5 shadow-sm active:scale-95 transition-all w-full sm:w-auto h-auto"
+              >
+                <CheckCircle2 className="w-5 h-5" />
+                Update Resume
+              </Button>
+            </div>
+            </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Reusable Form Modal */}
       {isModalOpen && modalConfig && (

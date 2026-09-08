@@ -22,7 +22,7 @@ export default function DynamicStudentTabPage({ params }: { params: Promise<{ ta
   const tab = unwrappedParams.tab;
 
   const renderTab = () => {
-    if (tab === "resume") {
+    if (tab === "resume" || tab === "profile") {
       return <ResumeTabContent />;
     }
     if (tab === "resume-preview") {
@@ -75,7 +75,10 @@ export default function DynamicStudentTabPage({ params }: { params: Promise<{ ta
                      tab !== "stories" && 
                      tab !== "path" && 
                      tab !== "habits" && 
-                     tab !== "mentors";
+                     tab !== "mentors" &&
+                     tab !== "resume" &&
+                     tab !== "profile";
+
 
   return (
     <div className="flex flex-col min-h-full justify-between">
