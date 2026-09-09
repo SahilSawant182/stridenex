@@ -1,12 +1,18 @@
-// Frappe API base URL configuration
+// Dynamically resolves backend base URL from environment variables or relative browser origin.
+// Priority: NEXT_PUBLIC_BACKEND_URL → NEXT_PUBLIC_API_BASE_URL (strip trailing /api/) → window.location.origin
 const getBackendUrl = () => {
+    if (process.env.NEXT_PUBLIC_BACKEND_URL) {
+        return process.env.NEXT_PUBLIC_BACKEND_URL.replace(/\/$/, "");
+    }
+    if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+        return process.env.NEXT_PUBLIC_API_BASE_URL
+            .replace(/\/api\/?$/, "")
+            .replace(/\/$/, "");
+    }
     if (typeof window !== "undefined") {
-        if (window.location.port === "3001" || window.location.port === "3000") {
-            return "https://devstridenex.quantcloud.in";
-        }
         return window.location.origin;
     }
-    return "https://devstridenex.quantcloud.in";
+    return "";
 };
 
 export interface OnboardingStatusResponse {
