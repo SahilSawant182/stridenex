@@ -39,6 +39,7 @@ export default function StudentProfileForm() {
       const res = await getStudentByEmail(email);
       const data = res?.data || res?.message?.data || res?.message;
       if (data) {
+        data.course_type = data.course_type || data.courses_type;
         setStudentData(data);
         setStudentFormState({
           stream: data.stream || "",
@@ -73,6 +74,7 @@ export default function StudentProfileForm() {
 
       const payload = {
         ...formData,
+        courses_type: formData.course_type || formData.courses_type,
         marksheet: marksheetUrl || null,
         name: currentUser
       };
