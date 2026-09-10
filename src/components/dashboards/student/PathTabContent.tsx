@@ -53,7 +53,8 @@ import {
   getSkillTestQuestions,
   submitSkillTest,
   getSkillTestResult,
-  getStudentByEmail
+  getStudentByEmail,
+  getCertificate
 } from "@/services/student.services";
 import { useToast } from "@/context/ToastContext";
 import { parseBackendError } from "@/utils/error.utils";
@@ -216,6 +217,27 @@ export default function PathTabContent() {
   const [reportBlobUrl, setReportBlobUrl] = useState<string | null>(null);
   const [isReportLoading, setIsReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
+  const [isCertificateLoading, setIsCertificateLoading] = useState(false);
+
+  const handleGetCertificate = async () => {
+    try {
+      setIsCertificateLoading(true);
+      const studentEmail = localStorage.getItem("currentUser") || "ac1@gmail.com";
+      // The screenshot shows student_name as the email itself (e.g., stu2@gmail.com)
+
+      const pathData = activePath?.data || activePath;
+      const assessmentName = pathData?.career_path || pathData?.career_path_name || pathData?.path_name || pathData?.title || "Data Scientist";
+
+      const url = `https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.app.get_certificate?student_name=${encodeURIComponent(studentEmail)}&assessment_name=${encodeURIComponent(assessmentName)}&sr_no=1`;
+
+      window.open(url, '_blank');
+    } catch (err: any) {
+      console.error("Error fetching certificate:", err);
+      showToast("Failed to retrieve certificate", "error");
+    } finally {
+      setIsCertificateLoading(false);
+    }
+  };
 
   const handlePreviewReport = async () => {
     setIsReportLoading(true);
@@ -1006,8 +1028,8 @@ export default function PathTabContent() {
               {/* Background Accents */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-indigo-400/20 rounded-full blur-2xl -translate-x-1/2 translate-y-1/2" />
-              
-              <button 
+
+              <button
                 onClick={dismissGuide}
                 className="absolute top-4 right-4 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-all"
                 title="Dismiss Guide"
@@ -1022,7 +1044,7 @@ export default function PathTabContent() {
                   </div>
                   <h2 className="text-xl md:text-2xl font-bold tracking-tight">Welcome to Your AI Skill Path</h2>
                 </div>
-                
+
                 <p className="text-blue-100 text-sm md:text-base max-w-2xl mb-8 leading-relaxed">
                   Your personalized roadmap to your dream career. The Skill Path analyzes your current abilities, identifies the gap to your target role, and provides actionable milestones to help you build a verifiable Skill Ledger.
                 </p>
@@ -1066,7 +1088,7 @@ export default function PathTabContent() {
 
       {!showGuideBanner && (
         <div className="w-full max-w-[1360px] mx-auto px-4 mb-4 flex justify-end">
-          <button 
+          <button
             onClick={() => setShowGuideBanner(true)}
             className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors border border-blue-100"
           >
@@ -1804,7 +1826,7 @@ export default function PathTabContent() {
             <AnimatePresence>
               {showConfirmModal && (
                 <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-[250] p-4">
-                  
+
                   <motion.div
                     initial={{ scale: 0.9, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
@@ -1936,10 +1958,28 @@ export default function PathTabContent() {
                 </div>
               )}
 
-              <p className="text-xs font-medium text-slate-500 flex items-center gap-1.5 flex-wrap">
-                <TrendingUp className="w-3.5 h-3.5" />
-                Est. completion: {estCompletion} • Target: {targetRole}
-              </p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-4">
+                <p className="text-xs font-medium text-slate-500 flex items-center gap-1.5 flex-wrap">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                  Est. completion: {estCompletion} • Target: {targetRole}
+                </p>
+                <button
+                  onClick={handleGetCertificate}
+                  disabled={isCertificateLoading || !isPathCompleted}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                    isPathCompleted 
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white hover:shadow-md hover:from-amber-600 hover:to-orange-700' 
+                      : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                  }`}
+                >
+                  {isCertificateLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Award className="w-4 h-4" />
+                  )}
+                  Get Certification
+                </button>
+              </div>
             </div>
 
             {/* Acquired Skills and Missing Skills details */}
@@ -2440,7 +2480,7 @@ export default function PathTabContent() {
               exit={{ opacity: 0 }}
               className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4"
             >
-              
+
               <motion.div
                 initial={{ scale: 0.95, opacity: 0, y: 20 }}
                 animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -2780,7 +2820,7 @@ export default function PathTabContent() {
         <AnimatePresence>
           {showCelebration && (
             <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-[200] p-4">
-              
+
               <ConfettiEffect />
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
