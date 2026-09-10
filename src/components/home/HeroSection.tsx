@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Sparkles, ArrowRight, Star, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/navigation";
 
 interface HeroSectionProps {
     appName?: string;
@@ -51,6 +52,7 @@ const heroSlides = [
 ];
 
 export default function HeroSection({ appName }: HeroSectionProps) {
+    const router = useRouter();
     const [currentSlide, setCurrentSlide] = useState(0);
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
     const containerRef = useRef<HTMLDivElement>(null);
@@ -203,6 +205,7 @@ export default function HeroSection({ appName }: HeroSectionProps) {
                                     variant="accent"
                                     size="xl"
                                     className="btn-hover-scale btn-hover-glow"
+                                    onClick={() => router.push('/login')}
                                 >
                                     Start Your Career Journey
                                     <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
