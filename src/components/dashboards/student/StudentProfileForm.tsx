@@ -5,12 +5,15 @@ import { Users, Mail, Phone, Building2, GraduationCap, Layers, Shield, Calendar,
 import { DashboardDynamicForm } from "@/components/dashboards/shared/DashboardDynamicForm";
 import { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import MarksheetUploader from "@/components/profile/MarksheetUploader";
+import ProfileImageUploader from "@/components/profile/ProfileImageUploader";
 import { getStudentByEmail, updateStudent } from "@/services/student.services";
 import { uploadFileApi } from "@/services/api.services";
 import { useToast } from "@/context/ToastContext";
+import { useAuth } from "@/context/AuthContext";
 
 export default function StudentProfileForm() {
   const { showToast } = useToast();
+  const { userImage, updateUserImage } = useAuth();
   const [currentUser, setCurrentUser] = useState<string>("");
   const [studentData, setStudentData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -239,8 +242,21 @@ export default function StudentProfileForm() {
   return (
     <div className="w-full">
       <div className="p-6 border-b border-slate-100 bg-slate-50/50">
-        <h2 className="text-xl font-bold text-slate-800">Update Profile</h2>
-        <p className="text-slate-500 text-sm mt-1">Manage your personal and academic details.</p>
+        <div>
+          <h2 className="text-xl font-bold text-slate-800">Update Profile</h2>
+          <p className="text-slate-500 text-sm mt-1">Manage your personal and academic details.</p>
+        </div>
+        <div className="mt-8 flex justify-center">
+          <ProfileImageUploader 
+            currentImageUrl={userImage || studentData?.image || undefined} 
+            initials={studentData?.first_name?.charAt(0) || currentUser?.charAt(0)?.toUpperCase() || "U"} 
+            size="lg" 
+            onSuccess={(fileUrl) => {
+              fetchStudentData(currentUser);
+              if (updateUserImage) updateUserImage(fileUrl);
+            }}
+          />
+        </div>
       </div>
       <div className="p-6">
         <DashboardDynamicForm

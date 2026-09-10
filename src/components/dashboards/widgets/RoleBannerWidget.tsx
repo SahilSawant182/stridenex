@@ -1294,7 +1294,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
               )}
               {role === "student" && (
                 <Link
-                  href="/student/dashboard/resume"
+                  href="/student/dashboard/profile"
                   className="p-1.5 hover:bg-white/10 rounded-lg transition-colors group/edit"
                 >
                   <Pen className="w-[18px] h-[18px] text-white/50 group-hover/edit:text-white transition-colors" strokeWidth={2.5} />
