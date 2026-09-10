@@ -52,7 +52,8 @@ import {
   completeMilestonePoint,
   getSkillTestQuestions,
   submitSkillTest,
-  getSkillTestResult
+  getSkillTestResult,
+  getStudentByEmail
 } from "@/services/student.services";
 import { useToast } from "@/context/ToastContext";
 import { parseBackendError } from "@/utils/error.utils";
@@ -265,8 +266,8 @@ export default function PathTabContent() {
       if (!silent) setLoading(true);
       const studentEmail = localStorage.getItem("currentUser") || "ac1@gmail.com";
 
-      // Fetch active career path and student skills in parallel
-      const [careerPathRes, studentSkillsRes] = await Promise.all([
+      // Fetch active career path, student skills, and student details in parallel
+      const [careerPathRes, studentSkillsRes, studentDetailsRes] = await Promise.all([
         getStudentCareerPath(studentEmail).catch(err => {
           console.warn("getStudentCareerPath API failed, using fallback data:", err);
           return null;
@@ -274,8 +275,20 @@ export default function PathTabContent() {
         getStudentSkills(studentEmail).catch(err => {
           console.warn("getStudentSkills API failed:", err);
           return null;
+        }),
+        getStudentByEmail(studentEmail).catch(err => {
+          console.warn("getStudentByEmail API failed:", err);
+          return null;
         })
       ]);
+
+      if (studentDetailsRes) {
+        const studentData = studentDetailsRes?.data || studentDetailsRes?.message?.data || studentDetailsRes?.message;
+        if (studentData) {
+          if (studentData.course_type && !degree) setDegree(studentData.course_type);
+          if (studentData.course && !specialisation) setSpecialisation(studentData.course);
+        }
+      }
 
       if (studentSkillsRes?.message) {
         setStudentSkills(Array.isArray(studentSkillsRes.message) ? studentSkillsRes.message : []);
