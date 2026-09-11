@@ -1705,3 +1705,17 @@ export const completeStudentGuidelineStep = async (guidelineName: string, studen
     throw error;
   }
 };
+/**
+ * Fetch all completed paths and acquired skills for a student
+ */
+export const getCompletedPaths = async (studentEmail: string) => {
+  try {
+    const response = await apiService.get(
+      `method/nexedu.path_finder.api.path_enrollment.get_completed_paths?student=${encodeURIComponent(studentEmail)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error fetching completed paths:", error);
+    throw error;
+  }
+};

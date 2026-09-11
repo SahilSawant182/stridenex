@@ -43,6 +43,7 @@ import {
   enrollStudentPath,
   deleteStudentEnrollment,
   createStudentSkill,
+  getCompletedPaths,
   logMilestoneProgress,
   getMasterData,
   getCareerPathDetail,
@@ -120,6 +121,10 @@ export default function PathTabContent() {
   const [masterTotalCount, setMasterTotalCount] = useState<number>(0);
   const [masterPathsLoading, setMasterPathsLoading] = useState<boolean>(false);
   const [enrollingPath, setEnrollingPath] = useState<string | null>(null);
+
+  // Completed Paths
+  const [completedPaths, setCompletedPaths] = useState<any[]>([]);
+  const [showCompletedPathsModal, setShowCompletedPathsModal] = useState<boolean>(false);
 
   const fetchMasterCareerPaths = async (query = "", page = 1) => {
     setMasterPathsLoading(true);
@@ -288,8 +293,8 @@ export default function PathTabContent() {
       if (!silent) setLoading(true);
       const studentEmail = localStorage.getItem("currentUser") || "ac1@gmail.com";
 
-      // Fetch active career path, student skills, and student details in parallel
-      const [careerPathRes, studentSkillsRes, studentDetailsRes] = await Promise.all([
+      // Fetch active career path, student skills, student details, and completed paths in parallel
+      const [careerPathRes, studentSkillsRes, studentDetailsRes, completedPathsRes] = await Promise.all([
         getStudentCareerPath(studentEmail).catch(err => {
           console.warn("getStudentCareerPath API failed, using fallback data:", err);
           return null;
@@ -300,6 +305,10 @@ export default function PathTabContent() {
         }),
         getStudentByEmail(studentEmail).catch(err => {
           console.warn("getStudentByEmail API failed:", err);
+          return null;
+        }),
+        getCompletedPaths(studentEmail).catch(err => {
+          console.warn("getCompletedPaths API failed:", err);
           return null;
         })
       ]);
@@ -316,6 +325,12 @@ export default function PathTabContent() {
         setStudentSkills(Array.isArray(studentSkillsRes.message) ? studentSkillsRes.message : []);
       } else if (Array.isArray(studentSkillsRes)) {
         setStudentSkills(studentSkillsRes);
+      }
+
+      if (completedPathsRes?.message?.completed_paths) {
+        setCompletedPaths(completedPathsRes.message.completed_paths);
+      } else {
+        setCompletedPaths([]);
       }
 
       if (careerPathRes?.message) {
@@ -1086,17 +1101,26 @@ export default function PathTabContent() {
         )}
       </AnimatePresence>
 
-      {!showGuideBanner && (
-        <div className="w-full max-w-[1360px] mx-auto px-4 mb-4 flex justify-end">
+      <div className="w-full max-w-[1360px] mx-auto px-4 mb-4 flex justify-end gap-2">
+        {completedPaths.length > 0 && (
+          <button
+            onClick={() => setShowCompletedPathsModal(true)}
+            className="flex items-center gap-2 text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-colors border border-emerald-100 shadow-sm"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Completed Paths ({completedPaths.length})
+          </button>
+        )}
+        {!showGuideBanner && (
           <button
             onClick={() => setShowGuideBanner(true)}
-            className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors border border-blue-100"
+            className="flex items-center gap-2 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors border border-blue-100 shadow-sm"
           >
             <Sparkles className="w-3.5 h-3.5" />
             How Skill Path Works
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {inWizardMode ? (
         /* WIZARD FLOW SCREEN */
@@ -2960,6 +2984,115 @@ export default function PathTabContent() {
                       className="w-full h-full border-0"
                       title="PDF Preview"
                     />
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* Completed Paths Modal */}
+      {typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {showCompletedPathsModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
+              >
+                <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-800">Your Completed Paths</h2>
+                      <p className="text-sm text-slate-500">Review your acquired skills and achievements</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowCompletedPathsModal(false)}
+                    className="p-2 hover:bg-slate-200 rounded-lg transition-colors text-slate-500"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
+                  {completedPaths.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 mx-auto bg-slate-100 rounded-full flex items-center justify-center mb-4 text-slate-400">
+                        <BookOpen className="w-8 h-8" />
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-700">No paths completed yet</h3>
+                      <p className="text-slate-500 mt-2 text-sm">Keep learning and completing milestones to see your achievements here!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {completedPaths.map((cp, idx) => (
+                        <div key={idx} className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-4 border-b border-slate-100">
+                            <div>
+                              <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                {cp.career_path}
+                                {cp.completion_percent === 100 && (
+                                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full uppercase tracking-wider">Completed</span>
+                                )}
+                              </h3>
+                              <p className="text-xs text-slate-500 mt-1">
+                                Enrolled: {new Date(cp.enrolled_at).toLocaleDateString()} • Total Milestones: {cp.total_milestones}
+                              </p>
+                            </div>
+                            {cp.completion_percent === 100 && (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    setIsCertificateLoading(true);
+                                    const studentName = localStorage.getItem("currentUser") || "Student";
+                                    const payload = {
+                                      student_name: studentName,
+                                      assessment_name: cp.career_path,
+                                      sr_no: 1
+                                    };
+                                    const params = new URLSearchParams(payload as any).toString();
+                                    const url = `https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.app.get_certificate?${params}`;
+                                    window.open(url, "_blank");
+                                  } catch (err) {
+                                    console.error("Error generating certificate", err);
+                                  } finally {
+                                    setIsCertificateLoading(false);
+                                  }
+                                }}
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-lg font-bold text-sm transition-all shadow-sm"
+                              >
+                                <Award className="w-4 h-4" />
+                                Get Certificate
+                              </button>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-3">Skills Acquired</h4>
+                            {cp.skills_acquired && cp.skills_acquired.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {cp.skills_acquired.map((s: any, sIdx: number) => (
+                                  <span key={sIdx} className="px-2.5 py-1 bg-blue-50 text-blue-700 border border-blue-100 rounded-md text-xs font-semibold flex items-center gap-1.5">
+                                    <CheckCircle2 className="w-3 h-3 text-blue-500" />
+                                    {s.skill}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-slate-500 italic">No skills recorded yet.</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               </motion.div>
