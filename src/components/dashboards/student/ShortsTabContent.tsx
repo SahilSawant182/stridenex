@@ -1146,18 +1146,14 @@ export default function ShortsTabContent() {
 
   const handleShare = async (videoUrl: string) => {
     const shareUrl = videoUrl || window.location.href;
-    const isWindows = typeof window !== 'undefined' && navigator.userAgent.toLowerCase().includes('windows');
-
-    if (navigator.share && !isWindows) {
+    if (navigator.share) {
       try {
         await navigator.share({
           title: 'StrideNex Short',
           url: shareUrl,
         });
         return;
-      } catch (err: any) {
-        if (err.name === 'AbortError') return;
-      }
+      } catch (err) {}
     }
 
     try {
