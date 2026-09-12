@@ -650,6 +650,23 @@ export const getStudentBadges = async (studentEmail: string) => {
   }
 };
 
+/**
+ * Fetch habit completion heatmap for a student (GitHub-style activity grid).
+ */
+export const getHabitCompletionHeatmap = async (studentEmail: string, year?: number) => {
+  try {
+    const params = new URLSearchParams({ student: studentEmail });
+    if (year) params.append("year", String(year));
+    const response = await apiService.get(
+      `method/nexedu.habits_builder.api.get_habit_completion_heatmap?${params.toString()}`
+    );
+    return response?.message || response;
+  } catch (error) {
+    console.error("Error fetching habit completion heatmap:", error);
+    throw error;
+  }
+};
+
 
 export const getBookedSessions = async (studentEmail: string) => {
   try {
