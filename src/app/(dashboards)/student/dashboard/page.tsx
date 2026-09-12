@@ -5,7 +5,7 @@ import { motion, Variants } from "framer-motion";
 import StudentBannerWidget from "@/components/dashboards/widgets/RoleBannerWidget";
 import HorizontalTabs from "@/components/dashboards/shared/HorizontalTabs";
 import StatsWidget from "@/components/dashboards/widgets/StatsWidget";
-import LearningActivityGraph from "@/components/dashboards/widgets/LearningActivityGraph";
+import HabitHeatmap from "@/components/dashboards/widgets/HabitHeatmap";
 import CoachWidget from "@/components/dashboards/widgets/CoachWidget";
 import SkillsWidget from "@/components/dashboards/widgets/SkillsWidget";
 import AlertsWidget from "@/components/dashboards/widgets/AlertsWidget";
@@ -293,7 +293,7 @@ export default function StudentDashboardPage() {
           <div className="lg:col-span-3">
             {/* Learning Activity Heatmap */}
             <div className="h-full">
-              <LearningActivityGraph data={learningActivityData} />
+              <HabitHeatmap studentEmail={currentUser || ""} />
             </div>
           </div>
 

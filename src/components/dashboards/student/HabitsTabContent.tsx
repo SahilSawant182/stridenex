@@ -32,7 +32,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+
 import { useToast } from "@/context/ToastContext";
 import { useEntitlements, QuotaExceededError } from "@/context/EntitlementContext";
 import {
@@ -47,7 +48,8 @@ import {
     getPlanSummary,
     completeHabitPlanStatus,
     deleteHabitPlan,
-    getStudentBadges
+    getStudentBadges,
+    getHabitCompletionHeatmap
 } from "@/services/student.services";
 import { BASE_DOMAIN } from "@/services/api.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
@@ -116,7 +118,7 @@ interface HabitHistoryItem {
 interface SuggestedHabit {
     title: string;
     description: string;
-    icon: any;
+    icon: React.ElementType;
 }
 
 interface HabitFormData {
@@ -149,7 +151,33 @@ interface BadgeItem {
     };
 }
 
+interface HeatmapDay {
+    date: string | null;
+    count: number;
+    intensity: 0 | 1 | 2 | 3 | 4;
+    day_of_week: number | null;
+}
+
+interface HeatmapWeek {
+    week_number: number;
+    days: HeatmapDay[];
+}
+
+interface HeatmapMonth {
+    name: string;
+    week_index: number;
+}
+
+interface HeatmapData {
+    year: number;
+    total_done: number;
+    max_count: number;
+    weeks: HeatmapWeek[];
+    months: HeatmapMonth[];
+}
+
 // Dynamic data
+
 const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const getImageUrl = (path: string | null) => {
@@ -220,11 +248,14 @@ const getBadgeIcon = (streakCount: number) => {
 };
 
 function ConfettiEffect() {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const particles = useMemo(() => {
+        // Math.random is safe here – useMemo with [] only runs once on mount
+        // eslint-disable-next-line react-hooks/purity
         return Array.from({ length: 80 }).map((_, i) => ({
             id: i,
-            x: Math.random() * 100, // percentage width
-            y: -10 - Math.random() * 20, // start above screen
+            x: Math.random() * 100,
+            y: -10 - Math.random() * 20,
             size: 5 + Math.random() * 10,
             color: ['#F59E0B', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899', '#EF4444'][Math.floor(Math.random() * 6)],
             delay: Math.random() * 2,
