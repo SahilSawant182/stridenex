@@ -53,7 +53,6 @@ const tabConfig = {
     { name: "Shorts", icon: Video, path: "/student/dashboard/shorts" },
     { name: "Community", icon: Users, path: "/student/dashboard/community" },
     { name: "Events", icon: Calendar, path: "/student/dashboard/events" },
-    { name: "Stories", icon: BookOpen, path: "/student/dashboard/stories" },
   ],
   college: [
     { name: "Overview", path: "/college/dashboard", icon: LayoutDashboard },
