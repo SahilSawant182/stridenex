@@ -3060,7 +3060,15 @@ export default function PathTabContent() {
                                     };
                                     const params = new URLSearchParams(payload as any).toString();
                                     const url = `https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.app.get_certificate?${params}`;
-                                    window.open(url, "_blank");
+                                    
+                                    const response = await fetch(url);
+                                    if (response.ok) {
+                                      const blob = await response.blob();
+                                      const fileURL = URL.createObjectURL(blob);
+                                      window.open(fileURL, "_blank");
+                                    } else {
+                                      console.error("Failed to fetch certificate");
+                                    }
                                   } catch (err) {
                                     console.error("Error generating certificate", err);
                                   } finally {
