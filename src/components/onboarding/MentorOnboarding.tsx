@@ -10,6 +10,8 @@ import { validateEmail, validateRequired } from "@/lib/validators";
 import {
   sendMobileOTP,
   verifyMobileOTP,
+  sendWhatsappOTP,
+  verifyWhatsappOTP,
   sendEmailOTP,
   verifyEmailOTP
 } from "@/services/onboarding.services";
@@ -151,6 +153,7 @@ export default function MentorOnboarding({
   const [mobileVerificationCode, setMobileVerificationCode] = useState("");
   const [emailOtpSent, setEmailOtpSent] = useState(false);
   const [mobileOtpSent, setMobileOtpSent] = useState(false);
+  const [mobileOtpMethod, setMobileOtpMethod] = useState<'sms' | 'whatsapp' | null>(null);
   const [emailTimer, setEmailTimer] = useState(0);
   const [mobileTimer, setMobileTimer] = useState(0);
 
@@ -496,8 +499,9 @@ export default function MentorOnboarding({
         formData.email
       );
       if (response?.message === "OTP sent successfully") {
-        setSuccess(response.message);
+        setSuccess("OTP sent via SMS successfully");
         setMobileOtpSent(true);
+        setMobileOtpMethod('sms');
         setMobileTimer(120);
       } else {
         setError(
@@ -512,20 +516,64 @@ export default function MentorOnboarding({
     }
   };
 
+  const handleSendWhatsappOTP = async () => {
+    setError("");
+    setSuccess("");
+    if (!formData.mobileNo || formData.mobileNo.length !== 10) {
+      setFieldErrors(prev => ({
+        ...prev,
+        mobileNo:
+          "Please enter a valid 10-digit mobile number"
+      }));
+      return;
+    }
+    try {
+      const response = await sendWhatsappOTP(
+        formData.mobileNo
+      );
+      setSuccess("OTP sent via WhatsApp successfully");
+      setMobileOtpSent(true);
+      setMobileOtpMethod('whatsapp');
+      setMobileTimer(120);
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message ||
+        "Failed to send verification code"
+      );
+    }
+  };
+
   const handleVerifyMobile = async () => {
     setError("");
     setSuccess("");
     try {
-      const response = await verifyMobileOTP(
-        formData.mobileNo,
-        mobileVerificationCode,
-        formData.email
-      );
+      let response;
+      if (mobileOtpMethod === 'whatsapp') {
+        response = await verifyWhatsappOTP(
+          formData.mobileNo,
+          mobileVerificationCode
+        );
+      } else {
+        response = await verifyMobileOTP(
+          formData.mobileNo,
+          mobileVerificationCode,
+          formData.email
+        );
+      }
+      let responseMessage = response?.message;
+      let isSuccess = response?.data?.success || false;
+
+      if (typeof responseMessage === 'object' && responseMessage !== null) {
+        isSuccess = isSuccess || responseMessage.success;
+        responseMessage = responseMessage.message;
+      }
+      
+      const successMessages = ["Mobile number verified successfully", "OTP verified successfully", "OTP Verified Successfully", "success"];
       if (
-        response?.message === "Mobile number verified successfully"
+        successMessages.includes(responseMessage) || isSuccess
       ) {
         setFormData(prev => ({ ...prev, mobileVerified: true }));
-        setSuccess(response.message);
+        setSuccess("Mobile verified successfully");
         localStorage.setItem("userMobileNo", formData.mobileNo);
         // Clear any stale mobile field error
         setFieldErrors(prev => {
@@ -535,7 +583,7 @@ export default function MentorOnboarding({
         });
       } else {
         setError(
-          response?.message || "Invalid verification code"
+          responseMessage || "Invalid verification code"
         );
       }
     } catch (err: any) {
@@ -1253,25 +1301,69 @@ export default function MentorOnboarding({
                   }}
                 />
               </div>
-              {!formData.mobileVerified && (
-                <Button
-                  type="button"
-                  onClick={handleSendMobileOTP}
-                  disabled={
-                    !formData.mobileNo ||
-                    formData.mobileNo.length !== 10 ||
-                    loading ||
-                    mobileTimer > 0
-                  }
-                  variant="accent"
-                  className="mt-7 whitespace-nowrap"
-                >
-                  {mobileTimer > 0
-                    ? `Resend in ${mobileTimer}s`
-                    : mobileOtpSent
-                      ? "Resend OTP"
-                      : "Send OTP"}
-                </Button>
+              {!formData.mobileVerified && !mobileOtpSent && (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={handleSendMobileOTP}
+                    disabled={
+                      !formData.mobileNo ||
+                      formData.mobileNo.length !== 10 ||
+                      loading ||
+                      mobileTimer > 0
+                    }
+                    variant="outline"
+                    className="mt-7 whitespace-nowrap"
+                  >
+                    {mobileTimer > 0 ? `Resend SMS in ${mobileTimer}s` : "Get OTP on Text"}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleSendWhatsappOTP}
+                    disabled={
+                      !formData.mobileNo ||
+                      formData.mobileNo.length !== 10 ||
+                      loading ||
+                      mobileTimer > 0
+                    }
+                    variant="accent"
+                    className="mt-7 whitespace-nowrap"
+                  >
+                    {mobileTimer > 0 ? `Resend WA in ${mobileTimer}s` : "Get OTP on WhatsApp"}
+                  </Button>
+                </div>
+              )}
+              {!formData.mobileVerified && mobileOtpSent && (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={handleSendMobileOTP}
+                    disabled={
+                      !formData.mobileNo ||
+                      formData.mobileNo.length !== 10 ||
+                      loading ||
+                      mobileTimer > 0
+                    }
+                    variant="outline"
+                    className="mt-7 whitespace-nowrap"
+                  >
+                    {mobileTimer > 0 ? `Resend SMS in ${mobileTimer}s` : "Resend on Text"}
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={handleSendWhatsappOTP}
+                    disabled={
+                      !formData.mobileNo ||
+                      formData.mobileNo.length !== 10 ||
+                      loading ||
+                      mobileTimer > 0
+                    }
+                    variant="accent"
+                    className="mt-7 whitespace-nowrap"
+                  >
+                    {mobileTimer > 0 ? `Resend WA in ${mobileTimer}s` : "Resend on WhatsApp"}
+                  </Button>
+                </div>
               )}
             </div>
 

@@ -10,6 +10,8 @@ import { validateEmail, validateRequired } from "@/lib/validators";
 import {
   sendMobileOTP,
   verifyMobileOTP,
+  sendWhatsappOTP,
+  verifyWhatsappOTP,
   sendEmailOTP,
   verifyEmailOTP,
   createStudent
@@ -77,6 +79,7 @@ export default function StudentOnboarding({
   const [mobileVerificationCode, setMobileVerificationCode] = useState("");
   const [emailOtpSent, setEmailOtpSent] = useState(false);
   const [mobileOtpSent, setMobileOtpSent] = useState(false);
+  const [mobileOtpMethod, setMobileOtpMethod] = useState<'sms' | 'whatsapp' | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [emailTimer, setEmailTimer] = useState(0);
@@ -611,11 +614,9 @@ export default function StudentOnboarding({
 
   // ============ STEP 2: MOBILE VERIFICATION ============
   const handleSendMobileOTP = async () => {
-    // Clear previous messages
     setError("");
     setSuccess("");
 
-    // Check if mobile number is exactly 10 digits
     if (!formData.mobileNo || formData.mobileNo.length !== 10) {
       setFieldErrors(prev => ({
         ...prev,
@@ -624,43 +625,77 @@ export default function StudentOnboarding({
       return;
     }
 
-    // setLoading(true);
-    setError("");
-
     try {
       const response = await sendMobileOTP(formData.mobileNo, formData.email);
 
       if (response?.message === "OTP sent successfully") {
-        setSuccess(response.message);
+        setSuccess("OTP sent via SMS successfully");
         setMobileOtpSent(true);
-        setMobileTimer(120); // Start 2 minute timer
-        if (response.data) {}
+        setMobileOtpMethod('sms');
+        setMobileTimer(120);
       } else {
         setError(response?.message || "Failed to send OTP");
       }
     } catch (err: any) {
       console.error("Error sending mobile OTP:", err);
       setError(err?.response?.data?.message || "Failed to send verification code");
-    } finally {
-      // setLoading(false);
+    }
+  };
+
+  const handleSendWhatsappOTP = async () => {
+    setError("");
+    setSuccess("");
+
+    if (!formData.mobileNo || formData.mobileNo.length !== 10) {
+      setFieldErrors(prev => ({
+        ...prev,
+        mobileNo: "Please enter a valid 10-digit mobile number"
+      }));
+      return;
+    }
+
+    try {
+      const response = await sendWhatsappOTP(formData.mobileNo);
+
+      setSuccess("OTP sent via WhatsApp successfully");
+      setMobileOtpSent(true);
+      setMobileOtpMethod('whatsapp');
+      setMobileTimer(120);
+    } catch (err: any) {
+      console.error("Error sending WhatsApp OTP:", err);
+      setError(err?.response?.data?.message || "Failed to send verification code");
     }
   };
 
   const handleVerifyMobile = async () => {
-    // setLoading(true);
     setError("");
     setSuccess("");
 
     try {
-      const response = await verifyMobileOTP(formData.mobileNo, mobileVerificationCode, formData.email);
+      let response;
+      if (mobileOtpMethod === 'whatsapp') {
+        response = await verifyWhatsappOTP(formData.mobileNo, mobileVerificationCode);
+      } else {
+        response = await verifyMobileOTP(formData.mobileNo, mobileVerificationCode, formData.email);
+      }
 
-      if (response?.message === "Mobile number verified successfully") {
+      let responseMessage = response?.message;
+      let isSuccess = response?.data?.success || false;
+
+      // Handle nested message object
+      if (typeof responseMessage === 'object' && responseMessage !== null) {
+        isSuccess = isSuccess || responseMessage.success;
+        responseMessage = responseMessage.message;
+      }
+
+      const successMessages = ["Mobile number verified successfully", "OTP verified successfully", "OTP Verified Successfully", "success"];
+      if (successMessages.includes(responseMessage) || isSuccess) {
         setFormData(prev => ({ ...prev, mobileVerified: true }));
-        setSuccess(response.message);
+        setSuccess("Mobile verified successfully");
         localStorage.setItem("userMobileNo", formData.mobileNo);
         setError("");
       } else {
-        setError(response?.message || "Invalid verification code");
+        setError(responseMessage || "Invalid verification code");
       }
     } catch (err: any) {
       console.error("Error verifying mobile OTP:", err);
@@ -1148,27 +1183,49 @@ export default function StudentOnboarding({
             </div>
 
             {!formData.mobileVerified && !mobileOtpSent && (
-              <Button
-                type="button"
-                onClick={handleSendMobileOTP}
-                disabled={!formData.mobileNo || formData.mobileNo.length !== 10 || loading || mobileTimer > 0}
-                variant="accent"
-                className="mt-7 whitespace-nowrap"
-              >
-                {mobileTimer > 0 ? `Resend in ${mobileTimer}s` : "Send OTP"}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={handleSendMobileOTP}
+                  disabled={!formData.mobileNo || formData.mobileNo.length !== 10 || loading || mobileTimer > 0}
+                  variant="outline"
+                  className="mt-7 whitespace-nowrap"
+                >
+                  {mobileTimer > 0 ? `Resend SMS in ${mobileTimer}s` : "Get OTP on Text"}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSendWhatsappOTP}
+                  disabled={!formData.mobileNo || formData.mobileNo.length !== 10 || loading || mobileTimer > 0}
+                  variant="accent"
+                  className="mt-7 whitespace-nowrap"
+                >
+                  {mobileTimer > 0 ? `Resend WA in ${mobileTimer}s` : "Get OTP on WhatsApp"}
+                </Button>
+              </div>
             )}
 
             {mobileOtpSent && !formData.mobileVerified && (
-              <Button
-                type="button"
-                onClick={handleSendMobileOTP}
-                disabled={loading || mobileTimer > 0}
-                variant="accent"
-                className="mt-7 whitespace-nowrap"
-              >
-                {mobileTimer > 0 ? `Resend in ${mobileTimer}s` : "Resend OTP"}
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={handleSendMobileOTP}
+                  disabled={loading || mobileTimer > 0}
+                  variant="outline"
+                  className="mt-7 whitespace-nowrap"
+                >
+                  {mobileTimer > 0 ? `Resend SMS in ${mobileTimer}s` : "Resend on Text"}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSendWhatsappOTP}
+                  disabled={loading || mobileTimer > 0}
+                  variant="accent"
+                  className="mt-7 whitespace-nowrap"
+                >
+                  {mobileTimer > 0 ? `Resend WA in ${mobileTimer}s` : "Resend on WhatsApp"}
+                </Button>
+              </div>
             )}
           </div>
 

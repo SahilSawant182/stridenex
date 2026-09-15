@@ -32,7 +32,7 @@ export default function SignupPage() {
   const [shakeRole, setShakeRole] = useState(false);
   const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, updateOnboardedFlag } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -211,6 +211,18 @@ export default function SignupPage() {
       .then(response => response.json())
       .then(responseData => {
         if (responseData?.message === "User created successfully") {
+          // Clear any dirty auth state from previous sessions to prevent skipping onboarding steps
+          localStorage.removeItem("isOnboarded");
+          localStorage.removeItem("apiKey");
+          localStorage.removeItem("apiSecret");
+          localStorage.removeItem("currentUser");
+          localStorage.removeItem("role");
+
+          // Explicitly reset the React Context state for onboarding flag
+          if (typeof updateOnboardedFlag === "function") {
+            updateOnboardedFlag("0");
+          }
+          
           localStorage.setItem("userEmail", data.email);
           localStorage.setItem("userFirstName", data.firstName);
           localStorage.setItem("userLastName", data.lastName);
