@@ -651,6 +651,22 @@ export const getStudentBadges = async (studentEmail: string) => {
 };
 
 /**
+ * Share earned badge on LinkedIn.
+ */
+export const shareBadgeOnLinkedIn = async (studentEmail: string, badgeId: string) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.habits_builder.api.share_badge_on_linkedin",
+      { student: studentEmail, badge_id: badgeId }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error sharing badge on LinkedIn:", error);
+    throw error;
+  }
+};
+
+/**
  * Fetch habit completion heatmap for a student (GitHub-style activity grid).
  */
 export const getHabitCompletionHeatmap = async (studentEmail: string, year?: number) => {

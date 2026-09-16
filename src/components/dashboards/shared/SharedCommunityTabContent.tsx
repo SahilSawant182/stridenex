@@ -156,6 +156,7 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
             onBack={() => {
               setSelectedCommunityId(null);
               setCommunityDetails(null);
+              fetchCommunities();
             }} 
             onRefresh={() => {
               fetchCommunityDetails(selectedCommunityId);

@@ -415,3 +415,11 @@ export const updateCommunityMemberStatus = async (payload: { name: string; statu
     data: payload,
   });
 };
+
+export const removeCommunityMember = async (payload: { name: string }) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.community_member.community_member.remove_community_member",
+    data: payload,
+  });
+};

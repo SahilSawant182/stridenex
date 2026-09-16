@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, MessageSquare, Plus, Folder, Hash, Search, FileText, Send, User, X, Heart, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, MessageSquare, Plus, Folder, Hash, Search, FileText, Send, User, X, Heart, Check, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/context/ToastContext";
 import DashboardDynamicModal from "@/components/dashboards/shared/DashboardDynamicModal";
-import { createCategory, getPosts, createPost, getPostDetail, postComment, leaveCommunity, apiService, updateCommunityMemberStatus } from "@/services/api.services";
+import { createCategory, getPosts, createPost, getPostDetail, postComment, leaveCommunity, apiService, updateCommunityMemberStatus, removeCommunityMember } from "@/services/api.services";
 interface SharedCommunityDiscussionViewProps {
   community: any;
   onBack: () => void;
@@ -83,6 +83,7 @@ export default function SharedCommunityDiscussionView({ community, onBack, onRef
 
   const [membersList, setMembersList] = useState<any[]>(community?.members || []);
   const [approvingMemberId, setApprovingMemberId] = useState<string | null>(null);
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
 
   useEffect(() => {
     if (community?.members) {
@@ -121,6 +122,34 @@ export default function SharedCommunityDiscussionView({ community, onBack, onRef
       showToast(typeof errMsg === "string" ? errMsg : "Failed to approve member", "error");
     } finally {
       setApprovingMemberId(null);
+    }
+  };
+
+  const handleRemoveMember = async (memberDocName: string) => {
+    if (!memberDocName) return;
+    try {
+      setRemovingMemberId(memberDocName);
+      const response = await removeCommunityMember({ name: memberDocName });
+
+      if (response?.message?.success === false || response?.success === false) {
+        throw new Error(response?.message?.message || response?.message || "Failed to remove member");
+      }
+
+      const successMsg = response?.message?.message || response?.message || "Member removed successfully";
+      window.alert(typeof successMsg === "string" ? successMsg : JSON.stringify(successMsg));
+      
+      setMembersList((prev) =>
+        prev.filter((m) => m.name !== memberDocName && m.id !== memberDocName)
+      );
+
+      if (onRefresh) {
+        onRefresh();
+      }
+    } catch (error: any) {
+      const errMsg = error?.response?.data?.message?.message || error?.response?.data?.message || error.message || "Failed to remove member";
+      window.alert(typeof errMsg === "string" ? errMsg : JSON.stringify(errMsg));
+    } finally {
+      setRemovingMemberId(null);
     }
   };
 
@@ -750,6 +779,7 @@ export default function SharedCommunityDiscussionView({ community, onBack, onRef
                       const memberId = member.name || member.id;
                       const isPending = member.status === 'Pending' || member.status !== 'Approved';
                       const isApproving = approvingMemberId === memberId;
+                      const isRemoving = removingMemberId === memberId;
 
                       return (
                         <div key={idx} className="flex items-center justify-between p-4 bg-white border border-slate-200/80 rounded-xl hover:border-slate-300 shadow-sm transition-colors">
@@ -774,25 +804,49 @@ export default function SharedCommunityDiscussionView({ community, onBack, onRef
                               {member.status || "Pending"}
                             </span>
 
-                            {isPending && (
+                            <div className="flex items-center gap-2">
+                              {isPending && (
+                                <button
+                                  onClick={() => handleApproveMember(memberId)}
+                                  disabled={isApproving || isRemoving}
+                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
+                                >
+                                  {isApproving ? (
+                                    <>
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                      Approving...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Check className="w-3.5 h-3.5" />
+                                      Approve
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                              
                               <button
-                                onClick={() => handleApproveMember(memberId)}
-                                disabled={isApproving}
-                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
+                                onClick={() => {
+                                  if (window.confirm("Are you sure you want to remove this member?")) {
+                                    handleRemoveMember(memberId);
+                                  }
+                                }}
+                                disabled={isRemoving || isApproving}
+                                className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
                               >
-                                {isApproving ? (
+                                {isRemoving ? (
                                   <>
                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    Approving...
+                                    Removing...
                                   </>
                                 ) : (
                                   <>
-                                    <Check className="w-3.5 h-3.5" />
-                                    Approve
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    Remove
                                   </>
                                 )}
                               </button>
-                            )}
+                            </div>
                           </div>
                         </div>
                       );

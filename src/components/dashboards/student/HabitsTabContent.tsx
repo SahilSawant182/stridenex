@@ -49,7 +49,8 @@ import {
     completeHabitPlanStatus,
     deleteHabitPlan,
     getStudentBadges,
-    getHabitCompletionHeatmap
+    getHabitCompletionHeatmap,
+    shareBadgeOnLinkedIn
 } from "@/services/student.services";
 import { BASE_DOMAIN } from "@/services/api.services";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
@@ -314,6 +315,7 @@ export default function HabitsTabContent() {
     const [badges, setBadges] = useState<BadgeItem[]>([]);
     const [newlyUnlockedBadge, setNewlyUnlockedBadge] = useState<BadgeItem | null>(null);
     const [selectedBadge, setSelectedBadge] = useState<BadgeItem | null>(null);
+    const [sharingLinkedIn, setSharingLinkedIn] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     // Modal states
@@ -886,6 +888,23 @@ export default function HabitsTabContent() {
             }
         } catch (error) {
             console.error("Error fetching habit history:", error);
+        }
+    };
+
+    const handleShareLinkedIn = async (badgeId: string) => {
+        try {
+            setSharingLinkedIn(true);
+            const studentEmail = localStorage.getItem("currentUser") || "";
+            const response = await shareBadgeOnLinkedIn(studentEmail, badgeId);
+            if (response && response.message && response.message.share_url) {
+                window.open(response.message.share_url, '_blank');
+            }
+            showToast("Redirecting to LinkedIn...", "success");
+        } catch (error) {
+            console.error("Error sharing badge on LinkedIn:", error);
+            showToast("Failed to share badge on LinkedIn. Please try again.", "error");
+        } finally {
+            setSharingLinkedIn(false);
         }
     };
 
@@ -1551,12 +1570,31 @@ export default function HabitsTabContent() {
                                     &quot;{newlyUnlockedBadge.description}&quot;
                                 </p>
 
-                                <Button
-                                    onClick={() => setNewlyUnlockedBadge(null)}
-                                    className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold h-12 rounded-2xl shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-95 transition-transform"
-                                >
-                                    Awesome! Keep it up
-                                </Button>
+                                <div className="w-full flex flex-col gap-3">
+                                    <Button
+                                        onClick={() => handleShareLinkedIn(newlyUnlockedBadge.badge_id)}
+                                        disabled={sharingLinkedIn}
+                                        className="w-full bg-[#0a66c2] hover:bg-[#004182] text-white font-bold h-12 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2"
+                                    >
+                                        {sharingLinkedIn ? (
+                                            <>
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                                <span>Sharing...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Link className="w-5 h-5" />
+                                                <span>Share on LinkedIn</span>
+                                            </>
+                                        )}
+                                    </Button>
+                                    <Button
+                                        onClick={() => setNewlyUnlockedBadge(null)}
+                                        className="w-full bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold h-12 rounded-2xl shadow-lg shadow-orange-500/20 hover:scale-[1.02] active:scale-95 transition-transform"
+                                    >
+                                        Awesome! Keep it up
+                                    </Button>
+                                </div>
                             </motion.div>
                         </div>
                     )}
@@ -1621,12 +1659,31 @@ export default function HabitsTabContent() {
                                     </div>
                                 )}
 
-                                <Button
-                                    onClick={() => setSelectedBadge(null)}
-                                    className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 rounded-2xl shadow-lg transition-transform active:scale-95"
-                                >
-                                    Close View
-                                </Button>
+                                <div className="w-full flex flex-col gap-3">
+                                    <Button
+                                        onClick={() => handleShareLinkedIn(selectedBadge.badge_id)}
+                                        disabled={sharingLinkedIn}
+                                        className="w-full bg-[#0a66c2] hover:bg-[#004182] text-white font-bold h-12 rounded-2xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2"
+                                    >
+                                        {sharingLinkedIn ? (
+                                            <>
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                                <span>Sharing...</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Link className="w-5 h-5" />
+                                                <span>Share on LinkedIn</span>
+                                            </>
+                                        )}
+                                    </Button>
+                                    <Button
+                                        onClick={() => setSelectedBadge(null)}
+                                        className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold h-12 rounded-2xl shadow-sm transition-transform active:scale-95"
+                                    >
+                                        Close View
+                                    </Button>
+                                </div>
                             </motion.div>
                         </div>
                     )}
