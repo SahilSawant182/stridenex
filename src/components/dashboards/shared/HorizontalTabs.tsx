@@ -120,6 +120,11 @@ export default function HorizontalTabs({ role }: HorizontalTabsProps) {
 
   const isFirstOrSecondYear = () => {
     if (!profile) return false;
+    
+    // Only apply the 1st/2nd year restriction if the course type is UG
+    const courseType = String(profile.course_type || "").trim().toLowerCase();
+    if (courseType !== "ug") return false;
+
     const yearStr = String(profile.current_year || "").trim();
     if (yearStr) {
       const lowerYear = yearStr.toLowerCase();

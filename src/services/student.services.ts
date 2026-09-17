@@ -94,11 +94,12 @@ export const mapYearToWord = (year: any): string | null => {
  * Fetch all available internships for students.
  */
 export const getStudentInternshipList = async (
-  studentEmail?: string,
+  studentEmail?: string | null,
   course?: string | null,
   department?: string | null,
   academicYear?: string | null,
-  search?: string
+  search?: string,
+  workMode?: string | null
 ) => {
   try {
     let url = "method/stridenex_app.stridenex_app.doctype.internship.internship.get_internship_list";
@@ -113,6 +114,10 @@ export const getStudentInternshipList = async (
 
     if (search) {
       params.append("search", search);
+    }
+
+    if (workMode && workMode !== "All") {
+      params.append("work_mode", workMode.toLowerCase());
     }
 
     const queryString = params.toString();

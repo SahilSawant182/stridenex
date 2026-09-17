@@ -416,6 +416,12 @@ export default function JobsTabContent() {
                     <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 text-[10px] font-bold">
                       {formatSalary(job.salary_from, job.salary_to)}
                     </Badge>
+                    {job.application_deadline && (
+                      <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 gap-1 text-[10px] font-bold">
+                        <Calendar className="w-3 h-3 text-orange-400" />
+                        Apply By: {new Date(job.application_deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </Badge>
+                    )}
                   </div>
 
                   <div className="text-xs text-slate-600 leading-relaxed font-medium mb-3 line-clamp-2 h-9 opacity-85"
@@ -535,6 +541,12 @@ export default function JobsTabContent() {
                   <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Openings</p>
                   <p className="text-sm font-bold text-slate-700 mt-1">{selectedJob.openings} positions</p>
                 </div>
+                {selectedJob.application_deadline && (
+                  <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Deadline</p>
+                    <p className="text-sm font-bold text-slate-700 mt-1">{new Date(selectedJob.application_deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                  </div>
+                )}
               </div>
 
               {/* Skills required */}

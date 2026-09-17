@@ -1,5 +1,6 @@
 "use client";
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, Variants } from "framer-motion";
@@ -60,6 +61,7 @@ export default function InternshipTabContent() {
   const [loading, setLoading] = useState(true);
   const [applying, setApplying] = useState<string | null>(null);
   const [successfullyApplied, setSuccessfullyApplied] = useState<string[]>([]);
+  const [workModeFilter, setWorkModeFilter] = useState("All");
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [selectedInternship, setSelectedInternship] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
@@ -187,7 +189,7 @@ export default function InternshipTabContent() {
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search]);
+  }, [search, workModeFilter]);
 
   const fetchInternships = async () => {
     try {
@@ -219,7 +221,7 @@ export default function InternshipTabContent() {
         }
       }
 
-      const response = await getStudentInternshipList(currentUser || undefined, course, department, academicYear, search);
+      const response = await getStudentInternshipList(currentUser || undefined, course, department, academicYear, search, workModeFilter);
       const dataContainer = (response?.data && typeof response.data === 'object' && !Array.isArray(response.data)) ? response : (response?.message && typeof response.message === 'object' ? response.message : response);
       const internshipData = dataContainer?.data?.internships || dataContainer?.internships || [];
       
@@ -402,16 +404,31 @@ export default function InternshipTabContent() {
           </p>
         </div>
         
-        {/* Search Field */}
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            type="text"
-            placeholder="Search internships..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-11 bg-white border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus-visible:ring-orange-500 focus-visible:border-orange-500 shadow-sm"
-          />
+        {/* Search & Filter */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              type="text"
+              placeholder="Search internships..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 h-11 bg-white border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus-visible:ring-orange-500 focus-visible:border-orange-500 shadow-sm"
+            />
+          </div>
+          <div className="w-full sm:w-48">
+            <select
+              value={workModeFilter}
+              onChange={(e) => setWorkModeFilter(e.target.value)}
+              className="w-full h-11 px-3 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm appearance-none"
+              style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394A3B8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem top 50%', backgroundSize: '0.65rem auto' }}
+            >
+              <option value="All">All Modes</option>
+              <option value="Remote">Remote</option>
+              <option value="Hybrid">Hybrid</option>
+              <option value="Onsite">Onsite</option>
+            </select>
+          </div>
         </div>
       </motion.div>
 
@@ -488,8 +505,14 @@ export default function InternshipTabContent() {
                 <div className="flex flex-wrap gap-2 mb-3">
                   <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1 text-[10px] font-bold">
                     <MapPin className="w-3 h-3 text-slate-400" />
-                    {internship.work_mode || internship.location || "Remote"}
+                    {internship.location || "Remote"}
                   </Badge>
+                  {internship.work_mode && (
+                    <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1 text-[10px] font-bold">
+                      <Briefcase className="w-3 h-3 text-slate-400" />
+                      {internship.work_mode}
+                    </Badge>
+                  )}
                   <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1 text-[10px] font-bold">
                     <Clock className="w-3 h-3 text-slate-400" />
                     {internship.duration ? `${internship.duration} Days` : "3 Months"}
@@ -498,6 +521,12 @@ export default function InternshipTabContent() {
                     <IndianRupee className="w-3 h-3" />
                     {internship.stipend ? `₹${internship.stipend.toLocaleString('en-IN')}` : "Best in Industry"}
                   </Badge>
+                  {internship.application_deadline && (
+                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 gap-1 text-[10px] font-bold">
+                      <Calendar className="w-3 h-3 text-orange-400" />
+                      Apply By: {new Date(internship.application_deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </Badge>
+                  )}
                   {internship.openings && (
                     <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1 text-[10px] font-bold">
                       {internship.openings} Opening{internship.openings !== 1 ? 's' : ''}
@@ -560,7 +589,7 @@ export default function InternshipTabContent() {
                     setSelectedInternship(internship);
                     setShowDetails(true);
                   }}
-                  className="px-4 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl h-10 font-bold text-xs"
+                  className="px-4 border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl h-10 font-bold text-xs"
                 >
                   Details
                 </Button>
@@ -608,7 +637,7 @@ export default function InternshipTabContent() {
             </div>
 
             {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Left Column: Core Info */}
                 <div className="space-y-6">
@@ -650,6 +679,34 @@ export default function InternshipTabContent() {
                           </div>
                         </div>
                       </div>
+                      {selectedInternship.application_deadline && (
+                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center">
+                              <Calendar className="w-4 h-4 text-orange-500" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase">Deadline</p>
+                              <p className="text-sm font-bold text-slate-700">
+                                {new Date(selectedInternship.application_deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {selectedInternship.work_mode && (
+                        <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                              <Briefcase className="w-4 h-4 text-indigo-500" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase">Work Mode</p>
+                              <p className="text-sm font-bold text-slate-700">{selectedInternship.work_mode}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </section>
 
@@ -671,19 +728,8 @@ export default function InternshipTabContent() {
                   </section>
                 </div>
 
-                {/* Right Column: Descriptions */}
+                {/* Right Column: Other Details */}
                 <div className="space-y-6">
-                  <section>
-                    <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                      <Zap className="w-3 h-3" /> About the Internship
-                    </h3>
-                    <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100">
-                      <p className="text-sm text-slate-600 leading-relaxed font-medium">
-                        {selectedInternship.description || "No description provided by the industry partner."}
-                      </p>
-                    </div>
-                  </section>
-
                   <section>
                     <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                       <GraduationCap className="w-3 h-3" /> Eligibility
@@ -707,6 +753,18 @@ export default function InternshipTabContent() {
                   </div>
                 </div>
               </div>
+
+              {/* Full Width Description */}
+              <section>
+                <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                  <Zap className="w-3 h-3" /> About the Internship
+                </h3>
+                <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100">
+                  <p className="text-sm text-slate-600 leading-relaxed font-medium break-words whitespace-pre-wrap">
+                    {selectedInternship.description || "No description provided by the industry partner."}
+                  </p>
+                </div>
+              </section>
             </div>
 
             {/* Modal Footer */}
@@ -714,7 +772,7 @@ export default function InternshipTabContent() {
               <Button 
                 variant="outline" 
                 onClick={() => setShowDetails(false)}
-                className="px-8 h-12 rounded-xl text-sm font-bold border-slate-200 text-slate-600 hover:bg-white transition-all"
+                className="px-8 h-12 rounded-xl text-sm font-bold border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-100 transition-all"
               >
                 Close
               </Button>
@@ -779,7 +837,7 @@ export default function InternshipTabContent() {
           <Briefcase className="w-12 h-12 text-slate-200 mb-4" />
           <h3 className="text-lg font-bold text-slate-800">No Openings Found</h3>
           <p className="text-sm text-slate-500 max-w-xs text-center mt-2">
-            We couldn't find any internships matching your profile right now. Check back later!
+            We could not find any internships matching your profile right now. Check back later!
           </p>
         </div>
       )}
