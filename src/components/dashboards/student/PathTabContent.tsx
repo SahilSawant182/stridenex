@@ -171,7 +171,7 @@ export default function PathTabContent() {
   // Student Profile fields
   const [degree, setDegree] = useState<string>("");
   const [specialisation, setSpecialisation] = useState<string>("");
-  const [academicYear, setAcademicYear] = useState<number>(3);
+  const [academicYear, setAcademicYear] = useState<number>(0);
   const [interests, setInterests] = useState<string>("");
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [skillsInput, setSkillsInput] = useState<string>("");
@@ -179,6 +179,9 @@ export default function PathTabContent() {
 
   // Hierarchy skills retrieved for the selected career path
   const [hierarchySkills, setHierarchySkills] = useState<any>(null);
+
+  // Controls the hierarchy popup modal visibility
+  const [showHierarchyModal, setShowHierarchyModal] = useState<boolean>(false);
 
   // Student skills ledger entries
   const [studentSkills, setStudentSkills] = useState<any[]>([]);
@@ -313,12 +316,10 @@ export default function PathTabContent() {
         })
       ]);
 
+      // Note: degree and branch are intentionally NOT auto-filled from student data.
+      // The user must manually enter these in the AI Career Pathfinder form.
       if (studentDetailsRes) {
-        const studentData = studentDetailsRes?.data || studentDetailsRes?.message?.data || studentDetailsRes?.message;
-        if (studentData) {
-          if (studentData.course_type && !degree) setDegree(studentData.course_type);
-          if (studentData.course && !specialisation) setSpecialisation(studentData.course);
-        }
+        // Reserved for future use if needed
       }
 
       if (studentSkillsRes?.message) {
@@ -1169,119 +1170,198 @@ export default function PathTabContent() {
               </div>
             </div>
 
-            {/* STEP 1: DEFINE PROFILE & DECLARED SKILLS */}
+            {/* STEP 1: DEFINE PROFILE & DECLARED SKILLS — redesigned */}
             {wizardStep === 1 && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="space-y-0">
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Hero intro strip */}
+                <div className="relative rounded-2xl overflow-hidden mb-7 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700 p-6 text-white">
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.12),transparent_60%)]" />
+                  <div className="absolute bottom-0 left-0 w-40 h-40 bg-indigo-400/20 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
+                  <div className="relative z-10 flex items-start gap-4">
+                    <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur-sm flex items-center justify-center shrink-0 border border-white/20">
+                      <Sparkles className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold tracking-tight">Tell us about yourself</h3>
+                      <p className="text-blue-100 text-xs mt-1 leading-relaxed max-w-md">
+                        Our AI will analyze your academic background and interests to surface the most fitting career paths for you.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fields grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+
                   {/* Degree */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <GraduationCap className="w-4 h-4 text-blue-600" />
-                      <span>Degree / Qualification <span className="text-red-500">*</span></span>
+                  <div className="group">
+                    <label className="flex items-center gap-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                      <span className="w-5 h-5 rounded-md bg-blue-50 border border-blue-100 flex items-center justify-center">
+                        <GraduationCap className="w-3 h-3 text-blue-600" />
+                      </span>
+                      Degree / Qualification <span className="text-red-400 normal-case tracking-normal">*</span>
                     </label>
                     <input
                       type="text"
                       value={degree}
                       onChange={(e) => setDegree(e.target.value)}
-                      placeholder="e.g. B.Tech, B.Sc, M.Tech, BCA, MBA"
-                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${showValidationErrors && !degree.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
+                      placeholder="e.g. B.Tech, B.Sc, M.Tech, MBA"
+                      autoComplete="off"
+                      className={`w-full px-4 py-3 text-sm bg-slate-50 border-2 rounded-xl transition-all duration-200
+                        focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white
+                        placeholder:text-slate-300 text-slate-700 font-medium
+                        ${showValidationErrors && !degree.trim()
+                          ? 'border-red-400 bg-red-50/30 focus:ring-red-400/10 focus:border-red-400'
+                          : 'border-slate-200 group-hover:border-slate-300'
                         }`}
                     />
                     {showValidationErrors && !degree.trim() && (
-                      <span className="text-[10px] font-bold text-red-500 mt-1 block">Degree is required.</span>
+                      <p className="text-[10px] font-semibold text-red-500 mt-1.5 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-red-500 inline-block" />
+                        Degree is required.
+                      </p>
                     )}
                   </div>
 
                   {/* Specialisation */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <Briefcase className="w-4 h-4 text-blue-600" />
-                      <span>Branch / Specialisation <span className="text-red-500">*</span></span>
+                  <div className="group">
+                    <label className="flex items-center gap-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                      <span className="w-5 h-5 rounded-md bg-blue-50 border border-blue-100 flex items-center justify-center">
+                        <Briefcase className="w-3 h-3 text-blue-600" />
+                      </span>
+                      Branch / Specialisation <span className="text-red-400 normal-case tracking-normal">*</span>
                     </label>
                     <input
                       type="text"
                       value={specialisation}
                       onChange={(e) => setSpecialisation(e.target.value)}
-                      placeholder="e.g. Computer Science, Electronics, Mechanical, Civil"
-                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${showValidationErrors && !specialisation.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
+                      placeholder="e.g. Computer Science, Electronics"
+                      autoComplete="off"
+                      className={`w-full px-4 py-3 text-sm bg-slate-50 border-2 rounded-xl transition-all duration-200
+                        focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white
+                        placeholder:text-slate-300 text-slate-700 font-medium
+                        ${showValidationErrors && !specialisation.trim()
+                          ? 'border-red-400 bg-red-50/30 focus:ring-red-400/10 focus:border-red-400'
+                          : 'border-slate-200 group-hover:border-slate-300'
                         }`}
                     />
                     {showValidationErrors && !specialisation.trim() && (
-                      <span className="text-[10px] font-bold text-red-500 mt-1 block">Branch / Specialisation is required.</span>
+                      <p className="text-[10px] font-semibold text-red-500 mt-1.5 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-red-500 inline-block" />
+                        Branch / Specialisation is required.
+                      </p>
                     )}
                   </div>
 
-                  {/* Year */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <Calendar className="w-4 h-4 text-blue-600" />
-                      <span>Academic Year <span className="text-red-500">*</span></span>
+                  {/* Academic Year */}
+                  <div className="group">
+                    <label className="flex items-center gap-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                      <span className="w-5 h-5 rounded-md bg-blue-50 border border-blue-100 flex items-center justify-center">
+                        <Calendar className="w-3 h-3 text-blue-600" />
+                      </span>
+                      Academic Year <span className="text-red-400 normal-case tracking-normal">*</span>
                     </label>
                     <select
                       value={academicYear}
                       onChange={(e) => setAcademicYear(Number(e.target.value))}
-                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${showValidationErrors && !academicYear ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
+                      className={`w-full px-4 py-3 text-sm bg-slate-50 border-2 rounded-xl transition-all duration-200 cursor-pointer
+                        focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white
+                        text-slate-700 font-medium appearance-none
+                        ${showValidationErrors && !academicYear
+                          ? 'border-red-400 bg-red-50/30'
+                          : 'border-slate-200 group-hover:border-slate-300'
                         }`}
                     >
-                      <option value="">Select Year...</option>
-                      <option value="1">First Year (1st)</option>
-                      <option value="2">Second Year (2nd)</option>
-                      <option value="3">Third Year (3rd)</option>
-                      <option value="4">Fourth Year (4th)</option>
+                      <option value="">Select your year...</option>
+                      <option value="1">1st Year</option>
+                      <option value="2">2nd Year</option>
+                      <option value="3">3rd Year</option>
+                      <option value="4">4th Year</option>
                       <option value="5">Graduate / Completed</option>
                     </select>
                     {showValidationErrors && !academicYear && (
-                      <span className="text-[10px] font-bold text-red-500 mt-1 block">Academic Year is required.</span>
+                      <p className="text-[10px] font-semibold text-red-500 mt-1.5 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-red-500 inline-block" />
+                        Academic Year is required.
+                      </p>
                     )}
                   </div>
 
-                  {/* Interests */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                      <Heart className="w-4 h-4 text-blue-600" />
-                      <span>Core Interests (Comma Separated) <span className="text-red-500">*</span></span>
+                  {/* Core Interests */}
+                  <div className="group">
+                    <label className="flex items-center gap-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                      <span className="w-5 h-5 rounded-md bg-blue-50 border border-blue-100 flex items-center justify-center">
+                        <Heart className="w-3 h-3 text-blue-600" />
+                      </span>
+                      Core Interests <span className="text-red-400 normal-case tracking-normal">*</span>
                     </label>
                     <input
                       type="text"
                       value={interests}
                       onChange={(e) => setInterests(e.target.value)}
-                      placeholder="e.g. Machine Learning, Web Development, Cybersecurity, Cloud Computing"
-                      className={`w-full px-3 py-2 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${showValidationErrors && !interests.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
+                      placeholder="e.g. ML, Web Dev, Cybersecurity"
+                      className={`w-full px-4 py-3 text-sm bg-slate-50 border-2 rounded-xl transition-all duration-200
+                        focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white
+                        placeholder:text-slate-300 text-slate-700 font-medium
+                        ${showValidationErrors && !interests.trim()
+                          ? 'border-red-400 bg-red-50/30 focus:ring-red-400/10 focus:border-red-400'
+                          : 'border-slate-200 group-hover:border-slate-300'
                         }`}
                     />
                     {showValidationErrors && !interests.trim() && (
-                      <span className="text-[10px] font-bold text-red-500 mt-1 block">Core Interests are required.</span>
+                      <p className="text-[10px] font-semibold text-red-500 mt-1.5 flex items-center gap-1">
+                        <span className="w-1 h-1 rounded-full bg-red-500 inline-block" />
+                        Core Interests are required.
+                      </p>
                     )}
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <BookOpen className="w-4 h-4 text-blue-600" />
-                    <span>What Skills Do You Already Possess? (Comma Separated) <span className="text-red-500">*</span></span>
+                {/* Skills field - full width */}
+                <div className="group mb-7">
+                  <label className="flex items-center gap-2 text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-2">
+                    <span className="w-5 h-5 rounded-md bg-blue-50 border border-blue-100 flex items-center justify-center">
+                      <BookOpen className="w-3 h-3 text-blue-600" />
+                    </span>
+                    Skills You Already Have
+                    <span className="text-red-400 normal-case tracking-normal">*</span>
+                    <span className="ml-auto text-[10px] text-slate-400 font-medium normal-case tracking-normal">comma separated</span>
                   </label>
-                  <p className="text-xs text-slate-500 mb-4">We will use these skills to run gap analysis and offer milestone revision options.</p>
                   <input
                     type="text"
                     value={skillsInput}
                     onChange={(e) => setSkillsInput(e.target.value)}
-                    placeholder="e.g. HTML, CSS, JavaScript, React, Node.js"
-                    className={`w-full px-3 py-2.5 text-sm bg-slate-50 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 font-semibold text-slate-700 ${showValidationErrors && !skillsInput.trim() ? "border-red-500 ring-1 ring-red-500" : "border-slate-200"
+                    placeholder="e.g. HTML, CSS, JavaScript, Python, React"
+                    className={`w-full px-4 py-3 text-sm bg-slate-50 border-2 rounded-xl transition-all duration-200
+                      focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white
+                      placeholder:text-slate-300 text-slate-700 font-medium
+                      ${showValidationErrors && !skillsInput.trim()
+                        ? 'border-red-400 bg-red-50/30 focus:ring-red-400/10 focus:border-red-400'
+                        : 'border-slate-200 group-hover:border-slate-300'
                       }`}
                   />
+                  <p className="text-[11px] text-slate-400 mt-2 font-medium leading-relaxed">
+                    These skills will be used to run a gap analysis and personalize your learning milestones.
+                  </p>
                   {showValidationErrors && !skillsInput.trim() && (
-                    <span className="text-[10px] font-bold text-red-500 mt-1 block">Please enter the skills you already possess.</span>
+                    <p className="text-[10px] font-semibold text-red-500 mt-1 flex items-center gap-1">
+                      <span className="w-1 h-1 rounded-full bg-red-500 inline-block" />
+                      Please enter at least one skill you already have.
+                    </p>
                   )}
                 </div>
 
+                {/* CTA */}
                 <div className="flex justify-end pt-4 border-t border-slate-100">
                   <button
                     onClick={handleGetRecommendations}
-                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-2 shadow-sm active:scale-98"
+                    className="group relative overflow-hidden px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-sm font-bold rounded-xl transition-all duration-200 flex items-center gap-2.5 shadow-lg shadow-blue-500/20 active:scale-[0.98]"
                   >
-                    Find Recommended Paths
-                    <ArrowRight className="w-4 h-4" />
+                    <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    <Sparkles className="w-4 h-4 text-amber-300 animate-pulse" />
+                    Find My Career Paths
+                    <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                   </button>
                 </div>
               </motion.div>
@@ -1381,7 +1461,10 @@ export default function PathTabContent() {
                                 ? 'border-blue-600 bg-blue-50/20 ring-1 ring-blue-500 shadow-sm'
                                 : 'border-slate-200 hover:border-slate-300 bg-white hover:shadow-sm'
                                 }`}
-                              onClick={() => handleSelectPathForSkills(path)}
+                              onClick={() => {
+                                handleSelectPathForSkills(path);
+                                setShowHierarchyModal(true);
+                              }}
                             >
                               <div>
                                 <div className="flex justify-between items-start mb-2">
@@ -1527,107 +1610,27 @@ export default function PathTabContent() {
                   )}
                 </div>
 
-                {/* Hierarchy-wise skills found by Skill Agent for the selected path */}
-                {selectedPath && (
+                {/* Hierarchy modal hint when a path is selected but modal is closed */}
+                {selectedPath && !showHierarchyModal && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-slate-50 rounded-xl border border-slate-150 p-6 space-y-4 shadow-inner"
+                    className="flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3"
                   >
-                    <div className="flex justify-between items-center pb-3 border-b border-slate-200">
-                      <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5 group relative">
-                        <Sparkles className={`w-4 h-4 text-blue-600 ${detailsLoading ? 'animate-spin' : ''}`} />
-                        SkillAgent Hierarchy Analysis: {selectedPath.title}
-                        <AlertCircle className="w-3.5 h-3.5 text-slate-400 cursor-help" />
-                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-slate-800 text-white text-[10px] rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all shadow-lg text-center z-10 pointer-events-none normal-case tracking-normal">
-                          Our AI breaks down this career into Foundation, Core, and Advanced skills to give you a clear roadmap.
-                        </div>
-                      </h4>
-                      {detailsLoading && <Loader2 className="w-4 h-4 animate-spin text-blue-600" />}
+                    <div className="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                      <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                     </div>
-
-                    {hierarchySkills ? (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {/* Foundation */}
-                        <div className="bg-white p-3 rounded-lg border border-slate-200/60 shadow-sm">
-                          <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block mb-2">Foundation</span>
-                          <div className="flex flex-col gap-1">
-                            {hierarchySkills.foundation_skills?.length > 0 ? (
-                              hierarchySkills.foundation_skills.map((s: string) => (
-                                <span key={s} className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                  <span className="w-1 h-1 rounded-full bg-blue-500"></span>{s}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-xs text-slate-400 italic">None found</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Core Domain */}
-                        <div className="bg-white p-3 rounded-lg border border-slate-200/60 shadow-sm">
-                          <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider block mb-2">Core Domain</span>
-                          <div className="flex flex-col gap-1">
-                            {hierarchySkills.core_domain_skills?.length > 0 ? (
-                              hierarchySkills.core_domain_skills.map((s: string) => (
-                                <span key={s} className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                  <span className="w-1 h-1 rounded-full bg-indigo-500"></span>{s}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-xs text-slate-400 italic">None found</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Industry */}
-                        <div className="bg-white p-3 rounded-lg border border-slate-200/60 shadow-sm">
-                          <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider block mb-2">Industry</span>
-                          <div className="flex flex-col gap-1">
-                            {hierarchySkills.industry_skills?.length > 0 ? (
-                              hierarchySkills.industry_skills.map((s: string) => (
-                                <span key={s} className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                  <span className="w-1 h-1 rounded-full bg-emerald-500"></span>{s}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-xs text-slate-400 italic">None found</span>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Emerging */}
-                        <div className="bg-white p-3 rounded-lg border border-slate-200/60 shadow-sm">
-                          <span className="text-[10px] font-bold text-orange-600 uppercase tracking-wider block mb-2">Emerging</span>
-                          <div className="flex flex-col gap-1">
-                            {hierarchySkills.emerging_skills?.length > 0 ? (
-                              hierarchySkills.emerging_skills.map((s: string) => (
-                                <span key={s} className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                                  <span className="w-1 h-1 rounded-full bg-orange-500"></span>{s}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-xs text-slate-400 italic">None found</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-4 text-xs font-medium text-slate-400 italic">
-                        Click on a career path card to parse hierarchy skills via SkillAgent...
-                      </div>
-                    )}
-
-                    <div className="flex justify-end pt-3">
-                      <button
-                        onClick={handleGoToGapAnalysis}
-                        disabled={!hierarchySkills}
-                        className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        Find Skill Gap
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-blue-800 truncate">{selectedPath.title}</p>
+                      <p className="text-[11px] text-blue-600 font-medium">Click to review skill hierarchy & continue</p>
                     </div>
+                    <button
+                      onClick={() => setShowHierarchyModal(true)}
+                      className="shrink-0 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1.5"
+                    >
+                      View Details
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
                   </motion.div>
                 )}
 
@@ -1845,7 +1848,126 @@ export default function PathTabContent() {
               </div>
             </div>
           </div>
-          {/* Active Path Confirmation Modal */}
+          {/* ─── Hierarchy Popup Modal ─── */}
+          {mounted && createPortal(
+            <AnimatePresence>
+              {showHierarchyModal && selectedPath && (
+                <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center z-[260] p-4">
+                  <motion.div
+                    initial={{ scale: 0.92, opacity: 0, y: 16 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.92, opacity: 0, y: 16 }}
+                    transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+                    className="bg-white rounded-3xl max-w-2xl w-full border border-slate-100 shadow-2xl overflow-hidden"
+                  >
+                    {/* Modal Header */}
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-5 text-white relative overflow-hidden">
+                      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.12),transparent_60%)]" />
+                      <div className="relative z-10 flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center shrink-0">
+                            <Sparkles className={`w-5 h-5 text-white ${detailsLoading ? 'animate-spin' : ''}`} />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-blue-200 uppercase tracking-widest mb-0.5">SkillAgent Hierarchy Analysis</p>
+                            <h3 className="text-base font-bold leading-tight">{selectedPath.title}</h3>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setShowHierarchyModal(false)}
+                          className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors shrink-0"
+                        >
+                          <X className="w-4 h-4 text-white" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Modal Body */}
+                    <div className="p-6">
+                      {detailsLoading ? (
+                        <div className="flex flex-col items-center justify-center py-12 gap-4">
+                          <div className="relative">
+                            <div className="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center">
+                              <Loader2 className="w-7 h-7 animate-spin text-blue-600" />
+                            </div>
+                            <div className="absolute inset-0 rounded-full bg-blue-400/20 animate-ping" />
+                          </div>
+                          <div className="text-center">
+                            <p className="text-sm font-bold text-slate-700">Analyzing skill hierarchy...</p>
+                            <p className="text-xs text-slate-400 mt-1">Our AI agent is mapping out the required skills</p>
+                          </div>
+                        </div>
+                      ) : hierarchySkills ? (
+                        <>
+                          <p className="text-xs text-slate-500 font-medium mb-5 leading-relaxed">
+                            Here's the full skill breakdown for this career path across all tiers. These are the skills our AI will use to identify your gaps.
+                          </p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                            {[
+                              { label: 'Foundation', color: 'blue', dot: 'bg-blue-500', badge: 'bg-blue-50 text-blue-700 border-blue-100', skills: hierarchySkills.foundation_skills },
+                              { label: 'Core Domain', color: 'indigo', dot: 'bg-indigo-500', badge: 'bg-indigo-50 text-indigo-700 border-indigo-100', skills: hierarchySkills.core_domain_skills },
+                              { label: 'Industry', color: 'emerald', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-100', skills: hierarchySkills.industry_skills },
+                              { label: 'Emerging', color: 'orange', dot: 'bg-orange-500', badge: 'bg-orange-50 text-orange-700 border-orange-100', skills: hierarchySkills.emerging_skills },
+                            ].map((tier) => (
+                              <div key={tier.label} className="bg-slate-50 rounded-2xl border border-slate-100 p-4">
+                                <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[10px] font-bold uppercase tracking-wider mb-3 ${tier.badge}`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${tier.dot}`} />
+                                  {tier.label}
+                                </div>
+                                <div className="flex flex-col gap-1.5">
+                                  {tier.skills?.length > 0 ? (
+                                    tier.skills.map((s: string) => (
+                                      <span key={s} className="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5 leading-snug">
+                                        <span className={`w-1 h-1 rounded-full shrink-0 ${tier.dot}`} />
+                                        {s}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-[11px] text-slate-400 italic">None listed</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center py-12">
+                          <AlertCircle className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                          <p className="text-sm font-semibold text-slate-500">Could not load hierarchy data.</p>
+                          <p className="text-xs text-slate-400 mt-1">Please try selecting the path again.</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Modal Footer */}
+                    <div className="px-6 pb-6 flex items-center justify-between gap-3 border-t border-slate-100 pt-5">
+                      <button
+                        onClick={() => setShowHierarchyModal(false)}
+                        className="px-4 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-bold rounded-xl transition-all"
+                      >
+                        Choose Another Path
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowHierarchyModal(false);
+                          handleGoToGapAnalysis();
+                        }}
+                        disabled={detailsLoading || !hierarchySkills}
+                        className="group relative overflow-hidden px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold rounded-xl transition-all duration-200 flex items-center gap-2 shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+                      >
+                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        Continue & Find Skill Gap
+                        <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
+                      </button>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+            </AnimatePresence>,
+            document.body
+          )}
+
+          {/* ─── Active Path Confirmation Modal ─── */}
           {mounted && createPortal(
             <AnimatePresence>
               {showConfirmModal && (
@@ -2005,146 +2127,6 @@ export default function PathTabContent() {
                 </button>
               </div>
             </div>
-
-            {/* Acquired Skills and Missing Skills details */}
-            {pathData && (
-              <div className="mb-6 pt-4 border-t border-slate-100 space-y-4">
-                {/* Journey Progress Bar */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-100/40 to-transparent rounded-bl-full -z-10" />
-                  <div className="flex justify-between items-end mb-3">
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                        <Award className="w-5 h-5 text-blue-500" /> Skill Acquisition Journey
-                      </h3>
-                      <p className="text-[11px] text-slate-500 font-semibold mt-0.5">As you complete milestones, skills will dynamically move here.</p>
-                    </div>
-                    <div className="text-right flex items-baseline gap-1">
-                      <span className="text-2xl font-black text-blue-600">
-                        {Array.isArray(pathData.matched_skills) ? pathData.matched_skills.length : 0}
-                      </span>
-                      <span className="text-xs font-bold text-slate-400">
-                        / {(Array.isArray(pathData.matched_skills) ? pathData.matched_skills.length : 0) + (Array.isArray(pathData.missing_skills) ? pathData.missing_skills.length : 0)} Skills
-                      </span>
-                    </div>
-                  </div>
-                  <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden flex shadow-inner">
-                    <motion.div
-                      className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full relative overflow-hidden"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${((Array.isArray(pathData.matched_skills) ? pathData.matched_skills.length : 0) / Math.max(1, (Array.isArray(pathData.matched_skills) ? pathData.matched_skills.length : 0) + (Array.isArray(pathData.missing_skills) ? pathData.missing_skills.length : 0))) * 100}%` }}
-                      transition={{ duration: 1.5, ease: "easeOut" }}
-                    >
-                      <div className="absolute inset-0 bg-white/20 w-full h-full" style={{ backgroundImage: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent)', transform: 'skewX(-20deg)', animation: 'shimmer 2s infinite' }}></div>
-                    </motion.div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Acquired Skills */}
-                  <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-100/40 to-transparent rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shadow-sm">
-                          <CheckCircle2 className="w-4 h-4" />
-                        </div>
-                        Your Acquired Skills
-                      </h4>
-                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100 uppercase tracking-wider">
-                        {Array.isArray(pathData.matched_skills) ? pathData.matched_skills.length : 0} Mastered
-                      </span>
-                    </div>
-
-                    {Array.isArray(pathData.matched_skills) && pathData.matched_skills.length > 0 ? (
-                      <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                        <AnimatePresence>
-                          {pathData.matched_skills.map((matched: any) => {
-                            const skillName = matched.skill || matched.name || "";
-                            const skillLevel = matched.current_level || matched.level || "Beginner";
-                            return (
-                              <motion.div
-                                layout
-                                layoutId={`skill-chip-${skillName}`}
-                                key={skillName}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, scale: 0.8 }}
-                                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                                className="flex items-center justify-between px-4 py-3 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-300 rounded-xl transition-colors shadow-sm cursor-default"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.6)]"></div>
-                                  <span className="text-xs font-bold text-slate-700">{skillName}</span>
-                                </div>
-                                <span className="text-[9px] font-bold text-slate-500 bg-slate-50 px-2 py-1 rounded-md border border-slate-100 uppercase tracking-wider">{skillLevel}</span>
-                              </motion.div>
-                            );
-                          })}
-                        </AnimatePresence>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-8 bg-slate-50/50 rounded-xl border border-slate-100 border-dashed h-[150px]">
-                        <Compass className="w-8 h-8 text-slate-300 mb-2" />
-                        <p className="text-xs font-medium text-slate-400">No acquired skills documented yet</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Missing Skills */}
-                  <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-rose-100/40 to-transparent rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500" />
-                    <div className="flex items-center justify-between mb-4">
-                      <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shadow-sm">
-                          <Target className="w-4 h-4" />
-                        </div>
-                        Skills to Acquire
-                      </h4>
-                      <span className="text-[10px] font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full border border-rose-100 uppercase tracking-wider">
-                        {Array.isArray(pathData.missing_skills) ? pathData.missing_skills.length : 0} Left
-                      </span>
-                    </div>
-
-                    {Array.isArray(pathData.missing_skills) && pathData.missing_skills.length > 0 ? (
-                      <div className="flex flex-col gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-                        <AnimatePresence>
-                          {pathData.missing_skills.map((missing: any) => {
-                            const skillName = missing.skill || missing.name || "";
-                            const skillLevel = missing.required_level || missing.level || "Beginner";
-                            return (
-                              <motion.div
-                                layout
-                                layoutId={`skill-chip-${skillName}`}
-                                key={skillName}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, scale: 0.8 }}
-                                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                                className="flex items-center justify-between px-4 py-3 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-300 rounded-xl transition-colors shadow-sm cursor-default"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_4px_rgba(244,63,94,0.6)]"></div>
-                                  <span className="text-xs font-bold text-slate-700">{skillName}</span>
-                                </div>
-                                <span className="text-[9px] font-bold text-slate-500 bg-slate-50 px-2 py-1 rounded-md border border-slate-100 uppercase tracking-wider">{skillLevel}</span>
-                              </motion.div>
-                            );
-                          })}
-                        </AnimatePresence>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-8 bg-slate-50/50 rounded-xl border border-slate-100 border-dashed h-[150px]">
-                        <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-2 shadow-sm">
-                          <Check className="w-5 h-5" />
-                        </div>
-                        <p className="text-xs font-bold text-emerald-600">All skills matched! You are fully qualified.</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
 
             {/* Timeline milestone items */}
             <div className="relative pl-3 space-y-6 pt-4 border-t border-slate-100">
