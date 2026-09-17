@@ -1211,13 +1211,13 @@ export default function ShortsTabContent() {
 
       {/* Top Right Floating Toolbar Actions */}
       <div className="absolute top-4 right-6 flex items-center gap-3.5 z-30">
-        <button
+        {/* <button
           onClick={() => setIsRecommendationsOpen(true)}
           className="flex items-center gap-1.5 px-4 py-2 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 rounded-full text-xs font-bold text-zinc-200 hover:text-white hover:scale-105 active:scale-95 transition-all shadow-xl backdrop-blur-md"
         >
           <Sparkles className="w-3.5 h-3.5 text-orange-400" />
           <span>Gaps & Recommendations</span>
-        </button>
+        </button> */}
         <button
           onClick={() => {
             fetchPlaylists();

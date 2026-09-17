@@ -51,6 +51,7 @@ export default function JobsTabContent() {
   const [successfullyApplied, setSuccessfullyApplied] = useState<string[]>([]);
   const [selectedJob, setSelectedJob] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [employmentTypeFilter, setEmploymentTypeFilter] = useState("All");
 
   // Offer Letter State
   const [showOfferModal, setShowOfferModal] = useState(false);
@@ -205,7 +206,7 @@ export default function JobsTabContent() {
       console.error("Error reading applied jobs from localStorage:", e);
     }
     fetchJobs();
-  }, [currentUser]);
+  }, [currentUser, employmentTypeFilter]);
 
   const fetchJobs = async () => {
     try {
@@ -221,7 +222,7 @@ export default function JobsTabContent() {
         }
       }
 
-      const response = await getJobProfiles(currentUser || undefined);
+      const response = await getJobProfiles(currentUser || undefined, employmentTypeFilter);
       const dataObj = response?.data || response?.message?.data || response?.message || {};
       let list = [];
       if (Array.isArray(dataObj)) {
@@ -310,16 +311,33 @@ export default function JobsTabContent() {
           </p>
         </div>
 
-        {/* Search Field */}
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <Input
-            type="text"
-            placeholder="Search jobs by title or company..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 h-11 bg-white border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus-visible:ring-orange-500 focus-visible:border-orange-500 shadow-sm"
-          />
+        {/* Search & Filter */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              type="text"
+              placeholder="Search jobs by title or company..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 h-11 bg-white border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus-visible:ring-orange-500 focus-visible:border-orange-500 shadow-sm"
+            />
+          </div>
+          <div className="w-full sm:w-48">
+            <select
+              value={employmentTypeFilter}
+              onChange={(e) => setEmploymentTypeFilter(e.target.value)}
+              className="w-full h-11 px-3 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 shadow-sm appearance-none"
+              style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394A3B8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem top 50%', backgroundSize: '0.65rem auto' }}
+            >
+              <option value="All">All Types</option>
+              <option value="Full Time">Full Time</option>
+              <option value="Part Time">Part Time</option>
+              <option value="Contract">Contract</option>
+              <option value="Work From Home">Work From Home</option>
+              <option value="Hybrid">Hybrid</option>
+            </select>
+          </div>
         </div>
       </motion.div>
 

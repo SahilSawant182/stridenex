@@ -33,7 +33,6 @@ interface SkillRow {
   evidence: number;
   endorsements: number;
   aiVerified: boolean;
-  lastDemo: string;
 }
 
 
@@ -142,8 +141,7 @@ export default function SkillsTabContent() {
             levelType: (s.current_level as any) || "Beginner",
             evidence: s.evidence_count || 0,
             endorsements: s.endorsement_count || 0,
-            aiVerified: !!s.ai_verified,
-            lastDemo: s.last_demo || "-"
+            aiVerified: !!s.ai_verified
           }));
           setSkillRows(mappedRows);
         }
@@ -428,7 +426,7 @@ export default function SkillsTabContent() {
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 z-20 bg-slate-50 shadow-sm border-b border-slate-200">
                 <tr>
-                  {['Skill Details', 'Proficiency', 'Evidence & Endorsements', 'Verification', 'Last Demo'].map((header) => (
+                  {['Skill Details', 'Proficiency', 'Evidence & Endorsements', 'Verification'].map((header) => (
                     <th key={header} className="py-4 px-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest first:pl-8 last:pr-8">
                       {header}
                     </th>
@@ -438,7 +436,7 @@ export default function SkillsTabContent() {
               <tbody className="text-sm divide-y divide-slate-100 bg-white">
               {skillRows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-16">
+                  <td colSpan={4} className="py-16">
                     <div className="flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border border-slate-100 border-dashed py-10 w-full max-w-md mx-auto">
                       <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-3 shadow-sm border border-slate-100">
                         <FileText className="w-8 h-8 text-slate-300" />
@@ -519,12 +517,6 @@ export default function SkillsTabContent() {
                           <Sparkles className="w-3.5 h-3.5 text-orange-400" /> Verify Now
                         </Button>
                       )}
-                    </td>
-                    <td className="py-5 px-6 first:pl-8 last:pr-8">
-                      <div className="flex items-center gap-2 text-slate-400 text-[11px] font-semibold uppercase tracking-wider group-hover:text-slate-600 transition-colors">
-                        <Clock className="w-3.5 h-3.5 opacity-40" />
-                        {row.lastDemo}
-                      </div>
                     </td>
                   </tr>
                 ))

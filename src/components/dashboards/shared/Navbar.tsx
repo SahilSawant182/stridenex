@@ -542,18 +542,7 @@ export default function Navbar({ role }: NavbarProps) {
           }`}>
           <Menu className="w-5 h-5" />
         </button>
-        <div className="hidden sm:flex relative">
-          <Search className={`w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${isShortsPage ? 'text-zinc-500' : 'text-slate-400'
-            }`} />
-          <input
-            type="text"
-            placeholder={config.searchPlaceholder}
-            className={`pl-9 pr-4 py-2 rounded-full text-sm w-64 transition-all focus:outline-none focus:ring-1 ${isShortsPage
-                ? 'bg-zinc-900 border border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:border-zinc-700 focus:ring-zinc-700'
-                : 'bg-slate-50 border border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-slate-400 focus:ring-slate-400'
-              }`}
-          />
-        </div>
+
       </div>
 
       <div className="flex items-center gap-3">

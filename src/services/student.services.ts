@@ -1502,11 +1502,15 @@ export const getTodaysOpportunityAlerts = async (studentEmail: string): Promise<
   }
 };
 
-export const getJobProfiles = async (studentEmail?: string) => {
+export const getJobProfiles = async (studentEmail?: string, employmentType?: string) => {
   try {
     let url = `method/stridenex_app.stridenex_app.doctype.student_job_applications.student_job_applications.get_job_profile_list`;
-    if (studentEmail) {
-      url += `?student=${encodeURIComponent(studentEmail)}`;
+    const queryParams = [];
+    if (studentEmail) queryParams.push(`student=${encodeURIComponent(studentEmail)}`);
+    if (employmentType && employmentType !== "All") queryParams.push(`employment_type=${encodeURIComponent(employmentType)}`);
+    
+    if (queryParams.length > 0) {
+      url += `?${queryParams.join("&")}`;
     }
     const response = await apiService.get(url);
     return response;
