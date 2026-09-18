@@ -322,7 +322,7 @@ export default function StudentOnboarding({
         limit_page_length: 1000
       } : undefined,
       mapOptions: (data) => {
-        const items = data.data || data || [];
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
         const uniqueStreams = Array.from(new Set(items.map((item: any) => item.stream))).filter(Boolean);
         return uniqueStreams.map((stream: any) => ({
           value: stream,
@@ -350,7 +350,7 @@ export default function StudentOnboarding({
         limit_page_length: 1000
       } : undefined,
       mapOptions: (data) => {
-        const items = data.data || data || [];
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
         const uniqueCourses = Array.from(new Set(items.map((item: any) => item.course))).filter(Boolean);
         return uniqueCourses.map((course: any) => ({
           value: course,
@@ -483,7 +483,7 @@ export default function StudentOnboarding({
         fields: ["skill_name"],
       },
       mapOptions: (data) => {
-        const items = data.data || data || [];
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
         return items.map((item: any) => ({
           value: item.name || item.skill_name,
           label: item.skill_name || item.name
@@ -503,7 +503,7 @@ export default function StudentOnboarding({
         doctype: "Student Career Interest" // Updated doctype
       },
       mapOptions: (data) => {
-        const items = data.data || data || [];
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
         return items.map((item: any) => ({
           value: item.name || item.career_interest_name,
           label: item.career_interest_name || item.name

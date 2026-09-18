@@ -104,7 +104,7 @@ export default function MyProfileTabContent() {
       apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
       apiParams: { doctype: "Type" },
       mapOptions: (data: any) => {
-        const items = data?.data || data || [];
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
         return items.map((item: any) => ({ value: item.name, label: item.name }));
       }
     },
@@ -119,7 +119,7 @@ export default function MyProfileTabContent() {
       apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
       apiParams: { doctype: "State" },
       mapOptions: (data: any) => {
-        const items = data?.data || data || [];
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
         return items.map((item: any) => ({ value: item.name, label: item.name }));
       }
     },
@@ -131,7 +131,7 @@ export default function MyProfileTabContent() {
         ? { doctype: "District", fields: ["name", "district_name"], filters: [["state", "=", modalValues.state]], order_by: "district_name asc", limit_page_length: 1000 }
         : undefined,
       mapOptions: (data: any) => {
-        const items = data?.data || data || [];
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
         return items.map((item: any) => ({ value: item.name, label: item.district_name || item.name }));
       },
       disabled: !modalValues.state
@@ -144,7 +144,7 @@ export default function MyProfileTabContent() {
         ? { doctype: "Tahsil", fields: ["name", "tahsil_name"], filters: [["district", "=", modalValues.district]], order_by: "tahsil_name asc", limit_page_length: 1000 }
         : undefined,
       mapOptions: (data: any) => {
-        const items = data?.data || data || [];
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
         return items.map((item: any) => ({ value: item.name, label: item.tahsil_name || item.name }));
       },
       disabled: !modalValues.district
@@ -157,7 +157,7 @@ export default function MyProfileTabContent() {
         ? { doctype: "City", fields: ["name", "city_name"], filters: [["tahsil", "=", modalValues.tahsil]], order_by: "city_name asc", limit_page_length: 1000 }
         : undefined,
       mapOptions: (data: any) => {
-        const items = data?.data || data || [];
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
         return items.map((item: any) => ({ value: item.name, label: item.city_name || item.name }));
       },
       disabled: !modalValues.tahsil

@@ -1453,7 +1453,7 @@ export default function MentorOnboarding({
         apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: { doctype: "State" },
         mapOptions: data => {
-          const items = data.data || data || [];
+          const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
           return items.map((item: any) => ({
             value: item.name,
             label: item.name
@@ -1478,7 +1478,7 @@ export default function MentorOnboarding({
           }
           : undefined,
         mapOptions: data => {
-          const items = data.data || data || [];
+          const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
           return items.map((item: any) => ({
             value: item.name,
             label: item.district_name || item.name
@@ -1506,7 +1506,7 @@ export default function MentorOnboarding({
           }
           : undefined,
         mapOptions: data => {
-          const items = data.data || data || [];
+          const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
           return items.map((item: any) => ({
             value: item.name,
             label: item.tahsil_name || item.name
@@ -1532,7 +1532,7 @@ export default function MentorOnboarding({
           }
           : undefined,
         mapOptions: data => {
-          const items = data.data || data || [];
+          const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
           return items.map((item: any) => ({
             value: item.name,
             label: item.city_name || item.name
@@ -1634,7 +1634,7 @@ export default function MentorOnboarding({
         apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: { doctype: "Type" },
         mapOptions: data => {
-          const items = data.data || data || [];
+          const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
           return items.map((item: any) => ({
             value: item.name,
             label: item.name
@@ -1654,7 +1654,7 @@ export default function MentorOnboarding({
         apiEndpoint: `${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`,
         apiParams: { doctype: "Domain" },
         mapOptions: data => {
-          const items = data.data || data || [];
+          const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
           return items.map((item: any) => ({
             value: item.name,
             label: item.name || item.domain_name
@@ -1675,7 +1675,7 @@ export default function MentorOnboarding({
           fields: ["skill_name"],
         },
         mapOptions: (data) => {
-          const items = data.data || data || [];
+          const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
           return items.map((item: any) => ({
             value: item.name || item.skill_name,
             label: item.skill_name || item.name

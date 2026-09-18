@@ -89,7 +89,7 @@ export default function OfferingsTabContent() {
     setCreatedOfferingName("");
     showToast("Offering created successfully", "success");
   };
- 
+
   const fetchOfferings = async () => {
     if (!userEmail) return;
     setLoading(true);
@@ -118,7 +118,7 @@ export default function OfferingsTabContent() {
       { name: "title", label: "Offering Title", type: "text", icon: Layout, required: true, colSpan: 2, placeholder: "e.g. Django API Bootcamp" },
       {
         name: "offering_type", label: "Offering Type", type: "select", icon: Tag, required: true, colSpan: 1,
-        options: ["1:1 Mentorship", "Group Session", "Async Review", "Workshop"]
+        options: ["1:1 Mentorship", "Group Session", "Workshop"]
       },
       {
         name: "category", label: "Category", type: "select", icon: Tag, required: true, colSpan: 1,
@@ -224,10 +224,10 @@ export default function OfferingsTabContent() {
       } else {
         const response = await createMentorOffering(payload);
         const createdName = response?.message?.name || response?.name || response?.message || response?.data?.name;
-        
+
         setIsModalOpen(false);
         fetchOfferings();
- 
+
         if (createdName && formData.offering_type === "Group Session") {
           setCreatedOfferingName(createdName);
           setShowBatchPrompt(true);
@@ -457,7 +457,7 @@ export default function OfferingsTabContent() {
       <AnimatePresence>
         {showBatchPrompt && createPortal(
           <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-md p-4">
-            
+
             <motion.div
               initial={{ scale: 0.95, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -467,7 +467,7 @@ export default function OfferingsTabContent() {
               <div className="mx-auto w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-100">
                 <Users className="w-8 h-8 text-emerald-600" />
               </div>
-              
+
               <div className="space-y-2">
                 <h3 className="text-xl font-bold text-slate-800">Create Batch</h3>
                 <p className="text-sm text-slate-500 font-semibold leading-relaxed">

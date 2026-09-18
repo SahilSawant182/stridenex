@@ -499,7 +499,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "Type" },
       mapOptions: (data: any) => {
-        const items = data?.data || data || [];
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
         return items.map((item: any) => ({ value: item.name, label: item.name }));
       }
     },
@@ -514,7 +514,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
       apiEndpoint: "method/stridenex_app.api_stridenex_app.college.master.get_master_data",
       apiParams: { doctype: "State" },
       mapOptions: (data: any) => {
-        const items = data?.data || data || [];
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
         return items.map((item: any) => ({ value: item.name, label: item.name }));
       }
     },
@@ -526,7 +526,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         ? { doctype: "District", fields: ["name", "district_name"], filters: [["state", "=", mentorFormState.state]], order_by: "district_name asc", limit_page_length: 1000 }
         : undefined,
       mapOptions: (data: any) => {
-        const items = data?.data || data || [];
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
         return items.map((item: any) => ({ value: item.name, label: item.district_name || item.name }));
       },
       disabled: !mentorFormState.state
@@ -539,7 +539,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         ? { doctype: "Tahsil", fields: ["name", "tahsil_name"], filters: [["district", "=", mentorFormState.district]], order_by: "tahsil_name asc", limit_page_length: 1000 }
         : undefined,
       mapOptions: (data: any) => {
-        const items = data?.data || data || [];
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
         return items.map((item: any) => ({ value: item.name, label: item.tahsil_name || item.name }));
       },
       disabled: !mentorFormState.district
@@ -552,7 +552,7 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         ? { doctype: "City", fields: ["name", "city_name"], filters: [["tahsil", "=", mentorFormState.tahsil]], order_by: "city_name asc", limit_page_length: 1000 }
         : undefined,
       mapOptions: (data: any) => {
-        const items = data?.data || data || [];
+        const items = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (Array.isArray(data?.data?.data) ? data.data.data : (Array.isArray(data?.message?.data) ? data.message.data : [])));
         return items.map((item: any) => ({ value: item.name, label: item.city_name || item.name }));
       },
       disabled: !mentorFormState.tahsil
