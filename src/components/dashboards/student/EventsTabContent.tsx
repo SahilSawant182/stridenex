@@ -52,6 +52,7 @@ interface Notice {
   date: string;
   icon: any;
   color: string;
+  description?: string;
 }
 
 // Notice board data
@@ -242,7 +243,7 @@ export default function EventsTabContent() {
     try {
       const response = await getMasterData("College Notice", {
         filters: { college: college },
-        fields: ["college", "notice", "notice_type", "date"]
+        fields: ["college", "notice", "notice_type", "date", "description"]
       });
 
       const apiData = response?.data || response?.message || [];
@@ -255,7 +256,8 @@ export default function EventsTabContent() {
             category: item.notice_type || "General",
             date: item.date || "",
             icon: styles.icon,
-            color: styles.color
+            color: styles.color,
+            description: item.description || ""
           };
         });
         setNotices(mappedNotices);
@@ -455,6 +457,9 @@ export default function EventsTabContent() {
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-slate-800 group-hover:text-orange-600 transition-colors line-clamp-2">{notice.title}</p>
+                      {notice.description && (
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{notice.description.replace(/<[^>]*>/g, '')}</p>
+                      )}
                       <div className="flex items-center gap-2 mt-2">
                         <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 text-[10px] px-1.5 py-0">
                           {notice.category}
