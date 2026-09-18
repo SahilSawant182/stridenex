@@ -205,7 +205,7 @@ export default function HeroSection({ appName }: HeroSectionProps) {
                                     variant="accent"
                                     size="xl"
                                     className="btn-hover-scale btn-hover-glow"
-                                    onClick={() => router.push('/login')}
+                                    onClick={() => router.push('/signup?role=student')}
                                 >
                                     Start Your Career Journey
                                     <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -215,6 +215,7 @@ export default function HeroSection({ appName }: HeroSectionProps) {
                                     variant="outline"
                                     size="xl"
                                     className="btn-hover-scale"
+                                    onClick={() => router.push('/signup?role=college')}
                                 >
                                     Partner as Institute
                                 </Button>
@@ -223,6 +224,7 @@ export default function HeroSection({ appName }: HeroSectionProps) {
                                     variant="outline"
                                     size="xl"
                                     className="btn-hover-scale"
+                                    onClick={() => router.push('/signup?role=industry')}
                                 >
                                     Access Skilled Talent
                                 </Button>

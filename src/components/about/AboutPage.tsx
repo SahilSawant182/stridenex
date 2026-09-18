@@ -9,7 +9,6 @@ import WhatMakesDifferent from "./WhatMakesDifferent";
 import VisionMission from "./VisionMission";
 import Ecosystem from "./Ecosystem";
 import JoinMovement from "./JoinMovement";
-import Footer from "../layout/Footer";
 
 export default function AboutPage() {
   return (

@@ -8,9 +8,6 @@ import {
   Mail,
   MapPin,
   Phone,
-  Facebook,
-  Linkedin,
-  Instagram,
   Github,
   Heart,
   Sparkles,
@@ -27,7 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FaXTwitter } from "react-icons/fa6";
-import { FaWhatsapp } from "react-icons/fa";
+import { FaWhatsapp, FaFacebook, FaLinkedin, FaInstagram } from "react-icons/fa";
 
 interface FooterProps {
   appName?: string;
@@ -72,11 +69,11 @@ const footerLinks = {
 };
 
 const socialLinks = [
-  { icon: Facebook, href: "https://facebook.com/stridenex", label: "Facebook" },
-  // { icon: X, href: "https://twitter.com/stridenex", label: "X (Twitter)", customIcon: FaXTwitter },
-  { icon: Linkedin, href: "https://linkedin.com/company/stridenex", label: "LinkedIn" },
-  { icon: Instagram, href: "https://instagram.com/stridenex", label: "Instagram" },
-  // { icon: MessageCircle, href: "https://whatsapp.com/stridenex", label: "WhatsApp", customIcon: FaWhatsapp },
+  { icon: FaFacebook, href: "https://facebook.com/stridenex", label: "Facebook", hoverColor: "group-hover:text-[#1877F2]" },
+  // { icon: X, href: "https://twitter.com/stridenex", label: "X (Twitter)", customIcon: FaXTwitter, hoverColor: "group-hover:text-black" },
+  { icon: FaLinkedin, href: "https://linkedin.com/company/stridenex", label: "LinkedIn", hoverColor: "group-hover:text-[#0077B5]" },
+  { icon: FaInstagram, href: "https://instagram.com/stridenex", label: "Instagram", hoverColor: "group-hover:text-[#E4405F]" },
+  // { icon: MessageCircle, href: "https://whatsapp.com/stridenex", label: "WhatsApp", customIcon: FaWhatsapp, hoverColor: "group-hover:text-[#25D366]" },
 ];
 
 const contactInfo = {
@@ -185,7 +182,6 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
                 </div>
               </div>
 
-              {/* Social Links */}
               <div className="flex gap-3">
                 {socialLinks.map((social, index) => (
                   <motion.a
@@ -194,13 +190,13 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     whileHover={{ scale: 1.1, y: -2 }}
-                    className="w-10 h-10 rounded-full bg-slate-800/50 backdrop-blur-sm flex items-center justify-center hover:bg-gradient-to-r hover:from-accent hover:to-orange-600 transition-all border border-slate-700 hover:border-transparent text-slate-300 hover:text-white"
+                    className="group w-10 h-10 rounded-full bg-slate-800/50 backdrop-blur-sm flex items-center justify-center hover:bg-white transition-all border border-slate-700 hover:border-transparent text-slate-300"
                     aria-label={social.label}
                   >
                     {/* {social.customIcon ? (
-                      <social.customIcon className="w-4 h-4" />
+                      <social.customIcon className={`w-5 h-5 transition-colors ${social.hoverColor}`} />
                     ) : ( */}
-                      <social.icon className="w-4 h-4" />
+                      <social.icon className={`w-5 h-5 transition-colors ${social.hoverColor}`} />
                     {/* )} */}
                   </motion.a>
                 ))}

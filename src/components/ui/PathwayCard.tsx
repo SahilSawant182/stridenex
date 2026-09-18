@@ -69,7 +69,7 @@ export default function PathwayCard({
           </p>
         </div>
 
-        <Button variant="accent" className="btn-cta-small">
+        <Button variant="accent" className="btn-cta-small" onClick={() => window.location.href = '/signup'}>
           {cta}
           <ArrowRight className="ml-2 w-4 h-4" />
         </Button>

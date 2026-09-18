@@ -76,7 +76,7 @@ export default function JourneySection() {
                 viewport={{ once: true }}
                 className="mt-16 text-center"
             >
-                <Button variant="outline" className="btn-outline-cta">
+                <Button variant="outline" className="btn-outline-cta" onClick={() => window.location.href = '/signup'}>
                     Learn More About Our Process
                     <ArrowRight className="ml-2 w-4 h-4" />
                 </Button>

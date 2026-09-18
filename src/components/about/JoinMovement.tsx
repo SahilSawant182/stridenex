@@ -16,14 +16,14 @@ export default function JoinMovement() {
         />
         
         <div className="flex flex-wrap justify-center gap-4 mt-8">
-          <Button variant="accent" size="lg" className="btn-cta">
+          <Button variant="accent" size="lg" className="btn-cta" onClick={() => window.location.href = '/signup?role=student'}>
             Start as Student
             <ArrowRight className="ml-2 w-5 h-5" />
           </Button>
-          <Button variant="outline" size="lg" className="btn-outline-cta">
+          <Button variant="outline" size="lg" className="btn-outline-cta" onClick={() => window.location.href = '/signup?role=college'}>
             Partner as Institute
           </Button>
-          <Button variant="outline" size="lg" className="btn-outline-cta">
+          <Button variant="outline" size="lg" className="btn-outline-cta" onClick={() => window.location.href = '/signup?role=industry'}>
             Collaborate as Industry
           </Button>
         </div>

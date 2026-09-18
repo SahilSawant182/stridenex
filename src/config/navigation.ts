@@ -1,5 +1,4 @@
 import { 
-  Home, 
   BookOpen, 
   Target, 
   TrendingUp, 
@@ -8,20 +7,15 @@ import {
   Phone,
   Info,
   Briefcase,
-  Shield,
   Sparkles,
-  Zap,
-  Globe,
   Code,
   Rocket,
   Award,
   Heart,
-  Mail,
   GraduationCap,
   Building2,
   Handshake,
   Lightbulb,
-  Star,
   type LucideIcon
 } from "lucide-react";
 
@@ -58,10 +52,21 @@ about: {
         items: [
           { 
             label: "Our Story", 
-            href: "/about", 
+            href: "/about/our-story", 
             icon: Heart,
             description: "Why StrideNex was created",
           },
+          { 
+            label: "Leadership", 
+            href: "/about/leadership", 
+            icon: Users,
+            description: "Guided by experience, driven by purpose",
+          },
+        ]
+      },
+      {
+        title: "Platform",
+        items: [
           { 
             label: "Capabilities", 
             href: "/about/capabilities", 
@@ -73,35 +78,6 @@ about: {
             href: "/about/solutions", 
             icon: Target,
             description: "Three pathways. One structured journey",
-          },
-          { 
-            label: "Leadership", 
-            href: "/about/leadership", 
-            icon: Users,
-            description: "Guided by experience, driven by purpose",
-          },
-        ]
-      },
-      {
-        title: "Community",
-        items: [
-          { 
-            label: "Mentors", 
-            href: "/about/mentors", 
-            icon: Award,
-            description: "Industry experts shaping future professionals",
-          },
-          { 
-            label: "Experts & Advisors", 
-            href: "/about/experts", 
-            icon: Lightbulb,
-            description: "Strategic expertise supporting innovation",
-          },
-          { 
-            label: "Testimonials", 
-            href: "/about/testimonials", 
-            icon: Star,
-            description: "Real stories. Real transformation",
           },
         ]
       },
@@ -198,7 +174,7 @@ about: {
     icon: TrendingUp,
     sections: [
       {
-        title: "Development Tracks",
+        title: "Skill Track",
         items: [
           { 
             label: "Skill Facilitating Program", 
@@ -206,12 +182,22 @@ about: {
             icon: Code,
             description: "Job-ready capabilities through applied learning",
           },
+        ]
+      },
+      {
+        title: "Entrepreneur Track",
+        items: [
           { 
             label: "Entrepreneur Development", 
             href: "/pathways/entrepreneur", 
             icon: Rocket,
             description: "From idea validation to venture readiness",
           },
+        ]
+      },
+      {
+        title: "Education Track",
+        items: [
           { 
             label: "Higher Education Pathway", 
             href: "/pathways/higher-education", 
@@ -228,45 +214,38 @@ about: {
     icon: Award,
     sections: [
       {
-        title: "Impact",
+        title: "For Students",
         items: [
           { 
             label: "Student Success", 
             href: "/outcomes/students", 
             icon: Users,
             description: "Real stories of career transformation",
-          },
+          }
+        ]
+      },
+      {
+        title: "For Institutes",
+        items: [
           { 
             label: "Institute Outcomes", 
             href: "/outcomes/institutes", 
             icon: Building2,
             description: "Enhanced placement and reputation",
-          },
+          }
+        ]
+      },
+      {
+        title: "For Industry",
+        items: [
           { 
             label: "Industry Impact", 
             href: "/outcomes/industry", 
             icon: Briefcase,
             description: "Reduced hiring risk, better talent",
-          },
+          }
         ]
-      },
-      {
-        title: "Metrics",
-        items: [
-          { 
-            label: "Impact Report", 
-            href: "/outcomes/report", 
-            icon: TrendingUp,
-            description: "Measurable career transformation",
-          },
-          { 
-            label: "Case Studies", 
-            href: "/outcomes/case-studies", 
-            icon: BookOpen,
-            description: "Success stories from our ecosystem",
-          },
-        ]
-      },
+      }
     ]
   },
   
@@ -283,26 +262,41 @@ about: {
     icon: Sparkles, 
     sections: [
       {
-        title: "Roles",
+        title: "For Students",
         items: [
           {
             label: "Student",
             href: "/signup?role=student",
             icon: GraduationCap,
             description: "Start your career journey",
-          },
+          }
+        ]
+      },
+      {
+        title: "For Institutes",
+        items: [
           {
             label: "Institute",
             href: "/signup?role=college",
             icon: Building2,
             description: "Enhance placement success",
-          },
+          }
+        ]
+      },
+      {
+        title: "For Mentors",
+        items: [
           {
             label: "Mentor",
             href: "/signup?role=mentor",
             icon: Lightbulb,
             description: "Guide the next generation",
-          },
+          }
+        ]
+      },
+      {
+        title: "For Industry",
+        items: [
           {
             label: "Industry",
             href: "/signup?role=industry",

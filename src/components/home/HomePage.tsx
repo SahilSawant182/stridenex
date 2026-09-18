@@ -42,13 +42,13 @@ export default function HomePage({ appName = "StrideNex" }: HomePageProps) {
     <>
       <main>
         <HeroSection appName={appName} />
-        <OfferingsSection />
+        {/* <OfferingsSection /> */}
         <JourneySection />
-        <PathwaysSection />
         <HowItWorksSection />
+        <PathwaysSection />
         <ImpactSection />
         <StakeholdersSection />
-        <WhyDifferentSection />
+        {/* <WhyDifferentSection /> */}
         <FinalCTASection />
       </main>
 
