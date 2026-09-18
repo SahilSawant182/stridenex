@@ -9,6 +9,7 @@ import {
   Menu,
   X,
   ChevronDown,
+  ChevronUp,
   Search,
   GraduationCap,
   Building2,
@@ -148,6 +149,14 @@ export default function PublicNavbar({ }: NavbarProps) {
     }
   };
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollToBottom = () => {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+  };
+
   const handleMegaMenuLeave = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
@@ -192,8 +201,8 @@ export default function PublicNavbar({ }: NavbarProps) {
           }`}
       >
         <div className="max-w-7xl mx-auto px-6">
-          {/* TOP ROW - Logo and Right Side Actions */}
-          <div className="flex items-center justify-between h-16">
+          {/* Main Navbar Row */}
+          <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <Link href="/" className="flex items-center cursor-pointer">
               <img
@@ -203,72 +212,15 @@ export default function PublicNavbar({ }: NavbarProps) {
               />
             </Link>
 
-            {/* Right Side Actions */}
-            <div className="flex items-center gap-2">
-              {/* Quick Role Switcher */}
-              <div className="hidden lg:flex items-center gap-1 mr-1">
-                {quickActions.map((action) => (
-                  <button
-                    key={action.label}
-                    onClick={() => window.open(action.href, '_blank')}
-                    className="text-xs px-2 py-1 h-7 rounded-lg hover:bg-primary/5 transition-colors flex items-center gap-1"
-                  >
-                    <action.icon
-                      className={`w-3.5 h-3.5 ${action.label === 'LinkedIn' ? 'text-[#0077B5]' :
-                        action.label === 'Instagram' ? 'text-[#E4405F]' :
-                          action.label === 'Facebook' ? 'text-[#1877F2]' :
-                            action.label === 'YouTube' ? 'text-[#FF0000]' : ''
-                        }`}
-                    />
-                    <span className="hidden lg:inline text-slate-700">{action.label}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Search Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setSearchOpen(!searchOpen)}
-                className="p-1.5 rounded-lg text-slate-700 hover:text-primary hover:bg-primary/5 transition-colors"
-              >
-                <Search className="w-4 h-4" />
-              </motion.button>
-
-              {/* Public Action Buttons */}
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => window.open('/login', '_blank')}
-                  className="px-3 py-1.5 text-sm font-medium text-slate-700 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
-                >
-                  Login
-                </button>
-                {/* <button
-                  onClick={() => handleNavigation('/signup')}
-                  className="px-3 py-1.5 text-sm font-medium bg-gradient-to-r from-accent to-orange-600 text-white rounded-lg shadow-lg hover:shadow-xl transition-all"
-                >
-                  Join Now
-                </button> */}
-              </div>
-
-              {/* Mobile Menu Button */}
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="lg:hidden p-1.5 rounded-lg text-slate-700 hover:text-primary hover:bg-primary/5 transition-colors"
-              >
-                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
-
-          {/* SEPARATOR LINE */}
-          <div className="w-full h-px bg-primary/10"></div>
-
-          {/* BOTTOM ROW - Desktop Navigation */}
-          <div className="hidden lg:flex items-center justify-center py-2">
-            <div className="flex items-center gap-1">
+            {/* Desktop Navigation */}
+            <div className="hidden lg:flex items-center justify-center gap-1">
               {navItems.map((item) => {
                 const hasSections = item.sections && item.sections.length > 0;
+                
+                // Hide Join Us from main loop, it will be rendered on the right
+                if (item.key === 'join') {
+                  return null;
+                }
 
                 return (
                   <div
@@ -279,14 +231,8 @@ export default function PublicNavbar({ }: NavbarProps) {
                   >
                     {item.href ? (
                       <button
-                        onClick={() => {
-                          if (item.key === 'join') {
-                            window.open(item.href, '_blank');
-                          } else {
-                            handleNavigation(item.href!);
-                          }
-                        }}
-                        className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1 group ${activeMegaMenu === item.key
+                        onClick={() => handleNavigation(item.href!)}
+                        className={`px-3 py-2 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1.5 group ${activeMegaMenu === item.key
                           ? 'text-primary bg-primary/10'
                           : 'text-slate-700 hover:text-primary hover:bg-primary/5'
                           }`}
@@ -300,7 +246,7 @@ export default function PublicNavbar({ }: NavbarProps) {
                       </button>
                     ) : (
                       <button
-                        className={`px-3 py-1.5 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1 group ${activeMegaMenu === item.key
+                        className={`px-3 py-2 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1.5 group ${activeMegaMenu === item.key
                           ? 'text-primary bg-primary/10'
                           : 'text-slate-700 hover:text-primary hover:bg-primary/5'
                           }`}
@@ -316,15 +262,47 @@ export default function PublicNavbar({ }: NavbarProps) {
                   </div>
                 );
               })}
+            </div>
 
-              {/* Additional Join Now Button in Navbar Row */}
-              {/* <button
-                onClick={() => handleNavigation('/signup')}
-                className="px-3 py-1.5 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1 group text-accent hover:bg-accent/10"
+            {/* Right Side Actions */}
+            <div className="flex items-center gap-3">
+              {/* Login Button and Join Us */}
+              <div className="hidden lg:flex items-center gap-3">
+                {(() => {
+                  const joinItem = navItems.find(i => i.key === 'join');
+                  if (!joinItem) return null;
+                  const hasSections = joinItem.sections && joinItem.sections.length > 0;
+                  return (
+                    <div className="relative" onMouseEnter={() => handleMegaMenuEnter(joinItem.key)} onMouseLeave={hasSections ? handleMegaMenuLeave : undefined}>
+                      <button
+                        onClick={() => window.open(joinItem.href, '_blank')}
+                        className={`px-5 py-2 rounded-full font-bold text-sm transition-all duration-300 flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800 shadow-md hover:shadow-lg ${activeMegaMenu === joinItem.key ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                      >
+                        <joinItem.icon className="w-4 h-4" />
+                        {joinItem.label}
+                        {hasSections && (
+                          <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${activeMegaMenu === joinItem.key ? 'rotate-180' : ''}`} />
+                        )}
+                      </button>
+                    </div>
+                  );
+                })()}
+
+                <button
+                  onClick={() => window.open('/login', '_blank')}
+                  className="px-5 py-2 text-sm font-semibold text-slate-700 hover:text-primary hover:bg-primary/5 rounded-full transition-colors border-2 border-slate-200 hover:border-primary/30"
+                >
+                  Login
+                </button>
+              </div>
+
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="lg:hidden p-2 rounded-lg text-slate-700 hover:text-primary hover:bg-primary/5 transition-colors"
               >
-                <Sparkles className="w-4 h-4" />
-                Join Now
-              </button> */}
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
             </div>
           </div>
         </div>
@@ -340,7 +318,7 @@ export default function PublicNavbar({ }: NavbarProps) {
               animate="visible"
               exit="exit"
               onMouseLeave={handleMegaMenuLeave}
-              className="absolute left-0 right-0 top-[110px] bg-white shadow-2xl border-t border-primary/10 overflow-hidden"
+              className="absolute left-0 right-0 top-full bg-white shadow-2xl border-t border-primary/10 overflow-hidden"
               style={{ originY: 0 }}
             >
               <div className="max-w-7xl mx-auto px-6 py-6">
@@ -352,7 +330,7 @@ export default function PublicNavbar({ }: NavbarProps) {
                     <motion.div
                       key={section.title}
                       variants={sectionVariants}
-                      className="space-y-4 w-full md:w-[280px]"
+                      className="space-y-4 w-full md:flex-1 md:min-w-[220px] md:max-w-[280px]"
                     >
                       <h4 className="text-xs font-bold uppercase tracking-wider text-gradient-orange">
                         {section.title}
@@ -637,6 +615,50 @@ export default function PublicNavbar({ }: NavbarProps) {
           />
         )}
       </AnimatePresence>
+      {/* Floating Social Media Icons */}
+      <div className="fixed right-0 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-3 p-3 bg-white/80 backdrop-blur-md shadow-[-4px_0_15px_rgba(0,0,0,0.05)] rounded-l-2xl border border-r-0 border-slate-200 hidden md:flex">
+        {quickActions.map((action) => (
+          <motion.button
+            key={action.label}
+            whileHover={{ scale: 1.1, x: -2 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => window.open(action.href, '_blank')}
+            className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center hover:bg-white shadow-sm hover:shadow-md transition-all group relative"
+            title={action.label}
+          >
+            <action.icon
+              className={`w-5 h-5 transition-colors ${action.label === 'LinkedIn' ? 'text-slate-400 group-hover:text-[#0077B5]' :
+                  action.label === 'Instagram' ? 'text-slate-400 group-hover:text-[#E4405F]' :
+                    action.label === 'Facebook' ? 'text-slate-400 group-hover:text-[#1877F2]' :
+                      action.label === 'YouTube' ? 'text-slate-400 group-hover:text-[#FF0000]' : ''
+                }`}
+            />
+          </motion.button>
+        ))}
+      </div>
+
+      {/* Floating Scroll Buttons */}
+      <div className="fixed right-6 bottom-6 z-50 flex flex-col gap-2">
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={scrollToTop}
+          className={`w-12 h-12 rounded-full bg-white text-slate-700 shadow-lg border border-slate-200 flex items-center justify-center hover:text-primary hover:border-primary/30 transition-all ${isScrolled ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+          title="Scroll to Top"
+        >
+          <ChevronUp className="w-6 h-6" />
+        </motion.button>
+        
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={scrollToBottom}
+          className="w-12 h-12 rounded-full bg-white text-slate-700 shadow-lg border border-slate-200 flex items-center justify-center hover:text-primary hover:border-primary/30 transition-all"
+          title="Scroll to Bottom"
+        >
+          <ChevronDown className="w-6 h-6" />
+        </motion.button>
+      </div>
     </>
   );
 }

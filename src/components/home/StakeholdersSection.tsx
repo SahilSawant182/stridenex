@@ -117,6 +117,7 @@ export default function StakeholdersSection() {
                             <Button
                                 variant="primary" 
                                 className={activeItem.id === "industry" ? "btn-cta-navy" : "btn-cta-accent"}
+                                onClick={() => window.location.href = `/signup?role=${activeItem.id === 'students' ? 'student' : 'industry'}`}
                             >
                                 {activeItem.cta}
                                 <ArrowRight className="ml-2 w-4 h-4" />

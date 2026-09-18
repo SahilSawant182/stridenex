@@ -67,6 +67,7 @@ export default function FinalCTASection() {
                         <Button
                             size="xl"
                             className="bg-white text-primary hover:bg-white/90 btn-hover-scale shadow-2xl"
+                            onClick={() => window.location.href = '/signup?role=student'}
                         >
                             Start as Student
                             <ArrowRight className="ml-2 w-5 h-5" />
@@ -76,6 +77,7 @@ export default function FinalCTASection() {
                             size="xl"
                             variant="outline"
                             className="border-white text-white hover:bg-white/10 btn-hover-scale"
+                            onClick={() => window.location.href = '/signup?role=college'}
                         >
                             Partner as Institute
                         </Button>
@@ -84,6 +86,7 @@ export default function FinalCTASection() {
                             size="xl"
                             variant="outline"
                             className="border-white text-white hover:bg-white/10 btn-hover-scale"
+                            onClick={() => window.location.href = '/signup?role=industry'}
                         >
                             Hire Skilled Talent
                         </Button>

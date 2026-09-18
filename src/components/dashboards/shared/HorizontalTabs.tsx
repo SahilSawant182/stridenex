@@ -93,13 +93,13 @@ export default function HorizontalTabs({ role }: HorizontalTabsProps) {
 
   useEffect(() => {
     if (role !== "student" || !currentUser) return;
-    
+
     // 1. Try to read from localStorage first
     const cachedProfile = localStorage.getItem("studentProfile");
     if (cachedProfile) {
       try {
         setProfile(JSON.parse(cachedProfile));
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // 2. Fetch from API
@@ -120,7 +120,7 @@ export default function HorizontalTabs({ role }: HorizontalTabsProps) {
 
   const isFirstOrSecondYear = () => {
     if (!profile) return false;
-    
+
     // Only apply the 1st/2nd year restriction if the course type is UG
     const courseType = String(profile.course_type || "").trim().toLowerCase();
     if (courseType !== "ug") return false;
