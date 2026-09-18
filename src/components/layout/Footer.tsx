@@ -78,7 +78,7 @@ const socialLinks = [
 
 const contactInfo = {
   email: "info@stridenex.ai",
-  phone: "(+91) 8668756959",
+  phone: "(+91) 9225297767",
   address: "B2/20, Saudamini Co-Operative Housing Society, Paud Road, Kothrud, Pune, (MH) India 411038",
   support: "support@stridenex.com",
   partnerships: "partners@stridenex.com",

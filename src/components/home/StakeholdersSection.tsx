@@ -17,6 +17,7 @@ const stakeholders = [
         color: "from-accent to-orange-600",
         bgColor: "bg-gradient-to-r from-accent to-orange-600",
         buttonVariant: "accent" as const,
+        image: "/images/for students.png",
         features: [
             "Discover your real professional interests",
             "Gain hands-on industry exposure",
@@ -35,6 +36,7 @@ const stakeholders = [
         color: "navy",
         bgColor: "bg-navy",
         buttonVariant: "primary" as const,
+        image: "/images/for industry.png",
         features: [
             "Access pre-evaluated candidate pools",
             "Skill-validated student profiles",
@@ -125,11 +127,18 @@ export default function StakeholdersSection() {
                         </div>
 
                         {/* Right side - Visual */}
-                        <div className={`${activeItem.id === "industry"
-                            ? "bg-navy"
-                            : `bg-gradient-to-br ${activeItem.color}`
-                            } p-12 flex items-center justify-center`}>
-                            <activeItem.icon className="w-40 h-40 text-white/30" />
+                        <div className="relative min-h-[350px] md:min-h-full overflow-hidden group bg-slate-50">
+                            {/* Dynamic background tint */}
+                            <div className={`absolute inset-0 opacity-[0.03] transition-colors duration-500 ${
+                                activeItem.id === "industry" ? "bg-navy" : "bg-accent"
+                            }`} />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <img 
+                                    src={activeItem.image} 
+                                    alt={activeItem.title} 
+                                    className="w-full h-full object-contain rounded-xl drop-shadow-2xl transition-transform duration-700 group-hover:scale-105" 
+                                />
+                            </div>
                         </div>
                     </div>
                 </motion.div>
