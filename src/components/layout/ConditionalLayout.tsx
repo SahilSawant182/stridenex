@@ -4,7 +4,6 @@
 import { usePathname } from "next/navigation";
 import PublicNavbar from "./PublicNavbar";
 import PublicFooter from "./PublicFooter";
-import FloatingSignupButton from "./FloatingSignupButton";
 
 export default function ConditionalLayout({
     children,
@@ -29,7 +28,6 @@ export default function ConditionalLayout({
                 <main className="pt-20 min-h-screen">
                     {children}
                 </main>
-                <FloatingSignupButton />
                 <PublicFooter />
             </>
         );

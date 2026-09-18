@@ -379,62 +379,7 @@ export default function PublicNavbar({ }: NavbarProps) {
                   ))}
                 </div>
 
-                {/* Featured CTA - Role-based */}
-                <motion.div
-                  variants={sectionVariants}
-                  className="mt-6 pt-6 border-t border-slate-100"
-                >
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <button
-                      onClick={() => handleNavigation('/signup?role=student')}
-                      className="group text-left"
-                    >
-                      <div className="bg-gradient-to-r from-primary/5 to-purple-600/5 rounded-xl p-4 hover:shadow-lg transition-all">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center">
-                            <GraduationCap className="w-5 h-5 text-white" />
-                          </div>
-                          <div>
-                            <h5 className="font-bold text-slate-900">For Students</h5>
-                            <p className="text-xs text-slate-500">Start your career journey</p>
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => handleNavigation('/signup?role=college')}
-                      className="group text-left"
-                    >
-                      <div className="bg-gradient-to-r from-accent/5 to-orange-600/5 rounded-xl p-4 hover:shadow-lg transition-all">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-accent to-orange-600 flex items-center justify-center">
-                            <Building2 className="w-5 h-5 text-white" />
-                          </div>
-                          <div>
-                            <h5 className="font-bold text-slate-900">For Institutes</h5>
-                            <p className="text-xs text-slate-500">Enhance placement success</p>
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => handleNavigation('/signup?role=industry')}
-                      className="group text-left"
-                    >
-                      <div className="bg-gradient-to-r from-emerald-500/5 to-emerald-600/5 rounded-xl p-4 hover:shadow-lg transition-all">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-emerald-600 to-emerald-500 flex items-center justify-center">
-                            <Briefcase className="w-5 h-5 text-white" />
-                          </div>
-                          <div>
-                            <h5 className="font-bold text-slate-900">For Industry</h5>
-                            <p className="text-xs text-slate-500">Access skilled talent</p>
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                </motion.div>
+
               </div>
             </motion.div>
           )}
@@ -616,7 +561,7 @@ export default function PublicNavbar({ }: NavbarProps) {
         )}
       </AnimatePresence>
       {/* Floating Social Media Icons */}
-      <div className="fixed right-0 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-3 p-3 bg-white/80 backdrop-blur-md shadow-[-4px_0_15px_rgba(0,0,0,0.05)] rounded-l-2xl border border-r-0 border-slate-200 hidden md:flex">
+      <div className="fixed right-0 top-32 z-50 flex flex-col gap-3 p-3 bg-white/80 backdrop-blur-md shadow-[-4px_0_15px_rgba(0,0,0,0.05)] rounded-l-2xl border border-r-0 border-slate-200 hidden md:flex">
         {quickActions.map((action) => (
           <motion.button
             key={action.label}

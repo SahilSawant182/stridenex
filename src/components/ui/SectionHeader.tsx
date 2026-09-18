@@ -10,6 +10,7 @@ interface SectionHeaderProps {
   subtitle?: string;
   alignment?: 'left' | 'center' | 'right';
   titleClassName?: string;
+  badgeClassName?: string;
 }
 
 export default function SectionHeader({ 
@@ -18,7 +19,8 @@ export default function SectionHeader({
   title, 
   subtitle, 
   alignment = 'center',
-  titleClassName = ""
+  titleClassName = "",
+  badgeClassName = "text-sm tracking-[0.3em]"
 }: SectionHeaderProps) {
   
   const getBadgeColorClass = () => {
@@ -46,7 +48,7 @@ export default function SectionHeader({
       className={`${getAlignmentClass()} mb-12 md:mb-16`}
     >
       {badge && (
-        <span className={`inline-block font-bold text-sm uppercase tracking-[0.3em] ${getBadgeColorClass()} px-4 py-2 rounded-full mb-4`}>
+        <span className={`inline-block font-bold uppercase ${badgeClassName} ${getBadgeColorClass()} px-4 py-2 rounded-full mb-4`}>
           {badge}
         </span>
       )}

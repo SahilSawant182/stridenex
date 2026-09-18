@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Briefcase, Rocket, GraduationCap } from "lucide-react";
+import { Lightbulb, Users, TrendingUp } from "lucide-react";
 import SectionWrapper from "@/components/ui/SectionWrapper";
 import SectionHeader from "@/components/ui/SectionHeader";
 import PathwayCard from "@/components/ui/PathwayCard";
@@ -9,57 +9,57 @@ import PathwayCard from "@/components/ui/PathwayCard";
 const pathways = [
     {
         id: 1,
-        title: "Skill Facilitating Program",
-        tagline: "Become Industry-Ready Before You Graduate",
-        description: "Designed for students aiming to enter the workforce with confidence and practical capability.",
-        icon: Briefcase,
-        image: "https://plus.unsplash.com/premium_photo-1770426275698-755a4e790a4c?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", 
+        title: "Phase 1: Learn with Purpose",
+        tagline: "Build a Strong, Industry-Aligned Foundation",
+        description: "Move away from random course selection. Follow guided, structured pathways that are directly aligned with real industry expectations and current market demands.",
+        icon: Lightbulb,
+        image: "https://plus.unsplash.com/premium_photo-1770426275698-755a4e790a4c?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0", 
         color: "from-primary to-purple-600",
         features: [
             "Industry-aligned skill pathways",
-            "Real-world project exposure",
-            "Portfolio and execution-based learning",
-            "Continuous mentor guidance",
-            "Industry readiness score and validation",
+            "Structured foundational curriculum",
+            "Targeted learning objectives",
+            "Interactive learning modules",
+            "Skill gap identification",
         ],
-        outcome: "Students transition from learners to professionals prepared for real job roles.",
-        cta: "Build Job-Ready Skills →",
+        outcome: "Students gain clarity and foundational knowledge tailored to specific career goals.",
+        cta: "Start Learning →",
     },
     {
         id: 2,
-        title: "Entrepreneur Development Program",
-        tagline: "Transform Ideas into Scalable Ventures",
-        description: "For students who aspire to create, innovate, and lead.",
-        icon: Rocket,
-        image: "https://images.unsplash.com/photo-1612772992614-bc2c2a2c3362?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", 
-        color: "from-accent to-orange-600",
+        title: "Phase 2: Execute with Guidance",
+        tagline: "Apply Knowledge Through Hands-on Projects",
+        description: "Bridge the gap between theory and practice. Work on practical assignments and collaborative projects supported by experienced mentors and industry experts.",
+        icon: Users,
+        image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0", 
+        color: "from-pink-500 to-rose-500",
         features: [
-            "Innovation and problem-identification frameworks",
-            "Startup mentoring and incubation guidance",
-            "Product development exposure",
-            "Business model and market validation support",
-            "Industry and investor ecosystem connect",
+            "Real-world project execution",
+            "Collaborative team assignments",
+            "1-on-1 mentor guidance",
+            "Iterative feedback loops",
+            "Practical problem scenarios",
         ],
-        outcome: "Students evolve from idea thinkers into startup creators.",
-        cta: "Start Your Innovation Journey →",
+        outcome: "Students transform theoretical knowledge into demonstrated practical capabilities.",
+        cta: "Start Executing →",
     },
     {
         id: 3,
-        title: "Higher Education Pathway",
-        tagline: "Prepare for Advanced Academic Excellence",
-        description: "For learners planning global or specialized higher studies with clarity and preparation.",
-        icon: GraduationCap,
-        image: "https://images.unsplash.com/photo-1616587226157-48e49175ee20?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D", 
+        title: "Phase 3: Progress with Confidence",
+        tagline: "Showcase Verified Skills to the World",
+        description: "Transition smoothly from campus to career. Showcase your verified skills and project portfolios through dynamic profiles trusted by top recruiters and institutions.",
+        icon: TrendingUp,
+        image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?q=80&w=2076&auto=format&fit=crop&ixlib=rb-4.1.0", 
         color: "from-emerald-600 to-emerald-500",
         features: [
-            "Career-aligned higher education mapping",
-            "Research and specialization guidance",
-            "Skill portfolio strengthening",
-            "Industry exposure to support academic applications",
-            "Future-focused learning preparation",
+            "Dynamic skill profile creation",
+            "Industry readiness validation",
+            "Verified portfolio showcasing",
+            "Direct recruiter visibility",
+            "Seamless career transition",
         ],
-        outcome: "Students pursue higher education with stronger profiles and clearer specialization goals.",
-        cta: "Plan Your Academic Future →",
+        outcome: "Students confidently step into the professional world with proven, verified credentials.",
+        cta: "Accelerate Your Career →",
     },
 ];
 
@@ -67,10 +67,10 @@ export default function PathwaysSection() {
     return (
         <SectionWrapper bgColor="slate" spacing="default">
             <SectionHeader
-                badge="Three Core Development Pathways"
+                badge="The StrideNex Journey"
                 title={
                     <>
-                        One Platform. <span className="text-slate-900">Three Powerful Growth Directions.</span>
+                        A Structured Path from <span className="text-slate-900">Campus to Career.</span>
                     </>
                 }
             />
