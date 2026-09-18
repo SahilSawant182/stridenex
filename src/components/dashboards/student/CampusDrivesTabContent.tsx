@@ -354,6 +354,10 @@ export default function CampusDrivesTabContent() {
                       </Badge>
                     </div>
 
+                    {drive.description && (
+                      <p className="text-xs text-slate-500 mt-2 mb-1 line-clamp-2">{drive.description.replace(/<[^>]*>/g, '')}</p>
+                    )}
+
                     {/* Metadata Badges */}
                     <div className="grid grid-cols-2 gap-3 my-4 p-3 bg-slate-50 rounded-xl text-xs font-medium text-slate-600 border border-slate-100">
                       <div className="flex items-center gap-2">
@@ -392,7 +396,7 @@ export default function CampusDrivesTabContent() {
                         setSelectedDrive(drive);
                         setShowDetails(true);
                       }}
-                      className="flex-1 rounded-xl h-10 text-xs font-bold border-slate-200 text-slate-600 hover:bg-slate-50"
+                      className="flex-1 rounded-xl h-10 text-xs font-bold border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-800"
                     >
                       View Details
                     </Button>
@@ -478,6 +482,15 @@ export default function CampusDrivesTabContent() {
                   {selectedDrive.criteria || "All students are eligible to apply."}
                 </p>
               </div>
+
+              {selectedDrive.description && (
+                <div className="space-y-2">
+                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Description</h3>
+                  <p className="text-sm text-slate-700 font-semibold p-3 bg-blue-50/50 border border-blue-100 rounded-xl whitespace-pre-wrap">
+                    {selectedDrive.description.replace(/<[^>]*>/g, '')}
+                  </p>
+                </div>
+              )}
 
               {selectedDrive.required_skill && (
                 <div className="space-y-2">
