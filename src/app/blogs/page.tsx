@@ -14,7 +14,7 @@ interface Blog {
   [key: string]: unknown;
 }
 
-const BASE_URL = 'https://devstridenex.quantcloud.in';
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/api\/?$/, "") || 'https://devstridenex.quantcloud.in';
 
 export default function BlogsPage() {
   const [readingBlog, setReadingBlog] = useState<Blog | null>(null);
