@@ -44,6 +44,8 @@ export interface QuestionData {
     no_of_options?: string;
     saved_response?: string | null;
     completed?: boolean;
+    total_questions?: number;   // dynamic count from backend (Psychometric Settings)
+    current_index?: number;     // 0-based index of the current question
 }
 
 export interface SubmitTestResult {
