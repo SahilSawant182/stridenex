@@ -2,13 +2,19 @@
 
 import React, { useState, useEffect } from "react";
 import { ChevronLeft } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 interface Blog {
   name: string;
   title: string;
   blog_category: string;
   blogger: string;
-  blog_intro: string;
+  blog_intro?: string;
+  meta_description?: string;
+  meta_image?: string;
+  content_md?: string;
+  content_html?: string;
+  read_time?: number;
   published?: number;
   creation: string;
   [key: string]: unknown;
@@ -70,10 +76,18 @@ export default function BlogsPage() {
                     onClick={() => setReadingBlog(blog)}
                     className="group flex flex-col h-full cursor-pointer"
                   >
-                    <div className="w-full aspect-[1.6] bg-[#f1f3f4] rounded-[4px] mb-4 overflow-hidden flex items-center justify-start p-6 text-left transition-opacity hover:opacity-95">
-                       <span className="text-slate-500 font-medium text-[15px] leading-snug line-clamp-3">
-                         {blog.title}
-                       </span>
+                    <div className="w-full aspect-[1.6] bg-white rounded-xl mb-4 overflow-hidden flex items-center justify-center relative transition-all duration-300 hover:shadow-md hover:-translate-y-1 border border-slate-100 shadow-sm">
+                      {blog.meta_image ? (
+                        <img 
+                          src={blog.meta_image.startsWith('http') ? blog.meta_image : `${BASE_URL}${blog.meta_image}`}
+                          alt={blog.title}
+                          className="w-full h-full object-contain p-2"
+                        />
+                      ) : (
+                        <span className="text-slate-500 font-medium text-[15px] leading-snug line-clamp-3 p-6 text-center">
+                          {blog.title}
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex flex-col flex-1">
@@ -86,7 +100,7 @@ export default function BlogsPage() {
                       </h3>
                       
                       <p className="text-[14px] text-slate-600 mb-5 line-clamp-3 flex-1 leading-relaxed">
-                        {blog.blog_intro}
+                        {blog.blog_intro || blog.meta_description}
                       </p>
                       
                       <div className="flex items-center justify-between mt-auto">
@@ -134,20 +148,38 @@ export default function BlogsPage() {
               </h1>
               
               <p className="text-[16px] sm:text-[17px] text-slate-700 mb-5 leading-relaxed">
-                {readingBlog.blog_intro}
+                {readingBlog.blog_intro || readingBlog.meta_description}
               </p>
               
               <p className="text-[13px] text-slate-500">
-                {new Date(readingBlog.creation.replace(" ", "T")).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} · 2 min read
+                {new Date(readingBlog.creation.replace(" ", "T")).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} · {readingBlog.read_time || 2} min read
               </p>
             </div>
 
+            {readingBlog.meta_image && (
+              <div className="w-full aspect-[21/9] sm:aspect-[2/1] rounded-2xl overflow-hidden mb-10 bg-white border border-slate-100 shadow-sm">
+                <img 
+                  src={readingBlog.meta_image.startsWith('http') ? readingBlog.meta_image : `${BASE_URL}${readingBlog.meta_image}`}
+                  alt={readingBlog.title}
+                  className="w-full h-full object-contain p-4"
+                />
+              </div>
+            )}
+
             <hr className="border-slate-100 my-8" />
 
-            <div 
-              className="prose prose-slate max-w-none text-[15px] sm:text-[16px] leading-[1.7] text-slate-800 space-y-6 break-words"
-              dangerouslySetInnerHTML={{ __html: String(readingBlog.blog_content || readingBlog.blog_intro || '<p>No content provided.</p>') }} 
-            />
+            {readingBlog.content_md ? (
+              <div className="prose prose-slate max-w-none text-[15px] sm:text-[16px] leading-[1.7] text-slate-800 space-y-6 break-words">
+                <ReactMarkdown>
+                  {readingBlog.content_md}
+                </ReactMarkdown>
+              </div>
+            ) : (
+              <div 
+                className="prose prose-slate max-w-none text-[15px] sm:text-[16px] leading-[1.7] text-slate-800 space-y-6 break-words"
+                dangerouslySetInnerHTML={{ __html: String(readingBlog.content_html || readingBlog.content || readingBlog.blog_intro || readingBlog.meta_description || '<p>No content provided.</p>') }} 
+              />
+            )}
           </article>
         </div>
       )}
