@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Share2, Copy, Linkedin, Facebook, X as CloseIcon, MessageCircle, Mail, Send, CheckCircle2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 interface Blog {
@@ -26,9 +26,22 @@ export default function BlogsPage() {
   const [readingBlog, setReadingBlog] = useState<Blog | null>(null);
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     fetchBlogs();
+    
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      const blogId = params.get("id");
+      if (!blogId) {
+        setReadingBlog(null);
+      }
+    };
+    
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   const fetchBlogs = async () => {
@@ -40,12 +53,66 @@ export default function BlogsPage() {
         const fetchedBlogs = data.message.data;
         fetchedBlogs.sort((a: Blog, b: Blog) => new Date(a.creation.replace(" ", "T")).getTime() - new Date(b.creation.replace(" ", "T")).getTime());
         setBlogs(fetchedBlogs);
+        
+        // Auto-open blog if ID is in URL
+        const params = new URLSearchParams(window.location.search);
+        const blogId = params.get("id");
+        if (blogId) {
+          const blogToOpen = fetchedBlogs.find((b: Blog) => b.name === blogId);
+          if (blogToOpen) {
+            setReadingBlog(blogToOpen);
+          }
+        }
       }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
+  };
+
+  const openBlog = (blog: Blog) => {
+    setReadingBlog(blog);
+    window.history.pushState({}, "", `/blogs?id=${blog.name}`);
+  };
+
+  const closeBlog = () => {
+    setReadingBlog(null);
+    window.history.pushState({}, "", `/blogs`);
+  };
+
+  const handleShare = () => {
+    if (navigator.share && /Mobi|Android/i.test(navigator.userAgent)) {
+      // Use native share on mobile devices if available
+      navigator.share({
+        title: readingBlog?.title,
+        text: readingBlog?.blog_intro || readingBlog?.meta_description,
+        url: window.location.href,
+      }).catch(console.error);
+    } else {
+      setShowShareModal(true);
+    }
+  };
+
+  const handleCopy = async () => {
+    const url = window.location.href;
+    try {
+      if (typeof window !== 'undefined' && window.ClipboardItem) {
+        const textBlob = new Blob([url], { type: 'text/plain' });
+        const htmlBlob = new Blob([`<a href="${url}">${url}</a>`], { type: 'text/html' });
+        const item = new ClipboardItem({
+          'text/plain': textBlob,
+          'text/html': htmlBlob
+        });
+        await navigator.clipboard.write([item]);
+      } else {
+        await navigator.clipboard.writeText(url);
+      }
+    } catch (e) {
+      await navigator.clipboard.writeText(url).catch(() => {});
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -73,7 +140,7 @@ export default function BlogsPage() {
                 {blogs.map((blog) => (
                   <article 
                     key={blog.name} 
-                    onClick={() => setReadingBlog(blog)}
+                    onClick={() => openBlog(blog)}
                     className="group flex flex-col h-full cursor-pointer"
                   >
                     <div className="w-full aspect-[1.6] bg-white rounded-xl mb-4 overflow-hidden flex items-center justify-center relative transition-all duration-300 hover:shadow-md hover:-translate-y-1 border border-slate-100 shadow-sm">
@@ -127,11 +194,18 @@ export default function BlogsPage() {
         <div className="w-full bg-white min-h-screen animate-in fade-in duration-300 font-sans">
           <div className="w-full max-w-[760px] mx-auto py-6 px-4 sm:px-6 flex items-center justify-between">
             <button 
-              onClick={() => setReadingBlog(null)}
+              onClick={closeBlog}
               className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-medium text-sm transition-colors"
             >
               <ChevronLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Back</span>
+            </button>
+            <button
+              onClick={handleShare}
+              className="flex items-center gap-2 text-slate-500 hover:text-blue-600 font-medium text-sm transition-colors"
+            >
+              <Share2 className="w-4 h-4" />
+              <span>Share</span>
             </button>
           </div>
 
@@ -181,6 +255,95 @@ export default function BlogsPage() {
               />
             )}
           </article>
+          
+          {showShareModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in">
+              <div className="bg-white rounded-2xl shadow-xl w-full max-w-[400px] overflow-hidden animate-in zoom-in-95">
+                <div className="flex items-center justify-between p-4 border-b border-slate-100">
+                  <h3 className="font-semibold text-slate-900">Share this article</h3>
+                  <button onClick={() => setShowShareModal(false)} className="p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-50 transition-colors">
+                    <CloseIcon className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="p-5 space-y-5">
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                    <a 
+                      href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center justify-center p-3 gap-2 rounded-xl border border-slate-100 hover:border-[#0a66c2] hover:bg-[#0a66c2]/5 transition-colors group"
+                    >
+                      <Linkedin className="w-6 h-6 text-[#0a66c2] group-hover:scale-110 transition-transform" />
+                      <span className="text-[11px] font-medium text-slate-600">LinkedIn</span>
+                    </a>
+                    <a 
+                      href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&text=${encodeURIComponent(readingBlog?.title || '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center justify-center p-3 gap-2 rounded-xl border border-slate-100 hover:border-black hover:bg-black/5 transition-colors group"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true" className="w-6 h-6 fill-black group-hover:scale-110 transition-transform"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"></path></svg>
+                      <span className="text-[11px] font-medium text-slate-600">X</span>
+                    </a>
+                    <a 
+                      href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center justify-center p-3 gap-2 rounded-xl border border-slate-100 hover:border-[#1877F2] hover:bg-[#1877F2]/5 transition-colors group"
+                    >
+                      <Facebook className="w-6 h-6 text-[#1877F2] group-hover:scale-110 transition-transform" />
+                      <span className="text-[11px] font-medium text-slate-600">Facebook</span>
+                    </a>
+                    <a 
+                      href={`https://api.whatsapp.com/send?text=${encodeURIComponent(readingBlog?.title + ' ' + (typeof window !== 'undefined' ? window.location.href : ''))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center justify-center p-3 gap-2 rounded-xl border border-slate-100 hover:border-[#25D366] hover:bg-[#25D366]/5 transition-colors group"
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true" className="w-6 h-6 fill-[#25D366] group-hover:scale-110 transition-transform"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                      <span className="text-[11px] font-medium text-slate-600">WhatsApp</span>
+                    </a>
+                    <a 
+                      href={`https://t.me/share/url?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&text=${encodeURIComponent(readingBlog?.title || '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center justify-center p-3 gap-2 rounded-xl border border-slate-100 hover:border-[#229ED9] hover:bg-[#229ED9]/5 transition-colors group"
+                    >
+                      <Send className="w-6 h-6 text-[#229ED9] group-hover:scale-110 transition-transform" />
+                      <span className="text-[11px] font-medium text-slate-600">Telegram</span>
+                    </a>
+                    <a 
+                      href={`mailto:?subject=${encodeURIComponent(readingBlog?.title || '')}&body=${encodeURIComponent('Check out this article: ' + (typeof window !== 'undefined' ? window.location.href : ''))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col items-center justify-center p-3 gap-2 rounded-xl border border-slate-100 hover:border-slate-800 hover:bg-slate-50 transition-colors group"
+                    >
+                      <Mail className="w-6 h-6 text-slate-700 group-hover:scale-110 transition-transform" />
+                      <span className="text-[11px] font-medium text-slate-600">Email</span>
+                    </a>
+                  </div>
+                  <div className="relative pt-2 border-t border-slate-100">
+                    <p className="text-xs font-medium text-slate-500 mb-2">Or copy link</p>
+                    <div className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-50 border border-slate-200 hover:border-slate-300 transition-colors">
+                      <input 
+                        type="text"
+                        readOnly
+                        value={typeof window !== 'undefined' ? window.location.href : ''}
+                        className="flex-1 bg-transparent text-[13px] text-slate-600 outline-none px-2 truncate"
+                      />
+                      <button 
+                        onClick={handleCopy}
+                        className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded shadow-sm border transition-colors shrink-0 ${copied ? 'bg-green-50 border-green-200 text-green-700' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'}`}
+                      >
+                        {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                        {copied ? 'Copied' : 'Copy'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
