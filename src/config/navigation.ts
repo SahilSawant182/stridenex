@@ -92,7 +92,7 @@ about: {
           },
           { 
             label: "Partner With Us", 
-            href: "/partners", 
+            href: "/partner-with-us", 
             icon: Handshake,
             description: "Join our ecosystem",
             badge: "Join Us",
@@ -253,6 +253,13 @@ about: {
     label: "Blogs",
     href: "/blogs",
     icon: Newspaper,
+    sections: []
+  },
+  
+  partner: {
+    label: "Partner With Us",
+    href: "/partner-with-us",
+    icon: Handshake,
     sections: []
   },
   

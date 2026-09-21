@@ -76,6 +76,18 @@ export default function Dropdown({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Prevent background scrolling when dropdown is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
   // Sync static options
   useEffect(() => {
     if (optionsProp) {

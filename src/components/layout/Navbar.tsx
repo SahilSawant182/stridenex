@@ -273,24 +273,57 @@ export default function PublicNavbar({ }: NavbarProps) {
                   if (!joinItem) return null;
                   const hasSections = joinItem.sections && joinItem.sections.length > 0;
                   return (
-                    <div className="relative" onMouseEnter={() => handleMegaMenuEnter(joinItem.key)} onMouseLeave={hasSections ? handleMegaMenuLeave : undefined}>
+                    <div className="relative group">
                       <button
                         onClick={() => window.open(joinItem.href, '_blank')}
-                        className={`px-5 py-2 rounded-full font-bold text-sm transition-all duration-300 flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800 shadow-md hover:shadow-lg ${activeMegaMenu === joinItem.key ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                        className="px-5 py-2 rounded-full font-bold text-sm transition-all duration-300 flex items-center gap-2 bg-slate-900 text-white hover:bg-slate-800 shadow-md hover:shadow-lg"
                       >
                         <joinItem.icon className="w-4 h-4" />
                         {joinItem.label}
                         {hasSections && (
-                          <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${activeMegaMenu === joinItem.key ? 'rotate-180' : ''}`} />
+                          <ChevronDown className="w-3 h-3 transition-transform duration-300 group-hover:rotate-180" />
                         )}
                       </button>
+                      
+                      {/* Normal Dropdown */}
+                      {hasSections && (
+                        <div className="absolute top-full right-0 pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                          <div className="w-64 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden">
+                            <div className="p-2">
+                              {joinItem.sections.map(section => (
+                                section.items.map(item => (
+                                  <button
+                                    key={item.label}
+                                    onClick={() => window.open(item.href, '_blank')}
+                                    className="w-full flex items-start gap-3 p-3 rounded-lg hover:bg-primary/5 transition-colors text-left group/item"
+                                  >
+                                    {item.icon && (
+                                      <div className="w-8 h-8 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover/item:bg-primary group-hover/item:text-white transition-colors">
+                                        <item.icon className="w-4 h-4" />
+                                      </div>
+                                    )}
+                                    <div>
+                                      <div className="text-sm font-semibold text-slate-900 group-hover/item:text-primary transition-colors">
+                                        {item.label}
+                                      </div>
+                                      <div className="text-xs text-slate-500 mt-0.5">
+                                        {item.description}
+                                      </div>
+                                    </div>
+                                  </button>
+                                ))
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
 
                 <button
                   onClick={() => window.open('/login', '_blank')}
-                  className="px-5 py-2 text-sm font-semibold text-slate-700 hover:text-primary hover:bg-primary/5 rounded-full transition-colors border-2 border-slate-200 hover:border-primary/30"
+                  className="px-6 py-2 text-sm font-bold text-orange-600 bg-orange-100 hover:bg-orange-200 rounded-full transition-all duration-300 shadow-sm hover:shadow-md hover:-translate-y-0.5 border border-orange-200 hover:border-orange-300"
                 >
                   Login
                 </button>

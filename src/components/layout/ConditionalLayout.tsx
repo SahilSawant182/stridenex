@@ -18,7 +18,8 @@ export default function ConditionalLayout({
         pathname?.startsWith('/privacy-policy') ||
         pathname?.startsWith('/terms-of-use') ||
         pathname?.startsWith('/blogs') ||
-        pathname?.startsWith('/bloggers');
+        pathname?.startsWith('/bloggers') ||
+        pathname?.startsWith('/partner-with-us');
 
     // Only show navbar and footer on public pages
     if (isPublicPage) {
