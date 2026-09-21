@@ -69,16 +69,19 @@ export default function LoginPage() {
 
   // ─── Post-login / page-load routing ──────────────────────────────────────────
   useEffect(() => {
-    // Wait until all auth state is populated
-    if (
-      !isAuthenticated ||
-      !role ||
-      isOnboarded === null ||
-      isOnboarded === undefined
-    )
-      return;
+    // Wait until basic auth state is populated
+    if (!isAuthenticated || !role) return;
 
-    const flag = parseInt(isOnboarded, 10);
+    // Partner bypass: Partners do not have onboarding, so we skip the isOnboarded check
+    if (role === "partner") {
+      router.push(`/partner`);
+      return;
+    }
+
+    // For other roles, we must wait for isOnboarded state
+    if (isOnboarded === null || isOnboarded === undefined) return;
+
+    const flag = parseInt(isOnboarded as string, 10);
 
     if (isFullyOnboarded(role, flag)) {
       // Fully onboarded → go straight to dashboard
@@ -158,6 +161,10 @@ export default function LoginPage() {
             r.toLowerCase()
           );
           if (
+            lowerRoles.some((r: string) => r.includes("partner"))
+          ) {
+            userRole = "partner";
+          } else if (
             lowerRoles.some((r: string) => r.includes("college"))
           ) {
             userRole = "college";
@@ -180,7 +187,9 @@ export default function LoginPage() {
           }
         } else if (data.role) {
           const r = data.role.toLowerCase();
-          if (r.includes("college") || r.includes("admin")) {
+          if (r.includes("partner")) {
+            userRole = "partner";
+          } else if (r.includes("college") || r.includes("admin")) {
             userRole = "college";
           } else if (r.includes("industry")) {
             userRole = "industry";

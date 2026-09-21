@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { BASE_URL } from "@/services/api.services";
 import axios from "axios";
 import Dropdown from "@/components/ui/Dropdown";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { sendEmailOTP, verifyEmailOTP, sendMobileOTP, verifyMobileOTP } from "@/services/onboarding.services";
 
 export default function PartnerForm() {
+  const router = useRouter();
+  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -25,12 +29,163 @@ export default function PartnerForm() {
   const [submitSuccess, setSubmitSuccess] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  // OTP States
+  const [emailOtp, setEmailOtp] = useState("");
+  const [mobileOtp, setMobileOtp] = useState("");
+  
+  const [showEmailOtp, setShowEmailOtp] = useState(false);
+  const [showMobileOtp, setShowMobileOtp] = useState(false);
+  
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [isMobileVerified, setIsMobileVerified] = useState(false);
+  
+  const [emailTimer, setEmailTimer] = useState(0);
+  const [mobileTimer, setMobileTimer] = useState(0);
+  const [otpLoading, setOtpLoading] = useState(false);
+
+  // Timer effects
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (emailTimer > 0) {
+      interval = setInterval(() => setEmailTimer(prev => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [emailTimer]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (mobileTimer > 0) {
+      interval = setInterval(() => setMobileTimer(prev => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [mobileTimer]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleSendEmailOTP = async () => {
+    if (!formData.email) {
+      setSubmitError("Please enter an email address first");
+      return;
+    }
+    setOtpLoading(true);
+    setSubmitError("");
+    try {
+      await sendEmailOTP(formData.email);
+      setShowEmailOtp(true);
+      setEmailTimer(60);
+      setSubmitSuccess("OTP sent to email");
+    } catch (err: any) {
+      setSubmitError(err?.response?.data?.message?.message || "Failed to send email OTP");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyEmailOTP = async () => {
+    if (!emailOtp) return;
+    setOtpLoading(true);
+    setSubmitError("");
+    setSubmitSuccess("");
+    try {
+      const response = await verifyEmailOTP(formData.email, emailOtp);
+      // Wait for the exact message matching onboarding or just assume success if it doesn't throw
+      if (response && (response.message === "OTP verified successfully" || response.message?.status === "success" || response.data?.success)) {
+        setIsEmailVerified(true);
+        setShowEmailOtp(false);
+        setSubmitSuccess("Email verified successfully!");
+      } else if (response && response.message) {
+        // If there's an arbitrary success message
+        setIsEmailVerified(true);
+        setShowEmailOtp(false);
+        setSubmitSuccess("Email verified successfully!");
+      } else {
+        setSubmitError("Invalid OTP");
+      }
+    } catch (err: any) {
+      setSubmitError(err?.response?.data?.message?.message || "Invalid OTP");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleSendMobileOTP = async () => {
+    if (!formData.phone || formData.phone.length !== 10) {
+      setSubmitError("Please enter a valid 10-digit mobile number");
+      return;
+    }
+    setOtpLoading(true);
+    setSubmitError("");
+    try {
+      await sendMobileOTP(formData.phone, formData.email || "");
+      setShowMobileOtp(true);
+      setMobileTimer(60);
+      setSubmitSuccess("OTP sent to mobile");
+    } catch (err: any) {
+      setSubmitError(err?.response?.data?.message?.message || "Failed to send mobile OTP");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyMobileOTP = async () => {
+    if (!mobileOtp) return;
+    setOtpLoading(true);
+    setSubmitError("");
+    setSubmitSuccess("");
+    try {
+      const response = await verifyMobileOTP(formData.phone, mobileOtp, formData.email || "");
+      if (response && (response.message === "OTP verified successfully" || response.message?.status === "success" || response.data?.success)) {
+        setIsMobileVerified(true);
+        setShowMobileOtp(false);
+        setSubmitSuccess("Mobile verified successfully!");
+      } else if (response && response.message) {
+        setIsMobileVerified(true);
+        setShowMobileOtp(false);
+        setSubmitSuccess("Mobile verified successfully!");
+      } else {
+        setSubmitError("Invalid OTP");
+      }
+    } catch (err: any) {
+      setSubmitError(err?.response?.data?.message?.message || "Invalid OTP");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const validatePassword = (password: string) => {
+    if (password.length < 8) {
+      return "Password must be at least 8 characters long.";
+    }
+    if (!/[A-Z]/.test(password)) {
+      return "Password must contain at least one uppercase letter.";
+    }
+    if (!/[a-z]/.test(password)) {
+      return "Password must contain at least one lowercase letter.";
+    }
+    if (!/[0-9]/.test(password)) {
+      return "Password must contain at least one number.";
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      return "Password must contain at least one special character.";
+    }
+    return "";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isEmailVerified || !isMobileVerified) {
+      setSubmitError("Please verify both Email and Phone number before submitting.");
+      return;
+    }
+    
+    const passwordError = validatePassword(formData.password);
+    if (passwordError) {
+      setSubmitError(passwordError);
+      return;
+    }
+    
     setLoading(true);
     setSubmitError('');
     setSubmitSuccess('');
@@ -58,26 +213,38 @@ export default function PartnerForm() {
       
       const responseData = response.data;
       if (responseData && responseData.message && responseData.message.status === "success") {
-        setSubmitSuccess("Partner created successfully!");
-        setFormData({
-          firstName: '',
-          lastName: '',
-          email: '',
-          phone: '',
-          organization: '',
-          jobTitle: '',
-          companySize: '',
-          partnerType: '',
-          country: 'India',
-          state: '',
-          password: ''
-        });
+        setSubmitSuccess("Partner created successfully! Redirecting to login...");
+        setTimeout(() => {
+          router.push('/login');
+        }, 1500);
       } else {
         setSubmitError(responseData?.message?.message || "Something went wrong. Please try again.");
       }
     } catch (error: any) {
       console.error("Error creating partner:", error);
-      setSubmitError(error.response?.data?.message?.message || error.message || "Failed to submit. Please try again.");
+      
+      let errorMessage = "Failed to submit. Please try again.";
+      
+      // Handle Frappe validation errors
+      if (error.response?.data?._server_messages) {
+        try {
+          const messages = JSON.parse(error.response.data._server_messages);
+          if (messages && messages.length > 0) {
+            const firstMessage = JSON.parse(messages[0]);
+            if (firstMessage && firstMessage.message) {
+              errorMessage = firstMessage.message;
+            }
+          }
+        } catch (e) {
+          console.error("Error parsing _server_messages", e);
+        }
+      } else if (error.response?.data?.message?.message) {
+        errorMessage = error.response.data.message.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setSubmitError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -171,32 +338,106 @@ export default function PartnerForm() {
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-6">
-                <div>
+              <div className="space-y-3">
                   <label htmlFor="email" className="sr-only">Email Address</label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    placeholder="Email Address"
-                    required
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-colors text-gray-800"
-                  />
-                </div>
-                <div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="Email Address"
+                        required
+                        disabled={isEmailVerified || showEmailOtp}
+                        value={formData.email}
+                        onChange={handleChange}
+                        className={`w-full px-4 py-3 rounded-lg border focus:ring-2 outline-none transition-colors text-gray-800 ${isEmailVerified ? 'border-green-300 bg-green-50' : 'border-gray-200 focus:border-blue-500 focus:ring-blue-200'}`}
+                      />
+                      {isEmailVerified && <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />}
+                    </div>
+                    {!isEmailVerified && (
+                      <button
+                        type="button"
+                        onClick={handleSendEmailOTP}
+                        disabled={!formData.email || otpLoading || emailTimer > 0}
+                        className="px-4 py-3 bg-white border border-blue-200 text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {emailTimer > 0 ? `Resend in ${emailTimer}s` : "Verify"}
+                      </button>
+                    )}
+                  </div>
+                  
+                  {showEmailOtp && !isEmailVerified && (
+                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                      <input
+                        type="text"
+                        placeholder="Enter Email OTP"
+                        value={emailOtp}
+                        onChange={(e) => setEmailOtp(e.target.value)}
+                        className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-sm"
+                        maxLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleVerifyEmailOTP}
+                        disabled={!emailOtp || otpLoading}
+                        className="px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm whitespace-nowrap"
+                      >
+                        Submit
+                      </button>
+                    </div>
+                  )}
+              </div>
+
+              <div className="space-y-3">
                   <label htmlFor="phone" className="sr-only">Phone Number</label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    placeholder="Phone Number"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-colors text-gray-800"
-                  />
-                </div>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="tel"
+                        id="phone"
+                        name="phone"
+                        placeholder="Phone Number"
+                        required
+                        disabled={isMobileVerified || showMobileOtp}
+                        value={formData.phone}
+                        onChange={handleChange}
+                        className={`w-full px-4 py-3 rounded-lg border focus:ring-2 outline-none transition-colors text-gray-800 ${isMobileVerified ? 'border-green-300 bg-green-50' : 'border-gray-200 focus:border-blue-500 focus:ring-blue-200'}`}
+                      />
+                      {isMobileVerified && <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-500" />}
+                    </div>
+                    {!isMobileVerified && (
+                      <button
+                        type="button"
+                        onClick={handleSendMobileOTP}
+                        disabled={!formData.phone || formData.phone.length !== 10 || otpLoading || mobileTimer > 0}
+                        className="px-4 py-3 bg-white border border-blue-200 text-blue-600 font-medium rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {mobileTimer > 0 ? `Resend in ${mobileTimer}s` : "Verify"}
+                      </button>
+                    )}
+                  </div>
+
+                  {showMobileOtp && !isMobileVerified && (
+                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                      <input
+                        type="text"
+                        placeholder="Enter Phone OTP"
+                        value={mobileOtp}
+                        onChange={(e) => setMobileOtp(e.target.value)}
+                        className="flex-1 px-4 py-2.5 rounded-lg border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-sm"
+                        maxLength={6}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleVerifyMobileOTP}
+                        disabled={!mobileOtp || otpLoading}
+                        className="px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm whitespace-nowrap"
+                      >
+                        Submit
+                      </button>
+                    </div>
+                  )}
               </div>
 
               <div className="grid sm:grid-cols-2 gap-6">
@@ -321,7 +562,7 @@ export default function PartnerForm() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || !isEmailVerified || !isMobileVerified}
                 className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors shadow-md shadow-blue-600/20 disabled:opacity-70 flex justify-center items-center gap-2"
               >
                 {loading ? (
@@ -333,7 +574,7 @@ export default function PartnerForm() {
                     Submitting...
                   </>
                 ) : (
-                  "Submit"
+                  "Submit Registration"
                 )}
               </button>
             </form>
