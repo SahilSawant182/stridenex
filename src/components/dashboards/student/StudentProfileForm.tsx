@@ -11,6 +11,31 @@ import { uploadFileApi } from "@/services/api.services";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
 
+const ReferralCodeDisplay = ({ referal_code, showToast }: { referal_code: string, showToast: any }) => {
+  const [copied, setCopied] = useState(false);
+  
+  return (
+    <div className="flex items-center gap-3 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100">
+      <div className="flex-1">
+        <p className="text-xl font-black text-emerald-700 tracking-widest">{referal_code}</p>
+        <p className="text-xs text-emerald-500 font-medium mt-1">Share this code to refer others!</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          navigator.clipboard.writeText(referal_code);
+          setCopied(true);
+          showToast("Referral code copied!", "success");
+          setTimeout(() => setCopied(false), 2000);
+        }}
+        className={`px-4 py-2 ${copied ? 'bg-emerald-700' : 'bg-emerald-600 hover:bg-emerald-700'} text-white rounded-lg text-sm font-medium transition-colors shadow-sm`}
+      >
+        {copied ? "Copied!" : "Copy Code"}
+      </button>
+    </div>
+  );
+};
+
 export default function StudentProfileForm() {
   const { showToast } = useToast();
   const { userImage, updateUserImage } = useAuth();
@@ -204,16 +229,25 @@ export default function StudentProfileForm() {
     {
       name: "marksheet",
       label: "Upload Marksheet / Result",
-      type: "custom",
-      colSpan: 2,
-      customRender: (formData, onChange) => (
+      type: "custom" as const,
+      colSpan: 2 as const,
+      customRender: (formData: any, onChange: any) => (
         <MarksheetUploader
           value={formData.marksheet}
-          onChange={(val) => onChange(val)}
+          onChange={(val: any) => onChange(val)}
         />
       )
     },
-  ], [studentFormState.course_type, studentFormState.stream, studentFormState.course, studentFormState.department, studentDepartmentOptions]);
+    ...(studentData?.referal_code ? [{
+      name: "referal_code",
+      label: "Your Referral Code",
+      type: "custom" as const,
+      colSpan: 2 as const,
+      customRender: (formData: any) => {
+        return <ReferralCodeDisplay referal_code={formData.referal_code} showToast={showToast} />;
+      }
+    }] : []),
+  ], [studentFormState.course_type, studentFormState.stream, studentFormState.course, studentFormState.department, studentDepartmentOptions, studentData?.referal_code]);
 
   const handleValuesChange = (values: Record<string, any>, changedFieldName: string) => {
     let sideEffects: Record<string, any> = {};

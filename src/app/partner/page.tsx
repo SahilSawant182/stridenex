@@ -3,13 +3,15 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { LogOut, Building2, User, Mail, Phone, Briefcase, MapPin, Users, Copy, CheckCircle2, TrendingUp } from "lucide-react";
+import { LogOut, Building2, User, Mail, Phone, Briefcase, MapPin, Users, Copy, CheckCircle2, TrendingUp, BookOpen, Target } from "lucide-react";
 import Image from "next/image";
 import axios from "axios";
 import { BASE_URL } from "@/services/api.services";
+import Dropdown from "@/components/ui/Dropdown";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from "recharts";
 
 interface PartnerData {
+  name?: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -47,6 +49,11 @@ export default function PartnerPage() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState<PartnerData | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState("");
+  const [editSuccess, setEditSuccess] = useState("");
 
   useEffect(() => {
     if (isInitialized && (!isAuthenticated || role !== "partner")) {
@@ -123,6 +130,42 @@ export default function PartnerPage() {
     }
   };
 
+  const handleEditSubmit = async () => {
+    if (!editData) return;
+    try {
+      setEditLoading(true);
+      setEditError("");
+      setEditSuccess("");
+      const payload = {
+        name: editData.name,
+        first_name: editData.first_name,
+        last_name: editData.last_name,
+        email: editData.email,
+        phone_number: editData.phone_number,
+        organisation: editData.organisation,
+        job_title: editData.job_title,
+        company_size: editData.company_size ? Number(editData.company_size) : undefined,
+        state: editData.state
+      };
+      
+      const res = await axios.put(`${BASE_URL}method/stridenex_app.stridenex_app.doctype.stridenex_partner.stridenex_partner.edit_stridenex_partner`, payload);
+      
+      if (res.data && (res.data.status === 200 || res.data.data?.success)) {
+        setPartnerData({ ...partnerData, ...editData });
+        setIsEditing(false);
+        setEditSuccess("Profile updated successfully!");
+        setTimeout(() => setEditSuccess(""), 3000);
+      } else {
+        setEditError(res.data?.message || "Failed to update profile.");
+      }
+    } catch (e: any) {
+      console.error("Failed to edit partner data", e);
+      setEditError(e?.response?.data?.message?.message || "Failed to update profile. Please try again.");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   if (!isInitialized || loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
@@ -182,18 +225,40 @@ export default function PartnerPage() {
           
           {/* Referral Code Prominent Display */}
           {partnerData?.referal_code && (
-            <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-sm shadow-blue-100 flex items-center gap-4">
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Your Referral Code</p>
-                <p className="text-2xl font-black text-blue-600 tracking-widest">{partnerData.referal_code}</p>
+            <div className="relative group cursor-pointer" onClick={copyToClipboard} title="Click to copy code">
+              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 rounded-[1.2rem] blur-md opacity-20 group-hover:opacity-40 transition duration-500"></div>
+              
+              <div className="relative flex items-stretch bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
+                {/* Left part: Code */}
+                <div className="relative flex-1 flex flex-col justify-center px-6 sm:px-8 py-4 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 border-r-2 border-dashed border-slate-200">
+                  {/* Decorative cutouts for ticket effect */}
+                  <div className="absolute -top-3 -right-3 w-6 h-6 bg-slate-50 rounded-full border border-slate-200 z-10"></div>
+                  <div className="absolute -bottom-3 -right-3 w-6 h-6 bg-slate-50 rounded-full border border-slate-200 z-10"></div>
+                  
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Your Referral Code</p>
+                  </div>
+                  <p className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 tracking-[0.15em] font-mono">
+                    {partnerData.referal_code}
+                  </p>
+                </div>
+                
+                {/* Right part: Copy Action */}
+                <div className={`w-24 sm:w-28 flex flex-col items-center justify-center transition-colors duration-300 ${copied ? 'bg-emerald-500 text-white' : 'bg-slate-50 text-blue-600 hover:bg-blue-50'}`}>
+                  {copied ? (
+                    <div className="flex flex-col items-center animate-in zoom-in duration-200">
+                      <CheckCircle2 className="w-7 h-7 mb-1" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Copied</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center group-hover:scale-110 transition-transform duration-300">
+                      <Copy className="w-7 h-7 mb-1" />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Copy</span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <button 
-                onClick={copyToClipboard}
-                className="h-12 w-12 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors shrink-0 border border-blue-100"
-                title="Copy Code"
-              >
-                {copied ? <CheckCircle2 className="w-5 h-5 text-green-600" /> : <Copy className="w-5 h-5" />}
-              </button>
             </div>
           )}
         </div>
@@ -210,10 +275,51 @@ export default function PartnerPage() {
               <div className="h-24 bg-gradient-to-r from-blue-600 to-sky-400 relative"></div>
               
               <div className="px-6 sm:px-10 pb-10 relative">
-                {/* Avatar Profile */}
-                <div className="w-20 h-20 sm:w-28 sm:h-28 bg-white rounded-full border-4 border-white shadow-md flex items-center justify-center text-3xl font-bold text-blue-600 uppercase -mt-10 sm:-mt-14 mb-6">
-                  {partnerData.first_name?.[0]}{partnerData.last_name?.[0]}
+                <div className="flex justify-between items-start -mt-10 sm:-mt-14 mb-6">
+                  {/* Avatar Profile */}
+                  <div className="w-20 h-20 sm:w-28 sm:h-28 bg-white rounded-full border-4 border-white shadow-md flex items-center justify-center text-3xl font-bold text-blue-600 uppercase shrink-0">
+                    {partnerData.first_name?.[0]}{partnerData.last_name?.[0]}
+                  </div>
+                  
+                  <div className="mt-14 sm:mt-16">
+                    {!isEditing ? (
+                      <button 
+                        onClick={() => { setIsEditing(true); setEditData(partnerData); setEditSuccess(""); }}
+                        className="px-4 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-sm font-medium transition-colors border border-blue-200"
+                      >
+                        Edit Profile
+                      </button>
+                    ) : (
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => setIsEditing(false)}
+                          className="px-4 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-lg text-sm font-medium transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          onClick={handleEditSubmit}
+                          disabled={editLoading}
+                          className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+                        >
+                          {editLoading ? 'Saving...' : 'Save Changes'}
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
+
+                {editError && (
+                  <div className="bg-red-50 text-red-600 p-3 rounded-lg border border-red-100 mb-6 text-sm">
+                    {editError}
+                  </div>
+                )}
+
+                {editSuccess && (
+                  <div className="bg-green-50 text-green-600 p-3 rounded-lg border border-green-100 mb-6 text-sm">
+                    {editSuccess}
+                  </div>
+                )}
 
                 <div className="grid md:grid-cols-2 gap-x-12 gap-y-10">
                   {/* Personal Information */}
@@ -224,32 +330,69 @@ export default function PartnerPage() {
                     
                     <div className="space-y-5">
                       <div className="flex gap-4">
-                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0 mt-1">
                           <User className="w-5 h-5 text-blue-600" />
                         </div>
-                        <div>
-                          <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide">Full Name</p>
-                          <p className="text-slate-900 font-medium">{partnerData.first_name} {partnerData.last_name}</p>
+                        <div className="flex-1">
+                          <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide mb-1">Full Name</p>
+                          {isEditing ? (
+                            <div className="flex gap-2">
+                              <input 
+                                type="text" 
+                                value={editData?.first_name || ''} 
+                                onChange={(e) => setEditData(prev => prev ? {...prev, first_name: e.target.value} : null)}
+                                className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="First Name"
+                              />
+                              <input 
+                                type="text" 
+                                value={editData?.last_name || ''} 
+                                onChange={(e) => setEditData(prev => prev ? {...prev, last_name: e.target.value} : null)}
+                                className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder="Last Name"
+                              />
+                            </div>
+                          ) : (
+                            <p className="text-slate-900 font-medium">{partnerData.first_name} {partnerData.last_name}</p>
+                          )}
                         </div>
                       </div>
 
                       <div className="flex gap-4">
-                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0 mt-1">
                           <Mail className="w-5 h-5 text-blue-600" />
                         </div>
-                        <div>
-                          <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide">Email Address</p>
-                          <p className="text-slate-900 font-medium">{partnerData.email}</p>
+                        <div className="flex-1">
+                          <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide mb-1">Email Address</p>
+                          {isEditing ? (
+                            <input 
+                              type="email" 
+                              value={editData?.email || ''} 
+                              readOnly
+                              className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:outline-none bg-slate-50 text-slate-500 cursor-not-allowed"
+                            />
+                          ) : (
+                            <p className="text-slate-900 font-medium">{partnerData.email}</p>
+                          )}
                         </div>
                       </div>
 
                       <div className="flex gap-4">
-                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center shrink-0 mt-1">
                           <Phone className="w-5 h-5 text-blue-600" />
                         </div>
-                        <div>
-                          <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide">Phone Number</p>
-                          <p className="text-slate-900 font-medium">{partnerData.phone_number}</p>
+                        <div className="flex-1">
+                          <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide mb-1">Phone Number</p>
+                          {isEditing ? (
+                            <input 
+                              type="tel" 
+                              value={editData?.phone_number || ''} 
+                              readOnly
+                              className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:outline-none bg-slate-50 text-slate-500 cursor-not-allowed"
+                            />
+                          ) : (
+                            <p className="text-slate-900 font-medium">{partnerData.phone_number}</p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -263,47 +406,95 @@ export default function PartnerPage() {
                     
                     <div className="space-y-5">
                       <div className="flex gap-4">
-                        <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 mt-1">
                           <Building2 className="w-5 h-5 text-indigo-600" />
                         </div>
-                        <div>
-                          <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide">Organization</p>
-                          <p className="text-slate-900 font-medium">{partnerData.organisation}</p>
+                        <div className="flex-1">
+                          <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide mb-1">Organization</p>
+                          {isEditing ? (
+                            <input 
+                              type="text" 
+                              value={editData?.organisation || ''} 
+                              onChange={(e) => setEditData(prev => prev ? {...prev, organisation: e.target.value} : null)}
+                              className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          ) : (
+                            <p className="text-slate-900 font-medium">{partnerData.organisation}</p>
+                          )}
                         </div>
                       </div>
 
                       <div className="flex gap-4">
-                        <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 mt-1">
                           <Briefcase className="w-5 h-5 text-indigo-600" />
                         </div>
-                        <div>
-                          <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide">Job Title & Type</p>
-                          <p className="text-slate-900 font-medium">
-                            {partnerData.job_title} 
-                            {partnerData.partner_type && <span className="text-slate-400 font-normal ml-1">({partnerData.partner_type})</span>}
-                          </p>
+                        <div className="flex-1">
+                          <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide mb-1">Job Title & Type</p>
+                          {isEditing ? (
+                            <input 
+                              type="text" 
+                              value={editData?.job_title || ''} 
+                              onChange={(e) => setEditData(prev => prev ? {...prev, job_title: e.target.value} : null)}
+                              className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              placeholder="Job Title"
+                            />
+                          ) : (
+                            <p className="text-slate-900 font-medium">
+                              {partnerData.job_title} 
+                              {partnerData.partner_type && <span className="text-slate-400 font-normal ml-1">({partnerData.partner_type})</span>}
+                            </p>
+                          )}
                         </div>
                       </div>
 
                       <div className="flex gap-4">
-                        <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 mt-1">
                           <Users className="w-5 h-5 text-indigo-600" />
                         </div>
-                        <div>
-                          <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide">Company Size</p>
-                          <p className="text-slate-900 font-medium">{partnerData.company_size || "Not specified"}</p>
+                        <div className="flex-1">
+                          <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide mb-1">Company Size</p>
+                          {isEditing ? (
+                            <select 
+                              value={editData?.company_size || ''} 
+                              onChange={(e) => setEditData(prev => prev ? {...prev, company_size: e.target.value} : null)}
+                              className="w-full px-3 py-1.5 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="">Select Size</option>
+                              <option value="50">1-50 employees</option>
+                              <option value="200">51-200 employees</option>
+                              <option value="500">201-500 employees</option>
+                              <option value="1000">501-1,000 employees</option>
+                              <option value="2000">1,000+ employees</option>
+                            </select>
+                          ) : (
+                            <p className="text-slate-900 font-medium">{partnerData.company_size || "Not specified"}</p>
+                          )}
                         </div>
                       </div>
 
                       <div className="flex gap-4">
-                        <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                        <div className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0 mt-1">
                           <MapPin className="w-5 h-5 text-indigo-600" />
                         </div>
-                        <div>
-                          <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide">Location</p>
-                          <p className="text-slate-900 font-medium">
-                            {partnerData.state}{partnerData.country ? `, ${partnerData.country}` : ''}
-                          </p>
+                        <div className="flex-1">
+                          <p className="text-[13px] font-medium text-slate-500 uppercase tracking-wide mb-1">Location</p>
+                          {isEditing ? (
+                            <div className="relative">
+                              <Dropdown
+                                id="state"
+                                placeholder="State"
+                                value={editData?.state || ''}
+                                onChange={(val) => setEditData(prev => prev ? {...prev, state: val} : null)}
+                                endpoint={`${BASE_URL}method/stridenex_app.api_stridenex_app.college.master.get_master_data`}
+                                params={{ doctype: "State" }}
+                                searchable={true}
+                              />
+                            </div>
+                          ) : (
+                            <p className="text-slate-900 font-medium">
+                              {partnerData.state}{partnerData.country ? `, ${partnerData.country}` : ''}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>

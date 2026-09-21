@@ -136,6 +136,19 @@ export default function SignupPage() {
       required: true,
       placeholder: "Confirm your password",
     },
+    {
+      fieldname: "hasReferral",
+      label: "Do you have a referral code?",
+      fieldtype: "Check",
+      required: false,
+    },
+    ...(formValues?.hasReferral ? [{
+      fieldname: "partner_referal",
+      label: "Referral Code",
+      placeholder: "Enter referral code",
+      fieldtype: "Data",
+      required: true,
+    }] : []),
   ];
 
   const handleFormChange = (data: any) => {
@@ -164,6 +177,10 @@ export default function SignupPage() {
 
     if (data.password && data.confirmPassword && data.password !== data.confirmPassword) {
       newFieldErrors.confirmPassword = "Passwords do not match";
+    }
+
+    if (data.hasReferral && !data.partner_referal) {
+      newFieldErrors.partner_referal = "Referral code is required";
     }
 
     if (!selectedRole) {
@@ -206,6 +223,7 @@ export default function SignupPage() {
         password: data.password,
         role: rolePayload,
         allow_promotional_news: allowPromotionalNews ? 1 : 0,
+        partner_referal: data.hasReferral ? data.partner_referal : undefined,
       }),
     })
       .then(response => response.json())

@@ -45,6 +45,31 @@ import { buildProfileImageUrl, uploadFileApi, BASE_DOMAIN } from "@/services/api
 
 import { createPortal } from "react-dom";
 
+const ReferralCodeDisplay = ({ referal_code, showToast }: { referal_code: string, showToast: any }) => {
+  const [copied, setCopied] = useState(false);
+  
+  return (
+    <div className="flex items-center gap-3 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100">
+      <div className="flex-1">
+        <p className="text-xl font-black text-emerald-700 tracking-widest">{referal_code}</p>
+        <p className="text-xs text-emerald-500 font-medium mt-1">Share this code to refer others!</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => {
+          navigator.clipboard.writeText(referal_code);
+          setCopied(true);
+          showToast("Referral code copied!", "success");
+          setTimeout(() => setCopied(false), 2000);
+        }}
+        className={`px-4 py-2 ${copied ? 'bg-emerald-700' : 'bg-emerald-600 hover:bg-emerald-700'} text-white rounded-lg text-sm font-medium transition-colors shadow-sm`}
+      >
+        {copied ? "Copied!" : "Copy Code"}
+      </button>
+    </div>
+  );
+};
+
 interface BannerMetric {
   key: string;
   value: string | number;
@@ -688,7 +713,16 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         return (Array.isArray(items) ? items : []).map((c: any) => ({ value: c.name, label: c.name }));
       }
     },
-  ], [collegeFormState]);
+    ...(collegeData?.user_details?.referal_code ? [{
+      name: "referal_code",
+      label: "Your Referral Code",
+      type: "custom" as const,
+      colSpan: 2 as const,
+      customRender: (formData: any) => {
+        return <ReferralCodeDisplay referal_code={collegeData.user_details.referal_code} showToast={showToast} />;
+      }
+    }] : []),
+  ], [collegeFormState, collegeData?.user_details?.referal_code]);
 
   const industryFields: DynamicField[] = useMemo(() => {
     const fields: DynamicField[] = [
