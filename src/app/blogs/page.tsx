@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { ChevronLeft, Share2, Copy, Linkedin, Facebook, X as CloseIcon, MessageCircle, Mail, Send, CheckCircle2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-
+import remarkGfm from "remark-gfm";
 interface Blog {
   name: string;
   title: string;
@@ -243,9 +243,9 @@ export default function BlogsPage() {
             <hr className="border-slate-100 my-8" />
 
             {readingBlog.content_md ? (
-              <div className="prose prose-slate max-w-none text-[15px] sm:text-[16px] leading-[1.7] text-slate-800 space-y-6 break-words">
-                <ReactMarkdown>
-                  {readingBlog.content_md}
+              <div className="prose prose-slate prose-blue max-w-none prose-headings:font-bold prose-h1:text-[28px] sm:prose-h1:text-[32px] prose-h2:text-[24px] sm:prose-h2:text-[28px] prose-p:text-[16px] sm:prose-p:text-[17px] leading-[1.75] text-slate-800 space-y-6 break-words">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {readingBlog.content_md.replace(/\\n/g, '\n')}
                 </ReactMarkdown>
               </div>
             ) : (
