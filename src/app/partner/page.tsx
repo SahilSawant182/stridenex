@@ -8,7 +8,7 @@ import Image from "next/image";
 import axios from "axios";
 import { BASE_URL } from "@/services/api.services";
 import Dropdown from "@/components/ui/Dropdown";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from "recharts";
+import ReferralPerformanceWidget from "@/components/dashboards/widgets/ReferralPerformanceWidget";
 
 interface PartnerData {
   name?: string;
@@ -25,26 +25,11 @@ interface PartnerData {
   referal_code?: string;
 }
 
-interface ReferralData {
-  success: boolean;
-  referral_code: string;
-  referrer: string;
-  referrer_name: string;
-  counts: {
-    Student: number;
-    College: number;
-    Mentor: number;
-    Industry: number;
-  };
-  total: number;
-}
-
 export default function PartnerPage() {
   const { currentUser, logout, isAuthenticated, isInitialized, role } = useAuth();
   const router = useRouter();
   
   const [partnerData, setPartnerData] = useState<PartnerData | null>(null);
-  const [referralData, setReferralData] = useState<ReferralData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -81,10 +66,6 @@ export default function PartnerPage() {
         const refCode = res.data.message.data.user?.referal_code;
         
         setPartnerData({ ...pData, referal_code: refCode });
-        
-        if (refCode) {
-          await fetchReferralStats(refCode);
-        }
       } else {
         throw new Error("Invalid response format");
       }
@@ -93,20 +74,6 @@ export default function PartnerPage() {
       setError("Failed to load partner details. Please try again.");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchReferralStats = async (code: string) => {
-    try {
-      // Assuming it's a POST request since it has a JSON body in the requirement
-      const res = await axios.post(`${BASE_URL}method/stridenex_app.stridenex_app.doctype.referal_details.referal_details.get_referral_module_count`, {
-        referral_code: code
-      });
-      if (res.data && res.data.data) {
-        setReferralData(res.data.data);
-      }
-    } catch (e) {
-      console.error("Failed to fetch referral stats", e);
     }
   };
 
@@ -177,12 +144,7 @@ export default function PartnerPage() {
     );
   }
 
-  const chartData = referralData ? [
-    { name: 'Students', value: referralData.counts.Student, color: '#3b82f6' }, // Blue
-    { name: 'Colleges', value: referralData.counts.College, color: '#8b5cf6' }, // Purple
-    { name: 'Mentors', value: referralData.counts.Mentor, color: '#f59e0b' }, // Amber
-    { name: 'Industries', value: referralData.counts.Industry, color: '#10b981' }, // Emerald
-  ] : [];
+
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-20">
@@ -225,39 +187,29 @@ export default function PartnerPage() {
           
           {/* Referral Code Prominent Display */}
           {partnerData?.referal_code && (
-            <div className="relative group cursor-pointer" onClick={copyToClipboard} title="Click to copy code">
-              <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 rounded-[1.2rem] blur-md opacity-20 group-hover:opacity-40 transition duration-500"></div>
-              
-              <div className="relative flex items-stretch bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
-                {/* Left part: Code */}
-                <div className="relative flex-1 flex flex-col justify-center px-6 sm:px-8 py-4 bg-gradient-to-br from-blue-50/50 to-indigo-50/50 border-r-2 border-dashed border-slate-200">
-                  {/* Decorative cutouts for ticket effect */}
-                  <div className="absolute -top-3 -right-3 w-6 h-6 bg-slate-50 rounded-full border border-slate-200 z-10"></div>
-                  <div className="absolute -bottom-3 -right-3 w-6 h-6 bg-slate-50 rounded-full border border-slate-200 z-10"></div>
-                  
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
-                    <p className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Your Referral Code</p>
-                  </div>
-                  <p className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 tracking-[0.15em] font-mono">
-                    {partnerData.referal_code}
-                  </p>
-                </div>
-                
-                {/* Right part: Copy Action */}
-                <div className={`w-24 sm:w-28 flex flex-col items-center justify-center transition-colors duration-300 ${copied ? 'bg-emerald-500 text-white' : 'bg-slate-50 text-blue-600 hover:bg-blue-50'}`}>
-                  {copied ? (
-                    <div className="flex flex-col items-center animate-in zoom-in duration-200">
-                      <CheckCircle2 className="w-7 h-7 mb-1" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">Copied</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center group-hover:scale-110 transition-transform duration-300">
-                      <Copy className="w-7 h-7 mb-1" />
-                      <span className="text-[10px] font-bold uppercase tracking-widest">Copy</span>
-                    </div>
-                  )}
-                </div>
+            <div 
+              className="group flex items-center gap-6 bg-white border border-slate-200 shadow-sm rounded-xl pl-5 pr-3 py-3 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
+              onClick={copyToClipboard}
+              title="Click to copy code"
+            >
+              <div className="flex flex-col justify-center">
+                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Your Referral Code</span>
+                <span className="text-2xl font-bold text-slate-800 font-mono tracking-[0.1em]">
+                  {partnerData.referal_code}
+                </span>
+              </div>
+              <div className={`flex flex-col items-center justify-center p-3 rounded-lg transition-all duration-200 ${copied ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400 group-hover:text-blue-600 group-hover:bg-blue-50'}`}>
+                {copied ? (
+                  <>
+                    <CheckCircle2 className="w-5 h-5 mb-1" />
+                    <span className="text-[9px] font-bold uppercase tracking-wider">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-5 h-5 mb-1" />
+                    <span className="text-[9px] font-bold uppercase tracking-wider">Copy</span>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -502,71 +454,9 @@ export default function PartnerPage() {
                 </div>
               </div>
             </div>
-
             {/* Referral Stats Section */}
-            {referralData && (
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden animate-in fade-in slide-in-from-bottom-12 duration-700 delay-200">
-                <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
-                    <TrendingUp className="w-4 h-4" />
-                  </div>
-                  <h2 className="text-xl font-bold text-slate-800">Referral Performance</h2>
-                </div>
-                
-                <div className="p-6 sm:p-10">
-                  <div className="grid md:grid-cols-3 gap-8">
-                    {/* Summary Total */}
-                    <div className="md:col-span-1 bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 text-white flex flex-col justify-center shadow-lg">
-                      <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-2">Total Signups</p>
-                      <h3 className="text-6xl font-black mb-4">{referralData.total}</h3>
-                      <p className="text-slate-300 text-sm leading-relaxed">
-                        Total users who have successfully registered using your referral code 
-                        <span className="font-bold text-white ml-1">"{referralData.referral_code}"</span>.
-                      </p>
-                    </div>
-
-                    {/* Chart Area */}
-                    <div className="md:col-span-2 h-[300px]">
-                      {referralData.total > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                            <XAxis 
-                              dataKey="name" 
-                              axisLine={false} 
-                              tickLine={false} 
-                              tick={{ fill: '#64748b', fontSize: 12, fontWeight: 500 }} 
-                              dy={10}
-                            />
-                            <YAxis 
-                              axisLine={false} 
-                              tickLine={false} 
-                              tick={{ fill: '#64748b', fontSize: 12 }} 
-                            />
-                            <RechartsTooltip 
-                              cursor={{ fill: '#f1f5f9' }}
-                              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
-                            />
-                            <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={60}>
-                              {chartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                              ))}
-                            </Bar>
-                          </BarChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="h-full border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-center p-6">
-                          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                            <TrendingUp className="w-8 h-8 text-slate-300" />
-                          </div>
-                          <p className="text-slate-600 font-medium mb-1">No referrals yet</p>
-                          <p className="text-slate-400 text-sm">Share your code to start seeing statistics here.</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+            {partnerData?.referal_code && (
+              <ReferralPerformanceWidget referralCode={partnerData.referal_code} role="partner" />
             )}
           </div>
         ) : null}

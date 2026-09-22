@@ -10,28 +10,60 @@ import { getStudentByEmail, updateStudent } from "@/services/student.services";
 import { uploadFileApi } from "@/services/api.services";
 import { useToast } from "@/context/ToastContext";
 import { useAuth } from "@/context/AuthContext";
+import ReferralPerformanceWidget from "@/components/dashboards/widgets/ReferralPerformanceWidget";
 
 const ReferralCodeDisplay = ({ referal_code, showToast }: { referal_code: string, showToast: any }) => {
   const [copied, setCopied] = useState(false);
   
   return (
-    <div className="flex items-center gap-3 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100">
-      <div className="flex-1">
-        <p className="text-xl font-black text-emerald-700 tracking-widest">{referal_code}</p>
-        <p className="text-xs text-emerald-500 font-medium mt-1">Share this code to refer others!</p>
+    <div className="relative overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50 to-teal-50 shadow-sm p-5 mt-2">
+      {/* Decorative background circle */}
+      <div className="absolute -right-8 -top-8 w-32 h-32 bg-emerald-200/40 rounded-full blur-2xl"></div>
+      
+      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest">
+              🎁 Refer & Earn
+            </span>
+          </div>
+          <h4 className="text-sm font-bold text-slate-800 mb-1">
+            Bring your squad in! 🔥
+          </h4>
+          <p className="text-xs text-slate-500 leading-relaxed max-w-sm">
+            Share the drip with your friends. When they use your code, you’ll get <span className="font-bold text-emerald-600">500 XP</span>, and they’ll get a <span className="font-bold text-emerald-600">200 XP</span> headstart. A win-win for everyone! 🚀
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-2 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm shrink-0">
+          <div className="px-3 py-2 bg-slate-50 rounded-lg border border-slate-100 border-dashed">
+            <span className="text-lg font-black text-emerald-600 tracking-widest font-mono">
+              {referal_code}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              navigator.clipboard.writeText(referal_code);
+              setCopied(true);
+              showToast("Referral code copied!", "success");
+              setTimeout(() => setCopied(false), 2000);
+            }}
+            className={`flex items-center justify-center h-10 px-3 rounded-lg transition-all ${
+              copied 
+                ? 'bg-emerald-500 text-white' 
+                : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+            }`}
+            title="Copy Code"
+          >
+            {copied ? (
+              <span className="text-xs font-bold">Copied!</span>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            )}
+          </button>
+        </div>
       </div>
-      <button
-        type="button"
-        onClick={() => {
-          navigator.clipboard.writeText(referal_code);
-          setCopied(true);
-          showToast("Referral code copied!", "success");
-          setTimeout(() => setCopied(false), 2000);
-        }}
-        className={`px-4 py-2 ${copied ? 'bg-emerald-700' : 'bg-emerald-600 hover:bg-emerald-700'} text-white rounded-lg text-sm font-medium transition-colors shadow-sm`}
-      >
-        {copied ? "Copied!" : "Copy Code"}
-      </button>
     </div>
   );
 };
@@ -244,7 +276,12 @@ export default function StudentProfileForm() {
       type: "custom" as const,
       colSpan: 2 as const,
       customRender: (formData: any) => {
-        return <ReferralCodeDisplay referal_code={formData.referal_code} showToast={showToast} />;
+        return (
+          <div className="flex flex-col w-full gap-4">
+            <ReferralCodeDisplay referal_code={formData.referal_code} showToast={showToast} />
+            <ReferralPerformanceWidget referralCode={formData.referal_code} role="student" />
+          </div>
+        );
       }
     }] : []),
   ], [studentFormState.course_type, studentFormState.stream, studentFormState.course, studentFormState.department, studentDepartmentOptions, studentData?.referal_code]);
