@@ -28,7 +28,8 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
             openGraph: {
               title: blog.title,
               description: blog.meta_description || blog.blog_intro || "Read this blog post on StrideNex.",
-              images: imageUrl ? [{ url: imageUrl }] : [],
+              url: `${BASE_URL}/blogs?id=${id}`,
+              images: imageUrl ? [{ url: imageUrl, width: 1200, height: 630 }] : [],
               type: "article",
             },
             twitter: {
