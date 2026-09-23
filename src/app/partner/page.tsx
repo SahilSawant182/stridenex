@@ -8,6 +8,7 @@ import Image from "next/image";
 import axios from "axios";
 import { BASE_URL } from "@/services/api.services";
 import Dropdown from "@/components/ui/Dropdown";
+import ReferralSectionField from "@/components/dashboards/widgets/ReferralSectionField";
 import ReferralPerformanceWidget from "@/components/dashboards/widgets/ReferralPerformanceWidget";
 
 interface PartnerData {
@@ -175,7 +176,7 @@ export default function PartnerPage() {
 
       {/* Main Content */}
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
             <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight mb-3">
               Welcome back, {partnerData?.first_name || 'Partner'}
@@ -185,32 +186,10 @@ export default function PartnerPage() {
             </p>
           </div>
           
-          {/* Referral Code Prominent Display */}
+          {/* Referral Card Display */}
           {partnerData?.referal_code && (
-            <div 
-              className="group flex items-center gap-6 bg-white border border-slate-200 shadow-sm rounded-xl pl-5 pr-3 py-3 hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
-              onClick={copyToClipboard}
-              title="Click to copy code"
-            >
-              <div className="flex flex-col justify-center">
-                <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-widest mb-1">Your Referral Code</span>
-                <span className="text-2xl font-bold text-slate-800 font-mono tracking-[0.1em]">
-                  {partnerData.referal_code}
-                </span>
-              </div>
-              <div className={`flex flex-col items-center justify-center p-3 rounded-lg transition-all duration-200 ${copied ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400 group-hover:text-blue-600 group-hover:bg-blue-50'}`}>
-                {copied ? (
-                  <>
-                    <CheckCircle2 className="w-5 h-5 mb-1" />
-                    <span className="text-[9px] font-bold uppercase tracking-wider">Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-5 h-5 mb-1" />
-                    <span className="text-[9px] font-bold uppercase tracking-wider">Copy</span>
-                  </>
-                )}
-              </div>
+            <div className="w-full md:w-auto min-w-[320px] max-w-[450px]">
+              <ReferralSectionField referralCode={partnerData.referal_code} role="partner" showPerformance={false} />
             </div>
           )}
         </div>
@@ -454,6 +433,7 @@ export default function PartnerPage() {
                 </div>
               </div>
             </div>
+
             {/* Referral Stats Section */}
             {partnerData?.referal_code && (
               <ReferralPerformanceWidget referralCode={partnerData.referal_code} role="partner" />

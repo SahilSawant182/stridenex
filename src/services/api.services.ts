@@ -423,3 +423,11 @@ export const removeCommunityMember = async (payload: { name: string }) => {
     data: payload,
   });
 };
+
+export const getReferenceCard = async (payload: { reference_code: string; module: string }) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.stridenex_partner.stridenex_partner.get_reference_card",
+    data: payload,
+  });
+};
