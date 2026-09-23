@@ -236,7 +236,7 @@ export default function PathTabContent() {
       const pathData = activePath?.data || activePath;
       const assessmentName = pathData?.career_path || pathData?.career_path_name || pathData?.path_name || pathData?.title || "Data Scientist";
 
-      const url = `https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.app.get_certificate?student_name=${encodeURIComponent(studentEmail)}&assessment_name=${encodeURIComponent(assessmentName)}&sr_no=1`;
+      const url = `https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.app.get_certificate?student_name=${encodeURIComponent(studentEmail)}&assessment_name=${encodeURIComponent(assessmentName)}&sr_no=1&email_id=${encodeURIComponent(studentEmail)}`;
 
       window.open(url, '_blank');
     } catch (err: any) {
@@ -3038,7 +3038,8 @@ export default function PathTabContent() {
                                     const payload = {
                                       student_name: studentName,
                                       assessment_name: cp.career_path,
-                                      sr_no: 1
+                                      sr_no: 1,
+                                      email_id: studentName
                                     };
                                     const params = new URLSearchParams(payload as any).toString();
                                     const url = `https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.app.get_certificate?${params}`;

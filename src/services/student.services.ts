@@ -999,6 +999,7 @@ export const getCertificate = async (payload: {
   student_name: string;
   assessment_name: string;
   sr_no: number;
+  email_id: string;
 }) => {
   try {
     const response = await apiService.post(
