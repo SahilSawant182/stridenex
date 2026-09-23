@@ -28,33 +28,43 @@ interface ReferralPerformanceWidgetProps {
 
 export default function ReferralPerformanceWidget({ referralCode, role }: ReferralPerformanceWidgetProps) {
   const [referralData, setReferralData] = useState<ReferralData | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchReferralStats = async () => {
-      if (!referralCode) return;
+      if (!referralCode) {
+        setLoading(false);
+        return;
+      }
       try {
         const res = await axios.post(`${BASE_URL}method/stridenex_app.stridenex_app.doctype.referal_details.referal_details.get_referral_module_count`, {
           referral_code: referralCode
         });
-        if (res.data && res.data.data) {
-          setReferralData(res.data.data);
+        
+        const data = res.data?.message?.data || res.data?.message || res.data?.data || res.data;
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          setReferralData(data as ReferralData);
         }
       } catch (e) {
         console.error("Failed to fetch referral stats", e);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchReferralStats();
   }, [referralCode]);
 
-  if (!referralData) return null;
+  const defaultCounts = { Student: 0, College: 0, Mentor: 0, Industry: 0, Partner: 0 };
+  const counts = referralData?.counts || defaultCounts;
+  const total = referralData?.total || 0;
 
   let chartData = [
-    { name: 'Students', value: referralData.counts.Student || 0, color: '#3b82f6' }, // Blue
-    { name: 'Colleges', value: referralData.counts.College || 0, color: '#8b5cf6' }, // Purple
-    { name: 'Mentors', value: referralData.counts.Mentor || 0, color: '#f59e0b' }, // Amber
-    { name: 'Industries', value: referralData.counts.Industry || 0, color: '#10b981' }, // Emerald
-    { name: 'Partners', value: referralData.counts.Partner || 0, color: '#ef4444' }, // Red
+    { name: 'Students', value: counts.Student || 0, color: '#3b82f6' }, // Blue
+    { name: 'Colleges', value: counts.College || 0, color: '#8b5cf6' }, // Purple
+    { name: 'Mentors', value: counts.Mentor || 0, color: '#f59e0b' }, // Amber
+    { name: 'Industries', value: counts.Industry || 0, color: '#10b981' }, // Emerald
+    { name: 'Partners', value: counts.Partner || 0, color: '#ef4444' }, // Red
   ];
 
   if (role === 'student') {
@@ -79,7 +89,7 @@ export default function ReferralPerformanceWidget({ referralCode, role }: Referr
               <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-4">Total Signups</p>
               
               <div className="flex items-center gap-6 mb-6">
-                <h3 className="text-6xl font-black text-slate-400">{referralData.total}</h3>
+                <h3 className="text-6xl font-black text-slate-400">{total}</h3>
                 
                 <div className="flex-1 flex flex-col gap-2.5">
                   {chartData.map((item) => (
@@ -104,13 +114,13 @@ export default function ReferralPerformanceWidget({ referralCode, role }: Referr
 
               <p className="text-slate-300 text-sm leading-relaxed mt-auto border-t border-slate-700/50 pt-4">
                 Total users who have successfully registered using your referral code 
-                <span className="font-bold text-white ml-1">&quot;{referralData.referral_code}&quot;</span>.
+                <span className="font-bold text-white ml-1">&quot;{referralCode}&quot;</span>.
               </p>
             </div>
 
             {/* Chart Area */}
             <div className="md:col-span-3 h-[300px]">
-              {referralData.total > 0 ? (
+              {total > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />

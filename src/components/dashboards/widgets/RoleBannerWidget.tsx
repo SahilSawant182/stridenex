@@ -45,6 +45,7 @@ import { buildProfileImageUrl, uploadFileApi, BASE_DOMAIN } from "@/services/api
 
 import { createPortal } from "react-dom";
 import ReferralPerformanceWidget from "@/components/dashboards/widgets/ReferralPerformanceWidget";
+import ReferralSectionField from "@/components/dashboards/widgets/ReferralSectionField";
 
 const ReferralCodeDisplay = ({ referal_code, showToast }: { referal_code: string, showToast: any }) => {
   const [copied, setCopied] = useState(false);
@@ -636,20 +637,12 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
       icon: CreditCard, required: false, colSpan: 1, placeholder: "e.g. HDFC0001234"
     },
     ...((mentorData?.user_details?.referal_code || mentorData?.referal_code) ? [{
-      name: "referal_code",
-      label: "Your Referral Code",
+      name: "referral_section",
+      label: "Referral Performance",
       type: "custom" as const,
       colSpan: 2 as const,
-      customRender: (formData: any) => {
-        const code = mentorData?.user_details?.referal_code || mentorData?.referal_code;
-        return (
-          <div className="flex flex-col w-full gap-4">
-            <ReferralCodeDisplay referal_code={code} showToast={showToast} />
-            <ReferralPerformanceWidget referralCode={code} role="mentor" />
-          </div>
-        );
-      }
-    }] : []),
+      customRender: () => <ReferralSectionField role="mentor" referralCode={mentorData?.user_details?.referal_code || mentorData?.referal_code} />
+    }] : [])
   ], [mentorFormState.state, mentorFormState.district, mentorFormState.tahsil, mentorData?.user_details?.referal_code, mentorData?.referal_code]);
 
   const collegeFields: DynamicField[] = useMemo(() => [
@@ -760,21 +753,14 @@ export default function RoleBannerWidget({ role, customData, onlyModal = false }
         return (Array.isArray(items) ? items : []).map((c: any) => ({ value: c.name, label: c.name }));
       }
     },
-    ...(collegeData?.user_details?.referal_code ? [{
-      name: "referal_code",
-      label: "Your Referral Code",
+    ...((collegeData?.user_details?.referal_code || collegeData?.referal_code) ? [{
+      name: "referral_section",
+      label: "Referral Performance",
       type: "custom" as const,
       colSpan: 2 as const,
-      customRender: (formData: any) => {
-        return (
-          <div className="flex flex-col w-full gap-4">
-            <ReferralCodeDisplay referal_code={collegeData.user_details.referal_code} showToast={showToast} />
-            <ReferralPerformanceWidget referralCode={collegeData.user_details.referal_code} role="college" />
-          </div>
-        );
-      }
-    }] : []),
-  ], [collegeFormState, collegeData?.user_details?.referal_code]);
+      customRender: () => <ReferralSectionField role="college" referralCode={collegeData?.user_details?.referal_code || collegeData?.referal_code} />
+    }] : [])
+  ], [collegeFormState, collegeData?.user_details?.referal_code, collegeData?.referal_code]);
 
   const industryFields: DynamicField[] = useMemo(() => {
     const fields: DynamicField[] = [
