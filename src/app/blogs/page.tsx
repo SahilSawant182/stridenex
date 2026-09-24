@@ -6,8 +6,7 @@ const API_BASE_URL =
   "https://officestridenex.quantcloud.in";
 
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  "https://stridenex.ai";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://stridenex.ai";
 
 type Props = {
   searchParams: Promise<{ id?: string }>;
@@ -39,7 +38,6 @@ export async function generateMetadata({
     }
 
     const data = await res.json();
-
     const blogs = data?.message?.data || [];
 
     const blog = blogs.find((b: any) => b.name === id);
@@ -51,18 +49,29 @@ export async function generateMetadata({
       };
     }
 
-    // Image is coming from Frappe/backend.
-    // If meta_image is already a complete URL, use it directly.
-    // Otherwise prepend the backend URL.
-    const imageUrl = blog.meta_image
-      ? blog.meta_image.startsWith("http")
-        ? blog.meta_image
-        : `${API_BASE_URL}${blog.meta_image}`
-      : undefined;
+    /*
+     * Always use the backend domain for blog images.
+     *
+     * This avoids using:
+     * https://devstridenex.quantcloud.in/files/...
+     *
+     * because that dev hostname currently has an SSL certificate
+     * mismatch on the server.
+     */
+    let imageUrl: string | undefined;
 
-    // IMPORTANT:
-    // Facebook should receive the public website URL,
-    // NOT the backend/officestridenex URL.
+    if (blog.meta_image) {
+      if (blog.meta_image.startsWith("http")) {
+        imageUrl = blog.meta_image;
+      } else {
+        imageUrl = `${API_BASE_URL}${blog.meta_image}`;
+      }
+    }
+
+    /*
+     * Facebook should share the public StrideNex website URL,
+     * never the backend URL.
+     */
     const blogUrl = `${SITE_URL}/blogs?id=${encodeURIComponent(id)}`;
 
     const title = blog.title || "StrideNex Blog";
@@ -76,24 +85,29 @@ export async function generateMetadata({
       title,
       description,
 
+      alternates: {
+        canonical: blogUrl,
+      },
+
       openGraph: {
         title,
         description,
         url: blogUrl,
-
-        ...(imageUrl && {
-          images: [
-            {
-              url: imageUrl,
-              width: 1200,
-              height: 630,
-              alt: title,
-            },
-          ],
-        }),
-
         type: "article",
         siteName: "StrideNex",
+
+        ...(imageUrl
+          ? {
+            images: [
+              {
+                url: imageUrl,
+                width: 1200,
+                height: 630,
+                alt: title,
+              },
+            ],
+          }
+          : {}),
       },
 
       twitter: {
@@ -101,9 +115,11 @@ export async function generateMetadata({
         title,
         description,
 
-        ...(imageUrl && {
-          images: [imageUrl],
-        }),
+        ...(imageUrl
+          ? {
+            images: [imageUrl],
+          }
+          : {}),
       },
     };
   } catch (error) {
