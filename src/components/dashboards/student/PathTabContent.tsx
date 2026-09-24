@@ -236,7 +236,8 @@ export default function PathTabContent() {
       const pathData = activePath?.data || activePath;
       const assessmentName = pathData?.career_path || pathData?.career_path_name || pathData?.path_name || pathData?.title || "Data Scientist";
 
-      const url = `https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.app.get_certificate?student_name=${encodeURIComponent(studentEmail)}&assessment_name=${encodeURIComponent(assessmentName)}&sr_no=1&email_id=${encodeURIComponent(studentEmail)}`;
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ? (process.env.NEXT_PUBLIC_API_BASE_URL.endsWith('/') ? process.env.NEXT_PUBLIC_API_BASE_URL : process.env.NEXT_PUBLIC_API_BASE_URL + '/') : '/';
+      const url = `${apiBase}method/stridenex_app.api_stridenex_app.app.get_certificate?student_name=${encodeURIComponent(studentEmail)}&assessment_name=${encodeURIComponent(assessmentName)}&sr_no=1&email_id=${encodeURIComponent(studentEmail)}`;
 
       window.open(url, '_blank');
     } catch (err: any) {
@@ -254,7 +255,8 @@ export default function PathTabContent() {
     setReportBlobUrl(null);
     try {
       const studentEmail = localStorage.getItem("currentUser") || "ac1@gmail.com";
-      const url = `https://devstridenex.quantcloud.in/api/method/nexedu.path_finder.app_api.get_career_path_pdf?student=${encodeURIComponent(studentEmail)}`;
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ? (process.env.NEXT_PUBLIC_API_BASE_URL.endsWith('/') ? process.env.NEXT_PUBLIC_API_BASE_URL : process.env.NEXT_PUBLIC_API_BASE_URL + '/') : '/';
+      const url = `${apiBase}method/nexedu.path_finder.app_api.get_career_path_pdf?student=${encodeURIComponent(studentEmail)}`;
 
       const response = await fetch(url);
 
@@ -3042,7 +3044,8 @@ export default function PathTabContent() {
                                       email_id: studentName
                                     };
                                     const params = new URLSearchParams(payload as any).toString();
-                                    const url = `https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.app.get_certificate?${params}`;
+                                    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ? (process.env.NEXT_PUBLIC_API_BASE_URL.endsWith('/') ? process.env.NEXT_PUBLIC_API_BASE_URL : process.env.NEXT_PUBLIC_API_BASE_URL + '/') : '/';
+                                    const url = `${apiBase}method/stridenex_app.api_stridenex_app.app.get_certificate?${params}`;
                                     
                                     const response = await fetch(url);
                                     if (response.ok) {

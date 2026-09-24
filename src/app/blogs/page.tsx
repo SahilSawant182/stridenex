@@ -1,7 +1,7 @@
 import BlogsClient from "./BlogsClient";
 import { Metadata } from "next";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/api\/?$/, "") || 'https://devstridenex.quantcloud.in';
+const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/api\/?$/, "") || '';
 
 type Props = {
   searchParams: any;

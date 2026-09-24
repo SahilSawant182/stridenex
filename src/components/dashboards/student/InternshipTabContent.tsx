@@ -156,7 +156,8 @@ export default function InternshipTabContent() {
       const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
       const authHeader: Record<string, string> = apiKey && apiSecret ? { "Authorization": `token ${apiKey}:${apiSecret}` } : {};
       
-      const response = await fetch(`https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.app.get_offer_letter?${queryParams}`, {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ? (process.env.NEXT_PUBLIC_API_BASE_URL.endsWith('/') ? process.env.NEXT_PUBLIC_API_BASE_URL : process.env.NEXT_PUBLIC_API_BASE_URL + '/') : '/';
+      const response = await fetch(`${apiBase}method/stridenex_app.api_stridenex_app.app.get_offer_letter?${queryParams}`, {
         method: "GET",
         credentials: "include",
         headers: {

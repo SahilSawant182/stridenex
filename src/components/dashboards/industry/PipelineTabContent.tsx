@@ -595,7 +595,7 @@ export default function PipelineTabContent() {
                         <a 
                           href={(selectedCandidate?.resume || studentDetails?.resume || "").startsWith("http") 
                             ? (selectedCandidate?.resume || studentDetails?.resume) 
-                            : `https://devstridenex.quantcloud.in${selectedCandidate?.resume || studentDetails?.resume}`}
+                            : `${process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/api\/?$/, "") || ""}${selectedCandidate?.resume || studentDetails?.resume}`}
                           target="_blank" 
                           rel="noopener noreferrer"
                           className="text-xs font-bold text-orange-500 hover:text-orange-600 hover:underline transition-colors flex items-center gap-1"

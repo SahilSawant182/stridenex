@@ -54,7 +54,8 @@ export default function VerifyCertificatePage() {
     const fetchCertificate = async () => {
       try {
         setLoading(true);
-        const url = new URL('https://devstridenex.quantcloud.in/api/method/stridenex_app.api_stridenex_app.student.masters.get_student_certificate_info');
+        const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ? (process.env.NEXT_PUBLIC_API_BASE_URL.endsWith('/') ? process.env.NEXT_PUBLIC_API_BASE_URL : process.env.NEXT_PUBLIC_API_BASE_URL + '/') : '/';
+        const url = new URL(`${apiBase}method/stridenex_app.api_stridenex_app.student.masters.get_student_certificate_info`);
         url.searchParams.append('sr_no', id);
 
         const res = await fetch(url.toString(), {
