@@ -23,6 +23,27 @@ export async function generateMetadata({
     return {
       title: "Blogs - StrideNex",
       description: "Read our latest blogs and updates.",
+      openGraph: {
+        title: "Blogs - StrideNex",
+        description: "Read our latest blogs and updates.",
+        url: `${SITE_URL}/blogs`,
+        type: "website",
+        siteName: "StrideNex",
+        images: [
+          {
+            url: `${SITE_URL}/images/Logo.png`,
+            width: 1200,
+            height: 630,
+            alt: "StrideNex Blogs",
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: "Blogs - StrideNex",
+        description: "Read our latest blogs and updates.",
+        images: [`${SITE_URL}/images/Logo.png`],
+      },
     };
   }
 
@@ -49,6 +70,27 @@ export async function generateMetadata({
       return {
         title: "Blog - StrideNex",
         description: "Read this blog post on StrideNex.",
+        openGraph: {
+          title: "Blog - StrideNex",
+          description: "Read this blog post on StrideNex.",
+          url: `${SITE_URL}/blogs?id=${encodeURIComponent(id)}`,
+          type: "article",
+          siteName: "StrideNex",
+          images: [
+            {
+              url: `${SITE_URL}/images/Logo.png`,
+              width: 1200,
+              height: 630,
+              alt: "StrideNex Blog",
+            },
+          ],
+        },
+        twitter: {
+          card: "summary_large_image",
+          title: "Blog - StrideNex",
+          description: "Read this blog post on StrideNex.",
+          images: [`${SITE_URL}/images/Logo.png`],
+        },
       };
     }
 
@@ -166,6 +208,27 @@ export async function generateMetadata({
     return {
       title: "Blogs - StrideNex",
       description: "Read our latest blogs and updates.",
+      openGraph: {
+        title: "Blogs - StrideNex",
+        description: "Read our latest blogs and updates.",
+        url: `${SITE_URL}/blogs`,
+        type: "website",
+        siteName: "StrideNex",
+        images: [
+          {
+            url: `${SITE_URL}/images/Logo.png`,
+            width: 1200,
+            height: 630,
+            alt: "StrideNex Blogs",
+          },
+        ],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: "Blogs - StrideNex",
+        description: "Read our latest blogs and updates.",
+        images: [`${SITE_URL}/images/Logo.png`],
+      },
     };
   }
 }
