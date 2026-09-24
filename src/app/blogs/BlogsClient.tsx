@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { ChevronLeft, Share2, Copy, Linkedin, Facebook, X as CloseIcon, MessageCircle, Mail, Send, CheckCircle2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import Image from "next/image";
 interface Blog {
   name: string;
   title: string;
@@ -145,11 +146,15 @@ export default function BlogsPage() {
                   >
                     <div className="w-full aspect-[1.6] bg-white rounded-xl mb-4 overflow-hidden flex items-center justify-center relative transition-all duration-300 hover:shadow-md hover:-translate-y-1 border border-slate-100 shadow-sm">
                       {blog.meta_image ? (
-                        <img 
-                          src={blog.meta_image.startsWith('http') ? blog.meta_image : `${BASE_URL}${blog.meta_image}`}
-                          alt={blog.title}
-                          className="w-full h-full object-contain p-2"
-                        />
+                        <div className="relative w-full h-full p-2">
+                          <Image 
+                            src={blog.meta_image.startsWith('http') ? blog.meta_image : `${BASE_URL}${blog.meta_image}`}
+                            alt={blog.title}
+                            fill
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            className="object-contain p-2"
+                          />
+                        </div>
                       ) : (
                         <span className="text-slate-500 font-medium text-[15px] leading-snug line-clamp-3 p-6 text-center">
                           {blog.title}
@@ -232,11 +237,16 @@ export default function BlogsPage() {
 
             {readingBlog.meta_image && (
               <div className="w-full aspect-[21/9] sm:aspect-[2/1] rounded-2xl overflow-hidden mb-10 bg-white border border-slate-100 shadow-sm">
-                <img 
-                  src={readingBlog.meta_image.startsWith('http') ? readingBlog.meta_image : `${BASE_URL}${readingBlog.meta_image}`}
-                  alt={readingBlog.title}
-                  className="w-full h-full object-contain p-4"
-                />
+                <div className="relative w-full h-full p-4">
+                  <Image 
+                    src={readingBlog.meta_image.startsWith('http') ? readingBlog.meta_image : `${BASE_URL}${readingBlog.meta_image}`}
+                    alt={readingBlog.title}
+                    fill
+                    priority
+                    sizes="(max-width: 768px) 100vw, 760px"
+                    className="object-contain p-4"
+                  />
+                </div>
               </div>
             )}
 
