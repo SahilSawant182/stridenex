@@ -18,6 +18,7 @@ export async function generateMetadata({
   const resolvedSearchParams = await searchParams;
   const id = resolvedSearchParams?.id;
 
+  // Default metadata for the main blogs page
   if (!id) {
     return {
       title: "Blogs - StrideNex",
@@ -26,6 +27,7 @@ export async function generateMetadata({
   }
 
   try {
+    // Fetch blog data from the backend
     const res = await fetch(
       `${API_BASE_URL}/api/method/stridenex_app.api_stridenex_app.blog.get_blog_posts`,
       {
@@ -40,6 +42,7 @@ export async function generateMetadata({
     const data = await res.json();
     const blogs = data?.message?.data || [];
 
+    // Find the blog matching the URL ?id=
     const blog = blogs.find((b: any) => b.name === id);
 
     if (!blog) {
@@ -50,27 +53,53 @@ export async function generateMetadata({
     }
 
     /*
-     * Always use the backend domain for blog images.
+     * Build the blog image URL.
      *
-     * This avoids using:
-     * https://devstridenex.quantcloud.in/files/...
+     * Social media crawlers such as Facebook/LinkedIn should receive
+     * the stable production backend URL:
      *
-     * because that dev hostname currently has an SSL certificate
-     * mismatch on the server.
+     * https://officestridenex.quantcloud.in/files/...
+     *
+     * If the API returns:
+     *   /files/example.jpg
+     * it becomes:
+     *   https://officestridenex.quantcloud.in/files/example.jpg
+     *
+     * If the API returns:
+     *   https://devstridenex.quantcloud.in/files/example.jpg
+     * it is converted to:
+     *   https://officestridenex.quantcloud.in/files/example.jpg
      */
     let imageUrl: string | undefined;
 
     if (blog.meta_image) {
-      if (blog.meta_image.startsWith("http")) {
-        imageUrl = blog.meta_image;
+      const metaImage = blog.meta_image.trim();
+      const mediaBaseUrl = "https://officestridenex.quantcloud.in";
+
+      if (metaImage.startsWith("http")) {
+        try {
+          const parsedUrl = new URL(metaImage);
+
+          if (parsedUrl.pathname.startsWith("/files/")) {
+            imageUrl = `${mediaBaseUrl}${parsedUrl.pathname}${parsedUrl.search}`;
+          } else {
+            imageUrl = metaImage;
+          }
+        } catch {
+          imageUrl = metaImage;
+        }
       } else {
-        imageUrl = `${API_BASE_URL}${blog.meta_image}`;
+        imageUrl = `${mediaBaseUrl}${metaImage}`;
       }
     }
 
     /*
-     * Facebook should share the public StrideNex website URL,
-     * never the backend URL.
+     * IMPORTANT:
+     * The public URL shared on Facebook/LinkedIn should always be
+     * the StrideNex website URL, NOT the backend URL.
+     *
+     * Example:
+     * https://stridenex.ai/blogs?id=xxxxx
      */
     const blogUrl = `${SITE_URL}/blogs?id=${encodeURIComponent(id)}`;
 
@@ -85,10 +114,16 @@ export async function generateMetadata({
       title,
       description,
 
+      /*
+       * Canonical URL
+       */
       alternates: {
         canonical: blogUrl,
       },
 
+      /*
+       * Facebook / LinkedIn / other Open Graph metadata
+       */
       openGraph: {
         title,
         description,
@@ -110,6 +145,9 @@ export async function generateMetadata({
           : {}),
       },
 
+      /*
+       * Twitter / X metadata
+       */
       twitter: {
         card: "summary_large_image",
         title,
