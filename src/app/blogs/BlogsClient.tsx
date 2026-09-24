@@ -151,6 +151,7 @@ export default function BlogsPage() {
                             src={blog.meta_image.startsWith('http') ? blog.meta_image : `${BASE_URL}${blog.meta_image}`}
                             alt={blog.title}
                             fill
+                            unoptimized
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                             className="object-contain p-2"
                           />
@@ -243,6 +244,7 @@ export default function BlogsPage() {
                     alt={readingBlog.title}
                     fill
                     priority
+                    unoptimized
                     sizes="(max-width: 768px) 100vw, 760px"
                     className="object-contain p-4"
                   />
