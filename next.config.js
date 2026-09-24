@@ -6,19 +6,19 @@ const withPWA = require("next-pwa")({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: '**',
+        protocol: "https",
+        hostname: "devstridenex.quantcloud.in",
       },
       {
-        protocol: 'http',
-        hostname: '**',
+        protocol: "https",
+        hostname: "officestridenex.quantcloud.in",
       },
     ],
   },
-
 };
 
 module.exports = withPWA(nextConfig);
