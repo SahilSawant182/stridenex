@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { CheckCircle2, ShieldCheck, Award, FileText, Lock, Star, Loader2, Clock, Globe } from "lucide-react";
+import { CheckCircle2, ShieldCheck, Award, FileText, Lock, Star, Loader2, Clock, Globe, Flag } from "lucide-react";
 import { StatsCard } from "@/components/dashboards/shared/StatsCard";
 import { SkillRadar } from "@/components/dashboards/shared/RadarChart";
 import { SummaryList } from "@/components/dashboards/shared/SummaryList";
@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Plus, Check, ChevronRight, AlertCircle, Sparkles, X, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
+import ReportQuestionModal from "@/components/dashboards/shared/ReportQuestionModal";
 import { useToast } from "@/context/ToastContext";
 
 // Types
@@ -78,6 +79,11 @@ export default function SkillsTabContent() {
   const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
   const [isSubmittingTest, setIsSubmittingTest] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
+
+  // Report Question state
+  const [reportedQuestions, setReportedQuestions] = useState<Set<string>>(new Set());
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportingQuestionBankId, setReportingQuestionBankId] = useState<string>("");
 
   // Map skillRows to Radar data
   const radarData = useMemo(() => {
@@ -731,10 +737,35 @@ export default function SkillsTabContent() {
                         </div>
 
                         {/* Question Card */}
-                        <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                          <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-orange-100 text-orange-600 uppercase tracking-widest mb-3">
-                            {testQuestions[currentQuestionIndex]?.difficulty || "Medium"}
-                          </span>
+                        <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 relative">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-orange-100 text-orange-600 uppercase tracking-widest">
+                              {testQuestions[currentQuestionIndex]?.difficulty || "Medium"}
+                            </span>
+                            {/* Flag / Report button — hidden when no question_bank_id */}
+                            {testQuestions[currentQuestionIndex]?.source === "bank" &&
+                              testQuestions[currentQuestionIndex]?.question_bank_id ? (
+                              <button
+                                type="button"
+                                title={reportedQuestions.has(testQuestions[currentQuestionIndex]?.question_bank_id) ? "Already reported" : "Report this question"}
+                                disabled={reportedQuestions.has(testQuestions[currentQuestionIndex]?.question_bank_id)}
+                                onClick={() => {
+                                  setReportingQuestionBankId(testQuestions[currentQuestionIndex]?.question_bank_id);
+                                  setIsReportModalOpen(true);
+                                }}
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                                  reportedQuestions.has(testQuestions[currentQuestionIndex]?.question_bank_id)
+                                    ? "text-slate-300 bg-slate-100 cursor-not-allowed border border-slate-200"
+                                    : "text-slate-400 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200 border border-transparent"
+                                }`}
+                              >
+                                <Flag className="w-3 h-3" />
+                                {reportedQuestions.has(testQuestions[currentQuestionIndex]?.question_bank_id)
+                                  ? "Reported"
+                                  : "Report"}
+                              </button>
+                            ) : null}
+                          </div>
                           <h3 className="text-base font-bold text-slate-800 leading-snug">
                             {testQuestions[currentQuestionIndex]?.question}
                           </h3>
@@ -1048,6 +1079,16 @@ export default function SkillsTabContent() {
         </AnimatePresence>,
         document.body
       )}
+
+      {/* Report Question Modal */}
+      <ReportQuestionModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        questionBankId={reportingQuestionBankId}
+        onReported={(id) =>
+          setReportedQuestions((prev) => new Set([...prev, id]))
+        }
+      />
     </div>
   );
 }
