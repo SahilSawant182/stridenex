@@ -817,6 +817,26 @@ export const submitSkillTest = async (payload: {
 };
 
 /**
+ * Report a question from a skill test.
+ */
+export const reportQuestion = async (payload: {
+  question_bank_id: string;
+  reason: string;
+  details?: string;
+}) => {
+  try {
+    const response = await apiService.post(
+      "method/nexedu.api.skill_assessment_ai.report_question",
+      payload
+    );
+    return response;
+  } catch (error) {
+    console.error("Error reporting question:", error);
+    throw error;
+  }
+};
+
+/**
  * Fetch student career path.
  */
 export const getStudentCareerPath = async (studentEmail: string) => {

@@ -34,7 +34,8 @@ import {
   ShieldCheck,
   Download,
   Eye,
-  FileText
+  FileText,
+  Flag
 } from "lucide-react";
 import {
   getStudentCareerPath,
@@ -60,6 +61,7 @@ import {
 } from "@/services/student.services";
 import { useToast } from "@/context/ToastContext";
 import { parseBackendError } from "@/utils/error.utils";
+import ReportQuestionModal from "@/components/dashboards/shared/ReportQuestionModal";
 
 function ConfettiEffect() {
   const particles = useMemo(() => {
@@ -204,6 +206,11 @@ export default function PathTabContent() {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluationStatus, setEvaluationStatus] = useState<string>("");
   const [activeStepName, setActiveStepName] = useState<string>("");
+
+  // Report Question state
+  const [reportedQuestions, setReportedQuestions] = useState<Set<string>>(new Set());
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportingQuestionBankId, setReportingQuestionBankId] = useState<string>("");
 
   // AI Generation simulation states
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
@@ -2797,10 +2804,35 @@ export default function PathTabContent() {
                       </div>
 
                       {/* Question Card */}
-                      <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                        <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-orange-100 text-orange-600 uppercase tracking-widest mb-3 font-mono">
-                          {testQuestions[currentQuestionIndex]?.difficulty || "Medium"}
-                        </span>
+                      <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 relative">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="inline-block px-2.5 py-1 rounded-md text-[10px] font-bold bg-orange-100 text-orange-600 uppercase tracking-widest font-mono">
+                            {testQuestions[currentQuestionIndex]?.difficulty || "Medium"}
+                          </span>
+                          {/* Flag / Report button — hidden when no question_bank_id */}
+                          {testQuestions[currentQuestionIndex]?.source === "bank" &&
+                            testQuestions[currentQuestionIndex]?.question_bank_id ? (
+                            <button
+                              type="button"
+                              title={reportedQuestions.has(testQuestions[currentQuestionIndex]?.question_bank_id) ? "Already reported" : "Report this question"}
+                              disabled={reportedQuestions.has(testQuestions[currentQuestionIndex]?.question_bank_id)}
+                              onClick={() => {
+                                setReportingQuestionBankId(testQuestions[currentQuestionIndex]?.question_bank_id);
+                                setIsReportModalOpen(true);
+                              }}
+                              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
+                                reportedQuestions.has(testQuestions[currentQuestionIndex]?.question_bank_id)
+                                  ? "text-slate-300 bg-slate-100 cursor-not-allowed border border-slate-200"
+                                  : "text-slate-400 hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200 border border-transparent"
+                              }`}
+                            >
+                              <Flag className="w-3 h-3" />
+                              {reportedQuestions.has(testQuestions[currentQuestionIndex]?.question_bank_id)
+                                ? "Reported"
+                                : "Report"}
+                            </button>
+                          ) : null}
+                        </div>
                         <h3 className="text-base font-bold text-slate-800 leading-snug">
                           {testQuestions[currentQuestionIndex]?.question}
                         </h3>
@@ -3342,6 +3374,16 @@ export default function PathTabContent() {
         </AnimatePresence>,
         document.body
       )}
+
+      {/* Report Question Modal */}
+      <ReportQuestionModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        questionBankId={reportingQuestionBankId}
+        onReported={(id) =>
+          setReportedQuestions((prev) => new Set([...prev, id]))
+        }
+      />
     </div>
   );
 }
