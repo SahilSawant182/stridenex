@@ -1797,3 +1797,37 @@ export const getCompletedPaths = async (studentEmail: string) => {
     throw error;
   }
 };
+
+/**
+ * Fuzzy-search the career knowledge base for existing careers matching a query.
+ * Endpoint: /api/method/job_search_ai.api.search_career_knowledge
+ */
+export const searchCareerKnowledge = async (query: string) => {
+  try {
+    const response = await apiService.get(
+      `method/job_search_ai.api.search_career_knowledge?query=${encodeURIComponent(query)}`
+    );
+    return response;
+  } catch (error) {
+    console.error("Error searching career knowledge:", error);
+    throw error;
+  }
+};
+
+/**
+ * Request LLM-based generation of a brand-new career path that doesn't yet exist.
+ * Endpoint: /api/method/job_search_ai.api.request_custom_career
+ */
+export const requestCustomCareer = async (roleName: string) => {
+  try {
+    const response = await apiService.post(
+      "method/job_search_ai.api.request_custom_career",
+      { role_name: roleName }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error requesting custom career:", error);
+    throw error;
+  }
+};
+
