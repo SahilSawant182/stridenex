@@ -5,6 +5,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import CustomCareerSearch from "./CustomCareerSearch";
 import {
   CheckCircle2,
   Circle,
@@ -1771,6 +1772,25 @@ export default function PathTabContent() {
                       <ArrowRight className="w-3 h-3" />
                     </button>
                   </motion.div>
+                )}
+
+                {/* ── Custom Career Search ── */}
+                {!showMasterSearch && (
+                  <CustomCareerSearch
+                    onSelectSuggestion={(careerName) => {
+                      // Treat it like selecting an existing path card
+                      const syntheticPath = { title: careerName, career: careerName };
+                      handleSelectPathForSkills(syntheticPath);
+                      setShowHierarchyModal(true);
+                    }}
+                    onGenerationQueued={(roleName) => {
+                      // Switch into the generation loading state; poll loop will pick it up
+                      setIsGenerating(true);
+                      setInWizardMode(false);
+                      setGenerationPhase(`🤖 Generating custom career path for ${roleName}...`);
+                      // Silent-refresh every 5 s via the existing useEffect on isGenerating
+                    }}
+                  />
                 )}
 
                 <div className="flex justify-between pt-4 border-t border-slate-100">

@@ -14,9 +14,13 @@ import {
   TrendingUp,
   Award,
   Loader2,
+  Download,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { getMentorDashboardData } from "@/services/mentor.services";
+import { BASE_DOMAIN } from "@/services/api.services";
+import { createPortal } from "react-dom";
 interface PayoutRecord {
   month: string;
   sessions: number;
@@ -28,6 +32,7 @@ interface PayoutRecord {
   net: string;
   status: string;
   date: string;
+  payout_slip?: string;
 }
 
 interface ApiResponse {
@@ -108,6 +113,7 @@ export default function PayoutsTabContent() {
   const { currentUser } = useAuth();
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [previewSlip, setPreviewSlip] = useState<string | null>(null);
 
   useEffect(() => {
     const email =
@@ -322,14 +328,23 @@ export default function PayoutsTabContent() {
                       {row.date}
                     </td>
                     <td className="py-4 px-6">
-                      {/* PDF slip — no backend endpoint yet; kept as disabled placeholder */}
-                      <button
-                        disabled
-                        title="PDF slip not yet available"
-                        className="flex items-center gap-1 text-xs font-bold text-slate-300 border border-slate-200 px-3 py-1 bg-white rounded shadow-sm cursor-not-allowed"
-                      >
-                        PDF
-                      </button>
+                      {row.payout_slip ? (
+                        <button
+                          onClick={() => setPreviewSlip(row.payout_slip?.startsWith("http") ? row.payout_slip : `${BASE_DOMAIN}${row.payout_slip}`)}
+                          className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700 border border-slate-200 px-3 py-1.5 bg-white rounded shadow-sm hover:bg-slate-50 hover:text-blue-600 hover:border-blue-200 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-blue-500" />
+                          View Slip
+                        </button>
+                      ) : (
+                        <span
+                          title="Slip is processing"
+                          className="inline-flex items-center justify-center gap-1.5 text-[11px] font-semibold text-slate-400 border border-slate-100 px-3 py-1.5 bg-slate-50 rounded cursor-not-allowed"
+                        >
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          Processing
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -365,6 +380,40 @@ export default function PayoutsTabContent() {
           ))}
         </div>
       </motion.div>
+
+      {/* PDF Preview Modal */}
+      {previewSlip && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden"
+          >
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50">
+              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-500" />
+                Payout Slip
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPreviewSlip(null)}
+                  className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/50"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 w-full bg-slate-100/50">
+              <iframe
+                src={previewSlip}
+                className="w-full h-full border-none"
+                title="Payout Slip Preview"
+              />
+            </div>
+          </motion.div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

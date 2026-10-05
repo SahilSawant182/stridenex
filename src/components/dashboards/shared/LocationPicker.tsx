@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { MapPin, Search, Loader2, Navigation, Check, X, Maximize2, Move, Target } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 
 // Fix for default marker icons in Leaflet with Next.js
 const DefaultIcon = L.icon({
@@ -326,7 +327,7 @@ export const LocationPicker: React.FC<Props> = ({ value, onChange }) => {
 
       {/* Full-screen Adjustment Modal */}
       <AnimatePresence>
-        {isModalOpen && (
+        {isModalOpen && typeof document !== 'undefined' && createPortal(
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -416,7 +417,8 @@ export const LocationPicker: React.FC<Props> = ({ value, onChange }) => {
                 </Button>
               </div>
             </motion.div>
-          </motion.div>
+          </motion.div>,
+          document.body
         )}
       </AnimatePresence>
     </div>

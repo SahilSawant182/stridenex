@@ -9,6 +9,7 @@ import { getFindTalentList, getMasterData } from "@/services/industry.services";
 import { Pagination } from "@/components/ui/Pagination";
 import Dropdown from "@/components/ui/Dropdown";
 import { BASE_URL } from "@/services/api.services";
+import { createPortal } from "react-dom";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -269,8 +270,8 @@ export default function FindTalentTabContent() {
             </div>
 
             <AnimatePresence>
-              {isCollegeDropdownOpen && (
-                <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={() => { setIsCollegeDropdownOpen(false); setCollegeSearchTerm(""); }}>
+              {isCollegeDropdownOpen && typeof document !== 'undefined' && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={() => { setIsCollegeDropdownOpen(false); setCollegeSearchTerm(""); }}>
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -382,7 +383,8 @@ export default function FindTalentTabContent() {
                       </div>
                     )}
                   </motion.div>
-                </div>
+                </div>,
+                document.body
               )}
             </AnimatePresence>
           </div>
