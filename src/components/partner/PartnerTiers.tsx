@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 
 export default function PartnerTiers() {
@@ -15,6 +16,7 @@ export default function PartnerTiers() {
       ],
       revenue: "5% referral commission, 10% on mentorship",
       buttonText: "Join for Free",
+      href: "/signup",
       popular: false,
       color: "blue"
     },
@@ -30,6 +32,7 @@ export default function PartnerTiers() {
       ],
       revenue: "8-12% commission, 5-8% revenue share",
       buttonText: "Apply Now",
+      href: "/signup",
       popular: true,
       color: "indigo"
     },
@@ -45,6 +48,7 @@ export default function PartnerTiers() {
       ],
       revenue: "10-15% commission, 8-12% revenue share",
       buttonText: "Contact Sales",
+      href: "/contact-us",
       popular: false,
       color: "purple"
     },
@@ -60,6 +64,7 @@ export default function PartnerTiers() {
       ],
       revenue: "12-20% commission, 20-30% on co-creation",
       buttonText: "Contact Partnerships",
+      href: "/contact-us",
       popular: false,
       color: "rose"
     }
@@ -128,9 +133,9 @@ export default function PartnerTiers() {
                 <p className="text-[13px] font-bold text-gray-800">{tier.revenue}</p>
               </div>
               
-              <button className={`w-full py-2.5 px-4 text-sm rounded-xl font-bold transition-all ${tier.popular ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg hover:shadow-indigo-500/30' : 'bg-white/80 text-indigo-700 border border-indigo-100 hover:border-indigo-300 hover:bg-indigo-50'}`}>
+              <Link href={tier.href} className={`w-full py-2.5 px-4 text-sm rounded-xl font-bold transition-all text-center block ${tier.popular ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg hover:shadow-indigo-500/30' : 'bg-white/80 text-indigo-700 border border-indigo-100 hover:border-indigo-300 hover:bg-indigo-50'}`}>
                 {tier.buttonText}
-              </button>
+              </Link>
             </motion.div>
           ))}
         </div>

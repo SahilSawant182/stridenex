@@ -208,7 +208,7 @@ export default function PublicNavbar({ }: NavbarProps) {
               <img
                 src="/images/Logo.png"
                 alt="StrideNex Logo"
-                className="w-[170px] h-[170px] object-contain hover:scale-105 transition-transform duration-300"
+                className="w-[140px] h-[140px] object-contain hover:scale-105 transition-transform duration-300"
               />
             </Link>
 
@@ -232,12 +232,11 @@ export default function PublicNavbar({ }: NavbarProps) {
                     {item.href ? (
                       <button
                         onClick={() => handleNavigation(item.href!)}
-                        className={`px-3 py-2 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1.5 group ${activeMegaMenu === item.key
+                        className={`px-2 xl:px-3 py-2 rounded-lg font-medium text-[13px] xl:text-sm transition-all duration-300 flex items-center gap-1 xl:gap-1.5 group ${activeMegaMenu === item.key
                           ? 'text-primary bg-primary/10'
                           : 'text-slate-700 hover:text-primary hover:bg-primary/5'
                           }`}
                       >
-                        <item.icon className="w-4 h-4" />
                         {item.label}
                         {hasSections && (
                           <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${activeMegaMenu === item.key ? 'rotate-180' : ''
@@ -246,12 +245,11 @@ export default function PublicNavbar({ }: NavbarProps) {
                       </button>
                     ) : (
                       <button
-                        className={`px-3 py-2 rounded-lg font-medium text-sm transition-all duration-300 flex items-center gap-1.5 group ${activeMegaMenu === item.key
+                        className={`px-2 xl:px-3 py-2 rounded-lg font-medium text-[13px] xl:text-sm transition-all duration-300 flex items-center gap-1 xl:gap-1.5 group ${activeMegaMenu === item.key
                           ? 'text-primary bg-primary/10'
                           : 'text-slate-700 hover:text-primary hover:bg-primary/5'
                           }`}
                       >
-                        <item.icon className="w-4 h-4" />
                         {item.label}
                         {hasSections && (
                           <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${activeMegaMenu === item.key ? 'rotate-180' : ''

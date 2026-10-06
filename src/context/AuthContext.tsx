@@ -149,7 +149,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const data = await response.json();
       return data.message || null;
     } catch (error) {
-      console.error("Error fetching current user:", error);
+      console.warn("Error fetching current user:", error);
       return null;
     }
   };
@@ -211,7 +211,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
     } catch (error) {
-      console.error("Error during login:", error);
+      console.warn("Error during login:", error);
 
       setApiKey(null);
       setApiSecret(null);
@@ -261,7 +261,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         );
       }
     } catch (error) {
-      console.error("Logout API error:", error);
+      console.warn("Logout API error:", error);
     }
 
     // Clear state

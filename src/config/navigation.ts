@@ -86,7 +86,7 @@ about: {
         items: [
           { 
             label: "Contact Us", 
-            href: "/about/contact", 
+            href: "/contact-us", 
             icon: Phone,
             description: "Get in touch with our team",
           },
@@ -253,6 +253,13 @@ about: {
     label: "Blogs",
     href: "/blogs",
     icon: Newspaper,
+    sections: []
+  },
+  
+  contact: {
+    label: "Contact Us",
+    href: "/contact-us",
+    icon: Phone,
     sections: []
   },
   
