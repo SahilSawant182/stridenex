@@ -15,8 +15,9 @@ import { getDashboardStats, getStudentByEmail, getStudentInternshipList, getLear
 import SuccessStoriesFooter from "@/components/dashboards/student/SuccessStoriesFooter";
 import StudentGuidelineTour from "@/components/dashboards/student/StudentGuidelineTour";
 import PsychometricTestModal from "@/components/PsychometricTestModal";
+import PsychometricHistoryModal from "@/components/PsychometricHistoryModal";
 import { psychometricApi } from "@/services/psychometricApi";
-import { Sparkles } from "lucide-react";
+import { Sparkles, History } from "lucide-react";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -62,6 +63,7 @@ export default function StudentDashboardPage() {
     deadlineAlerts: any[];
   }>({ newPostings: [], deadlineAlerts: [] });
   const [showTestModal, setShowTestModal] = useState<boolean>(false);
+  const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -310,12 +312,21 @@ export default function StudentDashboardPage() {
               <p className="text-sm text-slate-500 mt-0.5">Take the psychometric assessment to get personalized career and skill recommendations.</p>
             </div>
           </div>
-          <button
-            onClick={() => setShowTestModal(true)}
-            className="w-full md:w-auto px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all shadow-md active:scale-95 whitespace-nowrap flex items-center justify-center gap-2"
-          >
-            Retake Assessment
-          </button>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <button
+              onClick={() => setShowHistoryModal(true)}
+              className="flex-1 md:flex-none px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm rounded-xl transition-all border border-slate-200 shadow-sm active:scale-95 whitespace-nowrap flex items-center justify-center gap-2"
+            >
+              <History className="w-4 h-4 text-slate-500" />
+              View History
+            </button>
+            <button
+              onClick={() => setShowTestModal(true)}
+              className="flex-1 md:flex-none px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all shadow-md active:scale-95 whitespace-nowrap flex items-center justify-center gap-2"
+            >
+              Retake Assessment
+            </button>
+          </div>
         </motion.div>
 
         {/* Bottom Row */}
@@ -340,6 +351,11 @@ export default function StudentDashboardPage() {
         isOpen={showTestModal}
         onClose={() => setShowTestModal(false)}
         onCompleted={() => setShowTestModal(false)}
+        studentEmail={currentUser || undefined}
+      />
+      <PsychometricHistoryModal
+        isOpen={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
         studentEmail={currentUser || undefined}
       />
     </>

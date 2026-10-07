@@ -99,18 +99,23 @@ export const getStudentInternshipList = async (
   department?: string | null,
   academicYear?: string | null,
   search?: string,
-  workMode?: string | null
+  workMode?: string | null,
+  matchMyProfile?: boolean,
+  skill?: string,
+  limit_start: number = 0,
+  limit_page_length: number = 20
 ) => {
   try {
     let url = "method/stridenex_app.stridenex_app.doctype.internship.internship.get_internship_list";
     const params = new URLSearchParams();
 
     if (studentEmail) params.append("student", studentEmail);
-    params.append("course", course || "null");
-    params.append("department", department || "null");
+    
+    if (course && course !== "null") params.append("course", course);
+    if (department && department !== "null") params.append("department", department);
 
     const yearWord = mapYearToWord(academicYear);
-    params.append("current_year", yearWord || "null");
+    if (yearWord && yearWord !== "null") params.append("current_year", yearWord);
 
     if (search) {
       params.append("search", search);
@@ -119,6 +124,17 @@ export const getStudentInternshipList = async (
     if (workMode && workMode !== "All") {
       params.append("work_mode", workMode.toLowerCase());
     }
+
+    if (matchMyProfile) {
+      params.append("match_my_profile", "true");
+    }
+
+    if (skill) {
+      params.append("skill", skill);
+    }
+
+    params.append("limit_start", limit_start.toString());
+    params.append("limit_page_length", limit_page_length.toString());
 
     const queryString = params.toString();
     if (queryString) {

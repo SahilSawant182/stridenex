@@ -58,6 +58,22 @@ export interface SubmitTestResult {
     ai_result?: string | null;
 }
 
+export interface PsychometricHistoryItem {
+    name: string;
+    psychometric_test?: string;
+    profile_type?: string | null;
+    score?: number;
+    percentage?: number;
+    job_score?: number;
+    entrepreneurship_score?: number;
+    higher_education_score?: number;
+    raw_job_score?: number;
+    raw_entrepreneurship_score?: number;
+    raw_higher_education_score?: number;
+    creation: string;
+    modified?: string;
+}
+
 export const psychometricApi = {
     checkOnboardingStatus: async (email?: string): Promise<OnboardingStatusResponse> => {
         try {
@@ -168,5 +184,19 @@ export const psychometricApi = {
         }
 
         return data.message;
+    },
+
+    getStudentPsychometricResults: async (email?: string): Promise<{ status: string; data: PsychometricHistoryItem[] }> => {
+        const url = email
+            ? `${getBackendUrl()}/api/method/nexedu.api.get_student_psychometric_results?email=${encodeURIComponent(email)}`
+            : `${getBackendUrl()}/api/method/nexedu.api.get_student_psychometric_results`;
+        const res = await fetch(url, {
+            method: "GET",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" }
+        });
+        if (!res.ok) throw new Error(`HTTP error ${res.status}`);
+        const data = await res.json();
+        return data.message || { status: "success", data: [] };
     }
 };
