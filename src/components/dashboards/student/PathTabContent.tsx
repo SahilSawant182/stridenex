@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import CustomCareerSearch from "./CustomCareerSearch";
@@ -173,6 +173,8 @@ export default function PathTabContent() {
   const [selectedPath, setSelectedPath] = useState<any>(null);
   const [selectedPathDetails, setSelectedPathDetails] = useState<any>(null);
   const [detailsLoading, setDetailsLoading] = useState<boolean>(false);
+  const generationTargetRef = useRef<string | null>(null);
+  const generationStartTimeRef = useRef<number | null>(null);
 
   // Student Profile fields
   const [degree, setDegree] = useState<string>("");
@@ -362,27 +364,53 @@ export default function PathTabContent() {
       if (careerPathRes?.message) {
         const msg = careerPathRes.message;
         setActivePath(msg);
-        if (msg.type === "active_plan" || (msg.data && msg.data.has_active_plan)) {
-          setInWizardMode(false);
-          setIsGenerating(false);
-          setIsGenerationFailed(false);
-        } else if (msg.type === "generating") {
-          setInWizardMode(false);
-          setIsGenerating(true);
-          setIsGenerationFailed(false);
-          if (!generationPhase) {
-            setGenerationPhase("🤖 AI is generating your customized milestones...");
+        
+        // Ensure we don't drop the loading screen if we are waiting for a specific custom generation to finish
+        const returnedTitle = (msg.career_path || msg.career_path_name || msg.path_name || msg.title || (msg.data && (msg.data.career_path || msg.data.career_path_name || msg.data.path_name || msg.data.title)) || "").toLowerCase();
+        const target = generationTargetRef.current?.toLowerCase();
+
+        if (target && returnedTitle !== target) {
+          // Still waiting for the backend to finish generation and auto-enroll
+          const startTime = generationStartTimeRef.current;
+          if (startTime && Date.now() - startTime > 3 * 60 * 1000) {
+            // Timeout hit (3 minutes)
+            generationTargetRef.current = null;
+            generationStartTimeRef.current = null;
+            setIsGenerating(false);
+            showToast("The generation took too long or the server encountered an error. Please refresh and try again.", "error");
+          } else {
+            setInWizardMode(false);
+            setIsGenerating(true);
           }
-        } else if (msg.type === "failed") {
-          setInWizardMode(false);
-          setIsGenerating(false);
-          setIsGenerationFailed(true);
-          setFailedPathTitle(msg.career_path || "");
-          setFailedEnrollmentName(msg.enrollment || "");
         } else {
-          setInWizardMode(true);
-          setIsGenerating(false);
-          setIsGenerationFailed(false);
+          if (target && returnedTitle === target) {
+            generationTargetRef.current = null;
+            generationStartTimeRef.current = null;
+            showToast("Custom career path successfully generated and enrolled!", "success");
+          }
+          
+          if (msg.type === "active_plan" || (msg.data && msg.data.has_active_plan)) {
+            setInWizardMode(false);
+            setIsGenerating(false);
+            setIsGenerationFailed(false);
+          } else if (msg.type === "generating") {
+            setInWizardMode(false);
+            setIsGenerating(true);
+            setIsGenerationFailed(false);
+            if (!generationPhase) {
+              setGenerationPhase("🤖 AI is generating your customized milestones...");
+            }
+          } else if (msg.type === "failed") {
+            setInWizardMode(false);
+            setIsGenerating(false);
+            setIsGenerationFailed(true);
+            setFailedPathTitle(msg.career_path || "");
+            setFailedEnrollmentName(msg.enrollment || "");
+          } else {
+            setInWizardMode(true);
+            setIsGenerating(false);
+            setIsGenerationFailed(false);
+          }
         }
       } else {
         setInWizardMode(true);
@@ -1786,9 +1814,15 @@ export default function PathTabContent() {
                     onGenerationQueued={(roleName) => {
                       // Switch into the generation loading state; poll loop will pick it up
                       setIsGenerating(true);
+                      generationTargetRef.current = roleName;
+                      generationStartTimeRef.current = Date.now();
                       setInWizardMode(false);
                       setGenerationPhase(`🤖 Generating custom career path for ${roleName}...`);
                       // Silent-refresh every 5 s via the existing useEffect on isGenerating
+                    }}
+                    onGenerationImmediate={() => {
+                      setInWizardMode(false);
+                      fetchData();
                     }}
                   />
                 )}

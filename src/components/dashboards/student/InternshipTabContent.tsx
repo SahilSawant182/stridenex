@@ -5,14 +5,14 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion, Variants } from "framer-motion";
 
-import { 
-  Briefcase, 
-  Send, 
-  CheckCircle2, 
+import {
+  Briefcase,
+  Send,
+  CheckCircle2,
   Calendar,
 
-  MapPin, 
-  Clock, 
+  MapPin,
+  Clock,
   IndianRupee,
   Loader2,
   Info,
@@ -65,19 +65,25 @@ export default function InternshipTabContent() {
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [selectedInternship, setSelectedInternship] = useState<any>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [matchMyProfile, setMatchMyProfile] = useState(false);
+  const [skillFilter, setSkillFilter] = useState("");
+  const [limitStart, setLimitStart] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const limitPageLength = 20;
 
   // Offer Letter State
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [offerPdfUrl, setOfferPdfUrl] = useState<string | null>(null);
   const [loadingOffer, setLoadingOffer] = useState(false);
-  const [selectedOfferApp, setSelectedOfferApp] = useState<{item: any, type: string} | null>(null);
+  const [selectedOfferApp, setSelectedOfferApp] = useState<{ item: any, type: string } | null>(null);
   const [rejectingOffer, setRejectingOffer] = useState<string | null>(null);
 
   const getApplicationName = (item: any, type: string) => {
     if (item.application) return item.application;
     if (item.application_name) return item.application_name;
     if (item.application_id) return item.application_id;
-    
+
     const match = studentApplications.find(app => {
       if (type === "Internship") {
         return app.internship === item.name;
@@ -99,7 +105,7 @@ export default function InternshipTabContent() {
       alert("Application ID not found. Please try refreshing the page.");
       return;
     }
-    
+
     if (!confirm("Are you sure you want to accept this offer?")) {
       return;
     }
@@ -121,7 +127,7 @@ export default function InternshipTabContent() {
   const handleRejectOffer = async (item: any, type: string) => {
     const appName = getApplicationName(item, type);
     if (!appName) return;
-    
+
     if (!confirm("Are you sure you want to reject this offer? This action cannot be undone.")) return;
 
     try {
@@ -143,7 +149,7 @@ export default function InternshipTabContent() {
     setShowOfferModal(true);
     setLoadingOffer(true);
     setOfferPdfUrl(null);
-    
+
     try {
       const queryParams = new URLSearchParams({
         student: currentUser || "",
@@ -151,11 +157,11 @@ export default function InternshipTabContent() {
         offer_type: type || "",
         template: type || ""
       }).toString();
-      
+
       const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
       const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
       const authHeader: Record<string, string> = apiKey && apiSecret ? { "Authorization": `token ${apiKey}:${apiSecret}` } : {};
-      
+
       const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ? (process.env.NEXT_PUBLIC_API_BASE_URL.endsWith('/') ? process.env.NEXT_PUBLIC_API_BASE_URL : process.env.NEXT_PUBLIC_API_BASE_URL + '/') : '/';
       const response = await fetch(`${apiBase}method/stridenex_app.api_stridenex_app.app.get_offer_letter?${queryParams}`, {
         method: "GET",
@@ -165,11 +171,11 @@ export default function InternshipTabContent() {
           ...authHeader
         }
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to load offer letter");
       }
-      
+
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       setOfferPdfUrl(url);
@@ -185,31 +191,20 @@ export default function InternshipTabContent() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
+    setLimitStart(0);
+  }, [search, workModeFilter, matchMyProfile, skillFilter]);
+
+  useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       fetchInternships();
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [search, workModeFilter]);
+  }, [search, workModeFilter, matchMyProfile, skillFilter, limitStart]);
 
   const fetchInternships = async () => {
     try {
       setLoading(true);
-      let course = null;
-      let department = null;
-      let academicYear = null;
-
-      if (currentUser) {
-        try {
-          const studentRes = await getStudentByEmail(currentUser);
-          const profile = studentRes?.message?.data || studentRes?.data || {};
-          course = profile.course || null;
-          department = profile.department || null;
-          academicYear = profile.current_year || profile.academic_year || null;
-        } catch (err) {
-          console.error("Error fetching student profile:", err);
-        }
-      }
 
       let appsList: any[] = [];
       if (currentUser) {
@@ -222,10 +217,25 @@ export default function InternshipTabContent() {
         }
       }
 
-      const response = await getStudentInternshipList(currentUser || undefined, course, department, academicYear, search, workModeFilter);
+      const response = await getStudentInternshipList(
+        currentUser || undefined,
+        null,
+        null,
+        null,
+        search,
+        workModeFilter,
+        matchMyProfile,
+        skillFilter || undefined,
+        limitStart,
+        limitPageLength
+      );
       const dataContainer = (response?.data && typeof response.data === 'object' && !Array.isArray(response.data)) ? response : (response?.message && typeof response.message === 'object' ? response.message : response);
       const internshipData = dataContainer?.data?.internships || dataContainer?.internships || [];
-      
+      const paginationData = dataContainer?.data?.pagination || dataContainer?.pagination || {};
+
+      setTotalCount(paginationData.total_count || 0);
+      setHasMore(paginationData.has_next_page ?? paginationData.has_more ?? false);
+
       const mappedInternships = (Array.isArray(internshipData) ? internshipData : []).map((item: any) => {
         const match = appsList.find(app => app.internship === item.name);
         if (match) {
@@ -275,9 +285,9 @@ export default function InternshipTabContent() {
 
       if (isSuccess) {
         setSuccessfullyApplied(prev => [...prev, internship.name]);
-        const msg = (typeof response.message === 'string' ? response.message : null) || 
-                    (typeof response.message === 'object' ? response.message.message : null) || 
-                    `Application sent successfully for ${internship.role_name || internship.title || 'the internship'}!`;
+        const msg = (typeof response.message === 'string' ? response.message : null) ||
+          (typeof response.message === 'object' ? response.message.message : null) ||
+          `Application sent successfully for ${internship.role_name || internship.title || 'the internship'}!`;
         setFeedback({
           type: 'success',
           message: msg
@@ -286,15 +296,15 @@ export default function InternshipTabContent() {
         fetchInternships();
       } else {
         // Handle non-200 responses (e.g., 409 Conflict)
-        const errMsg = response && typeof response.message === 'object' 
-          ? response.message.message 
+        const errMsg = response && typeof response.message === 'object'
+          ? response.message.message
           : response?.message;
         setFeedback({
           type: 'error',
           message: errMsg || "Something went wrong. Please try again."
         });
       }
-      
+
       setTimeout(() => setFeedback(null), 5000);
 
     } catch (err: any) {
@@ -358,7 +368,7 @@ export default function InternshipTabContent() {
     },
     {
       id: 4,
-      title: "MATCHING OPENINGS",
+      title: "TOTAL OPENINGS",
       value: (statistics.total_internships || internships.length).toString(),
       icon: Briefcase,
       color: "orange"
@@ -382,14 +392,13 @@ export default function InternshipTabContent() {
       className="space-y-6"
     >
       {feedback && (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`p-4 rounded-xl border ${
-            feedback.type === 'success' 
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800' 
+          className={`p-4 rounded-xl border ${feedback.type === 'success'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
               : 'bg-red-50 border-red-200 text-red-800'
-          } text-sm font-medium mb-4 flex items-center justify-between`}
+            } text-sm font-medium mb-4 flex items-center justify-between`}
         >
           {feedback.message}
           <button onClick={() => setFeedback(null)} className="ml-4 opacity-50 hover:opacity-100">×</button>
@@ -404,10 +413,34 @@ export default function InternshipTabContent() {
             Apply to top-tier internship opportunities matching your career track
           </p>
         </div>
-        
+
         {/* Search & Filter */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-          <div className="relative w-full sm:w-64">
+        <div className="flex flex-col lg:flex-row items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
+          <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-xl border border-slate-200 shadow-sm h-11 w-full lg:w-auto shrink-0 cursor-pointer" onClick={() => setMatchMyProfile(!matchMyProfile)}>
+            <input
+              type="checkbox"
+              id="matchProfile"
+              checked={matchMyProfile}
+              readOnly
+              className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500 border-slate-300 pointer-events-none"
+            />
+            <label htmlFor="matchProfile" className="text-sm font-medium text-slate-700 cursor-pointer whitespace-nowrap pointer-events-none">
+              Match My Profile
+            </label>
+          </div>
+
+          <div className="relative w-full sm:w-40 lg:w-40 shrink-0">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              type="text"
+              placeholder="Skill (e.g. React)"
+              value={skillFilter}
+              onChange={(e) => setSkillFilter(e.target.value)}
+              className="pl-10 h-11 bg-white border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus-visible:ring-orange-500 focus-visible:border-orange-500 shadow-sm"
+            />
+          </div>
+
+          <div className="relative w-full sm:w-56 lg:w-56 shrink-0">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               type="text"
@@ -417,7 +450,8 @@ export default function InternshipTabContent() {
               className="pl-10 h-11 bg-white border-slate-200 rounded-xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus-visible:ring-orange-500 focus-visible:border-orange-500 shadow-sm"
             />
           </div>
-          <div className="w-full sm:w-48">
+
+          <div className="w-full sm:w-36 lg:w-36 shrink-0">
             <select
               value={workModeFilter}
               onChange={(e) => setWorkModeFilter(e.target.value)}
@@ -439,27 +473,24 @@ export default function InternshipTabContent() {
           <motion.div
             key={stat.id}
             variants={item}
-            className={`bg-white rounded-2xl border border-slate-200 p-4 md:p-5 shadow-sm hover:shadow-md transition-all border-t-4 ${
-              stat.color === 'orange' ? 'border-t-orange-400' :
-              stat.color === 'blue' ? 'border-t-blue-400' :
-              stat.color === 'emerald' ? 'border-t-emerald-400' : 'border-t-purple-400'
-            }`}
+            className={`bg-white rounded-2xl border border-slate-200 p-4 md:p-5 shadow-sm hover:shadow-md transition-all border-t-4 ${stat.color === 'orange' ? 'border-t-orange-400' :
+                stat.color === 'blue' ? 'border-t-blue-400' :
+                  stat.color === 'emerald' ? 'border-t-emerald-400' : 'border-t-purple-400'
+              }`}
           >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-1">{stat.title}</p>
                 <p className="text-2xl font-black text-slate-900">{stat.value}</p>
               </div>
-              <div className={`p-3 rounded-xl ${
-                stat.color === 'orange' ? 'bg-orange-50' :
-                stat.color === 'blue' ? 'bg-blue-50' :
-                stat.color === 'emerald' ? 'bg-emerald-50' : 'bg-purple-50'
-              }`}>
-                <stat.icon className={`w-5 h-5 ${
-                  stat.color === 'orange' ? 'text-orange-500' :
-                  stat.color === 'blue' ? 'text-blue-500' :
-                  stat.color === 'emerald' ? 'text-emerald-500' : 'text-purple-500'
-                }`} />
+              <div className={`p-3 rounded-xl ${stat.color === 'orange' ? 'bg-orange-50' :
+                  stat.color === 'blue' ? 'bg-blue-50' :
+                    stat.color === 'emerald' ? 'bg-emerald-50' : 'bg-purple-50'
+                }`}>
+                <stat.icon className={`w-5 h-5 ${stat.color === 'orange' ? 'text-orange-500' :
+                    stat.color === 'blue' ? 'text-blue-500' :
+                      stat.color === 'emerald' ? 'text-emerald-500' : 'text-purple-500'
+                  }`} />
               </div>
             </div>
           </motion.div>
@@ -468,152 +499,219 @@ export default function InternshipTabContent() {
 
       {/* Internships Grid */}
       <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {internships.map((internship, idx) => (
-          <BaseCard key={internship.name || idx} padding="none" className="h-full flex flex-col justify-between overflow-hidden border-slate-200 hover:border-orange-500 hover:shadow-lg transition-all group">
-            <div className="p-5 flex-1 flex flex-col justify-between">
+        {loading ? (
+          Array.from({ length: 6 }).map((_, idx) => (
+            <div key={`skeleton-${idx}`} className="h-[360px] bg-white rounded-[2rem] border border-slate-200 animate-pulse p-5 flex flex-col justify-between shadow-sm">
               <div>
-                {/* Header with Logo and Match */}
-                <div className="flex items-start justify-between mb-3">
+                <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-lg font-bold text-orange-600 group-hover:scale-105 transition-transform shadow-sm`}>
-                      {(internship.role_name || internship.title || "I")[0]}
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-800 line-clamp-1">{internship.role_name || internship.title || "Internship Role"}</h3>
-                      <p className="text-xs text-slate-500 font-medium">{internship.industry || "Industry Partner"}</p>
+                    <div className="w-12 h-12 rounded-xl bg-slate-100" />
+                    <div className="space-y-2">
+                      <div className="h-4 bg-slate-100 rounded w-32" />
+                      <div className="h-3 bg-slate-100 rounded w-24" />
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-1.5 mt-1">
-                    <div className={`text-lg font-bold text-emerald-600`}>
-                      {internship.match_score || 100}%
+                  <div className="h-6 w-12 bg-slate-100 rounded-full" />
+                </div>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="h-5 bg-slate-100 rounded-md w-16" />
+                  <div className="h-5 bg-slate-100 rounded-md w-20" />
+                  <div className="h-5 bg-slate-100 rounded-md w-24" />
+                  <div className="h-5 bg-slate-100 rounded-md w-16" />
+                </div>
+                <div className="space-y-2 mb-4 mt-2">
+                  <div className="h-3 bg-slate-100 rounded w-full" />
+                  <div className="h-3 bg-slate-100 rounded w-5/6" />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <div className="h-4 bg-slate-100 rounded w-12" />
+                  <div className="h-4 bg-slate-100 rounded w-16" />
+                  <div className="h-4 bg-slate-100 rounded w-14" />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <div className="h-10 bg-slate-100 rounded-xl flex-1" />
+                <div className="h-10 bg-slate-100 rounded-xl w-24" />
+              </div>
+            </div>
+          ))
+        ) : (
+          internships.map((internship, idx) => (
+            <BaseCard key={internship.name || idx} padding="none" className="h-full flex flex-col justify-between overflow-hidden border-slate-200 hover:border-orange-500 hover:shadow-lg transition-all group">
+              <div className="p-5 flex-1 flex flex-col justify-between">
+                <div>
+                  {/* Header with Logo and Match */}
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-12 h-12 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-lg font-bold text-orange-600 group-hover:scale-105 transition-transform shadow-sm`}>
+                        {(internship.role_name || internship.title || "I")[0]}
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-800 line-clamp-1">{internship.role_name || internship.title || "Internship Role"}</h3>
+                        <p className="text-xs text-slate-500 font-medium">{internship.industry || "Industry Partner"}</p>
+                      </div>
                     </div>
-                    <Badge className={`${
-                      internship.status?.toLowerCase() === "closed"
-                        ? "bg-red-50 text-red-600 border-red-100" 
-                        : "bg-emerald-50 text-emerald-600 border-emerald-100"
-                    } rounded-full text-[9px] px-2 py-0.5 font-bold border`}>
-                      {internship.status || "Active"}
+                    <div className="flex flex-col items-end gap-1.5 mt-1">
+                      <div className={`text-lg font-bold text-emerald-600`}>
+                        {internship.match_score || 100}%
+                      </div>
+                      <Badge className={`${internship.status?.toLowerCase() === "closed"
+                          ? "bg-red-50 text-red-600 border-red-100"
+                          : "bg-emerald-50 text-emerald-600 border-emerald-100"
+                        } rounded-full text-[9px] px-2 py-0.5 font-bold border`}>
+                        {internship.status || "Active"}
+                      </Badge>
+                      {internship.applied_status && internship.applied_status !== "Not Applied" && (
+                        <Badge className={`${getStatusConfig(internship.applied_status).bg} ${getStatusConfig(internship.applied_status).text} ${getStatusConfig(internship.applied_status).border} rounded-full text-[9px] px-2 py-0.5 font-bold border animate-pulse`}>
+                          {internship.applied_status}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Details Row */}
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1 text-[10px] font-bold">
+                      <MapPin className="w-3 h-3 text-slate-400" />
+                      {internship.location || "Remote"}
                     </Badge>
-                    {internship.applied_status && internship.applied_status !== "Not Applied" && (
-                      <Badge className={`${getStatusConfig(internship.applied_status).bg} ${getStatusConfig(internship.applied_status).text} ${getStatusConfig(internship.applied_status).border} rounded-full text-[9px] px-2 py-0.5 font-bold border animate-pulse`}>
-                        {internship.applied_status}
+                    {internship.work_mode && (
+                      <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1 text-[10px] font-bold">
+                        <Briefcase className="w-3 h-3 text-slate-400" />
+                        {internship.work_mode}
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1 text-[10px] font-bold">
+                      <Clock className="w-3 h-3 text-slate-400" />
+                      {internship.duration ? `${internship.duration} Days` : "3 Months"}
+                    </Badge>
+                    <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 text-[10px] font-bold">
+                      <IndianRupee className="w-3 h-3" />
+                      {internship.stipend ? `₹${internship.stipend.toLocaleString('en-IN')}` : "Best in Industry"}
+                    </Badge>
+                    {internship.application_deadline && (
+                      <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 gap-1 text-[10px] font-bold">
+                        <Calendar className="w-3 h-3 text-orange-400" />
+                        Apply By: {new Date(internship.application_deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </Badge>
+                    )}
+                    {internship.openings && (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1 text-[10px] font-bold">
+                        {internship.openings} Opening{internship.openings !== 1 ? 's' : ''}
                       </Badge>
                     )}
                   </div>
-                </div>
 
-                {/* Details Row */}
-                <div className="flex flex-wrap gap-2 mb-3">
-                  <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1 text-[10px] font-bold">
-                    <MapPin className="w-3 h-3 text-slate-400" />
-                    {internship.location || "Remote"}
-                  </Badge>
-                  {internship.work_mode && (
-                    <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1 text-[10px] font-bold">
-                      <Briefcase className="w-3 h-3 text-slate-400" />
-                      {internship.work_mode}
-                    </Badge>
-                  )}
-                  <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200 gap-1 text-[10px] font-bold">
-                    <Clock className="w-3 h-3 text-slate-400" />
-                    {internship.duration ? `${internship.duration} Days` : "3 Months"}
-                  </Badge>
-                  <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 gap-1 text-[10px] font-bold">
-                    <IndianRupee className="w-3 h-3" />
-                    {internship.stipend ? `₹${internship.stipend.toLocaleString('en-IN')}` : "Best in Industry"}
-                  </Badge>
-                  {internship.application_deadline && (
-                    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 gap-1 text-[10px] font-bold">
-                      <Calendar className="w-3 h-3 text-orange-400" />
-                      Apply By: {new Date(internship.application_deadline).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </Badge>
-                  )}
-                  {internship.openings && (
-                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 gap-1 text-[10px] font-bold">
-                      {internship.openings} Opening{internship.openings !== 1 ? 's' : ''}
-                    </Badge>
+                  <p className="text-xs text-slate-600 leading-relaxed font-medium mb-3 line-clamp-2 h-9 opacity-85">
+                    {internship.description || "Explore exciting internship opportunities and grow your career with industry partners."}
+                  </p>
+
+                  {/* Skills Tags */}
+                  {internship.skills && internship.skills.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {internship.skills.slice(0, 4).map((s: any, si: number) => (
+                        <span key={si} className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md">
+                          {s.skill}
+                        </span>
+                      ))}
+                      {internship.skills.length > 4 && (
+                        <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
+                          +{internship.skills.length - 4}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
 
-                <p className="text-xs text-slate-600 leading-relaxed font-medium mb-3 line-clamp-2 h-9 opacity-85">
-                  {internship.description || "Explore exciting internship opportunities and grow your career with industry partners."}
-                </p>
-
-                {/* Skills Tags */}
-                {internship.skills && internship.skills.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    {internship.skills.slice(0, 4).map((s: any, si: number) => (
-                      <span key={si} className="text-[10px] font-bold text-sky-700 bg-sky-50 border border-sky-200 px-2 py-0.5 rounded-md">
-                        {s.skill}
-                      </span>
-                    ))}
-                    {internship.skills.length > 4 && (
-                      <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md">
-                        +{internship.skills.length - 4}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2 mt-4">
-                <Button 
-                  onClick={() => handleApply(internship)}
-                  disabled={
-                    applying === internship.name || 
-                    internship.status?.toLowerCase() === "closed" || 
-                    successfullyApplied.includes(internship.name) ||
-                    (internship.applied_status && internship.applied_status !== "Not Applied")
-                  }
-                  className={`flex-1 ${
-                    internship.status?.toLowerCase() === "closed"
-                      ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-                      : (internship.applied_status && internship.applied_status !== "Not Applied") || successfullyApplied.includes(internship.name)
-                      ? `${getStatusConfig(internship.applied_status || "Applied").bg} ${getStatusConfig(internship.applied_status || "Applied").text} border ${getStatusConfig(internship.applied_status || "Applied").border} shadow-sm`
-                      : "bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/10 active:scale-95"
-                  } font-bold rounded-xl h-10 transition-all`}
-                >
-                  {applying === internship.name ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : (successfullyApplied.includes(internship.name) || (internship.applied_status && internship.applied_status !== "Not Applied")) ? (
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                  ) : null}
-                  {successfullyApplied.includes(internship.name) || (internship.applied_status && internship.applied_status !== "Not Applied") 
-                    ? (internship.applied_status && internship.applied_status !== "Not Applied" ? internship.applied_status : "Applied") 
-                    : "Apply Now"}
-                </Button>
-
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setSelectedInternship(internship);
-                    setShowDetails(true);
-                  }}
-                  className="px-4 border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl h-10 font-bold text-xs"
-                >
-                  Details
-                </Button>
-
-                {internship.applied_status?.toLowerCase() === "selected" && (
-                  <Button 
-                    onClick={() => handleViewOfferLetter(internship, "Internship")}
-                    className="px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl h-10 transition-all text-xs"
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2 mt-4">
+                  <Button
+                    onClick={() => handleApply(internship)}
+                    disabled={
+                      applying === internship.name ||
+                      internship.status?.toLowerCase() === "closed" ||
+                      successfullyApplied.includes(internship.name) ||
+                      (internship.applied_status && internship.applied_status !== "Not Applied")
+                    }
+                    className={`flex-1 ${internship.status?.toLowerCase() === "closed"
+                        ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                        : (internship.applied_status && internship.applied_status !== "Not Applied") || successfullyApplied.includes(internship.name)
+                          ? `${getStatusConfig(internship.applied_status || "Applied").bg} ${getStatusConfig(internship.applied_status || "Applied").text} border ${getStatusConfig(internship.applied_status || "Applied").border} shadow-sm`
+                          : "bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-500/10 active:scale-95"
+                      } font-bold rounded-xl h-10 transition-all`}
                   >
-                    View Offer Letter
+                    {applying === internship.name ? (
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    ) : (successfullyApplied.includes(internship.name) || (internship.applied_status && internship.applied_status !== "Not Applied")) ? (
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                    ) : null}
+                    {successfullyApplied.includes(internship.name) || (internship.applied_status && internship.applied_status !== "Not Applied")
+                      ? (internship.applied_status && internship.applied_status !== "Not Applied" ? internship.applied_status : "Applied")
+                      : "Apply Now"}
                   </Button>
-                )}
+
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedInternship(internship);
+                      setShowDetails(true);
+                    }}
+                    className="px-4 border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-xl h-10 font-bold text-xs"
+                  >
+                    Details
+                  </Button>
+
+                  {internship.applied_status?.toLowerCase() === "selected" && (
+                    <Button
+                      onClick={() => handleViewOfferLetter(internship, "Internship")}
+                      className="px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl h-10 transition-all text-xs"
+                    >
+                      View Offer Letter
+                    </Button>
+                  )}
+                </div>
               </div>
-            </div>
-          </BaseCard>
-        ))}
+            </BaseCard>
+          ))
+        )}
       </motion.div>
+
+      {/* Pagination Controls */}
+      {!loading && totalCount > limitPageLength && (
+        <div className="flex items-center justify-center gap-4 mt-8">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setLimitStart(Math.max(0, limitStart - limitPageLength));
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            disabled={limitStart === 0}
+            className="px-6 h-11 rounded-xl font-bold text-slate-700 disabled:opacity-50"
+          >
+            Previous
+          </Button>
+          <span className="text-sm font-bold text-slate-500">
+            Page {Math.floor(limitStart / limitPageLength) + 1} of {Math.ceil(totalCount / limitPageLength)}
+          </span>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setLimitStart(limitStart + limitPageLength);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            disabled={!hasMore}
+            className="px-6 h-11 rounded-xl font-bold text-slate-700 disabled:opacity-50"
+          >
+            Next
+          </Button>
+        </div>
+      )}
 
       {/* Details Modal */}
       {showDetails && selectedInternship && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-          
-          <motion.div 
+
+          <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-slate-100"
@@ -629,7 +727,7 @@ export default function InternshipTabContent() {
                   <p className="text-sm text-slate-500 font-semibold">{selectedInternship.industry || "Industry Partner"}</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setShowDetails(false)}
                 className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-all shadow-sm"
               >
@@ -770,15 +868,15 @@ export default function InternshipTabContent() {
 
             {/* Modal Footer */}
             <div className="p-8 border-t border-slate-50 flex items-center justify-end gap-3 bg-slate-50/50">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowDetails(false)}
                 className="px-8 h-12 rounded-xl text-sm font-bold border-slate-200 text-slate-600 hover:text-slate-800 hover:bg-slate-100 transition-all"
               >
                 Close
               </Button>
               {selectedInternship.applied_status?.toLowerCase() === "selected" && (
-                <Button 
+                <Button
                   onClick={() => {
                     handleViewOfferLetter(selectedInternship, "Internship");
                     setShowDetails(false);
@@ -788,27 +886,26 @@ export default function InternshipTabContent() {
                   View Offer Letter
                 </Button>
               )}
-              <Button 
+              <Button
                 onClick={() => {
                   handleApply(selectedInternship);
                   setShowDetails(false);
                 }}
                 disabled={
-                  applying === selectedInternship.name || 
-                  selectedInternship.status?.toLowerCase() === "closed" || 
+                  applying === selectedInternship.name ||
+                  selectedInternship.status?.toLowerCase() === "closed" ||
                   successfullyApplied.includes(selectedInternship.name) ||
                   (selectedInternship.applied_status && selectedInternship.applied_status !== "Not Applied")
                 }
-                className={`px-10 h-12 rounded-xl text-sm font-bold ${
-                  selectedInternship.status?.toLowerCase() === "closed"
+                className={`px-10 h-12 rounded-xl text-sm font-bold ${selectedInternship.status?.toLowerCase() === "closed"
                     ? "bg-slate-100 text-slate-400 border-slate-200"
                     : (selectedInternship.applied_status && selectedInternship.applied_status !== "Not Applied") || successfullyApplied.includes(selectedInternship.name)
-                    ? `${getStatusConfig(selectedInternship.applied_status || "Applied").bg} ${getStatusConfig(selectedInternship.applied_status || "Applied").text} border ${getStatusConfig(selectedInternship.applied_status || "Applied").border}`
-                    : "bg-orange-500 hover:bg-orange-600 text-white shadow-xl shadow-orange-500/10"
-                } transition-all`}
+                      ? `${getStatusConfig(selectedInternship.applied_status || "Applied").bg} ${getStatusConfig(selectedInternship.applied_status || "Applied").text} border ${getStatusConfig(selectedInternship.applied_status || "Applied").border}`
+                      : "bg-orange-500 hover:bg-orange-600 text-white shadow-xl shadow-orange-500/10"
+                  } transition-all`}
               >
-                {successfullyApplied.includes(selectedInternship.name) || (selectedInternship.applied_status && selectedInternship.applied_status !== "Not Applied") 
-                  ? (selectedInternship.applied_status && selectedInternship.applied_status !== "Not Applied" ? selectedInternship.applied_status : "Applied") 
+                {successfullyApplied.includes(selectedInternship.name) || (selectedInternship.applied_status && selectedInternship.applied_status !== "Not Applied")
+                  ? (selectedInternship.applied_status && selectedInternship.applied_status !== "Not Applied" ? selectedInternship.applied_status : "Applied")
                   : "Apply Now"}
               </Button>
             </div>
@@ -818,7 +915,7 @@ export default function InternshipTabContent() {
       )}
 
       {/* Offer Letter Modal */}
-      <OfferLetterModal 
+      <OfferLetterModal
         isOpen={showOfferModal}
         onClose={() => {
           setShowOfferModal(false);

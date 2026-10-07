@@ -29,6 +29,7 @@ interface CareerSuggestion {
 interface CustomCareerSearchProps {
   onSelectSuggestion?: (careerName: string) => void;
   onGenerationQueued?: (roleName: string) => void;
+  onGenerationImmediate?: (roleName: string) => void;
 }
 
 function useLoadingMessages(roleName: string) {
@@ -121,6 +122,7 @@ function GenerationLoadingScreen({ roleName }: { roleName: string }) {
 export default function CustomCareerSearch({
   onSelectSuggestion,
   onGenerationQueued,
+  onGenerationImmediate,
 }: CustomCareerSearchProps) {
   const { showToast } = useToast();
 
@@ -213,20 +215,21 @@ export default function CustomCareerSearch({
         setIsQueued(true);
         setQueuedRoleName(role);
         onGenerationQueued?.(role);
+      } else if (status === "success" || status === "already_enrolled" || status === "already_exists") {
+        showToast("Career already exists. Activating...", "success");
+        onGenerationImmediate?.(role);
       } else {
         showToast(res?.message?.message ?? "Unexpected response from server.", "warning");
       }
-    } catch (err: any) {
-      const msg: string =
-        err?.message ??
-        err?.response?.data?.message ??
-        "Failed to generate career path.";
+    } catch (error) {
+      // The backend gatekeeper throws 400 for invalid/garbage input.
+      const msg = "This does not appear to be a recognized professional career. Please try again.";
       setInlineError(msg);
       showToast(msg, "error");
     } finally {
       setIsGenerating(false);
     }
-  }, [query, showToast, onGenerationQueued]);
+  }, [query, showToast, onGenerationQueued, onGenerationImmediate]);
 
   if (isQueued) {
     return <GenerationLoadingScreen roleName={queuedRoleName} />;
