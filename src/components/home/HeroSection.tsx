@@ -17,7 +17,7 @@ const heroSlides = [
         title: "Bridge Your Learning to",
         subtitle: "Real Industry Success",
         description: "StrideNex helps students move beyond degrees and certifications by identifying their real interests, building practical skills, and guiding them toward careers, entrepreneurship, or higher education pathways — all aligned with industry expectations.",
-        image: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+        image: "/images/hero-student-team.jpeg",
         stat: "10k+",
         statLabel: "Active Students",
         gradient: "from-blue-600 to-purple-600",
@@ -29,7 +29,7 @@ const heroSlides = [
         title: "Transform Your Future with",
         subtitle: "Real-World Skills",
         description: "Join thousands of students who have accelerated their careers through our industry-connected programs, mentorship, and practical project experience.",
-          image: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2071&q=80",
+          image: "/images/hero-real-world-skills.jpeg",
 
         stat: "500+",
         statLabel: "Partner Institutes",
@@ -42,7 +42,7 @@ const heroSlides = [
         title: "Launch Your Career with",
         subtitle: "Industry Connections",
         description: "Connect directly with industry partners, work on real projects, and build a portfolio that employers trust. Your journey to career success starts here.",
-          image: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+          image: "/images/hero-industry-connections.jpeg",
 
         stat: "200+",
         statLabel: "Industry Partners",
