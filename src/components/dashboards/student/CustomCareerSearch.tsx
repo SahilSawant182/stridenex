@@ -3,6 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -126,6 +127,7 @@ export default function CustomCareerSearch({
 }: CustomCareerSearchProps) {
   const { showToast } = useToast();
 
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [suggestions, setSuggestions] = useState<CareerSuggestion[]>([]);
@@ -212,9 +214,7 @@ export default function CustomCareerSearch({
       const res = await requestCustomCareer(role);
       const status = res?.message?.status ?? res?.status;
       if (status === "queued") {
-        setIsQueued(true);
-        setQueuedRoleName(role);
-        onGenerationQueued?.(role);
+        setShowSuccessPopup(true);
       } else if (status === "success" || status === "already_enrolled" || status === "already_exists") {
         showToast("Career already exists. Activating...", "success");
         onGenerationImmediate?.(role);
@@ -236,176 +236,230 @@ export default function CustomCareerSearch({
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="mt-6 rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/80 p-5 shadow-sm"
-    >
-      <div className="mb-4 flex items-center gap-2.5">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 shadow-sm">
-          <Wand2 className="h-4 w-4 text-white" />
-        </div>
-        <div>
-          <h4 className="text-sm font-bold text-slate-800">
-            Don&apos;t see your dream job?
-          </h4>
-          <p className="text-[11px] text-slate-400 font-medium">
-            Search for it or let our AI generate a custom career path just for you.
-          </p>
-        </div>
-      </div>
-
-      <div ref={containerRef} className="relative">
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            {isSearching ? (
-              <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-indigo-400" />
-            ) : (
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors" />
-            )}
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setInlineError("");
-                setNoMatchFound(false);
-              }}
-              onKeyDown={(e) => e.key === "Enter" && !isGenerating && handleGenerateCustom()}
-              placeholder="Search your dream job... e.g. Robotics Engineer"
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm font-medium text-slate-700 shadow-inner outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
-            />
-            {query && (
-              <button
-                onClick={() => {
-                  setQuery("");
-                  setSuggestions([]);
-                  setNoMatchFound(false);
-                  setInlineError("");
-                  setShowDropdown(false);
-                }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="mt-6 rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50/80 p-5 shadow-sm"
+      >
+        <div className="mb-4 flex items-center gap-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 shadow-sm">
+            <Wand2 className="h-4 w-4 text-white" />
           </div>
-
-          <button
-            onClick={handleGenerateCustom}
-            disabled={isGenerating || !query.trim()}
-            className="group flex shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-500/20 transition-all duration-200 hover:from-violet-700 hover:to-indigo-700 hover:shadow-indigo-500/30 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isGenerating ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Zap className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
-            )}
-            {isGenerating ? "Generating..." : "Generate"}
-          </button>
+          <div>
+            <h4 className="text-sm font-bold text-slate-800">
+              Don&apos;t see your dream job?
+            </h4>
+            <p className="text-[11px] text-slate-400 font-medium">
+              Search for it or let our AI generate a custom career path just for you.
+            </p>
+          </div>
         </div>
 
-        <AnimatePresence>
-          {showDropdown && suggestions.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: -4, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -4, scale: 0.98 }}
-              transition={{ duration: 0.18 }}
-              className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 shadow-xl backdrop-blur-md"
-            >
-              <div className="px-3 pb-1 pt-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                  Did you mean...
-                </p>
-              </div>
-              <ul className="max-h-52 overflow-y-auto pb-2">
-                {suggestions.map((career, idx) => {
-                  const label = career.career_name ?? career.path_name ?? career.title ?? career.name;
-                  return (
-                    <li key={idx}>
-                      <button
-                        onClick={() => handleSelectSuggestion(career)}
-                        className="group flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-indigo-50/80"
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400 transition-transform group-hover:scale-110" />
-                        <span className="flex-1 text-sm font-semibold text-slate-700">
-                          {label}
-                        </span>
-                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-indigo-400" />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-              <div className="border-t border-slate-100 px-3 py-2">
+        <div ref={containerRef} className="relative">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              {isSearching ? (
+                <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-indigo-400" />
+              ) : (
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 transition-colors" />
+              )}
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setInlineError("");
+                  setNoMatchFound(false);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && !isGenerating && handleGenerateCustom()}
+                placeholder="Search your dream job... e.g. Robotics Engineer"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm font-medium text-slate-700 shadow-inner outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
+              />
+              {query && (
                 <button
                   onClick={() => {
+                    setQuery("");
+                    setSuggestions([]);
+                    setNoMatchFound(false);
+                    setInlineError("");
                     setShowDropdown(false);
-                    handleGenerateCustom();
                   }}
-                  className="group flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-violet-50"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-slate-400 hover:text-slate-600 transition-colors"
                 >
-                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />
-                  <span className="text-xs font-bold text-violet-600">
-                    Generate exact match for &ldquo;{query}&rdquo;
-                  </span>
-                  <ArrowRight className="ml-auto h-3.5 w-3.5 shrink-0 text-violet-400 transition-transform group-hover:translate-x-0.5" />
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={handleGenerateCustom}
+              disabled={isGenerating || !query.trim()}
+              className="group flex shrink-0 items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-indigo-500/20 transition-all duration-200 hover:from-violet-700 hover:to-indigo-700 hover:shadow-indigo-500/30 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isGenerating ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Zap className="h-3.5 w-3.5 transition-transform group-hover:scale-110" />
+              )}
+              {isGenerating ? "Generating..." : "Generate"}
+            </button>
+          </div>
+
+          <AnimatePresence>
+            {showDropdown && suggestions.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                transition={{ duration: 0.18 }}
+                className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-xl border border-slate-200/80 bg-white/90 shadow-xl backdrop-blur-md"
+              >
+                <div className="px-3 pb-1 pt-2">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    Did you mean...
+                  </p>
+                </div>
+                <ul className="max-h-52 overflow-y-auto pb-2">
+                  {suggestions.map((career, idx) => {
+                    const label = career.career_name ?? career.path_name ?? career.title ?? career.name;
+                    return (
+                      <li key={idx}>
+                        <button
+                          onClick={() => handleSelectSuggestion(career)}
+                          className="group flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors hover:bg-indigo-50/80"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400 transition-transform group-hover:scale-110" />
+                          <span className="flex-1 text-sm font-semibold text-slate-700">
+                            {label}
+                          </span>
+                          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-indigo-400" />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="border-t border-slate-100 px-3 py-2">
+                  <button
+                    onClick={() => {
+                      setShowDropdown(false);
+                      handleGenerateCustom();
+                    }}
+                    className="group flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-violet-50"
+                  >
+                    <Sparkles className="h-3.5 w-3.5 shrink-0 text-violet-500" />
+                    <span className="text-xs font-bold text-violet-600">
+                      Generate exact match for &ldquo;{query}&rdquo;
+                    </span>
+                    <ArrowRight className="ml-auto h-3.5 w-3.5 shrink-0 text-violet-400 transition-transform group-hover:translate-x-0.5" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {noMatchFound && debouncedQuery.length >= 2 && !showDropdown && !isSearching && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="mt-2 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5"
+              >
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-amber-700">
+                    No existing paths matched &ldquo;{debouncedQuery}&rdquo;.
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-amber-600 font-medium">
+                    Click &ldquo;Generate&rdquo; to have our AI build a custom career path from scratch.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {inlineError && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="mt-2 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5"
+              >
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                <p className="flex-1 text-xs font-semibold text-red-700 leading-relaxed">
+                  {inlineError}
+                </p>
+                <button
+                  onClick={() => setInlineError("")}
+                  className="shrink-0 text-red-400 hover:text-red-600 transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <p className="mt-3 text-[11px] text-slate-400 font-medium">
+          <span className="font-bold text-slate-500">Tip:</span> Type at least 2 characters for fuzzy suggestions,
+          or hit &ldquo;Generate&rdquo; to create an entirely new AI-crafted roadmap.
+        </p>
+      </motion.div>
+      <AnimatePresence>
+        {showSuccessPopup && typeof document !== 'undefined' && createPortal(
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999999] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: -20 }}
+              className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 right-0 w-80 h-80 bg-amber-50 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-50 rounded-full blur-3xl -ml-32 -mb-32 pointer-events-none" />
+
+              <div className="relative z-10 flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-gradient-to-br from-amber-100 to-amber-200 rounded-full flex items-center justify-center mb-6 text-amber-600 shadow-inner">
+                  <Sparkles size={32} className="animate-pulse" />
+                </div>
+
+                <h3 className="text-2xl font-extrabold text-slate-800 mb-4 tracking-tight">
+                  Crafting Your Unique Path
+                </h3>
+
+                <p className="text-slate-600 mb-6 leading-relaxed">
+                  We are building a curriculum that is entirely <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-indigo-600">unique to you</span>. Our AI is carefully analyzing industry standards and hand-picking the exact skills and milestones you need to reach your dream career.
+                </p>
+
+                <div className="bg-slate-50 border border-slate-100 rounded-xl p-5 mb-8 shadow-sm">
+                  <p className="text-slate-500 text-sm leading-relaxed">
+                    Great things take time—usually about <strong className="text-slate-700">3 to 5 minutes</strong>.
+                    <br /><br />
+                    Feel free to explore the rest of Stridenex while we put the finishing touches on your roadmap. We'll notify you (🔔) the moment it's ready.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setShowSuccessPopup(false);
+                  }}
+                  className="w-full py-3.5 px-6 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white rounded-xl font-medium transition-all shadow-lg hover:shadow-xl focus:ring-4 focus:ring-slate-200 outline-none flex items-center justify-center gap-2"
+                >
+                  Sounds good! <Sparkles size={16} className="opacity-70" />
                 </button>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {noMatchFound && debouncedQuery.length >= 2 && !showDropdown && !isSearching && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              className="mt-2 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5"
-            >
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-amber-700">
-                  No existing paths matched &ldquo;{debouncedQuery}&rdquo;.
-                </p>
-                <p className="mt-0.5 text-[11px] text-amber-600 font-medium">
-                  Click &ldquo;Generate&rdquo; to have our AI build a custom career path from scratch.
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {inlineError && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              className="mt-2 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5"
-            >
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
-              <p className="flex-1 text-xs font-semibold text-red-700 leading-relaxed">
-                {inlineError}
-              </p>
-              <button
-                onClick={() => setInlineError("")}
-                className="shrink-0 text-red-400 hover:text-red-600 transition-colors"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      <p className="mt-3 text-[11px] text-slate-400 font-medium">
-        <span className="font-bold text-slate-500">Tip:</span> Type at least 2 characters for fuzzy suggestions,
-        or hit &ldquo;Generate&rdquo; to create an entirely new AI-crafted roadmap.
-      </p>
-    </motion.div>
+          </motion.div>,
+          document.body
+        )}
+      </AnimatePresence>
+    </>
   );
 }
