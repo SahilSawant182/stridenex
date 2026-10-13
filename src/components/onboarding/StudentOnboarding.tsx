@@ -1043,8 +1043,8 @@ export default function StudentOnboarding({
   const renderStep1 = () => (
     <div className="space-y-6">
       <div className="space-y-4">
-        <div className="flex gap-2 items-start">
-          <div className="flex-1">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-start">
+          <div className="flex-1 w-full min-w-0">
             <DynamicForm
               fields={step1Fields}
               onSubmit={() => { }}
@@ -1075,7 +1075,7 @@ export default function StudentOnboarding({
               onClick={handleSendEmailOTP}
               disabled={!formData.email || emailTimer > 0}
               variant="accent"
-              className="mt-7 whitespace-nowrap"
+              className="w-full sm:w-auto sm:mt-[25px] whitespace-nowrap h-10 px-4 shrink-0"
             >
               {emailTimer > 0 ? `Resend in ${emailTimer}s` : "Send OTP"}
             </Button>
@@ -1087,7 +1087,7 @@ export default function StudentOnboarding({
               onClick={handleSendEmailOTP}
               disabled={emailTimer > 0}
               variant="accent"
-              className="mt-7 whitespace-nowrap"
+              className="w-full sm:w-auto sm:mt-[25px] whitespace-nowrap h-10 px-4 shrink-0"
             >
               {emailTimer > 0 ? `Resend in ${emailTimer}s` : "Resend OTP"}
             </Button>
@@ -1095,7 +1095,7 @@ export default function StudentOnboarding({
         </div>
 
         {emailOtpSent && !formData.emailVerified && (
-          <div>
+          <div className="space-y-1">
             <Label htmlFor="emailOtp" className="text-sm font-medium text-slate-700">
               Verification Code <span className="text-red-500">*</span>
             </Label>
@@ -1106,7 +1106,7 @@ export default function StudentOnboarding({
                 onChange={(e) => setEmailVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="Enter 6-digit code"
                 maxLength={6}
-                className="flex-1"
+                className="flex-1 h-10"
                 disabled={loading}
               />
               <Button
@@ -1114,25 +1114,30 @@ export default function StudentOnboarding({
                 onClick={handleVerifyEmail}
                 disabled={emailVerificationCode.length !== 6 || loading}
                 variant="accent"
-                className="whitespace-nowrap"
+                className="whitespace-nowrap shrink-0 px-5 h-10"
               >
                 Verify
               </Button>
             </div>
           </div>
         )}
+
+        {formData.emailVerified && (
+          <p className="text-sm text-green-600 font-medium">✓ Email verified</p>
+        )}
       </div>
 
       {formData.emailVerified && (
-        <div className="space-y-4 pt-4 border-t">
-          <div className="flex gap-2 items-start">
-            <div className="flex-1">
+        <div className="space-y-4 pt-4 border-t border-slate-100">
+          <div className="space-y-3">
+            <div className="w-full min-w-0">
               <DynamicForm
                 fields={step2Fields}
                 onSubmit={() => { }}
                 buttonLabel=""
                 loading={loading}
                 errors={fieldErrors}
+                initialValues={{ mobileNo: formData.mobileNo }}
                 onChange={(data) => {
                   setSuccess("");
                   setError("");
@@ -1160,13 +1165,13 @@ export default function StudentOnboarding({
             </div>
 
             {!formData.mobileVerified && !mobileOtpSent && (
-              <div className="flex gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
                 <Button
                   type="button"
                   onClick={handleSendMobileOTP}
                   disabled={!formData.mobileNo || formData.mobileNo.length !== 10 || loading || mobileTimer > 0}
                   variant="outline"
-                  className="mt-7 whitespace-nowrap"
+                  className="w-full justify-center text-xs sm:text-sm h-10 whitespace-nowrap"
                 >
                   {mobileTimer > 0 ? `Resend SMS in ${mobileTimer}s` : "Get OTP on Text"}
                 </Button>
@@ -1175,7 +1180,7 @@ export default function StudentOnboarding({
                   onClick={handleSendWhatsappOTP}
                   disabled={!formData.mobileNo || formData.mobileNo.length !== 10 || loading || mobileTimer > 0}
                   variant="accent"
-                  className="mt-7 whitespace-nowrap"
+                  className="w-full justify-center text-xs sm:text-sm h-10 whitespace-nowrap"
                 >
                   {mobileTimer > 0 ? `Resend WA in ${mobileTimer}s` : "Get OTP on WhatsApp"}
                 </Button>
@@ -1183,13 +1188,13 @@ export default function StudentOnboarding({
             )}
 
             {mobileOtpSent && !formData.mobileVerified && (
-              <div className="flex gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
                 <Button
                   type="button"
                   onClick={handleSendMobileOTP}
                   disabled={loading || mobileTimer > 0}
                   variant="outline"
-                  className="mt-7 whitespace-nowrap"
+                  className="w-full justify-center text-xs sm:text-sm h-10 whitespace-nowrap"
                 >
                   {mobileTimer > 0 ? `Resend SMS in ${mobileTimer}s` : "Resend on Text"}
                 </Button>
@@ -1198,7 +1203,7 @@ export default function StudentOnboarding({
                   onClick={handleSendWhatsappOTP}
                   disabled={loading || mobileTimer > 0}
                   variant="accent"
-                  className="mt-7 whitespace-nowrap"
+                  className="w-full justify-center text-xs sm:text-sm h-10 whitespace-nowrap"
                 >
                   {mobileTimer > 0 ? `Resend WA in ${mobileTimer}s` : "Resend on WhatsApp"}
                 </Button>
@@ -1207,7 +1212,7 @@ export default function StudentOnboarding({
           </div>
 
           {mobileOtpSent && !formData.mobileVerified && (
-            <div>
+            <div className="space-y-1">
               <Label htmlFor="mobileOtp" className="text-sm font-medium text-slate-700">
                 Verification Code <span className="text-red-500">*</span>
               </Label>
@@ -1218,7 +1223,7 @@ export default function StudentOnboarding({
                   onChange={(e) => setMobileVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   placeholder="Enter 6-digit code"
                   maxLength={6}
-                  className="flex-1"
+                  className="flex-1 h-10"
                   disabled={loading}
                 />
                 <Button
@@ -1226,7 +1231,7 @@ export default function StudentOnboarding({
                   onClick={handleVerifyMobile}
                   disabled={mobileVerificationCode.length !== 6 || loading}
                   variant="accent"
-                  className="whitespace-nowrap"
+                  className="whitespace-nowrap shrink-0 px-5 h-10"
                 >
                   Verify
                 </Button>
@@ -1235,11 +1240,15 @@ export default function StudentOnboarding({
           )}
 
           {formData.mobileVerified && (
+            <p className="text-sm text-green-600 font-medium">✓ Mobile verified</p>
+          )}
+
+          {formData.mobileVerified && (
             <Button
               type="button"
               onClick={handleContinueToStep2}
               variant="accent"
-              className="w-full mt-6"
+              className="w-full mt-6 h-10"
             >
               Continue to Profile
             </Button>

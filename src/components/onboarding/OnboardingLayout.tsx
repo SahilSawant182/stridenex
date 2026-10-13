@@ -36,7 +36,7 @@ export default function OnboardingLayout({
   };
 
   return (
-    <div className="flex flex-col lg:flex-row w-screen h-screen overflow-hidden">
+    <div className="flex flex-col lg:flex-row w-full min-h-screen lg:h-screen lg:overflow-hidden bg-white">
       {/* LEFT SIDE - Branding */}
       <div className="hidden lg:flex lg:w-[30%] h-full relative bg-slate-950 overflow-hidden">
         {/* Background Image */}
@@ -158,12 +158,12 @@ export default function OnboardingLayout({
       </div>
 
       {/* RIGHT SIDE - Form */}
-      <div className="w-full lg:w-[70%] h-full bg-white overflow-y-auto">
-        <div className="min-h-full flex items-center justify-center px-8 lg:px-16 py-12">
+      <div className="w-full lg:w-[70%] min-h-screen lg:h-full bg-white overflow-y-auto">
+        <div className="min-h-full flex items-center justify-center px-4 sm:px-8 lg:px-16 py-6 sm:py-12">
           <div className="w-full max-w-[850px]">
             {/* Mobile Branding */}
-            <div className="lg:hidden flex items-center gap-3 mb-10">
-              <div className="w-12 h-12 bg-white rounded-xl shadow-md flex items-center justify-center p-2 border border-slate-100">
+            <div className="lg:hidden flex items-center gap-3 mb-6 sm:mb-8">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl shadow-md flex items-center justify-center p-2 border border-slate-100 shrink-0">
                 <img
                   src="/images/circularLogo.jpg"
                   alt="Skill Bridge Logo"
@@ -171,18 +171,18 @@ export default function OnboardingLayout({
                 />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-navy">{appName}</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-navy">{appName}</h2>
                 <p className="text-xs text-slate-500">Pathways to Your Future</p>
               </div>
             </div>
 
             {/* Progress Header */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold text-accent uppercase tracking-wider">
+            <div className="mb-6 sm:mb-8">
+              <div className="flex items-center justify-between mb-2 gap-2">
+                <span className="text-xs sm:text-sm font-semibold text-accent uppercase tracking-wider shrink-0">
                   STEP {currentStep} OF {totalSteps}
                 </span>
-                <span className="text-sm font-medium text-slate-500">
+                <span className="text-xs sm:text-sm font-medium text-slate-500 text-right">
                   Profile Completion: {getStepCompletion()}%
                 </span>
               </div>
@@ -195,9 +195,9 @@ export default function OnboardingLayout({
             </div>
 
             {/* Form Heading */}
-            <div className="mb-6">
-              <h3 className="text-2xl md:text-3xl font-bold text-navy mb-2">{title}</h3>
-              <p className="text-slate-500">{description}</p>
+            <div className="mb-5 sm:mb-6">
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-navy mb-1.5 sm:mb-2">{title}</h3>
+              <p className="text-sm sm:text-base text-slate-500">{description}</p>
             </div>
 
             {/* Content */}

@@ -1167,8 +1167,8 @@ export default function MentorOnboarding({
       <div className="space-y-6">
         {/* ── Email Section ──────────────────────────────────────────────── */}
         <div className="space-y-4">
-          <div className="flex gap-2 items-start">
-            <div className="flex-1">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-start">
+            <div className="flex-1 w-full min-w-0">
               <DynamicForm
                 fields={emailFields}
                 onSubmit={() => { }}
@@ -1202,7 +1202,7 @@ export default function MentorOnboarding({
                   loading
                 }
                 variant="accent"
-                className="mt-7 whitespace-nowrap"
+                className="w-full sm:w-auto sm:mt-[25px] whitespace-nowrap h-10 px-4 shrink-0"
               >
                 {emailTimer > 0
                   ? `Resend in ${emailTimer}s`
@@ -1214,7 +1214,7 @@ export default function MentorOnboarding({
           </div>
 
           {emailOtpSent && !formData.emailVerified && (
-            <div>
+            <div className="space-y-1">
               <Label
                 htmlFor="emailOtp"
                 className="text-sm font-medium text-slate-700"
@@ -1235,7 +1235,7 @@ export default function MentorOnboarding({
                   }
                   placeholder="Enter 6-digit code"
                   maxLength={6}
-                  className="flex-1"
+                  className="flex-1 h-10"
                   disabled={loading}
                 />
                 <Button
@@ -1246,7 +1246,7 @@ export default function MentorOnboarding({
                     loading
                   }
                   variant="accent"
-                  className="whitespace-nowrap"
+                  className="whitespace-nowrap shrink-0 px-5 h-10"
                 >
                   Verify
                 </Button>
@@ -1268,9 +1268,9 @@ export default function MentorOnboarding({
 
         {/* ── Mobile Section (shown only after email is verified) ─────────── */}
         {formData.emailVerified && (
-          <div className="space-y-4 pt-4 border-t">
-            <div className="flex gap-2 items-start">
-              <div className="flex-1">
+          <div className="space-y-4 pt-4 border-t border-slate-100">
+            <div className="space-y-3">
+              <div className="w-full min-w-0">
                 <DynamicForm
                   fields={mobileFields}
                   onSubmit={() => { }}
@@ -1301,8 +1301,9 @@ export default function MentorOnboarding({
                   }}
                 />
               </div>
+
               {!formData.mobileVerified && !mobileOtpSent && (
-                <div className="flex gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
                   <Button
                     type="button"
                     onClick={handleSendMobileOTP}
@@ -1313,7 +1314,7 @@ export default function MentorOnboarding({
                       mobileTimer > 0
                     }
                     variant="outline"
-                    className="mt-7 whitespace-nowrap"
+                    className="w-full justify-center text-xs sm:text-sm h-10"
                   >
                     {mobileTimer > 0 ? `Resend SMS in ${mobileTimer}s` : "Get OTP on Text"}
                   </Button>
@@ -1327,14 +1328,15 @@ export default function MentorOnboarding({
                       mobileTimer > 0
                     }
                     variant="accent"
-                    className="mt-7 whitespace-nowrap"
+                    className="w-full justify-center text-xs sm:text-sm h-10"
                   >
                     {mobileTimer > 0 ? `Resend WA in ${mobileTimer}s` : "Get OTP on WhatsApp"}
                   </Button>
                 </div>
               )}
+
               {!formData.mobileVerified && mobileOtpSent && (
-                <div className="flex gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full">
                   <Button
                     type="button"
                     onClick={handleSendMobileOTP}
@@ -1345,7 +1347,7 @@ export default function MentorOnboarding({
                       mobileTimer > 0
                     }
                     variant="outline"
-                    className="mt-7 whitespace-nowrap"
+                    className="w-full justify-center text-xs sm:text-sm h-10"
                   >
                     {mobileTimer > 0 ? `Resend SMS in ${mobileTimer}s` : "Resend on Text"}
                   </Button>
@@ -1359,7 +1361,7 @@ export default function MentorOnboarding({
                       mobileTimer > 0
                     }
                     variant="accent"
-                    className="mt-7 whitespace-nowrap"
+                    className="w-full justify-center text-xs sm:text-sm h-10"
                   >
                     {mobileTimer > 0 ? `Resend WA in ${mobileTimer}s` : "Resend on WhatsApp"}
                   </Button>
@@ -1368,7 +1370,7 @@ export default function MentorOnboarding({
             </div>
 
             {mobileOtpSent && !formData.mobileVerified && (
-              <div>
+              <div className="space-y-1">
                 <Label
                   htmlFor="mobileOtp"
                   className="text-sm font-medium text-slate-700"
@@ -1389,7 +1391,7 @@ export default function MentorOnboarding({
                     }
                     placeholder="Enter 6-digit code"
                     maxLength={6}
-                    className="flex-1"
+                    className="flex-1 h-10"
                     disabled={loading}
                   />
                   <Button
@@ -1400,7 +1402,7 @@ export default function MentorOnboarding({
                       loading
                     }
                     variant="accent"
-                    className="whitespace-nowrap"
+                    className="whitespace-nowrap shrink-0 px-5 h-10"
                   >
                     Verify
                   </Button>
@@ -1424,7 +1426,7 @@ export default function MentorOnboarding({
                 type="button"
                 onClick={handleContinueToStep2}
                 variant="accent"
-                className="w-full mt-6"
+                className="w-full mt-6 h-10"
                 loading={loading}
                 disabled={loading}
               >
@@ -1749,9 +1751,9 @@ export default function MentorOnboarding({
           {platformUrls.map((item, index) => (
             <div
               key={index}
-              className="flex items-start gap-3 mb-3"
+              className="flex items-start gap-2 sm:gap-3 mb-3"
             >
-              <div className="flex-1 grid grid-cols-2 gap-3">
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                 {/* Platform Dropdown */}
                 <div
                   className="relative"

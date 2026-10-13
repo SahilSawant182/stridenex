@@ -67,7 +67,7 @@ export default function AuthLayout({
         className="absolute bottom-20 right-20 w-80 h-80 bg-gradient-to-r from-accent/20 to-orange-600/20 rounded-full blur-3xl"
       />
 
-      <div className="flex w-full h-screen bg-white overflow-hidden shadow-2xl relative z-10">
+      <div className="flex w-full min-h-screen lg:h-screen lg:overflow-hidden bg-white shadow-2xl relative z-10">
         {/* LEFT SIDE - Branding - Fixed, no scroll */}
         <div className="hidden lg:flex lg:w-[30%] relative flex-col justify-between p-10 overflow-hidden bg-slate-950 text-white">
           {/* Background Image */}
@@ -149,7 +149,7 @@ export default function AuthLayout({
         </div>
 
         {/* RIGHT SIDE - Form - Scrollable */}
-        <div className="w-full lg:w-[70%] overflow-y-auto relative bg-white">
+        <div className="w-full lg:w-[70%] min-h-screen lg:h-full overflow-y-auto relative bg-white">
 
           <Link
             href="/"
@@ -159,12 +159,12 @@ export default function AuthLayout({
             <Home className="w-4 h-4" />
           </Link>
 
-          <div className="flex flex-col justify-center items-center px-6 py-16 md:px-16 lg:px-24 min-h-full">
+          <div className="flex flex-col justify-center items-center px-4 sm:px-8 py-8 sm:py-16 md:px-16 lg:px-24 min-h-full">
             <div className="w-full max-w-[600px]">
 
               {/* Mobile Branding */}
-              <div className="lg:hidden flex items-center gap-4 mb-10">
-                <div className="w-14 h-14 flex items-center justify-center">
+              <div className="lg:hidden flex items-center gap-3 mb-6 sm:mb-8">
+                <div className="w-12 h-12 flex items-center justify-center shrink-0">
                   <img
                     src="/images/circularLogo.jpg"
                     alt="Skill Bridge Logo"
@@ -172,15 +172,15 @@ export default function AuthLayout({
                   />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-navy">{appName}</h2>
-                  <p className="text-sm text-slate-500">Pathways to Your Future</p>
+                  <h2 className="text-xl sm:text-2xl font-bold text-navy">{appName}</h2>
+                  <p className="text-xs sm:text-sm text-slate-500">Pathways to Your Future</p>
                 </div>
               </div>
 
               {/* Header */}
-              <div className="mb-8">
-                <h3 className="text-3xl font-bold text-navy mb-2">{title}</h3>
-                <p className="text-slate-500">{subtitle}</p>
+              <div className="mb-6 sm:mb-8">
+                <h3 className="text-2xl sm:text-3xl font-bold text-navy mb-1.5 sm:mb-2">{title}</h3>
+                <p className="text-sm sm:text-base text-slate-500">{subtitle}</p>
               </div>
 
               {/* Form Content */}

@@ -35,5 +35,5 @@ export default function ConditionalLayout({
     }
 
     // For all other pages (login, signup, onboarding, dashboard), just render children
-    return <main className="min-h-screen">{children}</main>;
+    return <main className="min-h-screen w-full">{children}</main>;
 }
