@@ -387,10 +387,21 @@ export default function MentorOnboarding({
   // ─────────────────────────────────────────────────────────────────────────────
 
   const addPlatformUrl = () =>
-    setPlatformUrls([...platformUrls, { platform: "", url: "" }]);
+    setPlatformUrls(prev => [...prev, { platform: "", url: "" }]);
 
-  const removePlatformUrl = (index: number) =>
-    setPlatformUrls(platformUrls.filter((_, i) => i !== index));
+  const removePlatformUrl = (index: number) => {
+    setPlatformUrls(prev => prev.filter((_, i) => i !== index));
+    if (openPlatformDropdown === index) {
+      setOpenPlatformDropdown(null);
+    }
+    if (fieldErrors.platformUrls) {
+      setFieldErrors(prev => {
+        const next = { ...prev };
+        delete next.platformUrls;
+        return next;
+      });
+    }
+  };
 
   const updatePlatformUrl = (
     index: number,
@@ -400,6 +411,13 @@ export default function MentorOnboarding({
     const updated = [...platformUrls];
     updated[index] = { ...updated[index], [field]: value };
     setPlatformUrls(updated);
+    if (fieldErrors.platformUrls) {
+      setFieldErrors(prev => {
+        const next = { ...prev };
+        delete next.platformUrls;
+        return next;
+      });
+    }
   };
 
   const togglePlatformDropdown = (index: number) =>
@@ -647,12 +665,14 @@ export default function MentorOnboarding({
     if (!formData.domain || formData.domain.length === 0)
       errors.domain =
         "Please select at least one domain";
-    const invalidPlatform = platformUrls.some(
-      p => !p.platform || !p.url
+    // Platform URLs are optional. Only validate if URL was entered without selecting a platform.
+    const hasUrlWithoutPlatform = platformUrls.some(
+      p => p.url?.trim() && !p.platform
     );
-    if (invalidPlatform)
+    if (hasUrlWithoutPlatform) {
       errors.platformUrls =
-        "All platform URL fields are required";
+        "Please select a platform for the entered URL";
+    }
     if (!formData.profile_description?.trim()) {
       errors.profile_description =
         "Profile description is required";
@@ -697,11 +717,11 @@ export default function MentorOnboarding({
       (skill: string) => ({ skill })
     );
     const validPlatformUrls = platformUrls.filter(
-      p => p.platform && p.url
+      p => p.platform && p.url && p.url.trim()
     );
     const platformUrlsArray = validPlatformUrls.map(p => ({
       platform: p.platform,
-      url: p.url
+      url: p.url.trim()
     }));
     const cleanMobile = formData.mobileNo.replace(/\D/g, "");
     const formattedMobile =
@@ -1745,7 +1765,7 @@ export default function MentorOnboarding({
         {/* ── Platform URLs ──────────────────────────────────────────────── */}
         <div className="mt-6">
           <Label className="text-sm font-medium text-slate-700 mb-3 block">
-            Profile URLs
+            Profile URLs <span className="text-xs font-normal text-slate-500">(Optional)</span>
           </Label>
 
           {platformUrls.map((item, index) => (
@@ -1800,7 +1820,7 @@ export default function MentorOnboarding({
                             onClick={() =>
                               selectPlatform(
                                 index,
-                                option.value
+                                item.platform === option.value ? "" : option.value
                               )
                             }
                             className={`px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors ${item.platform === option.value
@@ -1860,16 +1880,15 @@ export default function MentorOnboarding({
                 />
               </div>
 
-              {platformUrls.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => removePlatformUrl(index)}
-                  className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors mt-0.5"
-                  title="Remove URL"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => removePlatformUrl(index)}
+                className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 text-red-500 flex items-center justify-center transition-colors mt-0.5 shrink-0"
+                title="Remove URL"
+                aria-label="Remove URL"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           ))}
 
