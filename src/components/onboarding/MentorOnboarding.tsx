@@ -585,7 +585,7 @@ export default function MentorOnboarding({
         isSuccess = isSuccess || responseMessage.success;
         responseMessage = responseMessage.message;
       }
-      
+
       const successMessages = ["Mobile number verified successfully", "OTP verified successfully", "OTP Verified Successfully", "success"];
       if (
         successMessages.includes(responseMessage) || isSuccess
@@ -1594,7 +1594,7 @@ export default function MentorOnboarding({
         required: true,
         placeholder: "Select travelling possibility",
         layout: "half",
-        options: ["Yes", "No", "Maybe"]
+        options: ["Yes", "No"]
       }
     ];
 

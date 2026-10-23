@@ -53,7 +53,7 @@ const ReferralCodeDisplay = ({ referal_code, showToast }: { referal_code: string
             title="Copy Code"
           >
             {copied ? <span className="text-xs font-bold">Copied!</span> : (
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></svg>
             )}
           </button>
         </div>
@@ -147,7 +147,7 @@ export default function MyProfileTabContent() {
     {
       name: "travelling_possible", label: "Willing to Travel", type: "select",
       icon: MapPin, required: false, colSpan: 1, placeholder: "Select",
-      options: ["Yes", "No", "Maybe"]
+      options: ["Yes", "No"]
     },
     {
       name: "state", label: "State", type: "select",
@@ -431,9 +431,8 @@ export default function MyProfileTabContent() {
           <div className="flex items-start gap-4 mb-8">
             <div
               onClick={() => imageUrl && setIsImagePreviewOpen(true)}
-              className={`w-16 h-16 rounded-full overflow-hidden bg-orange-500 flex items-center justify-center text-white font-bold text-2xl shrink-0 mt-1 relative group select-none ${
-                imageUrl ? "cursor-zoom-in hover:ring-4 hover:ring-orange-100 transition-all duration-300" : ""
-              }`}
+              className={`w-16 h-16 rounded-full overflow-hidden bg-orange-500 flex items-center justify-center text-white font-bold text-2xl shrink-0 mt-1 relative group select-none ${imageUrl ? "cursor-zoom-in hover:ring-4 hover:ring-orange-100 transition-all duration-300" : ""
+                }`}
             >
               {imageUrl ? (
                 <>
@@ -638,9 +637,8 @@ export default function MyProfileTabContent() {
               <div className="flex items-center gap-3 mb-4">
                 <div
                   onClick={() => imageUrl && setIsImagePreviewOpen(true)}
-                  className={`w-12 h-12 rounded-full overflow-hidden bg-orange-500 flex items-center justify-center text-white font-bold text-lg shrink-0 mt-1 relative group select-none ${
-                    imageUrl ? "cursor-zoom-in hover:ring-4 hover:ring-orange-100 transition-all duration-300" : ""
-                  }`}
+                  className={`w-12 h-12 rounded-full overflow-hidden bg-orange-500 flex items-center justify-center text-white font-bold text-lg shrink-0 mt-1 relative group select-none ${imageUrl ? "cursor-zoom-in hover:ring-4 hover:ring-orange-100 transition-all duration-300" : ""
+                    }`}
                 >
                   {imageUrl ? (
                     <>
@@ -753,7 +751,7 @@ export default function MyProfileTabContent() {
             onClick={() => setIsImagePreviewOpen(false)}
             className="fixed inset-0 z-[999] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 cursor-zoom-out"
           >
-            
+
             <motion.div
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
