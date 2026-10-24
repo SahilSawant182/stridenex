@@ -212,7 +212,7 @@ export default function CustomCareerSearch({
     setInlineError("");
     try {
       const res = await requestCustomCareer(role);
-      const status = res?.message?.status ?? res?.status;
+      const status = res?.data?.message?.status ?? res?.message?.status ?? res?.status;
       if (status === "queued") {
         setShowSuccessPopup(true);
       } else if (status === "success" || status === "already_enrolled" || status === "already_exists") {
@@ -221,9 +221,20 @@ export default function CustomCareerSearch({
       } else {
         showToast(res?.message?.message ?? "Unexpected response from server.", "warning");
       }
-    } catch (error) {
-      // The backend gatekeeper throws 400 for invalid/garbage input.
-      const msg = "This does not appear to be a recognized professional career. Please try again.";
+    } catch (error: any) {
+      let msg = "This does not appear to be a recognized professional career. Please try again.";
+      if (error?.response?.data?._server_messages) {
+        try {
+          const messages = JSON.parse(error.response.data._server_messages);
+          if (messages && messages.length > 0) {
+            msg = JSON.parse(messages[0]).message;
+          }
+        } catch (e) { }
+      } else if (error?.response?.data?.message) {
+        msg = error.response.data.message;
+      } else if (error?.message) {
+        msg = error.message;
+      }
       setInlineError(msg);
       showToast(msg, "error");
     } finally {
@@ -449,6 +460,7 @@ export default function CustomCareerSearch({
                 <button
                   onClick={() => {
                     setShowSuccessPopup(false);
+                    window.location.reload();
                   }}
                   className="w-full py-3.5 px-6 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-black text-white rounded-xl font-medium transition-all shadow-lg hover:shadow-xl focus:ring-4 focus:ring-slate-200 outline-none flex items-center justify-center gap-2"
                 >
