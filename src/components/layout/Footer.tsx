@@ -24,7 +24,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FaXTwitter } from "react-icons/fa6";
-import { FaWhatsapp, FaFacebook, FaLinkedin, FaInstagram } from "react-icons/fa";
+import { FaWhatsapp, FaFacebook, FaLinkedin, FaInstagram, FaYoutube } from "react-icons/fa";
 
 interface FooterProps {
   appName?: string;
@@ -33,10 +33,10 @@ interface FooterProps {
 const footerLinks = {
   forStudents: [
     { label: "Skill Facilitating Program", href: "/students/skill-facilitating" },
-    { label: "Entrepreneur Development", href: "/students/entrepreneur" },
-    { label: "Higher Education Pathway", href: "/students/higher-education" },
     { label: "Mentorship", href: "/students/mentorship" },
     { label: "Success Stories", href: "/students/success-stories" },
+    { label: "Entrepreneur Development", href: "/students/entrepreneur" },
+    { label: "Higher Education Pathway", href: "/students/higher-education" },
   ],
   forInstitutes: [
     { label: "Industry Integration", href: "/institutes/integration" },
@@ -73,13 +73,14 @@ const socialLinks = [
   // { icon: X, href: "https://twitter.com/stridenex", label: "X (Twitter)", customIcon: FaXTwitter, hoverColor: "group-hover:text-black" },
   { icon: FaLinkedin, href: "https://linkedin.com/company/stridenex", label: "LinkedIn", hoverColor: "group-hover:text-[#0077B5]" },
   { icon: FaInstagram, href: "https://instagram.com/stridenex", label: "Instagram", hoverColor: "group-hover:text-[#E4405F]" },
+  { icon: FaYoutube, href: "https://www.youtube.com/@stridenex", label: "YouTube", hoverColor: "group-hover:text-[#FF0000]" },
   // { icon: MessageCircle, href: "https://whatsapp.com/stridenex", label: "WhatsApp", customIcon: FaWhatsapp, hoverColor: "group-hover:text-[#25D366]" },
 ];
 
 const contactInfo = {
   email: "info@stridenex.ai",
-  phone: "(+91) 9225297767",
-  address: "B2/20, Saudamini Co-Operative Housing Society, Paud Road, Kothrud, Pune, (MH) India 411038",
+  // phone: "(+91) 9225297767",
+  address: "Pune, (MH) India 411038",
   support: "support@stridenex.com",
   partnerships: "partners@stridenex.com",
 };
@@ -99,6 +100,7 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
 
   return (
     <footer className="relative bg-gradient-to-b from-slate-900 to-slate-950 text-white overflow-hidden">
+      <h2 className="sr-only">Footer</h2>
       {/* Animated Background Pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0" style={{
@@ -135,7 +137,7 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
 
       <div className="max-w-7xl mx-auto px-6 py-20 relative z-10">
         {/* Main Footer Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 mb-16">
+        <div className="grid grid-cols-1 lg:grid-cols-12 items-start gap-12 mb-16">
           {/* Brand Column */}
           <div className="lg:col-span-3">
             <motion.div
@@ -144,19 +146,19 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
             >
-             <div className="flex items-center gap-3 mb-4">
-  <div className="w-14 h-14 bg-white rounded-xl shadow-lg flex items-center justify-center p-2">
-    <img
-      src="/images/circularLogo.jpg" // Changed from the jpg to your actual logo file
-      alt="Skill Bridge Logo"
-      className="w-full h-full object-contain"
-    />
-  </div>
-  <div>
-    <span className="text-2xl font-black tracking-tighter text-white">{appName}</span>
-    <p className="text-xs text-slate-400 mt-0.5">Pathways to Your Future</p>
-  </div>
-</div>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-14 h-14 bg-white rounded-xl shadow-lg flex items-center justify-center p-2">
+                  <img
+                    src="/images/circularLogo.jpg" // Changed from the jpg to your actual logo file
+                    alt="Skill Bridge Logo"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div>
+                  <span className="text-2xl font-black tracking-tighter text-white">{appName}</span>
+                  <p className="text-xs text-slate-400 mt-0.5">Pathways to Your Future</p>
+                </div>
+              </div>
 
               <p className="text-slate-300 text-sm leading-relaxed mb-6">
                 StrideNex is a collaborative career development platform connecting education, innovation, and industry to enable structured growth pathways for the next generation workforce.
@@ -170,12 +172,12 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
                     {contactInfo.email}
                   </a>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-slate-300">
+                {/* <div className="flex items-center gap-2 text-sm text-slate-300">
                   <Phone className="w-4 h-4 text-accent" />
                   <a href={`tel:${contactInfo.phone}`} className="text-slate-300 hover:text-white transition-colors">
                     {contactInfo.phone}
                   </a>
-                </div>
+                </div> */}
                 <div className="flex items-center gap-2 text-sm text-slate-300">
                   <MapPin className="w-4 h-4 text-emerald-500" />
                   <span className="text-slate-300">{contactInfo.address}</span>
@@ -196,7 +198,7 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
                     {/* {social.customIcon ? (
                       <social.customIcon className={`w-5 h-5 transition-colors ${social.hoverColor}`} />
                     ) : ( */}
-                      <social.icon className={`w-5 h-5 transition-colors ${social.hoverColor}`} />
+                    <social.icon className={`w-5 h-5 transition-colors ${social.hoverColor}`} />
                     {/* )} */}
                   </motion.a>
                 ))}
@@ -205,16 +207,19 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
           </div>
 
           {/* Links Columns */}
-          <div className="lg:col-span-6 grid grid-cols-2 md:grid-cols-4 gap-8">
+          {/* <div className="lg:col-span-6 grid grid-cols-2 md:grid-cols-4 gap-8"> */}
+          <div className="grid grid-cols-2 gap-x-8 gap-y-10 lg:col-span-9 xl:grid-cols-4">
             <motion.div
+              className="min-w-0"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
               viewport={{ once: true }}
             >
-              <div className="flex items-center gap-2 mb-4">
+              {/* <div className="flex items-center gap-2 mb-4"> */}
+              <div className="mb-4 flex min-h-10 items-center gap-2">
                 <GraduationCap className="w-4 h-4 text-white" />
-                <h4 className="text-sm font-bold uppercase tracking-wider text-white">For Students</h4>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white">For Students</h3>
               </div>
               <ul className="space-y-2">
                 {footerLinks.forStudents.map((link) => (
@@ -232,14 +237,16 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
             </motion.div>
 
             <motion.div
+              className="min-w-0"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
               viewport={{ once: true }}
             >
-              <div className="flex items-center gap-2 mb-4">
+              {/* <div className="flex items-center gap-2 mb-4"> */}
+              <div className="mb-4 flex min-h-10 items-center gap-2">
                 <Building2 className="w-4 h-4 text-white" />
-                <h4 className="text-sm font-bold uppercase tracking-wider text-white">For Institutes</h4>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white">For Institutes</h3>
               </div>
               <ul className="space-y-2">
                 {footerLinks.forInstitutes.map((link) => (
@@ -257,14 +264,16 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
             </motion.div>
 
             <motion.div
+              className="min-w-0"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
               viewport={{ once: true }}
             >
-              <div className="flex items-center gap-2 mb-4">
+              {/* <div className="flex items-center gap-2 mb-4"> */}
+              <div className="mb-4 flex min-h-10 items-center gap-2">
                 <Briefcase className="w-4 h-4 text-white" />
-                <h4 className="text-sm font-bold uppercase tracking-wider text-white">For Industry</h4>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white">For Industry</h3>
               </div>
               <ul className="space-y-2">
                 {footerLinks.forIndustry.map((link) => (
@@ -282,14 +291,16 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
             </motion.div>
 
             <motion.div
+              className="min-w-0"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
               viewport={{ once: true }}
             >
-              <div className="flex items-center gap-2 mb-4">
+              {/* <div className="flex items-center gap-2 mb-4"> */}
+              <div className="mb-4 flex min-h-10 items-center gap-2">
                 <Users className="w-4 h-4 text-white" />
-                <h4 className="text-sm font-bold uppercase tracking-wider text-white">Company</h4>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white">Company</h3>
               </div>
               <ul className="space-y-2">
                 {footerLinks.company.map((link) => (
@@ -308,7 +319,7 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
           </div>
 
           {/* Newsletter Column */}
-          <div className="lg:col-span-3">
+          {/* <div className="lg:col-span-3">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -318,7 +329,7 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
             >
               <div className="flex items-center gap-2 mb-4">
                 <Sparkles className="w-5 h-5 text-white" />
-                <h4 className="text-lg font-bold text-white">Stay Updated</h4>
+                <h3 className="text-lg font-bold text-white">Stay Updated</h3>
               </div>
               <p className="text-sm text-slate-300 mb-4">
                 Get the latest insights on career development, industry trends, and program updates.
@@ -360,7 +371,7 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
                 We respect your privacy. Unsubscribe at any time.
               </p>
             </motion.div>
-          </div>
+          </div> */}
         </div>
 
         {/* Quick Contact Bar */}
@@ -428,12 +439,12 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
 
           <div className="flex items-center gap-6">
             <Link href="/privacy-policy"
-              target="_blank"className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+              target="_blank" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
               Privacy
             </Link>
             <span className="text-slate-700">•</span>
             <Link href="/terms-of-use"
-              target="_blank"className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+              target="_blank" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
               Terms
             </Link>
             {/* <span className="text-slate-700">•</span>

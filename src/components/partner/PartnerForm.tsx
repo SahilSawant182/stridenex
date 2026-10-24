@@ -9,7 +9,7 @@ import { sendEmailOTP, verifyEmailOTP, sendMobileOTP, verifyMobileOTP } from "@/
 
 export default function PartnerForm() {
   const router = useRouter();
-  
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -32,13 +32,13 @@ export default function PartnerForm() {
   // OTP States
   const [emailOtp, setEmailOtp] = useState("");
   const [mobileOtp, setMobileOtp] = useState("");
-  
+
   const [showEmailOtp, setShowEmailOtp] = useState(false);
   const [showMobileOtp, setShowMobileOtp] = useState(false);
-  
+
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [isMobileVerified, setIsMobileVerified] = useState(false);
-  
+
   const [emailTimer, setEmailTimer] = useState(0);
   const [mobileTimer, setMobileTimer] = useState(0);
   const [otpLoading, setOtpLoading] = useState(false);
@@ -179,17 +179,17 @@ export default function PartnerForm() {
       setSubmitError("Please verify both Email and Phone number before submitting.");
       return;
     }
-    
+
     const passwordError = validatePassword(formData.password);
     if (passwordError) {
       setSubmitError(passwordError);
       return;
     }
-    
+
     setLoading(true);
     setSubmitError('');
     setSubmitSuccess('');
-    
+
     try {
       const payload = {
         first_name: formData.firstName,
@@ -210,7 +210,7 @@ export default function PartnerForm() {
         payload,
         { headers: { 'Content-Type': 'application/json' } }
       );
-      
+
       const responseData = response.data;
       if (responseData && responseData.message && responseData.message.status === "success") {
         setSubmitSuccess("Partner created successfully! Redirecting to login...");
@@ -222,9 +222,9 @@ export default function PartnerForm() {
       }
     } catch (error: any) {
       console.error("Error creating partner:", error);
-      
+
       let errorMessage = "Failed to submit. Please try again.";
-      
+
       // Handle Frappe validation errors
       if (error.response?.data?._server_messages) {
         try {
@@ -243,7 +243,7 @@ export default function PartnerForm() {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       setSubmitError(errorMessage);
     } finally {
       setLoading(false);
@@ -261,7 +261,7 @@ export default function PartnerForm() {
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-          
+
           {/* Left Column: Text & Quote */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
@@ -273,9 +273,9 @@ export default function PartnerForm() {
               <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
               <span className="text-blue-300 text-xs font-semibold tracking-wider uppercase">Become a Partner</span>
             </div>
-            
+
             <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight tracking-tight">
-              Let&apos;s Drive <br/>
+              Let&apos;s Drive <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">
                 Transformation
               </span> Together
@@ -283,20 +283,20 @@ export default function PartnerForm() {
             <p className="text-lg text-gray-400 mb-10 leading-relaxed font-light">
               Join the StrideNex Partner Network to leverage verified talent pipelines, outcome-driven pathways, and dedicated support that accelerates your growth.
             </p>
-            
+
             <div className="relative p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md">
               {/* Quote icon */}
               <span className="absolute -top-4 -left-2 text-6xl text-blue-500/30 font-serif leading-none select-none">"</span>
               <p className="relative z-10 text-lg md:text-xl text-gray-300 italic font-medium leading-relaxed mb-8">
                 I invite you to join StrideNex's Partner Network. You'll gain access to world-class career pathways, AI-powered matching, and dedicated partnership support. More importantly, you'll help solve the most critical challenge: building skilled, future-ready workforces.
               </p>
-              
+
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center border-2 border-white/20 shadow-lg shrink-0">
                   <span className="text-lg font-bold text-white tracking-wider">KS</span>
                 </div>
                 <div>
-                  <h4 className="font-bold text-white text-lg">Kishor P. Shendge</h4>
+                  <h3 className="font-bold text-white text-lg">Kishor P. Shendge</h3>
                   <p className="text-sm text-blue-300">Founder, StrideNex</p>
                 </div>
               </div>
@@ -312,7 +312,7 @@ export default function PartnerForm() {
             className="bg-white/5 backdrop-blur-2xl p-8 md:p-10 rounded-2xl shadow-2xl shadow-indigo-900/20 border border-white/10"
           >
             <form onSubmit={handleSubmit} className="space-y-6">
-              
+
               {submitSuccess && (
                 <div className="bg-green-500/20 text-green-300 p-4 rounded-lg text-sm border border-green-500/30">
                   {submitSuccess}
@@ -354,105 +354,105 @@ export default function PartnerForm() {
               </div>
 
               <div className="space-y-3">
-                  <label htmlFor="email" className="sr-only">Email Address</label>
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        placeholder="Email Address"
-                        required
-                        disabled={isEmailVerified || showEmailOtp}
-                        value={formData.email}
-                        onChange={handleChange}
-                        className={`w-full px-4 py-3 rounded-lg border focus:ring-2 outline-none transition-colors text-white placeholder-gray-400 ${isEmailVerified ? 'border-green-400/50 bg-green-400/10' : 'border-white/20 bg-white/5 focus:border-blue-400 focus:ring-blue-400/30'}`}
-                      />
-                      {isEmailVerified && <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-400" />}
-                    </div>
-                    {!isEmailVerified && (
-                      <button
-                        type="button"
-                        onClick={handleSendEmailOTP}
-                        disabled={!formData.email || otpLoading || emailTimer > 0}
-                        className="px-4 py-3 bg-white/10 border border-blue-400/30 text-blue-300 font-medium rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50 whitespace-nowrap"
-                      >
-                        {emailTimer > 0 ? `Resend in ${emailTimer}s` : "Verify"}
-                      </button>
-                    )}
+                <label htmlFor="email" className="sr-only">Email Address</label>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      placeholder="Email Address"
+                      required
+                      disabled={isEmailVerified || showEmailOtp}
+                      value={formData.email}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-3 rounded-lg border focus:ring-2 outline-none transition-colors text-white placeholder-gray-400 ${isEmailVerified ? 'border-green-400/50 bg-green-400/10' : 'border-white/20 bg-white/5 focus:border-blue-400 focus:ring-blue-400/30'}`}
+                    />
+                    {isEmailVerified && <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-400" />}
                   </div>
-                  
-                  {showEmailOtp && !isEmailVerified && (
-                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
-                      <input
-                        type="text"
-                        placeholder="Enter Email OTP"
-                        value={emailOtp}
-                        onChange={(e) => setEmailOtp(e.target.value)}
-                        className="flex-1 px-4 py-2.5 rounded-lg border border-white/20 bg-white/5 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 outline-none text-white text-sm placeholder-gray-400"
-                        maxLength={6}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleVerifyEmailOTP}
-                        disabled={!emailOtp || otpLoading}
-                        className="px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-500 transition-colors disabled:opacity-50 text-sm whitespace-nowrap"
-                      >
-                        Submit
-                      </button>
-                    </div>
+                  {!isEmailVerified && (
+                    <button
+                      type="button"
+                      onClick={handleSendEmailOTP}
+                      disabled={!formData.email || otpLoading || emailTimer > 0}
+                      className="px-4 py-3 bg-white/10 border border-blue-400/30 text-blue-300 font-medium rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {emailTimer > 0 ? `Resend in ${emailTimer}s` : "Verify"}
+                    </button>
                   )}
+                </div>
+
+                {showEmailOtp && !isEmailVerified && (
+                  <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                    <input
+                      type="text"
+                      placeholder="Enter Email OTP"
+                      value={emailOtp}
+                      onChange={(e) => setEmailOtp(e.target.value)}
+                      className="flex-1 px-4 py-2.5 rounded-lg border border-white/20 bg-white/5 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 outline-none text-white text-sm placeholder-gray-400"
+                      maxLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyEmailOTP}
+                      disabled={!emailOtp || otpLoading}
+                      className="px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-500 transition-colors disabled:opacity-50 text-sm whitespace-nowrap"
+                    >
+                      Submit
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3">
-                  <label htmlFor="phone" className="sr-only">Phone Number</label>
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <input
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        placeholder="Phone Number"
-                        required
-                        disabled={isMobileVerified || showMobileOtp}
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className={`w-full px-4 py-3 rounded-lg border focus:ring-2 outline-none transition-colors text-white placeholder-gray-400 ${isMobileVerified ? 'border-green-400/50 bg-green-400/10' : 'border-white/20 bg-white/5 focus:border-blue-400 focus:ring-blue-400/30'}`}
-                      />
-                      {isMobileVerified && <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-400" />}
-                    </div>
-                    {!isMobileVerified && (
-                      <button
-                        type="button"
-                        onClick={handleSendMobileOTP}
-                        disabled={!formData.phone || formData.phone.length !== 10 || otpLoading || mobileTimer > 0}
-                        className="px-4 py-3 bg-white/10 border border-blue-400/30 text-blue-300 font-medium rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50 whitespace-nowrap"
-                      >
-                        {mobileTimer > 0 ? `Resend in ${mobileTimer}s` : "Verify"}
-                      </button>
-                    )}
+                <label htmlFor="phone" className="sr-only">Phone Number</label>
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="tel"
+                      id="phone"
+                      name="phone"
+                      placeholder="Phone Number"
+                      required
+                      disabled={isMobileVerified || showMobileOtp}
+                      value={formData.phone}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-3 rounded-lg border focus:ring-2 outline-none transition-colors text-white placeholder-gray-400 ${isMobileVerified ? 'border-green-400/50 bg-green-400/10' : 'border-white/20 bg-white/5 focus:border-blue-400 focus:ring-blue-400/30'}`}
+                    />
+                    {isMobileVerified && <CheckCircle2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-green-400" />}
                   </div>
-
-                  {showMobileOtp && !isMobileVerified && (
-                    <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
-                      <input
-                        type="text"
-                        placeholder="Enter Phone OTP"
-                        value={mobileOtp}
-                        onChange={(e) => setMobileOtp(e.target.value)}
-                        className="flex-1 px-4 py-2.5 rounded-lg border border-white/20 bg-white/5 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 outline-none text-white text-sm placeholder-gray-400"
-                        maxLength={6}
-                      />
-                      <button
-                        type="button"
-                        onClick={handleVerifyMobileOTP}
-                        disabled={!mobileOtp || otpLoading}
-                        className="px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-500 transition-colors disabled:opacity-50 text-sm whitespace-nowrap"
-                      >
-                        Submit
-                      </button>
-                    </div>
+                  {!isMobileVerified && (
+                    <button
+                      type="button"
+                      onClick={handleSendMobileOTP}
+                      disabled={!formData.phone || formData.phone.length !== 10 || otpLoading || mobileTimer > 0}
+                      className="px-4 py-3 bg-white/10 border border-blue-400/30 text-blue-300 font-medium rounded-lg hover:bg-white/20 transition-colors disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {mobileTimer > 0 ? `Resend in ${mobileTimer}s` : "Verify"}
+                    </button>
                   )}
+                </div>
+
+                {showMobileOtp && !isMobileVerified && (
+                  <div className="flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                    <input
+                      type="text"
+                      placeholder="Enter Phone OTP"
+                      value={mobileOtp}
+                      onChange={(e) => setMobileOtp(e.target.value)}
+                      className="flex-1 px-4 py-2.5 rounded-lg border border-white/20 bg-white/5 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 outline-none text-white text-sm placeholder-gray-400"
+                      maxLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleVerifyMobileOTP}
+                      disabled={!mobileOtp || otpLoading}
+                      className="px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-500 transition-colors disabled:opacity-50 text-sm whitespace-nowrap"
+                    >
+                      Submit
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="grid sm:grid-cols-2 gap-6">
@@ -501,7 +501,7 @@ export default function PartnerForm() {
                     required
                   />
                 </div>
-                
+
                 <div className="relative">
                   <Dropdown
                     id="partnerType"
@@ -521,7 +521,7 @@ export default function PartnerForm() {
                   />
                 </div>
               </div>
-              
+
               <div className="grid sm:grid-cols-2 gap-6">
                 <div className="relative">
                   <Dropdown
@@ -565,6 +565,7 @@ export default function PartnerForm() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white focus:outline-none"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}

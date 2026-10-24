@@ -13,7 +13,7 @@ export default function ContactUsPage() {
     designation: "",
     message: "",
   });
-  
+
   const generateCaptchaString = () => {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
     let result = "";
@@ -47,7 +47,7 @@ export default function ContactUsPage() {
     }
     setCaptchaError(false);
     setLoading(true);
-    
+
     try {
       const baseUrl = process.env.NEXT_PUBLIC_CONTACT_API_BASE_URL || "https://uat-dev.stridenex.ai/api/";
       const response = await fetch(`${baseUrl}method/quantbit_payments_platform.api.contact_us`, {
@@ -65,11 +65,11 @@ export default function ContactUsPage() {
           designation: formData.designation
         })
       });
-      
+
       if (!response.ok) {
         throw new Error("Failed to submit form");
       }
-      
+
       setSubmitSuccess("Thank you for reaching out! We'll get back to you shortly.");
       setFormData({
         fullName: "",
@@ -100,7 +100,7 @@ export default function ContactUsPage() {
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+
         {/* Header - Top Center */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -113,7 +113,7 @@ export default function ContactUsPage() {
             <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
             <span className="text-blue-300 text-xs font-semibold tracking-wider uppercase">Contact Us</span>
           </div>
-          
+
           <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 leading-tight tracking-tight">
             Get in <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">Touch</span>
           </h2>
@@ -123,7 +123,7 @@ export default function ContactUsPage() {
         </motion.div>
 
         <div className="grid lg:grid-cols-2 gap-10 items-start">
-          
+
           {/* Left Column: Contact Cards */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
@@ -158,7 +158,7 @@ export default function ContactUsPage() {
               </div>
               <div>
                 <h4 className="text-lg font-semibold text-white mb-0.5">Headquarters</h4>
-                <p className="text-gray-400 text-sm leading-relaxed">B2/20, Saudamini Co-Operative Housing Society,<br/>Paud Road, Kothrud, Pune, (MH) India 411038</p>
+                <p className="text-gray-400 text-sm leading-relaxed">B2/20, Saudamini Co-Operative Housing Society,<br />Paud Road, Kothrud, Pune, (MH) India 411038</p>
               </div>
             </div>
           </motion.div>
@@ -172,7 +172,7 @@ export default function ContactUsPage() {
             className="bg-white/5 backdrop-blur-2xl p-8 md:p-10 rounded-3xl shadow-2xl shadow-indigo-900/20 border border-white/10"
           >
             <form onSubmit={handleSubmit} className="space-y-6">
-              
+
               {submitSuccess && (
                 <div className="bg-green-500/20 text-green-300 p-4 rounded-lg text-sm border border-green-500/30">
                   {submitSuccess}
@@ -262,7 +262,7 @@ export default function ContactUsPage() {
                   className="w-full px-4 py-3 rounded-xl border border-white/20 bg-white/5 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 outline-none transition-colors text-white placeholder-gray-400 resize-none"
                 />
               </div>
-              
+
               {/* Captcha representation */}
               <div className="flex flex-col gap-3 w-full sm:w-[60%]">
                 <label htmlFor="captchaInput" className="text-sm font-medium text-gray-300">
@@ -279,7 +279,7 @@ export default function ContactUsPage() {
                     </div>
                     <span className="relative z-10 drop-shadow-md">{captchaText}</span>
                   </div>
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setCaptchaText(generateCaptchaString())}
                     className="p-3 h-full bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-colors text-blue-400 shrink-0"
@@ -290,7 +290,7 @@ export default function ContactUsPage() {
                     </svg>
                   </button>
                 </div>
-                <input 
+                <input
                   type="text"
                   id="captchaInput"
                   required

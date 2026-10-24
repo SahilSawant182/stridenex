@@ -22,11 +22,16 @@ export default function StrategicShift() {
   ];
 
   return (
-    <section className="py-24 relative overflow-hidden bg-gradient-to-br from-indigo-50/50 via-white to-blue-50/50">
+    <section className="relative overflow-hidden bg-gradient-to-br from-blue-50/70 via-white to-indigo-50/70 py-24">
       {/* Decorative background elements */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-blue-100/40 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3" />
-      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-indigo-100/40 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4" />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -right-20 -top-24 h-[600px] w-[600px] translate-x-1/4 -translate-y-1/4 rounded-full bg-gradient-to-bl from-blue-300/70 via-sky-200/50 to-transparent blur-2xl"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-24 -left-20 h-[560px] w-[560px] -translate-x-1/4 translate-y-1/4 rounded-full bg-gradient-to-tr from-violet-300/65 via-indigo-200/45 to-transparent blur-2xl"
+      />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 z-10">
         <div className="text-center max-w-3xl mx-auto mb-20">

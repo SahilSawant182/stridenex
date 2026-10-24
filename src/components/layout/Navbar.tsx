@@ -22,6 +22,7 @@ import {
   FaYoutube
 } from "react-icons/fa";
 import { navigationConfig, getBadgeColorClasses, type NavSection, type NavItem } from "@/config/navigation";
+import Image from "next/image";
 
 interface NavbarProps {
   appName?: string;
@@ -82,6 +83,7 @@ const sectionVariants = {
 export default function PublicNavbar({ }: NavbarProps) {
   const router = useRouter();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isAtBottom, setIsAtBottom] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeMegaMenu, setActiveMegaMenu] = useState<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -92,17 +94,28 @@ export default function PublicNavbar({ }: NavbarProps) {
 
   useEffect(() => {
     const handleScroll = () => {
+      const { scrollY, innerHeight } = window;
+      const pageHeight = document.documentElement.scrollHeight;
+
       setIsScrolled(window.scrollY > 20);
+      setIsAtBottom(innerHeight + scrollY >= pageHeight - 1);
+
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
         timeoutRef.current = null;
       }
+
       setActiveMegaMenu(null);
       setSearchOpen(false);
     };
-    window.addEventListener('scroll', handleScroll);
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("resize", handleScroll);
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
@@ -205,10 +218,19 @@ export default function PublicNavbar({ }: NavbarProps) {
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <Link href="/" className="flex items-center cursor-pointer">
-              <img
+              {/* <img
                 src="/images/Logo.png"
                 alt="StrideNex Logo"
                 className="w-[140px] h-[140px] object-contain hover:scale-105 transition-transform duration-300"
+              /> */}
+              <Image
+                src="/images/Logo.png"
+                alt="StrideNex"
+                width={700}
+                height={148}
+                sizes="140px"
+                priority
+                className="h-[60px] w-[140px] object-contain hover:scale-105 transition-transform duration-300"
               />
             </Link>
 
@@ -216,7 +238,7 @@ export default function PublicNavbar({ }: NavbarProps) {
             <div className="hidden lg:flex items-center justify-center gap-1">
               {navItems.map((item) => {
                 const hasSections = item.sections && item.sections.length > 0;
-                
+
                 // Hide Join Us from main loop, it will be rendered on the right
                 if (item.key === 'join') {
                   return null;
@@ -282,7 +304,7 @@ export default function PublicNavbar({ }: NavbarProps) {
                           <ChevronDown className="w-3 h-3 transition-transform duration-300 group-hover:rotate-180" />
                         )}
                       </button>
-                      
+
                       {/* Normal Dropdown */}
                       {hasSections && (
                         <div className="absolute top-full right-0 pt-4 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
@@ -331,6 +353,8 @@ export default function PublicNavbar({ }: NavbarProps) {
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 className="lg:hidden p-2 rounded-lg text-slate-700 hover:text-primary hover:bg-primary/5 transition-colors"
+                aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+                aria-expanded={mobileMenuOpen}
               >
                 {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -604,9 +628,9 @@ export default function PublicNavbar({ }: NavbarProps) {
           >
             <action.icon
               className={`w-5 h-5 transition-colors ${action.label === 'LinkedIn' ? 'text-slate-400 group-hover:text-[#0077B5]' :
-                  action.label === 'Instagram' ? 'text-slate-400 group-hover:text-[#E4405F]' :
-                    action.label === 'Facebook' ? 'text-slate-400 group-hover:text-[#1877F2]' :
-                      action.label === 'YouTube' ? 'text-slate-400 group-hover:text-[#FF0000]' : ''
+                action.label === 'Instagram' ? 'text-slate-400 group-hover:text-[#E4405F]' :
+                  action.label === 'Facebook' ? 'text-slate-400 group-hover:text-[#1877F2]' :
+                    action.label === 'YouTube' ? 'text-slate-400 group-hover:text-[#FF0000]' : ''
                 }`}
             />
           </motion.button>
@@ -624,12 +648,12 @@ export default function PublicNavbar({ }: NavbarProps) {
         >
           <ChevronUp className="w-6 h-6" />
         </motion.button>
-        
+
         <motion.button
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={scrollToBottom}
-          className="w-12 h-12 rounded-full bg-white text-slate-700 shadow-lg border border-slate-200 flex items-center justify-center hover:text-primary hover:border-primary/30 transition-all"
+          className={`w-12 h-12 rounded-full bg-white text-slate-700 shadow-lg border border-slate-200 flex items-center justify-center hover:text-primary hover:border-primary/30 transition-all ${isAtBottom ? 'opacity-0 translate-y-4 pointer-events-none' : 'opacity-100 translate-y-0'}`}
           title="Scroll to Bottom"
         >
           <ChevronDown className="w-6 h-6" />

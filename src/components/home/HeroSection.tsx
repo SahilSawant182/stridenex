@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Sparkles, ArrowRight, Star, Zap } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface HeroSectionProps {
     appName?: string;
@@ -16,8 +17,8 @@ const heroSlides = [
         microTagline: "Discover Your Direction. Build Real Skills. Achieve Real Careers.",
         title: "Bridge Your Learning to",
         subtitle: "Real Industry Success",
-        description: "StrideNex helps students move beyond degrees and certifications by identifying their real interests, building practical skills, and guiding them toward careers, entrepreneurship, or higher education pathways — all aligned with industry expectations.",
-        image: "/images/hero-student-team.jpeg",
+        description: "StrideNex helps students explore career pathways, build practical skills, and prepare for opportunities in industry, entrepreneurship, or further study.",
+        image: "/images/hero-student-team.webp",
         stat: "10k+",
         statLabel: "Active Students",
         gradient: "from-blue-600 to-purple-600",
@@ -29,7 +30,7 @@ const heroSlides = [
         title: "Transform Your Future with",
         subtitle: "Real-World Skills",
         description: "Join thousands of students who have accelerated their careers through our industry-connected programs, mentorship, and practical project experience.",
-          image: "/images/hero-real-world-skills.jpeg",
+        image: "/images/hero-real-world-skills.webp",
 
         stat: "500+",
         statLabel: "Partner Institutes",
@@ -42,7 +43,7 @@ const heroSlides = [
         title: "Launch Your Career with",
         subtitle: "Industry Connections",
         description: "Connect directly with industry partners, work on real projects, and build a portfolio that employers trust. Your journey to career success starts here.",
-          image: "/images/hero-industry-connections.jpeg",
+        image: "/images/hero-industry-connections.webp",
 
         stat: "200+",
         statLabel: "Industry Partners",
@@ -123,6 +124,7 @@ export default function HeroSection({ appName }: HeroSectionProps) {
                     size="icon"
                     onClick={prevSlide}
                     className="rounded-full bg-white/80 backdrop-blur-sm border-2 border-primary/20 hover:border-primary hover:scale-110 transition-all shadow-lg"
+                    aria-label="Previous slide"
                 >
                     <ChevronLeft className="h-5 w-5" />
                 </Button>
@@ -131,6 +133,7 @@ export default function HeroSection({ appName }: HeroSectionProps) {
                     size="icon"
                     onClick={nextSlide}
                     className="rounded-full bg-white/80 backdrop-blur-sm border-2 border-primary/20 hover:border-primary hover:scale-110 transition-all shadow-lg"
+                    aria-label="Next slide"
                 >
                     <ChevronRight className="h-5 w-5" />
                 </Button>
@@ -141,14 +144,14 @@ export default function HeroSection({ appName }: HeroSectionProps) {
                 {heroSlides.map((_, index) => (
                     <button
                         key={index}
+                        aria-label={`Go to slide ${index + 1}`}
                         onClick={() => setCurrentSlide(index)}
                         className="group relative"
                     >
-                        <span className={`block w-3 h-3 rounded-full transition-all duration-300 ${
-                            index === currentSlide
-                                ? "w-12 bg-primary"
-                                : "bg-primary/30 group-hover:bg-primary/50"
-                        }`} />
+                        <span className={`block w-3 h-3 rounded-full transition-all duration-300 ${index === currentSlide
+                            ? "w-12 bg-primary"
+                            : "bg-primary/30 group-hover:bg-primary/50"
+                            }`} />
                     </button>
                 ))}
             </div>
@@ -255,10 +258,13 @@ export default function HeroSection({ appName }: HeroSectionProps) {
                             }}
                         >
                             <div className="relative w-full aspect-[4/5] rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white">
-                                <img
+                                <Image
                                     alt="Students collaborating"
                                     className="w-full h-full object-cover"
+                                    fill
                                     src={slide.image}
+                                    priority={currentSlide === 0}
+                                    loading={currentSlide === 0 ? "eager" : "lazy"}
                                 />
                                 <div className={`absolute inset-0 bg-gradient-to-t ${slide.gradient} opacity-20 mix-blend-overlay`}></div>
                             </div>
