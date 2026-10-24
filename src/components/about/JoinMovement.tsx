@@ -14,7 +14,7 @@ export default function JoinMovement() {
           subtitle="Whether you are a student exploring your future, an institution strengthening outcomes, or an organization seeking capable talent — StrideNex enables growth through collaboration."
           alignment="center"
         />
-        
+
         <div className="flex flex-wrap justify-center gap-4 mt-8">
           <Button variant="accent" size="lg" className="btn-cta" onClick={() => window.location.href = '/signup?role=student'}>
             Start as Student
@@ -27,7 +27,7 @@ export default function JoinMovement() {
             Collaborate as Industry
           </Button>
         </div>
-        
+
         <p className="text-sm text-slate-500 mt-8">
           Start your journey with StrideNex today.
         </p>

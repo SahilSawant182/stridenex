@@ -256,10 +256,10 @@ about: {
     sections: []
   },
   
-  contact: {
-    label: "Contact Us",
-    href: "/contact-us",
-    icon: Phone,
+  events: {
+    label: "Events",
+    href: "/blogs",
+    icon: Newspaper,
     sections: []
   },
   

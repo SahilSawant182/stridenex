@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import SectionWrapper from "@/components/ui/SectionWrapper";
 
 export default function WhoWeAre() {
@@ -33,11 +34,13 @@ export default function WhoWeAre() {
           viewport={{ once: true }}
           className="relative"
         >
-          <div className="aspect-square rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
-            <img 
-              src="https://www.tbsnews.net/sites/default/files/styles/amp_metadata_content_image_min_696px_wide/public/images/2022/12/03/panorama.png" 
-              alt="Students collaborating"
-              className="w-full h-full object-cover"
+          <div className="relative aspect-square overflow-hidden rounded-3xl border-4 border-white shadow-2xl">
+            <Image
+              src="/images/indian-students-career-collaboration.png"
+              alt="Indian students collaborate with a mentor around a laptop on campus"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
             />
           </div>
           {/* Subtle decorative element */}
