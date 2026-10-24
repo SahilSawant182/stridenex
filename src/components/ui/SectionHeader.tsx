@@ -25,7 +25,7 @@ export default function SectionHeader({
   
   const getBadgeColorClass = () => {
     switch(badgeColor) {
-      case 'accent': return 'text-accent bg-accent/10';
+      case 'accent': return 'text-orange-800 bg-accent/10';
       case 'white': return 'text-white bg-white/10';
       default: return 'text-primary bg-primary/10';
     }

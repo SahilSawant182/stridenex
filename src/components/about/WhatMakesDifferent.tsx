@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Image from "next/image";
 import { CheckCircle } from "lucide-react";
 import SectionWrapper from "@/components/ui/SectionWrapper";
 
@@ -48,11 +49,13 @@ export default function WhatMakesDifferent() {
           viewport={{ once: true }}
           className="relative"
         >
-          <div className="aspect-square rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
-            <img 
-              src="https://images.unsplash.com/photo-1659080925920-1683d25f772a?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" 
-              alt="Innovation and collaboration"
-              className="w-full h-full object-cover"
+          <div className="relative aspect-[3/2] overflow-hidden rounded-3xl border-4 border-white shadow-2xl">
+            <Image
+              src="/images/indian-graduates-celebrating-achievements.png"
+              alt="Indian graduates celebrate their achievements while holding awards"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
             />
           </div>
           <div className="absolute -bottom-4 -left-4 w-24 h-24 bg-accent/10 rounded-full blur-2xl -z-10"></div>

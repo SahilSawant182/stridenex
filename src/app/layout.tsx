@@ -11,7 +11,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "StrideNex - Pathways to Your Future",
-  description: "",
+  description: "Explore career pathways, build practical skills, and connect learning with industry through StrideNex.",
   icons: {
     icon: '/images/favicon.png',
   },

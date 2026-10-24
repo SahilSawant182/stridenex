@@ -40,11 +40,17 @@ export default function PartnerCategories() {
       color: "orange"
     },
     {
-      title: "Mentors & Senior Professionals",
+      title: "Mentors",
       icon: "psychology",
-      benefits: ["Centralized mentor marketplace", "Automated student matching", "Income growth via commissions", "Professional badge & credibility"],
+      benefits: ["Guide students one-to-one", "Get matched with students", "Manage mentoring opportunities", "Earn mentor commissions"],
       color: "teal"
-    }
+    },
+    {
+      title: "Senior Professionals",
+      icon: "work_history",
+      benefits: ["Share industry insights", "Define role-specific skills", "Shape industry-aligned learning", "Build industry visibility"],
+      color: "blue"
+    },
   ];
 
   const getColorClasses = (color: string) => {
@@ -100,7 +106,7 @@ export default function PartnerCategories() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1, duration: 0.5 }}
-              className={`bg-white/30 backdrop-blur-xl rounded-3xl p-8 border border-white/60 shadow-lg shadow-blue-900/5 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group ${getHoverCardClass(category.color)} ${index === 6 ? 'lg:col-span-3 xl:col-span-1' : ''}`}
+              className={`bg-white/30 backdrop-blur-xl rounded-3xl p-8 border border-white/60 shadow-lg shadow-blue-900/5 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group ${getHoverCardClass(category.color)}`}
             >
               <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-colors duration-300 ${getColorClasses(category.color)}`}>
                 <span className="material-symbols-outlined text-2xl group-hover:text-white transition-colors duration-300">{category.icon}</span>
