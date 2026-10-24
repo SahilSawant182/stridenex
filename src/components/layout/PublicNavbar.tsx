@@ -18,7 +18,9 @@ export default function PublicNavbar() {
   ];
 
   // Check if the current path starts with any of the hidden routes
-  const shouldHide = hiddenRoutes.some(route => pathname?.startsWith(route));
+  const shouldHide = hiddenRoutes.some(
+    (route) => pathname === route || pathname?.startsWith(`${route}/`),
+  );
 
   if (shouldHide) {
     return null;

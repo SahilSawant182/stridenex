@@ -17,6 +17,11 @@ const nextConfig = {
         protocol: "https",
         hostname: "officestridenex.quantcloud.in",
       },
+      {
+        protocol: "https",
+        hostname: "www.tbsnews.net",
+        pathname: "/sites/default/files/**",
+      },
     ],
   },
 };
