@@ -3,7 +3,7 @@ import { ArrowLeft, MessageSquare, Plus, Folder, Hash, Search, FileText, Send, U
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/context/ToastContext";
 import DashboardDynamicModal from "@/components/dashboards/shared/DashboardDynamicModal";
-import { createCategory, getPosts, createPost, getPostDetail, postComment, leaveCommunity, apiService, updateCommunityMemberStatus } from "@/services/api.services";
+import { createCategory, getPosts, createPost, getPostDetail, postComment, leaveCommunity, apiService, updateCommunityMemberStatus, toggleCommentLike } from "@/services/api.services";
 interface CommunityDiscussionViewProps {
   community: any;
   onBack: () => void;
@@ -263,6 +263,59 @@ export default function CommunityDiscussionView({ community, onBack, onRefresh }
     }
   };
 
+  const handleToggleCommentLike = async (commentName: string) => {
+    if (!commentName) return;
+    try {
+      setPostDetails((prev: any) => {
+        if (!prev || !prev.comments) return prev;
+        return {
+          ...prev,
+          comments: prev.comments.map((c: any) => {
+            if ((c.name || c.id) === commentName) {
+              const currentlyLiked = Boolean(c.is_liked);
+              const currentCount = Number(c.like_count) || 0;
+              return {
+                ...c,
+                is_liked: !currentlyLiked,
+                like_count: currentlyLiked ? Math.max(0, currentCount - 1) : currentCount + 1
+              };
+            }
+            if (c.replies && c.replies.length > 0) {
+              return {
+                ...c,
+                replies: c.replies.map((r: any) => {
+                  if ((r.name || r.id) === commentName) {
+                    const currentlyLiked = Boolean(r.is_liked);
+                    const currentCount = Number(r.like_count) || 0;
+                    return {
+                      ...r,
+                      is_liked: !currentlyLiked,
+                      like_count: currentlyLiked ? Math.max(0, currentCount - 1) : currentCount + 1
+                    };
+                  }
+                  return r;
+                })
+              };
+            }
+            return c;
+          })
+        };
+      });
+
+      await toggleCommentLike({ comment: commentName });
+    } catch (error) {
+      console.error("Error toggling comment like:", error);
+      if (selectedPost?.name) {
+        const detailResponse = await getPostDetail({ post: selectedPost.name });
+        if (detailResponse?.message?.data) {
+          setPostDetails(detailResponse.message.data);
+        } else if (detailResponse?.data?.data) {
+          setPostDetails(detailResponse.data.data);
+        }
+      }
+    }
+  };
+
   useEffect(() => {
     if (selectedCategory) {
       fetchPosts(selectedCategory.category_name || selectedCategory.name);
@@ -470,12 +523,6 @@ export default function CommunityDiscussionView({ community, onBack, onRefresh }
                     {/* Stats */}
                     <div className="flex items-center gap-6 py-4 border-y border-slate-200">
                       <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
-                        <svg className="w-5 h-5" fill={postDetails.is_liked ? "#FF6B00" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
-                        </svg>
-                        <span>{postDetails.like_count} Likes</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
                         <MessageSquare className="w-5 h-5" />
                         <span>{postDetails.comment_count} Comments</span>
                       </div>
@@ -496,7 +543,10 @@ export default function CommunityDiscussionView({ community, onBack, onRefresh }
                               </div>
                               <p className="text-sm text-slate-600 mb-3">{comment.content}</p>
                               <div className="flex items-center gap-4 text-xs font-semibold text-slate-500">
-                                <button className="flex items-center gap-1.5 hover:text-[#FF6B00] transition-colors group">
+                                <button 
+                                  onClick={() => handleToggleCommentLike(comment.name || comment.id)}
+                                  className="flex items-center gap-1.5 hover:text-[#FF6B00] transition-colors group"
+                                >
                                   <Heart className={`w-3.5 h-3.5 group-hover:text-[#FF6B00] transition-colors ${comment.is_liked ? 'text-[#FF6B00] fill-[#FF6B00]' : ''}`} />
                                   <span>{comment.like_count || 0} Likes</span>
                                 </button>
@@ -520,7 +570,16 @@ export default function CommunityDiscussionView({ community, onBack, onRefresh }
                                           {new Date(reply.posted_on || reply.creation).toLocaleString()}
                                         </span>
                                       </div>
-                                      <p className="text-xs text-slate-600">{reply.content}</p>
+                                      <p className="text-xs text-slate-600 mb-2">{reply.content}</p>
+                                      <div className="flex items-center gap-4 text-xs font-semibold text-slate-500">
+                                        <button 
+                                          onClick={() => handleToggleCommentLike(reply.name || reply.id)}
+                                          className="flex items-center gap-1.5 hover:text-[#FF6B00] transition-colors group"
+                                        >
+                                          <Heart className={`w-3.5 h-3.5 group-hover:text-[#FF6B00] transition-colors ${reply.is_liked ? 'text-[#FF6B00] fill-[#FF6B00]' : ''}`} />
+                                          <span>{reply.like_count || 0} Likes</span>
+                                        </button>
+                                      </div>
                                     </div>
                                   ))}
                                 </div>
@@ -618,12 +677,6 @@ export default function CommunityDiscussionView({ community, onBack, onRefresh }
                         </div>
                         <p className="text-sm text-slate-600 whitespace-pre-wrap mb-3 leading-relaxed">{post.content}</p>
                         <div className="flex items-center gap-4 text-xs font-semibold text-slate-400">
-                          <button className="flex items-center gap-1 hover:text-slate-700 transition-colors">
-                            <svg className="w-4 h-4" fill={post.is_liked ? "#FF6B00" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" />
-                            </svg>
-                            <span>{post.like_count || 0}</span>
-                          </button>
                           <button className="flex items-center gap-1 hover:text-slate-700 transition-colors">
                             <MessageSquare className="w-4 h-4" />
                             <span>{post.comment_count || 0}</span>
