@@ -49,6 +49,7 @@ export const studentConfig: RoleConfig = {
   searchPlaceholder: "Search resources, skills, internships...",
   links: [
     { name: "Overview", href: "/student/dashboard", icon: LayoutDashboard }, // Base route
+    { name: "Courses", href: "/lms/courses", icon: BookOpen },
     { name: "Skill Ledger", href: "/student/dashboard/skills", icon: Code },
     { name: "Skill Path", href: "/student/dashboard/path", icon: Target },
     { name: "Habits", href: "/student/dashboard/habits", icon: CheckSquare },
@@ -105,6 +106,7 @@ export const mentorConfig: RoleConfig = {
     { name: "Session History", href: "/mentor/dashboard/session-history", icon: BookOpen },
     { name: "Payouts & Commission", href: "/mentor/dashboard/payouts", icon: MessageSquare },
     { name: "My Profile", href: "/mentor/dashboard/profile", icon: TrendingUp },
+    { name: "LMS Studio", href: "/lms/courses", icon: BookOpen }
   ],
   bottomLinks: [
     { name: "Settings", href: "/mentor/settings", icon: Settings },
