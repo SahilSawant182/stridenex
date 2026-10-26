@@ -17,7 +17,7 @@ import {
   Loader2,
   Trash2
 } from "lucide-react";
-import { getProjectList, createProject, updateProject, deleteProject, getMasterData, getProjectApplicationCount, createSkill, getDepartmentsByCourse } from "@/services/industry.services";
+import { getProjectList, createProject, updateProject, deleteProject, getMasterData, getProjectApplicationCount, createSkill, getDepartmentsByCourse, getApplications, getApplicationsCount } from "@/services/industry.services";
 import { useIndustry } from "@/context/IndustryContext";
 import DashboardDynamicModal, { DynamicField } from "@/components/dashboards/shared/DashboardDynamicModal";
 import { Pagination } from "@/components/ui/Pagination";
@@ -153,7 +153,10 @@ export default function ProjectsTabContent() {
     try {
       setLoading(true);
       setError(null);
-      const response = await getProjectList(industry);
+      const [response, appsRes] = await Promise.all([
+        getProjectList(industry),
+        getApplications({ opportunity_type: "Project", industry }).catch(() => null)
+      ]);
 
       const dataObj = response?.data || response?.message?.data || response?.message || {};
       
@@ -194,7 +197,39 @@ export default function ProjectsTabContent() {
         });
       }
 
-      setProjects(projectList);
+      // Extract real applications list to calculate counts
+      const appsList = appsRes?.data?.data 
+        || appsRes?.message?.data 
+        || (Array.isArray(appsRes?.data) ? appsRes.data : []) 
+        || (Array.isArray(appsRes?.message) ? appsRes.message : []) 
+        || [];
+
+      const totalApps = Array.isArray(appsList) ? appsList.length : 0;
+      if (totalApps > 0) {
+        setApplicationCount(totalApps);
+      }
+
+      const mappedProjectList = (projectList || []).map((proj: any) => {
+        const projId = proj.name || "";
+        const projTitle = proj.project_name || "";
+        const matchingApps = (Array.isArray(appsList) ? appsList : []).filter((app: any) => {
+          return app.project === projId || 
+                 app.project === projTitle || 
+                 (projTitle && app.project?.startsWith(projTitle)) ||
+                 (projId && app.project?.startsWith(projId));
+        });
+        const applied = matchingApps.length;
+        const shortlisted = matchingApps.filter((a: any) => 
+          ["shortlisted", "selected", "accepted", "tech interview", "hr"].includes((a.status || "").toLowerCase())
+        ).length;
+        return {
+          ...proj,
+          applied_count: applied,
+          shortlisted_count: shortlisted
+        };
+      });
+
+      setProjects(mappedProjectList);
       setIsServerPaged(serverPaged);
     } catch (err: any) {
       console.error("Error fetching projects:", err);
@@ -211,9 +246,22 @@ export default function ProjectsTabContent() {
 
   const fetchApplicationCount = async (industry: string) => {
     try {
-      const response = await getProjectApplicationCount(industry);
-      // Accessing data.total_applications as per the provided API response structure
-      setApplicationCount(response?.data?.total_applications || 0);
+      const [countRes, appsRes] = await Promise.all([
+        getApplicationsCount({ opportunity_type: "Project", industry }).catch(() => null),
+        getProjectApplicationCount(industry).catch(() => null)
+      ]);
+      
+      let count = 0;
+      if (countRes) {
+        const data = countRes?.data || countRes?.message?.data || countRes?.message || countRes;
+        if (typeof data === "object" && data !== null) {
+          count = Object.values(data).reduce((acc: number, val: any) => acc + (typeof val === "number" ? val : 0), 0);
+        }
+      }
+      if (count === 0 && appsRes?.data?.total_applications) {
+        count = appsRes.data.total_applications;
+      }
+      setApplicationCount(prev => count > 0 ? count : prev);
     } catch (err) {
       console.error("Error fetching application count:", err);
     }
@@ -224,8 +272,8 @@ export default function ProjectsTabContent() {
   };
 
   const handleProjectClick = (project: any) => {
-    const projName = project.project_name || project.name || "";
-    router.push(`/industry/dashboard/pipeline?type=project&project=${encodeURIComponent(projName)}`);
+    const projId = project.name || project.project_name || "";
+    router.push(`/industry/dashboard/pipeline?type=project&project=${encodeURIComponent(projId)}`);
   };
 
   useEffect(() => {

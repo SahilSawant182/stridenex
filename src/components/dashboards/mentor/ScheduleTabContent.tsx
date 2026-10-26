@@ -49,6 +49,18 @@ const getMentorEmail = (currentUser: string | null) => {
   return currentUser || (typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail")) : null) || "";
 };
 
+const normalizeSessionList = (res: any): any[] => {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res.message)) return res.message;
+  if (Array.isArray(res.message?.records)) return res.message.records;
+  if (Array.isArray(res.message?.data)) return res.message.data;
+  if (Array.isArray(res.data?.records)) return res.data.records;
+  if (Array.isArray(res.data)) return res.data;
+  if (Array.isArray(res.records)) return res.records;
+  return [];
+};
+
 export default function ScheduleTabContent() {
   const { currentUser, isInitialized } = useAuth();
   const { showToast } = useToast();
@@ -143,11 +155,7 @@ export default function ScheduleTabContent() {
           fetchMonthlyData();
         }
         const upcomingRes = await getUpcomingSessions(email);
-        if (upcomingRes?.message && Array.isArray(upcomingRes.message)) {
-          setUpcoming(upcomingRes.message);
-        } else {
-          setUpcoming([]);
-        }
+        setUpcoming(normalizeSessionList(upcomingRes));
       }
     } catch (err: any) {
       console.error("Failed to mark session as completed", err);
@@ -266,11 +274,7 @@ export default function ScheduleTabContent() {
       const email = getMentorEmail(currentUser);
       if (email) {
         const upcomingRes = await getUpcomingSessions(email);
-        if (upcomingRes?.message && Array.isArray(upcomingRes.message)) {
-          setUpcoming(upcomingRes.message);
-        } else {
-          setUpcoming([]);
-        }
+        setUpcoming(normalizeSessionList(upcomingRes));
       }
     } catch (error: any) {
       console.error("Failed to reschedule", error);
@@ -440,21 +444,13 @@ export default function ScheduleTabContent() {
             return null;
           })
         ]);
-        if (upcomingRes?.message && Array.isArray(upcomingRes.message)) {
-          setUpcoming(upcomingRes.message);
-        } else {
-          setUpcoming([]);
-        }
+        setUpcoming(normalizeSessionList(upcomingRes));
         if (calendarRes?.message && typeof calendarRes.message === 'object') {
           setSlotCalendar(calendarRes.message);
         } else {
           setSlotCalendar({});
         }
-        if (weeklyRes?.message && Array.isArray(weeklyRes.message)) {
-          setWeeklyBooked(weeklyRes.message);
-        } else {
-          setWeeklyBooked([]);
-        }
+        setWeeklyBooked(normalizeSessionList(weeklyRes));
       } catch (err) {
         console.error("Failed to fetch schedule data", err);
       } finally {
@@ -471,11 +467,7 @@ export default function ScheduleTabContent() {
     try {
       setLoadingMonthly(true);
       const monthlyRes = await getMonthlyBookedSessions(email);
-      if (monthlyRes?.message && Array.isArray(monthlyRes.message)) {
-        setMonthlyBooked(monthlyRes.message);
-      } else {
-        setMonthlyBooked([]);
-      }
+      setMonthlyBooked(normalizeSessionList(monthlyRes));
     } catch (err) {
       console.error("Failed to fetch monthly booked sessions", err);
     } finally {
@@ -489,11 +481,7 @@ export default function ScheduleTabContent() {
     try {
       setLoadingWeekly(true);
       const weeklyRes = await getWeeklyBookedSessions(email);
-      if (weeklyRes?.message && Array.isArray(weeklyRes.message)) {
-        setWeeklyBooked(weeklyRes.message);
-      } else {
-        setWeeklyBooked([]);
-      }
+      setWeeklyBooked(normalizeSessionList(weeklyRes));
     } catch (err) {
       console.error("Failed to fetch weekly booked sessions", err);
     } finally {
@@ -667,7 +655,40 @@ export default function ScheduleTabContent() {
     };
   });
 
-  const dynamicUpcomingBookings = (Array.isArray(upcoming) ? upcoming : []).map((s, index) => {
+  const mergedUpcomingList = useMemo(() => {
+    const map = new Map<string, any>();
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // 1. Add sessions from upcoming API
+    (Array.isArray(upcoming) ? upcoming : []).forEach(s => {
+      const key = s.name || s.id;
+      if (key) map.set(key, s);
+    });
+
+    // 2. Add future sessions from weeklyBooked
+    (Array.isArray(weeklyBooked) ? weeklyBooked : []).forEach(s => {
+      const key = s.name || s.id;
+      if (key && !map.has(key)) {
+        if (!s.session_date || s.session_date >= todayStr) {
+          map.set(key, s);
+        }
+      }
+    });
+
+    // 3. Add future sessions from monthlyBooked
+    (Array.isArray(monthlyBooked) ? monthlyBooked : []).forEach(s => {
+      const key = s.name || s.id;
+      if (key && !map.has(key)) {
+        if (!s.session_date || s.session_date >= todayStr) {
+          map.set(key, s);
+        }
+      }
+    });
+
+    return Array.from(map.values());
+  }, [upcoming, weeklyBooked, monthlyBooked]);
+
+  const dynamicUpcomingBookings = mergedUpcomingList.map((s, index) => {
     const studentName = s.student_full_name || s.student_name || (s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : null) || s.student?.split('@')[0] || "Unknown";
     const initials = studentName.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2) || "??";
     const colors = ["bg-orange-500", "bg-blue-500", "bg-emerald-500", "bg-purple-500"];
