@@ -1152,7 +1152,10 @@ export const createSuccessStory = async (data: any): Promise<any> => {
   try {
     const response = await apiService.post(
       "method/stridenex_app.stridenex_app.doctype.success_story.success_story.create_success_story",
-      data
+      {
+        ...data,
+        status: data?.status || "Published",
+      }
     );
     return response;
   } catch (error) {
@@ -1172,6 +1175,7 @@ export const updateSuccessStory = async (data: any): Promise<any> => {
       {
         ...data,
         id: storyId,
+        status: data?.status || "Published",
       }
     );
     return response;

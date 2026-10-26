@@ -96,7 +96,8 @@ function formatDate(dateStr: string): string {
 async function redirectToPayment(
   plan: BillingPackage,
   accountType: string,
-  customerEmail: string
+  customerEmail: string,
+  currentPathname?: string
 ): Promise<void> {
   let fromSite: string;
   try {
@@ -107,12 +108,25 @@ async function redirectToPayment(
   const billingUrl = await getBillingUrl(fromSite);
   if (!billingUrl) throw new Error("Billing URL not returned from server");
 
-  
+  // Determine return URL so the user returns to their active plans page in their logged-in session
+  let returnPath = "/student/dashboard/plans";
+  const accLower = (accountType || "").toLowerCase();
+  if (accLower === "mentor") {
+    returnPath = "/mentor/dashboard/plans";
+  } else if (accLower === "industry") {
+    returnPath = "/industry/dashboard/plan";
+  } else if (accLower === "college") {
+    returnPath = "/college/dashboard/plans";
+  } else if (currentPathname && currentPathname.startsWith("/") && currentPathname !== "/") {
+    returnPath = currentPathname;
+  }
+  const frontendUrl = `${window.location.origin}${returnPath}`;
+
   // Explicitly opt-in: only true when backend sends 1 / true
   const isInclusive = plan.is_tax_inclusive === 1 || plan.is_tax_inclusive === true;
   const paymentParams = new URLSearchParams({
     from_site: fromSite,
-    frontend_url: window.location.origin,
+    frontend_url: frontendUrl,
     pkg_name: plan.package_name,
     pkg_type: plan.package_type || "",
     pkg_app: plan.app_name || plan.app || "",
@@ -563,7 +577,7 @@ export default function PlansTabContent() {
   const handleSelectPlan = async (plan: BillingPackage) => {
     setRedirectingPlan(plan.package_name);
     try {
-      await redirectToPayment(plan, accountType, customerEmail);
+      await redirectToPayment(plan, accountType, customerEmail, pathname);
     } catch (err: unknown) {
       console.error("Payment redirect failed:", err);
       setRedirectingPlan(null);

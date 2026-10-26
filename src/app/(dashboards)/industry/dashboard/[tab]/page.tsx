@@ -39,6 +39,7 @@ export default function IndustryTabContent({
       case "analytics":
         return <AnalyticsTabContent />;
       case "plan":
+      case "plans":
         return <PlansTabContent />;
       case "settings":
         return <SettingsTabContent />;

@@ -595,7 +595,7 @@ export default function StoriesTabContent() {
                                         <select
                                             value={outcomeCategory}
                                             onChange={(e) => setOutcomeCategory(e.target.value)}
-                                            className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white"
+                                            className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white text-slate-800"
                                         >
                                             <option value="Placement">Placement</option>
                                             <option value="Startup">Startup</option>
@@ -610,7 +610,7 @@ export default function StoriesTabContent() {
                                         <select
                                             value={status}
                                             onChange={(e) => setStatus(e.target.value)}
-                                            className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white"
+                                            className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white text-slate-800"
                                         >
                                             <option value="Draft">Draft</option>
                                             <option value="Published">Published</option>

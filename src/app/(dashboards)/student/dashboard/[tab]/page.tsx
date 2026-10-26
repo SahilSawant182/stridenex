@@ -64,7 +64,7 @@ export default function DynamicStudentTabPage({ params }: { params: Promise<{ ta
     if (tab === "stories") {
       return <StoriesTabContent />;
     }
-    if (tab === "plans") {
+    if (tab === "plans" || tab === "plan") {
       return <PlanTabContent />;
     }
     return <CommonTabContent title={tab} />;

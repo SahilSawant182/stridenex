@@ -28,6 +28,7 @@ export default function DynamicMentorTabPage({ params }: { params: Promise<{ tab
     case "profile":
       return <MyProfileTabContent />;
     case "plans":
+    case "plan":
       return <PlansTabContent />;
     case "overview":
       return <OverviewTabContent />;

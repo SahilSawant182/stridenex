@@ -53,6 +53,7 @@ export default function SuccessStoriesFooter({
 
   // Form fields state
   const [outcomeCategory, setOutcomeCategory] = useState("Placement");
+  const [status, setStatus] = useState("Published");
   const [outcomeTitle, setOutcomeTitle] = useState("");
   const [outcomeMetric, setOutcomeMetric] = useState("");
   const [metricError, setMetricError] = useState("");
@@ -193,6 +194,7 @@ export default function SuccessStoriesFooter({
   const handleOpenCreate = () => {
     setEditingStory(null);
     setOutcomeCategory("Placement");
+    setStatus("Published");
     setOutcomeTitle("");
     setOutcomeMetric("");
     setMetricError("");
@@ -203,6 +205,7 @@ export default function SuccessStoriesFooter({
   const handleOpenEdit = (story: any) => {
     setEditingStory(story);
     setOutcomeCategory(story.outcome_category || "Placement");
+    setStatus(story.status || "Published");
     setOutcomeTitle(story.outcome_title || "");
     setOutcomeMetric(story.outcome_metric || "");
     setMetricError("");
@@ -250,7 +253,7 @@ export default function SuccessStoriesFooter({
           outcome_title: outcomeTitle,
           outcome_metric: outcomeMetric || null,
           testimonial: testimonial,
-          status: editingStory.status || "Published"
+          status: status
         };
         await updateSuccessStory(payload);
         showToast("Success story updated successfully!", "success");
@@ -261,7 +264,7 @@ export default function SuccessStoriesFooter({
           outcome_title: outcomeTitle,
           outcome_metric: outcomeMetric || null,
           testimonial: testimonial,
-          status: "Published"
+          status: status
         };
         await createSuccessStory(payload);
         showToast("Success story published successfully!", "success");
@@ -269,6 +272,8 @@ export default function SuccessStoriesFooter({
 
       setIsOpen(false);
       setEditingStory(null);
+      setOutcomeCategory("Placement");
+      setStatus("Published");
       setOutcomeTitle("");
       setOutcomeMetric("");
       setTestimonial("");
@@ -564,7 +569,7 @@ export default function SuccessStoriesFooter({
                   Start Your Path
                 </Button>
                 <Button
-                  onClick={() => setIsOpen(true)}
+                  onClick={handleOpenCreate}
                   variant="outline"
                   className="border-orange-200 text-orange-600 hover:bg-orange-100/50 hover:text-orange-700 hover:border-orange-300 font-semibold text-sm rounded-xl px-5 py-2.5 transition-all"
                 >
@@ -628,13 +633,26 @@ export default function SuccessStoriesFooter({
                       <select
                         value={outcomeCategory}
                         onChange={(e) => setOutcomeCategory(e.target.value)}
-                        className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white"
+                        className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white text-slate-800"
                       >
                         <option value="Placement">Placement</option>
                         <option value="Startup">Startup</option>
                         <option value="Internship">Internship</option>
                         <option value="Higher Studies">Higher Studies</option>
                         <option value="Other">Other</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Status</label>
+                      <select
+                        value={status}
+                        onChange={(e) => setStatus(e.target.value)}
+                        className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white text-slate-800"
+                      >
+                        <option value="Draft">Draft</option>
+                        <option value="Published">Published</option>
+                        <option value="Archived">Archived</option>
                       </select>
                     </div>
 
