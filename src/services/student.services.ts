@@ -1152,11 +1152,54 @@ export const createSuccessStory = async (data: any): Promise<any> => {
   try {
     const response = await apiService.post(
       "method/stridenex_app.stridenex_app.doctype.success_story.success_story.create_success_story",
-      data
+      {
+        ...data,
+        status: data?.status || "Published",
+      }
     );
     return response;
   } catch (error) {
     console.error("Error creating success story:", error);
+    throw error;
+  }
+};
+
+/**
+ * Update a success story.
+ */
+export const updateSuccessStory = async (data: any): Promise<any> => {
+  try {
+    const storyId = data?.id || data?.name || data?.story_id;
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.success_story.success_story.update_success_story?id=${encodeURIComponent(storyId || "")}`,
+      {
+        ...data,
+        id: storyId,
+        status: data?.status || "Published",
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating success story:", error);
+    throw error;
+  }
+};
+
+/**
+ * Delete a success story.
+ */
+export const deleteSuccessStory = async (id: string | { id?: string; name?: string }): Promise<any> => {
+  try {
+    const storyId = typeof id === "string" ? id : (id?.id || id?.name || "");
+    const response = await apiService.post(
+      `method/stridenex_app.stridenex_app.doctype.success_story.success_story.delete_success_story?id=${encodeURIComponent(storyId || "")}`,
+      {
+        id: storyId,
+      }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error deleting success story:", error);
     throw error;
   }
 };

@@ -119,11 +119,8 @@ export default function OverviewTabContent() {
       const email = currentUser || localStorage.getItem("userEmail") || "";
       if (email) {
         const upcomingRes = await getUpcomingSessions(email);
-        if (upcomingRes?.message && Array.isArray(upcomingRes.message)) {
-          setUpcoming(upcomingRes.message);
-        } else {
-          setUpcoming([]);
-        }
+        const upList = upcomingRes?.message?.records || upcomingRes?.message?.data || (Array.isArray(upcomingRes?.message) ? upcomingRes.message : []) || upcomingRes?.data?.records || upcomingRes?.data || [];
+        setUpcoming(Array.isArray(upList) ? upList : []);
       }
     } catch (error: any) {
       console.error("Failed to reschedule", error);
@@ -171,11 +168,8 @@ export default function OverviewTabContent() {
           getMentorPendingVerifications(email, 3).catch(e => { console.error(e); return null; }),
           getMentorDashboardData(email).catch(e => { console.error(e); return null; })
         ]);
-        if (upcomingRes?.message && Array.isArray(upcomingRes.message)) {
-          setUpcoming(upcomingRes.message);
-        } else {
-          setUpcoming([]);
-        }
+        const upList = upcomingRes?.message?.records || upcomingRes?.message?.data || (Array.isArray(upcomingRes?.message) ? upcomingRes.message : []) || upcomingRes?.data?.records || upcomingRes?.data || [];
+        setUpcoming(Array.isArray(upList) ? upList : []);
         if (pendingRes?.message) {
           setPending(pendingRes.message.records || []);
           setPendingRequestsCount(pendingRes.message.total_pending_count || 0);

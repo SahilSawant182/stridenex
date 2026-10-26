@@ -1,7 +1,7 @@
 // components/dashboards/shared/FeedCard.tsx
 "use client";
 
-import { Heart, Eye, Share2, MoreHorizontal } from "lucide-react";
+import { Eye, Share2, MoreHorizontal } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 
 interface FeedCardProps {
@@ -14,7 +14,7 @@ interface FeedCardProps {
     };
     timestamp: string;
     content: string;
-    likes: number;
+    likes?: number;
     views: number;
   };
   onLike?: (id: string) => void;
@@ -48,13 +48,6 @@ export function FeedCard({ post, onLike, onShare, className = "" }: FeedCardProp
         <p className="text-sm text-slate-700 mb-4 leading-relaxed">{post.content}</p>
 
         <div className="flex items-center gap-4 pt-3 border-t border-slate-100">
-          <button
-            onClick={() => onLike?.(post.id)}
-            className="flex items-center gap-1.5 text-slate-500 hover:text-red-500 transition-colors group"
-          >
-            <Heart className="w-4 h-4 group-hover:fill-red-500 group-hover:text-red-500" />
-            <span className="text-xs">{post.likes}</span>
-          </button>
           <button className="flex items-center gap-1.5 text-slate-500 hover:text-blue-500 transition-colors">
             <Eye className="w-4 h-4" />
             <span className="text-xs">{post.views}</span>

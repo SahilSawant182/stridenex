@@ -13,7 +13,15 @@ import {
   Loader2
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { getPendingRequests, acceptRequest, getMentorPendingVerifications, verifyAndEndorseSkill, rejectSkillEvidence } from "@/services/mentor.services";
+import { 
+  getPendingRequests, 
+  acceptRequest, 
+  getMentorPendingVerifications, 
+  verifyAndEndorseSkill, 
+  rejectSkillEvidence,
+  getMentorDashboardStats,
+  getMonthlyBookedSessions
+} from "@/services/mentor.services";
 import { BASE_DOMAIN } from "@/services/api.services";
 import { Pagination } from "@/components/ui/Pagination";
 import { useToast } from "@/context/ToastContext";
@@ -36,6 +44,7 @@ export default function RequestsTabContent() {
   const [verifyQueuePage, setVerifyQueuePage] = useState<number>(1);
   const ITEMS_PER_PAGE = 3;
   const [totalPendingCount, setTotalPendingCount] = useState<number>(0);
+  const [approvedThisMonth, setApprovedThisMonth] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [loadingVerify, setLoadingVerify] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -92,8 +101,8 @@ export default function RequestsTabContent() {
         type: 'success',
         message: msg
       });
-      showToast(msg, "success");
       fetchRequests();
+      fetchApprovedStats();
     } catch (err: any) {
       console.error("Failed to accept request", err);
       const errMsg = err?.message || "Failed to accept request.";
@@ -107,18 +116,23 @@ export default function RequestsTabContent() {
     }
   };
 
+  const getMentorEmail = () => {
+    return currentUser || (typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail")) : null) || "";
+  };
+
   const fetchRequests = async () => {
-    if (!currentUser) return;
+    const email = getMentorEmail();
+    if (!email) return;
     try {
       setLoading(true);
-      const response = await getPendingRequests(currentUser);
-      if (response?.message?.records && Array.isArray(response.message.records)) {
-        setRequests(response.message.records);
-      } else if (Array.isArray(response?.message)) {
-        setRequests(response.message);
-      } else {
-        setRequests([]);
-      }
+      const response = await getPendingRequests(email);
+      const records = response?.message?.records 
+        || response?.message?.data 
+        || (Array.isArray(response?.message) ? response.message : []) 
+        || response?.data?.records 
+        || response?.data 
+        || [];
+      setRequests(Array.isArray(records) ? records : []);
     } catch (err) {
       console.error("Failed to fetch requests", err);
       setError("Failed to load requests.");
@@ -128,21 +142,68 @@ export default function RequestsTabContent() {
   };
 
   const fetchVerifyQueue = async () => {
-    if (!currentUser) return;
+    const email = getMentorEmail();
+    if (!email) return;
     try {
       setLoadingVerify(true);
-      const response = await getMentorPendingVerifications(currentUser, 0);
-      if (response?.message) {
-        setVerifyQueue(response.message.records || []);
-        setTotalPendingCount(response.message.total_pending_count || 0);
-      } else {
-        setVerifyQueue([]);
-        setTotalPendingCount(0);
-      }
+      const response = await getMentorPendingVerifications(email, 0);
+      const records = response?.message?.records 
+        || response?.message?.data 
+        || (Array.isArray(response?.message) ? response.message : []) 
+        || response?.data?.records 
+        || response?.data 
+        || [];
+      setVerifyQueue(Array.isArray(records) ? records : []);
+      setTotalPendingCount(response?.message?.total_pending_count ?? records.length ?? 0);
     } catch (err) {
       console.error("Failed to fetch verification queue", err);
     } finally {
       setLoadingVerify(false);
+    }
+  };
+
+  const fetchApprovedStats = async () => {
+    const email = getMentorEmail();
+    if (!email) return;
+    try {
+      const [statsRes, monthlyRes] = await Promise.all([
+        getMentorDashboardStats(email).catch(() => null),
+        getMonthlyBookedSessions(email).catch(() => null)
+      ]);
+
+      let count = 0;
+      if (statsRes?.message) {
+        const s = statsRes.message;
+        if (typeof s.approved_sessions_this_month === 'number') {
+          count = s.approved_sessions_this_month;
+        } else if (typeof s.approved_this_month === 'number') {
+          count = s.approved_this_month;
+        } else if (typeof s.sessions_this_month === 'number') {
+          count = s.sessions_this_month;
+        } else if (s.this_month && typeof s.this_month.sessions_completed === 'number') {
+          count = s.this_month.sessions_completed;
+        }
+      }
+
+      if (count === 0 && monthlyRes) {
+        const monthlyList = monthlyRes?.message?.records 
+          || monthlyRes?.message?.data 
+          || (Array.isArray(monthlyRes?.message) ? monthlyRes.message : []) 
+          || monthlyRes?.data?.records 
+          || monthlyRes?.data 
+          || [];
+        if (Array.isArray(monthlyList)) {
+          const approvedSessions = monthlyList.filter((item: any) => {
+            const st = (item.status || "").toLowerCase();
+            return st === "approved" || st === "confirmed" || st === "booked" || st === "completed";
+          });
+          count = approvedSessions.length > 0 ? approvedSessions.length : monthlyList.length;
+        }
+      }
+
+      setApprovedThisMonth(count);
+    } catch (err) {
+      console.error("Failed to fetch approved stats:", err);
     }
   };
 
@@ -201,6 +262,7 @@ export default function RequestsTabContent() {
   useEffect(() => {
     fetchRequests();
     fetchVerifyQueue();
+    fetchApprovedStats();
   }, [currentUser]);
 
   const formatDate = (dateStr?: string) => {
@@ -269,8 +331,8 @@ export default function RequestsTabContent() {
   const summaryStats = useMemo(() => [
     { label: "Unattended Student Requests", value: requests.length, icon: UserPlus, color: "bg-red-50", textColor: "text-red-500", borderColor: "border-red-100" },
     { label: "Skill Verification Pending", value: totalPendingCount, icon: ShieldCheck, color: "bg-amber-50", textColor: "text-amber-500", borderColor: "border-amber-100" },
-    { label: "Approved This Month", value: 31, icon: CheckCircle, color: "bg-emerald-50", textColor: "text-emerald-500", borderColor: "border-emerald-100" }
-  ], [requests.length, totalPendingCount]);
+    { label: "Approved This Month", value: approvedThisMonth, icon: CheckCircle, color: "bg-emerald-50", textColor: "text-emerald-500", borderColor: "border-emerald-100" }
+  ], [requests.length, totalPendingCount, approvedThisMonth]);
   return (
     <div className="space-y-6">
       {feedback && (

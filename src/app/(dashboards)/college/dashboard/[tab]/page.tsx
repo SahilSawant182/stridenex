@@ -17,7 +17,7 @@ export default function DynamicCollegeTabPage({ params }: { params: Promise<{ ta
     if (unwrappedParams.tab === "interventions") return <InterventionsTabContent />;
     if (unwrappedParams.tab === "notice-board") return <NoticeBoardTabContent />;
     if (unwrappedParams.tab === "reports") return <ReportsTabContent />;
-    if (unwrappedParams.tab === "plans") return <PlansTabContent />;
+    if (unwrappedParams.tab === "plans" || unwrappedParams.tab === "plan") return <PlansTabContent />;
 
     return <CommonTabContent title={unwrappedParams.tab} />;
 }

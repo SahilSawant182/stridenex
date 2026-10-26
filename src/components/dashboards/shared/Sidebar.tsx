@@ -167,17 +167,27 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
         }`}
     >
       {/* Logo Area */}
-      <div className={`h-[72px] shrink-0 flex items-center justify-between px-4 border-b transition-colors duration-300 ${isShortsPage ? 'border-zinc-800' : 'border-slate-100'
+      <div className={`h-[72px] shrink-0 flex items-center justify-between px-4 border-b relative transition-colors duration-300 ${isShortsPage ? 'border-zinc-800' : 'border-slate-100'
         }`}>
-        <div onClick={handleLogoClick} className={`flex items-center gap-2 cursor-pointer group ${collapsed ? 'w-full justify-center' : ''}`}>
-          <div className="relative">
+        <div
+          onClick={handleLogoClick}
+          className={`flex items-center cursor-pointer group ${
+            collapsed ? 'w-full justify-center' : 'gap-2'
+          }`}
+        >
+          {collapsed ? (
+            <img
+              src="/images/favicon.png"
+              alt="StrideNex Logo"
+              className="w-8 h-8 object-contain rounded-lg transition-transform duration-200 group-hover:scale-105"
+            />
+          ) : (
             <img
               src="/images/Logo.png"
               alt="StrideNex Logo"
-              className="w-40 h-40 object-contain drop-shadow-sm group-hover:drop-shadow-md transition-all duration-300"
+              className="h-9 w-auto max-w-[155px] object-contain transition-transform duration-200 group-hover:scale-[1.02]"
             />
-            <div className={`absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity ${isShortsPage ? 'bg-white/5' : 'bg-white/20'}`}></div>
-          </div>
+          )}
         </div>
 
         {!isMobile && onToggle && (
@@ -198,7 +208,7 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
       </div>
 
       {/* Navigation Menu */}
-      <div className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto hide-scrollbar">
+      <div className={`flex-1 py-4 space-y-1.5 overflow-y-auto hide-scrollbar ${collapsed ? "px-2" : "px-4"}`}>
         {filteredLinks.map((link) => {
           // Exact match for base dashboard route to prevent it from being active on sub-routes
           const isBaseRoute = link.href === config.baseRoute;
@@ -216,20 +226,30 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
               onMouseEnter={() => setHoveredItem(link.name)}
               onMouseLeave={() => setHoveredItem(null)}
               className={`
-                relative flex items-center gap-3 px-3 py-2.5 rounded-lg
-                transition-all duration-300 group
+                relative flex items-center
+                transition-all duration-200 group
                 ${isActive
                   ? getActiveTabStyles()
                   : isShortsPage
                     ? "text-zinc-400 hover:bg-zinc-800/60 hover:text-white font-medium"
                     : "text-slate-500 hover:bg-slate-100/80 hover:text-slate-900 font-medium"
                 }
-                ${collapsed ? "justify-center" : ""}
+                ${collapsed
+                  ? "w-11 h-11 mx-auto justify-center rounded-xl p-0"
+                  : "w-full gap-3 px-3 py-2.5 rounded-lg"
+                }
               `}
             >
               <Icon
-                className={`w-[20px] h-[20px] transition-colors ${isActive ? getActiveIconStyles() : isShortsPage ? "text-zinc-500 group-hover:text-zinc-300" : "text-slate-400 group-hover:text-slate-600"
-                  }`}
+                className={`${
+                  collapsed ? "w-6 h-6" : "w-5 h-5"
+                } shrink-0 transition-colors ${
+                  isActive
+                    ? getActiveIconStyles()
+                    : isShortsPage
+                      ? "text-zinc-500 group-hover:text-zinc-300"
+                      : "text-slate-400 group-hover:text-slate-600"
+                }`}
               />
 
               {!collapsed && (
@@ -241,7 +261,7 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
                 <motion.div
                   initial={{ opacity: 0, x: 10 }}
                   animate={{ opacity: 1, x: 0 }}
-                  className="absolute left-full ml-4 px-3 py-1.5 bg-slate-800 text-white text-xs font-medium rounded-md shadow-lg whitespace-nowrap z-50 pointer-events-none"
+                  className="absolute left-full ml-3 px-3 py-1.5 bg-slate-800 text-white text-xs font-medium rounded-md shadow-lg whitespace-nowrap z-50 pointer-events-none"
                 >
                   {link.name}
                 </motion.div>
@@ -252,7 +272,7 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
       </div>
 
       {/* Bottom Links & User Profile */}
-      <div className={`p-4 space-y-3 transition-colors duration-300 ${isShortsPage ? 'bg-[#0b0b0b]' : 'bg-slate-50/50'}`}>
+      <div className={`transition-colors duration-300 ${collapsed ? 'p-2' : 'p-4'} ${isShortsPage ? 'bg-[#0b0b0b]' : 'bg-slate-50/50'}`}>
         {/* User Profile */}
         {!collapsed ? (
           <div className={`pt-4 border-t flex items-center gap-3 transition-colors duration-300 ${isShortsPage ? 'border-zinc-800' : 'border-slate-200/60'}`}>
@@ -276,8 +296,8 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
             </div>
           </div>
         ) : (
-          <div className={`pt-4 border-t flex justify-center relative transition-colors duration-300 ${isShortsPage ? 'border-zinc-800' : 'border-slate-200/60'}`}>
-            <div className="w-9 h-9 rounded-full overflow-hidden bg-gradient-to-tr from-slate-800 to-slate-600 flex items-center justify-center text-white font-bold text-sm shadow-sm cursor-pointer hover:shadow-md hover:scale-105 transition-all"
+          <div className={`pt-3 border-t flex justify-center relative transition-colors duration-300 ${isShortsPage ? 'border-zinc-800' : 'border-slate-200/60'}`}>
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-tr from-slate-800 to-slate-600 flex items-center justify-center text-white font-bold text-sm shadow-sm cursor-pointer hover:shadow-md hover:scale-105 transition-all"
               onMouseEnter={() => setHoveredItem("profile")}
               onMouseLeave={() => setHoveredItem(null)}
             >
@@ -291,7 +311,7 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
               <motion.div
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="absolute left-full ml-4 px-3 py-1.5 bg-slate-800 text-white text-xs font-medium rounded-md shadow-lg whitespace-nowrap z-50 pointer-events-none flex items-center gap-2"
+                className="absolute left-full ml-3 px-3 py-1.5 bg-slate-800 text-white text-xs font-medium rounded-md shadow-lg whitespace-nowrap z-50 pointer-events-none flex items-center gap-2"
               >
                 {fullName || "User"} • {getRoleIcon(role, "w-[14px] h-[14px]")} {config.roleName}
               </motion.div>

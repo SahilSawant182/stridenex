@@ -13,7 +13,10 @@ import {
     ChevronRight,
     Award,
     TrendingUp,
-    X
+    X,
+    Pencil,
+    Trash2,
+    AlertTriangle
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
@@ -21,10 +24,10 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
-import { getSuccessStories, createSuccessStory, getStudentByEmail } from "@/services/student.services";
+import { getSuccessStories, createSuccessStory, updateSuccessStory, deleteSuccessStory, getStudentByEmail } from "@/services/student.services";
 
 export default function StoriesTabContent() {
-    const { currentUser } = useAuth();
+    const { currentUser, fullName } = useAuth();
     const { showToast } = useToast();
     
     const [stories, setStories] = useState<any[]>([]);
@@ -34,6 +37,9 @@ export default function StoriesTabContent() {
     // Modal state
     const [isOpen, setIsOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [editingStory, setEditingStory] = useState<any | null>(null);
+    const [deleteConfirmStory, setDeleteConfirmStory] = useState<any | null>(null);
+    const [deleting, setDeleting] = useState(false);
     
     // Form fields state
     const [outcomeCategory, setOutcomeCategory] = useState("Placement");
@@ -122,6 +128,73 @@ export default function StoriesTabContent() {
         return () => clearInterval(interval);
     }, [stories, isAutoplayStopped]);
 
+    const isMyStory = (story: any): boolean => {
+        if (!story || (!currentUser && !studentProfile && !fullName)) return false;
+
+        const clean = (str: any) => (typeof str === "string" ? str.trim().toLowerCase() : "");
+
+        const storyStudent = clean(story.student);
+        const storyOwner = clean(story.owner);
+        const storyEmail = clean(story.student_email || story.email);
+
+        const authEmail = clean(currentUser);
+        const authFullName = clean(fullName);
+        const profileId = clean(studentProfile?.name);
+        const profileEmail = clean(studentProfile?.email_id);
+        const profileFullName = clean(
+            studentProfile?.full_name ||
+            `${studentProfile?.first_name || ""} ${studentProfile?.last_name || ""}`.trim()
+        );
+
+        if (authEmail) {
+            if (storyStudent === authEmail || storyOwner === authEmail || storyEmail === authEmail) {
+                return true;
+            }
+            const userPrefix = authEmail.split("@")[0];
+            if (userPrefix && storyStudent === userPrefix) {
+                return true;
+            }
+        }
+
+        if (profileId && (storyStudent === profileId || storyOwner === profileId)) {
+            return true;
+        }
+
+        if (profileEmail && (storyStudent === profileEmail || storyOwner === profileEmail || storyEmail === profileEmail)) {
+            return true;
+        }
+
+        if (authFullName && storyStudent && storyStudent === authFullName) {
+            return true;
+        }
+
+        if (profileFullName && storyStudent && storyStudent === profileFullName) {
+            return true;
+        }
+
+        return false;
+    };
+
+    const handleOpenCreate = () => {
+        setEditingStory(null);
+        setOutcomeCategory("Placement");
+        setOutcomeTitle("");
+        setOutcomeMetric("");
+        setTestimonial("");
+        setStatus("Published");
+        setIsOpen(true);
+    };
+
+    const handleOpenEdit = (story: any) => {
+        setEditingStory(story);
+        setOutcomeCategory(story.outcome_category || "Placement");
+        setOutcomeTitle(story.outcome_title || "");
+        setOutcomeMetric(story.outcome_metric || "");
+        setTestimonial(story.testimonial || "");
+        setStatus(story.status || "Published");
+        setIsOpen(true);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentUser) {
@@ -139,30 +212,65 @@ export default function StoriesTabContent() {
         
         try {
             setSubmitting(true);
-            const payload = {
-                student: studentProfile?.name || currentUser,
-                outcome_category: outcomeCategory,
-                outcome_title: outcomeTitle,
-                outcome_metric: outcomeMetric || null,
-                testimonial: testimonial,
-                status: status
-            };
-            
-            const res = await createSuccessStory(payload);
-            if (res) {
+            if (editingStory) {
+                const storyId = editingStory.id || editingStory.name;
+                const payload = {
+                    id: storyId,
+                    name: storyId,
+                    story_id: storyId,
+                    student: editingStory.student || studentProfile?.name || currentUser,
+                    outcome_category: outcomeCategory,
+                    outcome_title: outcomeTitle,
+                    outcome_metric: outcomeMetric || null,
+                    testimonial: testimonial,
+                    status: status
+                };
+                await updateSuccessStory(payload);
+                showToast("Success story updated successfully!", "success");
+            } else {
+                const payload = {
+                    student: studentProfile?.name || currentUser,
+                    outcome_category: outcomeCategory,
+                    outcome_title: outcomeTitle,
+                    outcome_metric: outcomeMetric || null,
+                    testimonial: testimonial,
+                    status: status
+                };
+                await createSuccessStory(payload);
                 showToast("Success story published successfully!", "success");
-                setIsOpen(false);
-                setOutcomeTitle("");
-                setOutcomeMetric("");
-                setTestimonial("");
-                setStatus("Published");
-                fetchStories();
             }
+
+            setIsOpen(false);
+            setEditingStory(null);
+            setOutcomeTitle("");
+            setOutcomeMetric("");
+            setTestimonial("");
+            setStatus("Published");
+            fetchStories();
         } catch (error: any) {
-            console.error("Error creating success story:", error);
-            showToast(error.message || "Failed to create success story", "error");
+            console.error("Error saving success story:", error);
+            showToast(error.message || `Failed to ${editingStory ? "update" : "create"} success story`, "error");
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const handleDeleteStory = async () => {
+        if (!deleteConfirmStory) return;
+        const storyId = deleteConfirmStory.id || deleteConfirmStory.name;
+        if (!storyId) return;
+
+        try {
+            setDeleting(true);
+            await deleteSuccessStory({ id: storyId });
+            showToast("Success story deleted successfully!", "success");
+            setDeleteConfirmStory(null);
+            fetchStories();
+        } catch (error: any) {
+            console.error("Error deleting success story:", error);
+            showToast(error.message || "Failed to delete success story", "error");
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -263,7 +371,7 @@ export default function StoriesTabContent() {
                     <p className="text-slate-500 mt-1 text-xs font-medium">Real outcomes from StrideNex students — your inspiration starts here</p>
                 </div>
                 <Button 
-                    onClick={() => setIsOpen(true)}
+                    onClick={handleOpenCreate}
                     className="bg-orange-500 hover:bg-orange-600 text-white font-bold flex items-center gap-2 px-5 py-2.5 rounded-xl shadow-sm transition-all duration-200 hover:-translate-y-0.5"
                 >
                     <Sparkles className="w-4 h-4" />
@@ -306,7 +414,7 @@ export default function StoriesTabContent() {
                 >
                     <Sparkles className="w-12 h-12 text-slate-300 mb-3" />
                     <p className="text-slate-400 mb-4 font-semibold text-sm">No success stories published yet.</p>
-                    <Button onClick={() => setIsOpen(true)} variant="outline" className="border-orange-500 text-orange-500 hover:bg-orange-50">
+                    <Button onClick={handleOpenCreate} variant="outline" className="border-orange-500 text-orange-500 hover:bg-orange-50">
                         Be the first to share!
                     </Button>
                 </motion.div>
@@ -321,6 +429,7 @@ export default function StoriesTabContent() {
                         const initials = getInitials(story);
                         const avatarStyle = getAvatarStyle(story);
                         const cardTheme = getCategoryColors(story.outcome_category);
+                        const canManage = isMyStory(story);
                         
                         return (
                             <div 
@@ -346,9 +455,31 @@ export default function StoriesTabContent() {
                                                     <p className="text-[9px] text-slate-405 font-semibold truncate" title={story.college}>{story.college || "StrideNex Student"}</p>
                                                 </div>
                                             </div>
-                                            <Badge variant="outline" className={`${cardTheme.badge} text-[9px] font-bold py-0.5 px-2 rounded-full uppercase tracking-wider shrink-0`}>
-                                                {story.outcome_category}
-                                            </Badge>
+                                            <div className="flex items-center gap-1 shrink-0">
+                                                <Badge variant="outline" className={`${cardTheme.badge} text-[9px] font-bold py-0.5 px-2 rounded-full uppercase tracking-wider shrink-0`}>
+                                                    {story.outcome_category}
+                                                </Badge>
+                                                {canManage && (
+                                                    <div className="flex items-center gap-0.5 ml-1" onClick={(e) => e.stopPropagation()}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleOpenEdit(story)}
+                                                            title="Edit story"
+                                                            className="p-1 rounded-md text-slate-400 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                                                        >
+                                                            <Pencil className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setDeleteConfirmStory(story)}
+                                                            title="Delete story"
+                                                            className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
 
                                         {/* Testimonial Quote Box */}
@@ -402,7 +533,7 @@ export default function StoriesTabContent() {
                                 Start Your Path
                             </Button>
                             <Button
-                                onClick={() => setIsOpen(true)}
+                                onClick={handleOpenCreate}
                                 variant="outline"
                                 className="border-orange-200 text-orange-600 hover:bg-orange-100/50 hover:text-orange-700 hover:border-orange-300 font-semibold text-sm rounded-xl px-5 py-2.5 transition-all"
                             >
@@ -414,11 +545,10 @@ export default function StoriesTabContent() {
                 </BaseCard>
             </div>
 
-            {/* Creation Dialog Modal */}
+            {/* Creation / Edit Dialog Modal */}
             <AnimatePresence>
                 {isOpen && createPortal(
                     <>
-                        
                         {/* Backdrop */}
                         <motion.div
                             initial={{ opacity: 0 }}
@@ -449,11 +579,11 @@ export default function StoriesTabContent() {
                                     </button>
                                     <div className="flex items-center gap-3">
                                         <div className="bg-white/20 p-2 rounded-xl">
-                                            <Sparkles className="w-6 h-6 text-white" />
+                                            {editingStory ? <Pencil className="w-6 h-6 text-white" /> : <Sparkles className="w-6 h-6 text-white" />}
                                         </div>
                                         <div>
-                                            <h2 className="text-xl font-bold">Share Your Success Story</h2>
-                                            <p className="text-white/80 text-sm mt-0.5">Inspire the StrideNex community with your achievement</p>
+                                            <h2 className="text-xl font-bold">{editingStory ? "Edit Your Success Story" : "Share Your Success Story"}</h2>
+                                            <p className="text-white/80 text-sm mt-0.5">{editingStory ? "Update your achievement details" : "Inspire the StrideNex community with your achievement"}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -465,7 +595,7 @@ export default function StoriesTabContent() {
                                         <select
                                             value={outcomeCategory}
                                             onChange={(e) => setOutcomeCategory(e.target.value)}
-                                            className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white"
+                                            className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white text-slate-800"
                                         >
                                             <option value="Placement">Placement</option>
                                             <option value="Startup">Startup</option>
@@ -480,7 +610,7 @@ export default function StoriesTabContent() {
                                         <select
                                             value={status}
                                             onChange={(e) => setStatus(e.target.value)}
-                                            className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white"
+                                            className="w-full h-10 px-3 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm bg-white text-slate-800"
                                         >
                                             <option value="Draft">Draft</option>
                                             <option value="Published">Published</option>
@@ -541,14 +671,80 @@ export default function StoriesTabContent() {
                                             {submitting ? (
                                                 <>
                                                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                                    Publishing...
+                                                    {editingStory ? "Updating..." : "Publishing..."}
                                                 </>
                                             ) : (
-                                                "Publish Story"
+                                                editingStory ? "Update Story" : "Publish Story"
                                             )}
                                         </Button>
                                     </div>
                                 </form>
+                            </motion.div>
+                        </div>
+                    </>,
+                    document.body
+                )}
+            </AnimatePresence>
+
+            {/* Delete Confirmation Modal */}
+            <AnimatePresence>
+                {deleteConfirmStory && createPortal(
+                    <>
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => !deleting && setDeleteConfirmStory(null)}
+                            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[999]"
+                        />
+                        <div className="fixed inset-0 flex items-center justify-center p-4 z-[1000] pointer-events-none">
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-100 w-full max-w-md p-6 pointer-events-auto"
+                            >
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+                                        <AlertTriangle className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-900">Delete Success Story</h3>
+                                        <p className="text-slate-500 text-xs">This action cannot be undone.</p>
+                                    </div>
+                                </div>
+                                <p className="text-sm text-slate-600 mb-6 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                    Are you sure you want to delete <span className="font-semibold text-slate-800">"{deleteConfirmStory.outcome_title}"</span>?
+                                </p>
+                                <div className="flex justify-end gap-3">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() => setDeleteConfirmStory(null)}
+                                        disabled={deleting}
+                                        className="px-4 py-2 text-sm font-semibold border-slate-200 text-slate-600 hover:bg-slate-50"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        onClick={handleDeleteStory}
+                                        disabled={deleting}
+                                        className="px-5 py-2 text-sm font-semibold bg-rose-600 hover:bg-rose-700 text-white flex items-center gap-2"
+                                    >
+                                        {deleting ? (
+                                            <>
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                Deleting...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Trash2 className="w-4 h-4" />
+                                                Delete Story
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
                             </motion.div>
                         </div>
                     </>,
