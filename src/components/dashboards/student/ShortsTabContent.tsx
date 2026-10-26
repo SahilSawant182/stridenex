@@ -49,6 +49,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
+const formatMediaUrl = (urlOrPath: string, baseDomain: string): string => {
+  if (!urlOrPath) return "";
+  const full = urlOrPath.startsWith("http://") || urlOrPath.startsWith("https://")
+    ? urlOrPath
+    : `${baseDomain}${urlOrPath.startsWith("/") ? "" : "/"}${urlOrPath}`;
+  try {
+    return encodeURI(decodeURI(full));
+  } catch {
+    return encodeURI(full);
+  }
+};
+
 // Types
 interface ShortVideo {
   id: any;
@@ -463,8 +475,8 @@ export default function ShortsTabContent() {
     const shortId = String(shortItem.name || shortItem.id);
     const exists = shortsList.some(s => String(s.id) === shortId);
     if (!exists) {
-      const videoUrl = shortItem.video ? (shortItem.video.startsWith('http') ? shortItem.video : `${BASE_DOMAIN}${shortItem.video}`) : '';
-      const thumbnail = shortItem.thumbnail ? (shortItem.thumbnail.startsWith('http') ? shortItem.thumbnail : `${BASE_DOMAIN}${shortItem.thumbnail}`) : undefined;
+      const videoUrl = shortItem.video ? formatMediaUrl(shortItem.video, BASE_DOMAIN) : '';
+      const thumbnail = shortItem.thumbnail ? formatMediaUrl(shortItem.thumbnail, BASE_DOMAIN) : undefined;
       const mappedShort: ShortVideo = {
         id: shortId,
         title: shortItem.title || "Untitled Short",
@@ -860,8 +872,8 @@ export default function ShortsTabContent() {
         const savedIdsFromFeed: string[] = [];
         const likedIdsFromFeed: string[] = [];
         const mapped = rawShorts.map((item: any): ShortVideo => {
-          const videoUrl = item.video ? (item.video.startsWith('http') ? item.video : `${BASE_DOMAIN}${item.video}`) : '';
-          const thumbnail = item.thumbnail ? (item.thumbnail.startsWith('http') ? item.thumbnail : `${BASE_DOMAIN}${item.thumbnail}`) : undefined;
+          const videoUrl = item.video ? formatMediaUrl(item.video, BASE_DOMAIN) : '';
+          const thumbnail = item.thumbnail ? formatMediaUrl(item.thumbnail, BASE_DOMAIN) : undefined;
 
           const skill = item.skill || "Skill";
           const authorAvatar = skill.substring(0, 2).toUpperCase();
@@ -1149,7 +1161,14 @@ export default function ShortsTabContent() {
   };
 
   const handleShare = async (videoUrl: string) => {
-    const shareUrl = videoUrl || window.location.href;
+    let shareUrl = videoUrl || window.location.href;
+    if (shareUrl) {
+      try {
+        shareUrl = encodeURI(decodeURI(shareUrl));
+      } catch {
+        shareUrl = encodeURI(shareUrl);
+      }
+    }
     if (navigator.share) {
       try {
         await navigator.share({
