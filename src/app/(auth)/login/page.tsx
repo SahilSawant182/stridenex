@@ -218,6 +218,19 @@ export default function LoginPage() {
           userImage: data.user_image
         });
 
+        // Sync roles and instructor flag for LMS integration
+        if (data.roles && Array.isArray(data.roles)) {
+          localStorage.setItem("roles", JSON.stringify(data.roles));
+        } else if (userRole === "mentor") {
+          localStorage.setItem("roles", JSON.stringify(["Mentor", "Instructor", "Course Creator"]));
+        }
+
+        if (userRole === "mentor" || (data.roles && (data.roles.includes("Instructor") || data.roles.includes("Course Creator")))) {
+          localStorage.setItem("isInstructor", "true");
+        } else {
+          localStorage.setItem("isInstructor", "false");
+        }
+
         if (userRole === "college") {
           try {
             const { getCollegeDetails } = await import("@/services/college.services");
