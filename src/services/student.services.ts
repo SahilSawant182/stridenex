@@ -1150,10 +1150,18 @@ export const getSuccessStories = async (): Promise<any> => {
  */
 export const createSuccessStory = async (data: any): Promise<any> => {
   try {
+    let studentEmail = data?.student;
+    if (!studentEmail || typeof studentEmail !== "string" || !studentEmail.includes("@")) {
+      const storedEmail = typeof window !== "undefined" ? localStorage.getItem("userEmail") : null;
+      if (storedEmail) {
+        studentEmail = storedEmail;
+      }
+    }
     const response = await apiService.post(
       "method/stridenex_app.stridenex_app.doctype.success_story.success_story.create_success_story",
       {
         ...data,
+        student: studentEmail,
         status: data?.status || "Published",
       }
     );
@@ -1170,11 +1178,19 @@ export const createSuccessStory = async (data: any): Promise<any> => {
 export const updateSuccessStory = async (data: any): Promise<any> => {
   try {
     const storyId = data?.id || data?.name || data?.story_id;
+    let studentEmail = data?.student;
+    if (!studentEmail || typeof studentEmail !== "string" || !studentEmail.includes("@")) {
+      const storedEmail = typeof window !== "undefined" ? localStorage.getItem("userEmail") : null;
+      if (storedEmail) {
+        studentEmail = storedEmail;
+      }
+    }
     const response = await apiService.post(
       `method/stridenex_app.stridenex_app.doctype.success_story.success_story.update_success_story?id=${encodeURIComponent(storyId || "")}`,
       {
         ...data,
         id: storyId,
+        student: studentEmail,
         status: data?.status || "Published",
       }
     );
