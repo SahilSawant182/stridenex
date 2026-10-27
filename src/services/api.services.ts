@@ -18,9 +18,22 @@ const apiRequest = async (config: AxiosRequestConfig) => {
   const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
   const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
 
-  const headers = {
+  const isAuthRoute =
+    typeof config.url === "string" &&
+    (config.url.includes("login") ||
+      config.url.includes("signup") ||
+      config.url.includes("forgot_password") ||
+      config.url.includes("reset_user_password") ||
+      config.url.includes("send_email_otp") ||
+      config.url.includes("validate_email_otp") ||
+      config.url.includes("send_mobile_otp") ||
+      config.url.includes("validate_mobile_otp") ||
+      config.url.includes("send_verification_otp") ||
+      config.url.includes("verify_verification_otp"));
+
+  const headers: any = {
     ...config.headers,
-    ...(apiKey && apiSecret ? { Authorization: `token ${apiKey}:${apiSecret}` } : {}),
+    ...(!isAuthRoute && apiKey && apiSecret ? { Authorization: `token ${apiKey}:${apiSecret}` } : {}),
   };
   try {
     const response = await api({ ...config, headers });
