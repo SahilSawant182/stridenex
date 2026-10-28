@@ -930,10 +930,10 @@ export default function MentorsTabContent() {
                             size="sm"
                             className="bg-orange-600 hover:bg-orange-700 text-white shadow-sm h-8 px-3 text-xs"
                             onClick={() => {
-                              const mentorObj = mentors.find(m => m.email === offering.mentor) || {
+                              const mentorObj = mentors.find(m => m.email === offering.mentor || m.id === offering.mentor) || {
                                 id: offering.mentor,
                                 name: offering.mentor_full_name,
-                                email: offering.mentor,
+                                email: (offering as any).mentor_email || offering.mentor,
                                 initials: offering.mentor_full_name ? offering.mentor_full_name.charAt(0).toUpperCase() : "M",
                                 role: "Mentor",
                                 company: "",
