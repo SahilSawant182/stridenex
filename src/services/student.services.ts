@@ -1067,14 +1067,21 @@ export const getCertificate = async (payload: {
 
 export const initiateSessionBooking = async (payload: any): Promise<any> => {
   try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret && apiKey !== "undefined" && apiSecret !== "undefined" && apiKey !== "null" && apiSecret !== "null") {
+      headers["Authorization"] = `token ${apiKey.trim()}:${apiSecret.trim()}`;
+    }
+
     const response = await fetch(
       `${BASE_DOMAIN}/api/method/quantbit_billing_platform.quantbit_billing_platform.api.initiate_session_booking`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-
+        headers,
+        credentials: "include",
         body: JSON.stringify({ payload: JSON.stringify(payload) }),
       }
     );

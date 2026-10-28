@@ -212,6 +212,7 @@ export default function SignupPage() {
     // Call API
     fetch(`${BASE_URL}method/stridenex_app.api_stridenex_app.app.signup`, {
       method: "POST",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",

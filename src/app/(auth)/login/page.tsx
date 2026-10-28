@@ -149,6 +149,7 @@ export default function LoginPage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({
             usr: formValues.username,
             pwd: formValues.password
@@ -159,7 +160,8 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (data.message === "Logged In") {
-        const { api_key, api_secret } = data.key_details;
+        const api_key = data.key_details?.api_key || data.api_key || "";
+        const api_secret = data.key_details?.api_secret || data.api_secret || "";
         const fullName =
           data.full_name ||
           formValues.username.split("@")[0];

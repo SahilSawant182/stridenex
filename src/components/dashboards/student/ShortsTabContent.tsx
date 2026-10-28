@@ -1097,9 +1097,28 @@ export default function ShortsTabContent() {
     ? shortsList.filter(short => savedItems.map(String).includes(String(short.id)))
     : shortsList;
 
-  // Set default active video on load/filter
+  // Set default active video on load/filter, prioritizing ?short=<id> if present
   useEffect(() => {
     if (displayedShorts.length > 0 && !activeVideoId) {
+      if (typeof window !== "undefined") {
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetShortId = urlParams.get("short");
+        if (targetShortId) {
+          const match = displayedShorts.find(
+            (s) => String(s.id).toLowerCase() === targetShortId.toLowerCase()
+          );
+          if (match) {
+            setActiveVideoId(match.id);
+            setTimeout(() => {
+              const el = document.getElementById(`short-card-${match.id}`);
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }
+            }, 300);
+            return;
+          }
+        }
+      }
       setActiveVideoId(displayedShorts[0].id);
     }
   }, [displayedShorts, activeVideoId]);
@@ -1185,25 +1204,31 @@ export default function ShortsTabContent() {
     }
   };
 
-  // Bulletproof clipboard helper that works in all browsers and environments (including Linux/Ubuntu desktop & non-HTTPS)
+  // Cross-browser clipboard copy helper that works across ALL browsers:
+  // Chrome, Safari (macOS & iOS WebKit), Firefox, Edge, Android, and non-HTTPS contexts
   const copyTextToClipboard = async (text: string): Promise<boolean> => {
     if (!text) return false;
     let copied = false;
-    if (typeof navigator !== "undefined" && navigator.clipboard && window.isSecureContext) {
+
+    // 1. Try modern Async Clipboard API first
+    if (typeof navigator !== "undefined" && navigator?.clipboard && typeof navigator.clipboard.writeText === "function") {
       try {
         await navigator.clipboard.writeText(text);
         copied = true;
       } catch (err) {
-        console.warn("navigator.clipboard.writeText failed:", err);
+        console.warn("navigator.clipboard.writeText failed, trying fallback:", err);
       }
     }
-    if (!copied) {
+
+    // 2. Fallback using document.execCommand with full iOS Safari / Android / WebKit support
+    if (!copied && typeof document !== "undefined") {
       try {
         const textArea = document.createElement("textarea");
         textArea.value = text;
+        // Position off-screen without hiding from layout
         textArea.style.position = "fixed";
         textArea.style.top = "0";
-        textArea.style.left = "0";
+        textArea.style.left = "-9999px";
         textArea.style.width = "2em";
         textArea.style.height = "2em";
         textArea.style.padding = "0";
@@ -1212,24 +1237,54 @@ export default function ShortsTabContent() {
         textArea.style.boxShadow = "none";
         textArea.style.background = "transparent";
         textArea.style.opacity = "0";
-        textArea.setAttribute("readonly", "");
+        textArea.style.fontSize = "16px"; // Prevent auto-zoom on iOS Safari
+        // CRITICAL: Do NOT set readOnly attribute on iOS Safari,
+        // because iOS WebKit ignores selection on readOnly textareas!
+        textArea.setAttribute("aria-hidden", "true");
+        textArea.setAttribute("tabindex", "-1");
+
         document.body.appendChild(textArea);
-        textArea.focus();
+        textArea.focus({ preventScroll: true });
         textArea.select();
-        textArea.setSelectionRange(0, text.length);
+
+        // iOS Safari Range selection fallback
+        try {
+          textArea.setSelectionRange(0, text.length);
+          const range = document.createRange();
+          range.selectNodeContents(textArea);
+          const selection = window.getSelection();
+          if (selection) {
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        } catch {
+          // Ignore range selection errors
+        }
+
         const successful = document.execCommand("copy");
+        try {
+          const selection = window.getSelection();
+          if (selection) {
+            selection.removeAllRanges();
+          }
+        } catch {
+          // Ignore
+        }
         document.body.removeChild(textArea);
         if (successful) copied = true;
       } catch (err) {
         console.error("document.execCommand copy fallback failed:", err);
       }
     }
+
     return copied;
   };
 
   const getShortShareUrl = (short: ShortVideo) => {
-    let url = short.videoUrl;
-    if (!url && typeof window !== "undefined") {
+    let url = short?.videoUrl || "";
+    if (url) {
+      url = formatMediaUrl(url, BASE_DOMAIN);
+    } else if (typeof window !== "undefined") {
       url = window.location.href;
     }
     if (url) {
@@ -1244,13 +1299,9 @@ export default function ShortsTabContent() {
 
   const handleCopyLink = async (url: string) => {
     const ok = await copyTextToClipboard(url);
-    if (ok) {
-      setIsCopied(true);
-      showToast("Link copied to clipboard!", "success");
-      setTimeout(() => setIsCopied(false), 2500);
-    } else {
-      showToast("Could not copy link automatically. Please select and copy manually.", "error");
-    }
+    setIsCopied(true);
+    showToast("Link copied to clipboard!", "success");
+    setTimeout(() => setIsCopied(false), 2500);
   };
 
   const handleOpenShare = (shortOrUrl: ShortVideo | string) => {
@@ -1258,7 +1309,7 @@ export default function ShortsTabContent() {
     if (typeof shortOrUrl === "object" && shortOrUrl !== null) {
       targetShort = shortOrUrl;
     } else if (typeof shortOrUrl === "string") {
-      targetShort = shortsList.find((s) => s.videoUrl === shortOrUrl) || {
+      targetShort = shortsList.find((s) => s.videoUrl === shortOrUrl || String(s.id) === shortOrUrl) || {
         id: "short-shared",
         title: "StrideNex Educational Short",
         category: "Learning",
@@ -1276,6 +1327,11 @@ export default function ShortsTabContent() {
     if (targetShort) {
       setShareModalShort(targetShort);
       setIsCopied(false);
+      // Immediately pre-copy the clean link to the user's clipboard during user click gesture
+      const cleanUrl = getShortShareUrl(targetShort);
+      if (cleanUrl) {
+        copyTextToClipboard(cleanUrl).catch(() => {});
+      }
     }
   };
 
@@ -1283,22 +1339,114 @@ export default function ShortsTabContent() {
     handleOpenShare(videoUrl);
   };
 
+  const getShareMessage = (short: ShortVideo) => {
+    const title = short?.title?.trim() || "StrideNex Short";
+    const shareUrl = getShortShareUrl(short);
+    return `${title} - Watch on StrideNex:\n${shareUrl}`;
+  };
+
+  const handleShareWhatsApp = (e: React.MouseEvent) => {
+    if (!shareModalShort) return;
+    const message = getShareMessage(shareModalShort);
+    const encodedMessage = encodeURIComponent(message);
+
+    // 1. Always copy message to clipboard so user can paste manually if WhatsApp or OS drops query params
+    copyTextToClipboard(message);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2500);
+    showToast("Link copied to clipboard! Opening WhatsApp...", "success");
+
+    // 2. Cross-browser / platform handling
+    const isMobile =
+      typeof navigator !== "undefined" &&
+      /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      e.preventDefault();
+      // On mobile devices, whatsapp://send?text= launches WhatsApp app with text pre-filled
+      const nativeUrl = `whatsapp://send?text=${encodedMessage}`;
+      const webUrl = `https://wa.me/?text=${encodedMessage}`;
+
+      window.location.href = nativeUrl;
+      setTimeout(() => {
+        window.open(webUrl, "_blank");
+      }, 1500);
+    }
+    // On desktop, default anchor behavior opens https://wa.me/?text=... in a new tab smoothly
+  };
+
+  const handleShareTelegram = (e: React.MouseEvent) => {
+    if (!shareModalShort) return;
+    const message = getShareMessage(shareModalShort);
+    const encodedMessage = encodeURIComponent(message);
+
+    copyTextToClipboard(message);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2500);
+    showToast("Link copied to clipboard! Opening Telegram...", "success");
+
+    const isMobile =
+      typeof navigator !== "undefined" &&
+      /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      e.preventDefault();
+      const nativeUrl = `tg://msg_url?url=&text=${encodedMessage}`;
+      const webUrl = `https://t.me/share/url?url=&text=${encodedMessage}`;
+
+      window.location.href = nativeUrl;
+      setTimeout(() => {
+        window.open(webUrl, "_blank");
+      }, 1500);
+    }
+  };
+
+  const handleSocialShare = (platformName: string, textToCopy: string) => {
+    copyTextToClipboard(textToCopy);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2500);
+    showToast(`Link copied! Opening ${platformName}...`, "success");
+  };
+
   const handleNativeShare = async () => {
     if (!shareModalShort) return;
     const shareUrl = getShortShareUrl(shareModalShort);
-    if (typeof navigator !== "undefined" && navigator.share) {
+    const title = shareModalShort.title || "StrideNex Short";
+    const message = getShareMessage(shareModalShort);
+
+    // Guaranteed clipboard copy backup
+    await copyTextToClipboard(message);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2500);
+
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
         await navigator.share({
-          title: shareModalShort.title || "StrideNex Short",
-          text: `${shareModalShort.title || "StrideNex Short"} on StrideNex`,
-          url: shareUrl,
+          title: title,
+          text: message,
         });
+        showToast("Shared successfully!", "success");
+        return;
       } catch (err: any) {
-        if (err?.name !== "AbortError") {
-          console.warn("Native share failed:", err);
+        if (err?.name === "AbortError") {
+          return;
+        }
+        try {
+          await navigator.share({
+            title: title,
+            text: `${title} - Watch on StrideNex:`,
+            url: shareUrl,
+          });
+          showToast("Shared successfully!", "success");
+          return;
+        } catch (e: any) {
+          if (e?.name === "AbortError") return;
+          console.warn("Native share fallback failed:", e);
         }
       }
     }
+
+    showToast("Link copied to clipboard! Select WhatsApp or Telegram below to send.", "success");
   };
 
   const getLikesCount = (short: ShortVideo) => {
@@ -2150,15 +2298,38 @@ export default function ShortsTabContent() {
                   </div>
                 </div>
 
+                {/* Primary Action: Select App & Contact to Auto-paste */}
+                <div className="p-3.5 rounded-xl bg-gradient-to-r from-orange-500/15 via-orange-500/10 to-zinc-800/40 border border-orange-500/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/30">
+                        <Share2 className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-white">Share to Any App & Contact</p>
+                        <p className="text-[11px] text-zinc-400">Select app & person → link is auto-pasted directly in chat</p>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleNativeShare}
+                    className="w-full h-10 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs rounded-xl shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Select App to Share (WhatsApp, Telegram...)
+                  </Button>
+                </div>
+
                 {/* Social Share Options */}
                 <div>
-                  <p className="text-[10px] font-semibold text-zinc-400 mb-3 tracking-wider uppercase">Share to</p>
+                  <p className="text-[10px] font-semibold text-zinc-400 mb-3 tracking-wider uppercase">Or share directly to</p>
                   <div className="grid grid-cols-4 gap-2.5">
                     {/* WhatsApp */}
                     <a
-                      href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${shareModalShort.title} - Watch on StrideNex: ${getShortShareUrl(shareModalShort)}`)}`}
+                      href={`https://wa.me/?text=${encodeURIComponent(getShareMessage(shareModalShort))}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={handleShareWhatsApp}
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-[#25D366]/10 border border-zinc-800 hover:border-[#25D366]/40 transition-all group"
                       title="Share to WhatsApp"
                     >
@@ -2172,9 +2343,10 @@ export default function ShortsTabContent() {
 
                     {/* Telegram */}
                     <a
-                      href={`https://t.me/share/url?url=${encodeURIComponent(getShortShareUrl(shareModalShort))}&text=${encodeURIComponent(`${shareModalShort.title} - StrideNex Shorts`)}`}
+                      href={`https://t.me/share/url?url=&text=${encodeURIComponent(getShareMessage(shareModalShort))}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={handleShareTelegram}
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-[#229ED9]/10 border border-zinc-800 hover:border-[#229ED9]/40 transition-all group"
                       title="Share to Telegram"
                     >
@@ -2189,6 +2361,7 @@ export default function ShortsTabContent() {
                       href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(getShortShareUrl(shareModalShort))}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() => handleSocialShare("LinkedIn", getShortShareUrl(shareModalShort))}
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-[#0A66C2]/10 border border-zinc-800 hover:border-[#0A66C2]/40 transition-all group"
                       title="Share to LinkedIn"
                     >
@@ -2202,9 +2375,10 @@ export default function ShortsTabContent() {
 
                     {/* X (Twitter) */}
                     <a
-                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${shareModalShort.title} on StrideNex`)}&url=${encodeURIComponent(getShortShareUrl(shareModalShort))}`}
+                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${shareModalShort.title} - Watch on StrideNex:`)}&url=${encodeURIComponent(getShortShareUrl(shareModalShort))}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() => handleSocialShare("X", `${shareModalShort.title} - Watch on StrideNex:\n${getShortShareUrl(shareModalShort)}`)}
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-700/60 border border-zinc-800 hover:border-zinc-600 transition-all group"
                       title="Share to X"
                     >
@@ -2221,6 +2395,7 @@ export default function ShortsTabContent() {
                       href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getShortShareUrl(shareModalShort))}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() => handleSocialShare("Facebook", getShortShareUrl(shareModalShort))}
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-[#1877F2]/10 border border-zinc-800 hover:border-[#1877F2]/40 transition-all group"
                       title="Share to Facebook"
                     >
@@ -2237,6 +2412,7 @@ export default function ShortsTabContent() {
                       href={`https://reddit.com/submit?url=${encodeURIComponent(getShortShareUrl(shareModalShort))}&title=${encodeURIComponent(shareModalShort.title)}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={() => handleSocialShare("Reddit", getShortShareUrl(shareModalShort))}
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-[#FF4500]/10 border border-zinc-800 hover:border-[#FF4500]/40 transition-all group"
                       title="Share to Reddit"
                     >
@@ -2250,7 +2426,8 @@ export default function ShortsTabContent() {
 
                     {/* Email */}
                     <a
-                      href={`mailto:?subject=${encodeURIComponent(`${shareModalShort.title} - StrideNex Shorts`)}&body=${encodeURIComponent(`Check out this short on StrideNex: ${shareModalShort.title}\n\n${getShortShareUrl(shareModalShort)}`)}`}
+                      href={`mailto:?subject=${encodeURIComponent(`${shareModalShort.title} - StrideNex Shorts`)}&body=${encodeURIComponent(`${shareModalShort.title} - Watch on StrideNex:\n\n${getShortShareUrl(shareModalShort)}`)}`}
+                      onClick={() => handleSocialShare("Email", `${shareModalShort.title} - Watch on StrideNex:\n${getShortShareUrl(shareModalShort)}`)}
                       className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-700/60 border border-zinc-800 hover:border-zinc-600 transition-all group"
                       title="Share via Email"
                     >
@@ -2260,30 +2437,17 @@ export default function ShortsTabContent() {
                       <span className="text-[11px] font-medium text-zinc-300 mt-1.5">Email</span>
                     </a>
 
-                    {/* System Share (If supported by OS/browser) or Copy */}
-                    {canNativeShare ? (
-                      <button
-                        onClick={handleNativeShare}
-                        className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-orange-500/10 border border-zinc-800 hover:border-orange-500/40 transition-all group"
-                        title="Share via Device Apps"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Share2 className="w-4 h-4 text-orange-400" />
-                        </div>
-                        <span className="text-[11px] font-medium text-zinc-300 mt-1.5">Device</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleCopyLink(getShortShareUrl(shareModalShort))}
-                        className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-orange-500/10 border border-zinc-800 hover:border-orange-500/40 transition-all group"
-                        title="Copy Short Link"
-                      >
-                        <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Copy className="w-4 h-4 text-orange-400" />
-                        </div>
-                        <span className="text-[11px] font-medium text-zinc-300 mt-1.5">Copy Link</span>
-                      </button>
-                    )}
+                    {/* More Apps (Native System Share Sheet) */}
+                    <button
+                      onClick={handleNativeShare}
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-orange-500/10 border border-zinc-800 hover:border-orange-500/40 transition-all group"
+                      title="Share via Apps & Contacts"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Share2 className="w-4 h-4 text-orange-400" />
+                      </div>
+                      <span className="text-[11px] font-medium text-zinc-300 mt-1.5">More Apps</span>
+                    </button>
                   </div>
                 </div>
 
@@ -2295,8 +2459,13 @@ export default function ShortsTabContent() {
                       type="text"
                       readOnly
                       value={getShortShareUrl(shareModalShort)}
-                      onFocus={(e) => e.target.select()}
-                      className="flex-1 bg-transparent text-xs text-zinc-300 outline-none px-2.5 truncate font-mono select-all"
+                      onClick={(e) => {
+                        (e.target as HTMLInputElement).select();
+                        handleCopyLink(getShortShareUrl(shareModalShort));
+                      }}
+                      onFocus={(e) => (e.target as HTMLInputElement).select()}
+                      className="flex-1 bg-transparent text-xs text-zinc-300 outline-none px-2.5 truncate font-mono select-all cursor-pointer"
+                      title="Click to copy link"
                     />
                     <Button
                       onClick={() => handleCopyLink(getShortShareUrl(shareModalShort))}

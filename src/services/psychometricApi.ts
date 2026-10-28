@@ -74,6 +74,18 @@ export interface PsychometricHistoryItem {
     modified?: string;
 }
 
+const getAuthHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (typeof window !== "undefined") {
+        const apiKey = localStorage.getItem("apiKey");
+        const apiSecret = localStorage.getItem("apiSecret");
+        if (apiKey && apiSecret && apiKey !== "undefined" && apiSecret !== "undefined" && apiKey !== "null" && apiSecret !== "null") {
+            headers["Authorization"] = `token ${apiKey.trim()}:${apiSecret.trim()}`;
+        }
+    }
+    return headers;
+};
+
 export const psychometricApi = {
     checkOnboardingStatus: async (email?: string): Promise<OnboardingStatusResponse> => {
         try {
@@ -84,7 +96,7 @@ export const psychometricApi = {
             const res = await fetch(url, {
                 method: "GET",
                 credentials: "include",
-                headers: { "Content-Type": "application/json" }
+                headers: getAuthHeaders()
             });
             if (!res.ok) {
                 throw new Error(`HTTP error ${res.status}`);
@@ -109,7 +121,7 @@ export const psychometricApi = {
         const res = await fetch(`${getBackendUrl()}/api/method/nexedu.api.get_tests`, {
             method: "GET",
             credentials: "include",
-            headers: { "Content-Type": "application/json" }
+            headers: getAuthHeaders()
         });
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         const data = await res.json();
@@ -119,7 +131,7 @@ export const psychometricApi = {
     startNewTest: async (testType: string, email?: string): Promise<any> => {
         const res = await fetch(`${getBackendUrl()}/api/method/nexedu.api.start_new_test`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders(),
             credentials: "include",
             body: JSON.stringify({ test_type: testType, email })
         });
@@ -131,7 +143,7 @@ export const psychometricApi = {
     loadQuestion: async (screenName: string): Promise<QuestionData> => {
         const res = await fetch(`${getBackendUrl()}/api/method/nexedu.api.load_question`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders(),
             credentials: "include",
             body: JSON.stringify({ screen_name: screenName })
         });
@@ -148,7 +160,7 @@ export const psychometricApi = {
     }): Promise<QuestionData> => {
         const res = await fetch(`${getBackendUrl()}/api/method/nexedu.api.next_question`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders(),
             credentials: "include",
             body: JSON.stringify(params)
         });
@@ -160,7 +172,7 @@ export const psychometricApi = {
     previousQuestion: async (screenName: string): Promise<QuestionData> => {
         const res = await fetch(`${getBackendUrl()}/api/method/nexedu.api.previous_question`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders(),
             credentials: "include",
             body: JSON.stringify({ screen_name: screenName })
         });
@@ -172,7 +184,7 @@ export const psychometricApi = {
     submitTest: async (screenName: string, email?: string): Promise<SubmitTestResult> => {
         const res = await fetch(`${getBackendUrl()}/api/method/nexedu.api.submit_test`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders(),
             credentials: "include",
             body: JSON.stringify({ name: screenName, email })
         });
@@ -193,7 +205,7 @@ export const psychometricApi = {
         const res = await fetch(url, {
             method: "GET",
             credentials: "include",
-            headers: { "Content-Type": "application/json" }
+            headers: getAuthHeaders()
         });
         if (!res.ok) throw new Error(`HTTP error ${res.status}`);
         const data = await res.json();

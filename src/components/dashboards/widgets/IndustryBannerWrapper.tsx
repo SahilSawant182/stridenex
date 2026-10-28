@@ -1,11 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useIndustry } from "@/context/IndustryContext";
 import RoleBannerWidget from "./RoleBannerWidget";
 import { Briefcase, Users, Target, Star, Building2, Globe, FileText, Layout, Layers, MapPin, Factory } from "lucide-react";
 import { OperatingHoursTable } from "@/components/dashboards/shared/OperatingHoursTable";
 import ReferralSectionField from "@/components/dashboards/widgets/ReferralSectionField";
+import {
+  getJobProfiles,
+  getApplications,
+  getApplicationsCount,
+  getApplicationStatusCount,
+  getInternshipList
+} from "@/services/industry.services";
 
 // Module-level component so it's not re-created on every render
 function IndustryReferralCodeBox({ referal_code }: { referal_code: string }) {
@@ -48,6 +55,179 @@ export default function IndustryBannerWrapper() {
   const { industryData, roleList, loading, refreshIndustryData } = useIndustry();
   const [businessTypeOptions, setBusinessTypeOptions] = useState<string[]>([]);
   const [industrySectorOptions, setIndustrySectorOptions] = useState<string[]>([]);
+  const [bannerMetrics, setBannerMetrics] = useState({
+    openRoles: 0,
+    applications: 0,
+    hired: 0
+  });
+
+  const fetchBannerMetrics = useCallback(async (companyName: string) => {
+    if (!companyName) return;
+    try {
+      const [
+        jobsRes,
+        jobAppsCountRes,
+        internAppsCountRes,
+        projAppsCountRes,
+        generalAppsCountRes,
+        statusCountRes,
+        appsListRes
+      ] = await Promise.allSettled([
+        getJobProfiles(companyName),
+        getApplicationsCount({ industry: companyName, opportunity_type: "Job" }),
+        getApplicationsCount({ industry: companyName, opportunity_type: "Internship" }),
+        getApplicationsCount({ industry: companyName, opportunity_type: "Project" }),
+        getApplicationsCount({ industry: companyName } as any),
+        getApplicationStatusCount(companyName),
+        getApplications({ industry: companyName } as any)
+      ]);
+
+      // 1. Calculate Open Roles from Job Profiles
+      let openRolesCount = 0;
+      if (jobsRes.status === "fulfilled" && jobsRes.value) {
+        const dataObj = jobsRes.value?.data || jobsRes.value?.message?.data || jobsRes.value?.message || {};
+        let list: any[] = [];
+        if (Array.isArray(dataObj)) {
+          list = dataObj;
+        } else if (Array.isArray(dataObj?.data)) {
+          list = dataObj.data;
+        }
+        const compLower = companyName.trim().toLowerCase();
+        const filteredJobs = list.filter((job: any) =>
+          !job.industry || job.industry.trim().toLowerCase() === compLower
+        );
+        const openJobs = filteredJobs.filter((job: any) =>
+          (job.status || "open").trim().toLowerCase() === "open"
+        );
+        openRolesCount = openJobs.length;
+      }
+
+      // Include any legacy roles from roleList
+      if (roleList && roleList.length > 0) {
+        if (openRolesCount === 0) {
+          openRolesCount = roleList.length;
+        } else {
+          openRolesCount += roleList.length;
+        }
+      }
+
+      // If still 0, check active internships
+      if (openRolesCount === 0) {
+        try {
+          const internRes = await getInternshipList(companyName, 1, 100);
+          const internData = internRes?.data || internRes?.message?.data || internRes?.message || {};
+          let internList: any[] = [];
+          if (Array.isArray(internData)) {
+            internList = internData;
+          } else if (Array.isArray(internData?.internships)) {
+            internList = internData.internships;
+          } else if (Array.isArray(internData?.data)) {
+            internList = internData.data;
+          }
+          const openInterns = internList.filter((i: any) =>
+            (i.status || "open").trim().toLowerCase() === "open"
+          );
+          if (openInterns.length > 0) {
+            openRolesCount = openInterns.length;
+          }
+        } catch (_) {}
+      }
+
+      // 2. Extract Application Counts
+      const extractCounts = (settledRes: PromiseSettledResult<any>): Record<string, number> => {
+        if (settledRes.status !== "fulfilled" || !settledRes.value) return {};
+        const val = settledRes.value;
+        const data = val?.data?.data || val?.message?.data || val?.data || val?.message || val;
+        if (data && typeof data === "object" && !Array.isArray(data)) {
+          const res: Record<string, number> = {};
+          for (const [k, v] of Object.entries(data)) {
+            const num = Number(v);
+            if (!isNaN(num)) {
+              res[k] = num;
+            }
+          }
+          return res;
+        }
+        return {};
+      };
+
+      const jobCounts = extractCounts(jobAppsCountRes);
+      const internCounts = extractCounts(internAppsCountRes);
+      const projCounts = extractCounts(projAppsCountRes);
+      const generalCounts = extractCounts(generalAppsCountRes);
+      const statusCounts = extractCounts(statusCountRes);
+
+      const aggregatedStatusMap: Record<string, number> = {};
+      const addCountsToMap = (counts: Record<string, number>) => {
+        for (const [status, count] of Object.entries(counts)) {
+          const normKey = status.trim();
+          aggregatedStatusMap[normKey] = (aggregatedStatusMap[normKey] || 0) + count;
+        }
+      };
+
+      const oppTypeTotal =
+        Object.values(jobCounts).reduce((a, b) => a + b, 0) +
+        Object.values(internCounts).reduce((a, b) => a + b, 0) +
+        Object.values(projCounts).reduce((a, b) => a + b, 0);
+
+      if (oppTypeTotal > 0) {
+        addCountsToMap(jobCounts);
+        addCountsToMap(internCounts);
+        addCountsToMap(projCounts);
+      } else if (Object.keys(generalCounts).length > 0) {
+        addCountsToMap(generalCounts);
+      } else if (Object.keys(statusCounts).length > 0) {
+        addCountsToMap(statusCounts);
+      }
+
+      // Extract raw applications list if returned
+      let rawAppsList: any[] = [];
+      if (appsListRes.status === "fulfilled" && appsListRes.value) {
+        const val = appsListRes.value;
+        const data = val?.data?.data || val?.message?.data || val?.data || val?.message || val;
+        if (Array.isArray(data)) {
+          rawAppsList = data;
+        } else if (data && typeof data === "object" && Array.isArray(data.data)) {
+          rawAppsList = data.data;
+        }
+      }
+
+      const totalApplications = Math.max(
+        Object.values(aggregatedStatusMap).reduce((a, b) => a + b, 0),
+        rawAppsList.length
+      );
+
+      // 3. Calculate Hired (Selected, Accepted, Hired)
+      let hiredFromStatus = 0;
+      for (const [k, v] of Object.entries(aggregatedStatusMap)) {
+        const lower = k.toLowerCase().trim();
+        if (lower === "selected" || lower === "accepted" || lower === "hired") {
+          hiredFromStatus += v;
+        }
+      }
+
+      const hiredFromList = rawAppsList.filter((app: any) => {
+        const s = (app.status || "").toLowerCase().trim();
+        return s === "selected" || s === "accepted" || s === "hired";
+      }).length;
+
+      const totalHired = Math.max(hiredFromStatus, hiredFromList);
+
+      setBannerMetrics({
+        openRoles: openRolesCount,
+        applications: totalApplications,
+        hired: totalHired
+      });
+    } catch (err) {
+      console.error("Error fetching industry banner metrics:", err);
+    }
+  }, [roleList]);
+
+  useEffect(() => {
+    if (industryData?.company_name) {
+      fetchBannerMetrics(industryData.company_name);
+    }
+  }, [industryData?.company_name, fetchBannerMetrics]);
 
   useEffect(() => {
     const fetchOptions = async () => {
@@ -98,25 +278,23 @@ export default function IndustryBannerWrapper() {
     </div>
   );
 
-  const openPositions = roleList?.reduce((acc, r) => acc + (Number(r.available_positions) || 0), 0) || 0;
-
   // Construct dynamic metrics
   const customMetrics = [
     {
       key: "positions",
-      value: openPositions,
+      value: bannerMetrics.openRoles,
       label: "Open Roles",
       icon: Briefcase
     },
     {
       key: "applications",
-      value: "0",
+      value: bannerMetrics.applications,
       label: "Applications",
       icon: Users
     },
     {
       key: "hired",
-      value: "0",
+      value: bannerMetrics.hired,
       label: "Hired",
       icon: Users
     }
@@ -228,7 +406,12 @@ export default function IndustryBannerWrapper() {
         subtitle: subtitle,
         metrics: customMetrics,
         rawIndustryData: industryData,
-        onUpdateSuccess: refreshIndustryData,
+        onUpdateSuccess: async () => {
+          await refreshIndustryData();
+          if (industryData?.company_name) {
+            await fetchBannerMetrics(industryData.company_name);
+          }
+        },
         fields: industryFields
       }}
     />
