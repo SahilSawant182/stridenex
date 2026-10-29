@@ -124,7 +124,7 @@ export default function PublicNavbar({ }: NavbarProps) {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (megaMenuRef.current && !megaMenuRef.current.contains(event.target as Node)) {
+      if (!mobileMenuOpen && megaMenuRef.current && !megaMenuRef.current.contains(event.target as Node)) {
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current);
           timeoutRef.current = null;
@@ -139,7 +139,7 @@ export default function PublicNavbar({ }: NavbarProps) {
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     if (activeMegaMenu || mobileMenuOpen || searchOpen) {
@@ -373,14 +373,11 @@ export default function PublicNavbar({ }: NavbarProps) {
               animate="visible"
               exit="exit"
               onMouseLeave={handleMegaMenuLeave}
-              className="absolute left-0 right-0 top-full bg-white shadow-2xl border-t border-primary/10 overflow-hidden"
+              className="hidden lg:block absolute left-0 right-0 top-full bg-white shadow-2xl border-t border-primary/10 overflow-hidden"
               style={{ originY: 0 }}
             >
               <div className="max-w-7xl mx-auto px-6 py-6">
-                <div className={`flex flex-col md:flex-row flex-wrap gap-6 md:gap-8 lg:gap-12 ${(navItems.find(item => item.key === activeMegaMenu)?.sections?.length || 0) === 1
-                  ? 'justify-start'
-                  : 'justify-center'
-                  }`}>
+                <div className="flex flex-col md:flex-row flex-wrap gap-6 md:gap-8 lg:gap-12 justify-center">
                   {navItems.find(item => item.key === activeMegaMenu)?.sections.map((section) => (
                     <motion.div
                       key={section.title}
@@ -514,15 +511,26 @@ export default function PublicNavbar({ }: NavbarProps) {
                   return (
                     <motion.div key={item.key} variants={itemVariants} className="space-y-3">
                       {item.href ? (
-                        <button
-                          onClick={() => handleNavigation(item.href!)}
-                          className="flex items-center justify-between w-full text-left"
-                        >
-                          <span className="text-lg font-bold text-slate-900">{item.label}</span>
+                        <div className="flex items-center justify-between w-full">
+                          <button
+                            onClick={() => handleNavigation(item.href!)}
+                            className="text-left flex-1 py-1"
+                          >
+                            <span className="text-lg font-bold text-slate-900">{item.label}</span>
+                          </button>
                           {hasSections && (
-                            <ChevronDown className="w-5 h-5 text-accent" />
+                            <button
+                              type="button"
+                              onClick={() => setActiveMegaMenu(activeMegaMenu === item.key ? null : item.key)}
+                              className="p-2 -mr-2 rounded-lg hover:bg-primary/5 transition-colors"
+                              aria-label={`Toggle ${item.label} submenu`}
+                              aria-expanded={activeMegaMenu === item.key}
+                            >
+                              <ChevronDown className={`w-5 h-5 text-accent transition-transform duration-200 ${activeMegaMenu === item.key ? 'rotate-180' : ''
+                                }`} />
+                            </button>
                           )}
-                        </button>
+                        </div>
                       ) : (
                         <button
                           onClick={() => setActiveMegaMenu(activeMegaMenu === item.key ? null : item.key)}
