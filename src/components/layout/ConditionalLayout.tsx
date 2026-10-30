@@ -17,6 +17,8 @@ export default function ConditionalLayout({
         pathname?.startsWith('/privacy-policy') ||
         pathname?.startsWith('/terms-of-use') ||
         pathname?.startsWith('/blogs') ||
+        pathname?.startsWith('/events') ||
+        pathname?.startsWith('/our-videos') ||
         pathname?.startsWith('/bloggers') ||
         pathname?.startsWith('/insights') ||
         pathname?.startsWith('/students/') ||
