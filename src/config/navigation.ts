@@ -16,6 +16,7 @@ import {
   Building2,
   Handshake,
   Lightbulb,
+  Video,
   type LucideIcon
 } from "lucide-react";
 
@@ -258,9 +259,21 @@ about: {
   
   events: {
     label: "Events",
-    href: "/blogs",
+    href: "/events",
     icon: Newspaper,
-    sections: []
+    sections: [
+      {
+        title: "Explore",
+        items: [
+          {
+            label: "Our Videos",
+            href: "/our-videos",
+            icon: Video,
+            description: "Watch our latest videos and insights",
+          },
+        ]
+      }
+    ]
   },
   
   partner: {
