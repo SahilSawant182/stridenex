@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 
 import { useAuth } from "@/context/AuthContext";
-import { getUpcomingSessions, getSlotCalendar, getWeeklyBookedSessions, getMonthlyBookedSessions, blockTime, rescheduleSession, saveMentorAvailability, deleteMentorAvailability, getSessionNote, saveSessionNotes, markSessionCompleted } from "@/services/mentor.services";
+import { getUpcomingSessions, getSlotCalendar, getWeeklyBookedSessions, getMonthlyBookedSessions, getPendingRequests, blockTime, rescheduleSession, saveMentorAvailability, deleteMentorAvailability, getSessionNote, saveSessionNotes, markSessionCompleted } from "@/services/mentor.services";
 import { useToast } from "@/context/ToastContext";
 import { DatePicker } from "@/components/ui/date-picker";
 
@@ -68,6 +68,7 @@ export default function ScheduleTabContent() {
   const [slotCalendar, setSlotCalendar] = useState<Record<string, any[]>>({});
   const [weeklyBooked, setWeeklyBooked] = useState<any[]>([]);
   const [monthlyBooked, setMonthlyBooked] = useState<any[]>([]);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
   const [viewType, setViewType] = useState<'week' | 'month'>('week');
   const [loading, setLoading] = useState(true);
   const [loadingMonthly, setLoadingMonthly] = useState(false);
@@ -430,7 +431,7 @@ export default function ScheduleTabContent() {
         return;
       }
       try {
-        const [upcomingRes, calendarRes, weeklyRes] = await Promise.all([
+        const [upcomingRes, calendarRes, weeklyRes, pendingRes] = await Promise.all([
           getUpcomingSessions(email).catch(err => {
             console.error("Failed to fetch upcoming sessions", err);
             return null;
@@ -442,9 +443,14 @@ export default function ScheduleTabContent() {
           getWeeklyBookedSessions(email).catch(err => {
             console.error("Failed to fetch weekly booked sessions", err);
             return null;
+          }),
+          getPendingRequests(email).catch(err => {
+            console.error("Failed to fetch pending requests in schedule", err);
+            return null;
           })
         ]);
         setUpcoming(normalizeSessionList(upcomingRes));
+        setPendingRequests(normalizeSessionList(pendingRes));
         if (calendarRes?.message && typeof calendarRes.message === 'object') {
           setSlotCalendar(calendarRes.message);
         } else {
@@ -685,8 +691,18 @@ export default function ScheduleTabContent() {
       }
     });
 
+    // 4. Add future sessions from pending requests (awaiting approval)
+    (Array.isArray(pendingRequests) ? pendingRequests : []).forEach(s => {
+      const key = s.name || s.id;
+      if (key && !map.has(key)) {
+        if (!s.session_date || s.session_date >= todayStr) {
+          map.set(key, { ...s, isPendingRequest: true });
+        }
+      }
+    });
+
     return Array.from(map.values());
-  }, [upcoming, weeklyBooked, monthlyBooked]);
+  }, [upcoming, weeklyBooked, monthlyBooked, pendingRequests]);
 
   const dynamicUpcomingBookings = mergedUpcomingList.map((s, index) => {
     const studentName = s.student_full_name || s.student_name || (s.first_name && s.last_name ? `${s.first_name} ${s.last_name}` : null) || s.student?.split('@')[0] || "Unknown";
@@ -709,8 +725,8 @@ export default function ScheduleTabContent() {
       topic: s.topic || "Session",
       date: `${dateStr} • ${timeStr}`,
       duration: `${s.duration} min`,
-      type: "Mentorship",
-      typeColor: "text-blue-600 bg-blue-50",
+      type: s.isPendingRequest || (s.status && s.status.toLowerCase() === "pending") ? "Pending Approval" : "Mentorship",
+      typeColor: s.isPendingRequest || (s.status && s.status.toLowerCase() === "pending") ? "text-amber-700 bg-amber-50 border border-amber-200" : "text-blue-600 bg-blue-50",
       fee: "—",
       meeting_link: s.meeting_link
     };

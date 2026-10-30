@@ -41,13 +41,29 @@ import {
   Sliders,
   Plus,
   Compass,
-  Repeat
+  Repeat,
+  Copy,
+  Check,
+  ExternalLink,
+  Mail
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+
+const formatMediaUrl = (urlOrPath: string, baseDomain: string): string => {
+  if (!urlOrPath) return "";
+  const full = urlOrPath.startsWith("http://") || urlOrPath.startsWith("https://")
+    ? urlOrPath
+    : `${baseDomain}${urlOrPath.startsWith("/") ? "" : "/"}${urlOrPath}`;
+  try {
+    return encodeURI(decodeURI(full));
+  } catch {
+    return encodeURI(full);
+  }
+};
 
 // Types
 interface ShortVideo {
@@ -459,12 +475,33 @@ export default function ShortsTabContent() {
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
   const [selectedPlaylistForView, setSelectedPlaylistForView] = useState<any | null>(null);
 
+  // Universal Share Shorts Modal state (Works for all browsers & OS: Linux, Ubuntu, Mac, Windows, iOS, Android)
+  const [shareModalShort, setShareModalShort] = useState<ShortVideo | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
+  const [canNativeShare, setCanNativeShare] = useState(false);
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      setCanNativeShare(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && shareModalShort) {
+        setShareModalShort(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [shareModalShort]);
+
   const playPlaylistShort = (shortItem: any) => {
     const shortId = String(shortItem.name || shortItem.id);
     const exists = shortsList.some(s => String(s.id) === shortId);
     if (!exists) {
-      const videoUrl = shortItem.video ? (shortItem.video.startsWith('http') ? shortItem.video : `${BASE_DOMAIN}${shortItem.video}`) : '';
-      const thumbnail = shortItem.thumbnail ? (shortItem.thumbnail.startsWith('http') ? shortItem.thumbnail : `${BASE_DOMAIN}${shortItem.thumbnail}`) : undefined;
+      const videoUrl = shortItem.video ? formatMediaUrl(shortItem.video, BASE_DOMAIN) : '';
+      const thumbnail = shortItem.thumbnail ? formatMediaUrl(shortItem.thumbnail, BASE_DOMAIN) : undefined;
       const mappedShort: ShortVideo = {
         id: shortId,
         title: shortItem.title || "Untitled Short",
@@ -860,8 +897,8 @@ export default function ShortsTabContent() {
         const savedIdsFromFeed: string[] = [];
         const likedIdsFromFeed: string[] = [];
         const mapped = rawShorts.map((item: any): ShortVideo => {
-          const videoUrl = item.video ? (item.video.startsWith('http') ? item.video : `${BASE_DOMAIN}${item.video}`) : '';
-          const thumbnail = item.thumbnail ? (item.thumbnail.startsWith('http') ? item.thumbnail : `${BASE_DOMAIN}${item.thumbnail}`) : undefined;
+          const videoUrl = item.video ? formatMediaUrl(item.video, BASE_DOMAIN) : '';
+          const thumbnail = item.thumbnail ? formatMediaUrl(item.thumbnail, BASE_DOMAIN) : undefined;
 
           const skill = item.skill || "Skill";
           const authorAvatar = skill.substring(0, 2).toUpperCase();
@@ -1060,9 +1097,28 @@ export default function ShortsTabContent() {
     ? shortsList.filter(short => savedItems.map(String).includes(String(short.id)))
     : shortsList;
 
-  // Set default active video on load/filter
+  // Set default active video on load/filter, prioritizing ?short=<id> if present
   useEffect(() => {
     if (displayedShorts.length > 0 && !activeVideoId) {
+      if (typeof window !== "undefined") {
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetShortId = urlParams.get("short");
+        if (targetShortId) {
+          const match = displayedShorts.find(
+            (s) => String(s.id).toLowerCase() === targetShortId.toLowerCase()
+          );
+          if (match) {
+            setActiveVideoId(match.id);
+            setTimeout(() => {
+              const el = document.getElementById(`short-card-${match.id}`);
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+              }
+            }, 300);
+            return;
+          }
+        }
+      }
       setActiveVideoId(displayedShorts[0].id);
     }
   }, [displayedShorts, activeVideoId]);
@@ -1148,35 +1204,249 @@ export default function ShortsTabContent() {
     }
   };
 
-  const handleShare = async (videoUrl: string) => {
-    const shareUrl = videoUrl || window.location.href;
-    if (navigator.share) {
+  // Cross-browser clipboard copy helper that works across ALL browsers:
+  // Chrome, Safari (macOS & iOS WebKit), Firefox, Edge, Android, and non-HTTPS contexts
+  const copyTextToClipboard = async (text: string): Promise<boolean> => {
+    if (!text) return false;
+    let copied = false;
+
+    // 1. Try modern Async Clipboard API first
+    if (typeof navigator !== "undefined" && navigator?.clipboard && typeof navigator.clipboard.writeText === "function") {
       try {
-        await navigator.share({
-          title: 'StrideNex Short',
-          url: shareUrl,
-        });
-        return;
-      } catch (err) { }
+        await navigator.clipboard.writeText(text);
+        copied = true;
+      } catch (err) {
+        console.warn("navigator.clipboard.writeText failed, trying fallback:", err);
+      }
     }
 
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(shareUrl);
-        showToast("Link copied to clipboard!", "success");
-      } else {
-        const textarea = document.createElement("textarea");
-        textarea.value = shareUrl;
-        textarea.style.position = "fixed";
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-        showToast("Link copied to clipboard!", "success");
+    // 2. Fallback using document.execCommand with full iOS Safari / Android / WebKit support
+    if (!copied && typeof document !== "undefined") {
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        // Position off-screen without hiding from layout
+        textArea.style.position = "fixed";
+        textArea.style.top = "0";
+        textArea.style.left = "-9999px";
+        textArea.style.width = "2em";
+        textArea.style.height = "2em";
+        textArea.style.padding = "0";
+        textArea.style.border = "none";
+        textArea.style.outline = "none";
+        textArea.style.boxShadow = "none";
+        textArea.style.background = "transparent";
+        textArea.style.opacity = "0";
+        textArea.style.fontSize = "16px"; // Prevent auto-zoom on iOS Safari
+        // CRITICAL: Do NOT set readOnly attribute on iOS Safari,
+        // because iOS WebKit ignores selection on readOnly textareas!
+        textArea.setAttribute("aria-hidden", "true");
+        textArea.setAttribute("tabindex", "-1");
+
+        document.body.appendChild(textArea);
+        textArea.focus({ preventScroll: true });
+        textArea.select();
+
+        // iOS Safari Range selection fallback
+        try {
+          textArea.setSelectionRange(0, text.length);
+          const range = document.createRange();
+          range.selectNodeContents(textArea);
+          const selection = window.getSelection();
+          if (selection) {
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        } catch {
+          // Ignore range selection errors
+        }
+
+        const successful = document.execCommand("copy");
+        try {
+          const selection = window.getSelection();
+          if (selection) {
+            selection.removeAllRanges();
+          }
+        } catch {
+          // Ignore
+        }
+        document.body.removeChild(textArea);
+        if (successful) copied = true;
+      } catch (err) {
+        console.error("document.execCommand copy fallback failed:", err);
       }
-    } catch (err) {
-      showToast("Failed to copy link.", "error");
     }
+
+    return copied;
+  };
+
+  const getShortShareUrl = (short: ShortVideo) => {
+    let url = short?.videoUrl || "";
+    if (url) {
+      url = formatMediaUrl(url, BASE_DOMAIN);
+    } else if (typeof window !== "undefined") {
+      url = window.location.href;
+    }
+    if (url) {
+      try {
+        url = encodeURI(decodeURI(url));
+      } catch {
+        url = encodeURI(url);
+      }
+    }
+    return url || "";
+  };
+
+  const handleCopyLink = async (url: string) => {
+    const ok = await copyTextToClipboard(url);
+    setIsCopied(true);
+    showToast("Link copied to clipboard!", "success");
+    setTimeout(() => setIsCopied(false), 2500);
+  };
+
+  const handleOpenShare = (shortOrUrl: ShortVideo | string) => {
+    let targetShort: ShortVideo | null = null;
+    if (typeof shortOrUrl === "object" && shortOrUrl !== null) {
+      targetShort = shortOrUrl;
+    } else if (typeof shortOrUrl === "string") {
+      targetShort = shortsList.find((s) => s.videoUrl === shortOrUrl || String(s.id) === shortOrUrl) || {
+        id: "short-shared",
+        title: "StrideNex Educational Short",
+        category: "Learning",
+        duration: "30 sec",
+        views: "0",
+        author: "StrideNex",
+        authorAvatar: "SN",
+        authorHandle: "@stridenex",
+        tags: [],
+        isSaved: false,
+        videoUrl: shortOrUrl,
+        color: "orange",
+      };
+    }
+    if (targetShort) {
+      setShareModalShort(targetShort);
+      setIsCopied(false);
+      // Immediately pre-copy the clean link to the user's clipboard during user click gesture
+      const cleanUrl = getShortShareUrl(targetShort);
+      if (cleanUrl) {
+        copyTextToClipboard(cleanUrl).catch(() => {});
+      }
+    }
+  };
+
+  const handleShare = (videoUrl: string) => {
+    handleOpenShare(videoUrl);
+  };
+
+  const getShareMessage = (short: ShortVideo) => {
+    const title = short?.title?.trim() || "StrideNex Short";
+    const shareUrl = getShortShareUrl(short);
+    return `${title} - Watch on StrideNex:\n${shareUrl}`;
+  };
+
+  const handleShareWhatsApp = (e: React.MouseEvent) => {
+    if (!shareModalShort) return;
+    const message = getShareMessage(shareModalShort);
+    const encodedMessage = encodeURIComponent(message);
+
+    // 1. Always copy message to clipboard so user can paste manually if WhatsApp or OS drops query params
+    copyTextToClipboard(message);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2500);
+    showToast("Link copied to clipboard! Opening WhatsApp...", "success");
+
+    // 2. Cross-browser / platform handling
+    const isMobile =
+      typeof navigator !== "undefined" &&
+      /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      e.preventDefault();
+      // On mobile devices, whatsapp://send?text= launches WhatsApp app with text pre-filled
+      const nativeUrl = `whatsapp://send?text=${encodedMessage}`;
+      const webUrl = `https://wa.me/?text=${encodedMessage}`;
+
+      window.location.href = nativeUrl;
+      setTimeout(() => {
+        window.open(webUrl, "_blank");
+      }, 1500);
+    }
+    // On desktop, default anchor behavior opens https://wa.me/?text=... in a new tab smoothly
+  };
+
+  const handleShareTelegram = (e: React.MouseEvent) => {
+    if (!shareModalShort) return;
+    const message = getShareMessage(shareModalShort);
+    const encodedMessage = encodeURIComponent(message);
+
+    copyTextToClipboard(message);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2500);
+    showToast("Link copied to clipboard! Opening Telegram...", "success");
+
+    const isMobile =
+      typeof navigator !== "undefined" &&
+      /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      e.preventDefault();
+      const nativeUrl = `tg://msg_url?url=&text=${encodedMessage}`;
+      const webUrl = `https://t.me/share/url?url=&text=${encodedMessage}`;
+
+      window.location.href = nativeUrl;
+      setTimeout(() => {
+        window.open(webUrl, "_blank");
+      }, 1500);
+    }
+  };
+
+  const handleSocialShare = (platformName: string, textToCopy: string) => {
+    copyTextToClipboard(textToCopy);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2500);
+    showToast(`Link copied! Opening ${platformName}...`, "success");
+  };
+
+  const handleNativeShare = async () => {
+    if (!shareModalShort) return;
+    const shareUrl = getShortShareUrl(shareModalShort);
+    const title = shareModalShort.title || "StrideNex Short";
+    const message = getShareMessage(shareModalShort);
+
+    // Guaranteed clipboard copy backup
+    await copyTextToClipboard(message);
+    setIsCopied(true);
+    setTimeout(() => setIsCopied(false), 2500);
+
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: title,
+          text: message,
+        });
+        showToast("Shared successfully!", "success");
+        return;
+      } catch (err: any) {
+        if (err?.name === "AbortError") {
+          return;
+        }
+        try {
+          await navigator.share({
+            title: title,
+            text: `${title} - Watch on StrideNex:`,
+            url: shareUrl,
+          });
+          showToast("Shared successfully!", "success");
+          return;
+        } catch (e: any) {
+          if (e?.name === "AbortError") return;
+          console.warn("Native share fallback failed:", e);
+        }
+      }
+    }
+
+    showToast("Link copied to clipboard! Select WhatsApp or Telegram below to send.", "success");
   };
 
   const getLikesCount = (short: ShortVideo) => {
@@ -1472,8 +1742,10 @@ export default function ShortsTabContent() {
                       {/* Share Button */}
                       <div className="flex flex-col items-center">
                         <button
-                          onClick={() => handleShare(short.videoUrl)}
+                          onClick={() => handleOpenShare(short)}
                           className="w-11 h-11 rounded-full bg-zinc-800/60 hover:bg-zinc-700/80 text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-xl"
+                          title="Share Short"
+                          aria-label="Share Short"
                         >
                           <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M14 9V5l7 7-7 7v-4.1c-5 0-8.5 1.6-11 5.1 1-5 4-10 11-11z" />
@@ -1969,6 +2241,254 @@ export default function ShortsTabContent() {
                 >
                   {isCreatingPlaylist ? "Creating..." : "Create"}
                 </Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Universal Share Shorts Modal (Works across all browsers & OS: Linux, Ubuntu, Windows, macOS, Android, iOS) */}
+      <AnimatePresence>
+        {shareModalShort && (
+          <div
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+            onClick={() => setShareModalShort(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-zinc-900 border border-zinc-800 rounded-2xl max-w-md w-full text-zinc-100 shadow-2xl relative overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-5 border-b border-zinc-800">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
+                    <Share2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Share Short</h3>
+                    <p className="text-xs text-zinc-400 line-clamp-1">{shareModalShort.title}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShareModalShort(null)}
+                  className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-5 space-y-5">
+                {/* Short preview card */}
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-zinc-850/60 border border-zinc-800/80">
+                  <div className="w-10 h-10 rounded-lg bg-orange-500/20 text-orange-400 font-bold text-xs flex items-center justify-center border border-orange-500/30 shrink-0">
+                    {shareModalShort.authorAvatar || "SN"}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-white truncate">{shareModalShort.title}</p>
+                    <div className="flex items-center gap-2 mt-0.5 text-[11px] text-zinc-400">
+                      <span>{shareModalShort.authorHandle}</span>
+                      <span>•</span>
+                      <span className="text-orange-400 font-medium">{shareModalShort.category}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Primary Action: Select App & Contact to Auto-paste */}
+                <div className="p-3.5 rounded-xl bg-gradient-to-r from-orange-500/15 via-orange-500/10 to-zinc-800/40 border border-orange-500/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-orange-500 flex items-center justify-center text-white shadow-md shadow-orange-500/30">
+                        <Share2 className="w-3.5 h-3.5" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-white">Share to Any App & Contact</p>
+                        <p className="text-[11px] text-zinc-400">Select app & person → link is auto-pasted directly in chat</p>
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleNativeShare}
+                    className="w-full h-10 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-xs rounded-xl shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2 active:scale-95 transition-all"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Select App to Share (WhatsApp, Telegram...)
+                  </Button>
+                </div>
+
+                {/* Social Share Options */}
+                <div>
+                  <p className="text-[10px] font-semibold text-zinc-400 mb-3 tracking-wider uppercase">Or share directly to</p>
+                  <div className="grid grid-cols-4 gap-2.5">
+                    {/* WhatsApp */}
+                    <a
+                      href={`https://wa.me/?text=${encodeURIComponent(getShareMessage(shareModalShort))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={handleShareWhatsApp}
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-[#25D366]/10 border border-zinc-800 hover:border-[#25D366]/40 transition-all group"
+                      title="Share to WhatsApp"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#25D366]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg className="w-4.5 h-4.5 fill-[#25D366]" viewBox="0 0 24 24">
+                          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                        </svg>
+                      </div>
+                      <span className="text-[11px] font-medium text-zinc-300 mt-1.5">WhatsApp</span>
+                    </a>
+
+                    {/* Telegram */}
+                    <a
+                      href={`https://t.me/share/url?url=&text=${encodeURIComponent(getShareMessage(shareModalShort))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={handleShareTelegram}
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-[#229ED9]/10 border border-zinc-800 hover:border-[#229ED9]/40 transition-all group"
+                      title="Share to Telegram"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#229ED9]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Send className="w-4 h-4 text-[#229ED9]" />
+                      </div>
+                      <span className="text-[11px] font-medium text-zinc-300 mt-1.5">Telegram</span>
+                    </a>
+
+                    {/* LinkedIn */}
+                    <a
+                      href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(getShortShareUrl(shareModalShort))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => handleSocialShare("LinkedIn", getShortShareUrl(shareModalShort))}
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-[#0A66C2]/10 border border-zinc-800 hover:border-[#0A66C2]/40 transition-all group"
+                      title="Share to LinkedIn"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#0A66C2]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg className="w-4 h-4 fill-[#0A66C2]" viewBox="0 0 24 24">
+                          <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z"/>
+                        </svg>
+                      </div>
+                      <span className="text-[11px] font-medium text-zinc-300 mt-1.5">LinkedIn</span>
+                    </a>
+
+                    {/* X (Twitter) */}
+                    <a
+                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`${shareModalShort.title} - Watch on StrideNex:`)}&url=${encodeURIComponent(getShortShareUrl(shareModalShort))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => handleSocialShare("X", `${shareModalShort.title} - Watch on StrideNex:\n${getShortShareUrl(shareModalShort)}`)}
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-700/60 border border-zinc-800 hover:border-zinc-600 transition-all group"
+                      title="Share to X"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-zinc-700/40 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24">
+                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                      </div>
+                      <span className="text-[11px] font-medium text-zinc-300 mt-1.5">X</span>
+                    </a>
+
+                    {/* Facebook */}
+                    <a
+                      href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getShortShareUrl(shareModalShort))}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => handleSocialShare("Facebook", getShortShareUrl(shareModalShort))}
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-[#1877F2]/10 border border-zinc-800 hover:border-[#1877F2]/40 transition-all group"
+                      title="Share to Facebook"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#1877F2]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg className="w-4 h-4 fill-[#1877F2]" viewBox="0 0 24 24">
+                          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                        </svg>
+                      </div>
+                      <span className="text-[11px] font-medium text-zinc-300 mt-1.5">Facebook</span>
+                    </a>
+
+                    {/* Reddit */}
+                    <a
+                      href={`https://reddit.com/submit?url=${encodeURIComponent(getShortShareUrl(shareModalShort))}&title=${encodeURIComponent(shareModalShort.title)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => handleSocialShare("Reddit", getShortShareUrl(shareModalShort))}
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-[#FF4500]/10 border border-zinc-800 hover:border-[#FF4500]/40 transition-all group"
+                      title="Share to Reddit"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-[#FF4500]/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <svg className="w-4 h-4 fill-[#FF4500]" viewBox="0 0 24 24">
+                          <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.197-2.512-.73a.326.326 0 0 0-.232-.095z"/>
+                        </svg>
+                      </div>
+                      <span className="text-[11px] font-medium text-zinc-300 mt-1.5">Reddit</span>
+                    </a>
+
+                    {/* Email */}
+                    <a
+                      href={`mailto:?subject=${encodeURIComponent(`${shareModalShort.title} - StrideNex Shorts`)}&body=${encodeURIComponent(`${shareModalShort.title} - Watch on StrideNex:\n\n${getShortShareUrl(shareModalShort)}`)}`}
+                      onClick={() => handleSocialShare("Email", `${shareModalShort.title} - Watch on StrideNex:\n${getShortShareUrl(shareModalShort)}`)}
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-zinc-700/60 border border-zinc-800 hover:border-zinc-600 transition-all group"
+                      title="Share via Email"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-zinc-700/40 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Mail className="w-4 h-4 text-zinc-300" />
+                      </div>
+                      <span className="text-[11px] font-medium text-zinc-300 mt-1.5">Email</span>
+                    </a>
+
+                    {/* More Apps (Native System Share Sheet) */}
+                    <button
+                      onClick={handleNativeShare}
+                      className="flex flex-col items-center justify-center p-3 rounded-xl bg-zinc-800/50 hover:bg-orange-500/10 border border-zinc-800 hover:border-orange-500/40 transition-all group"
+                      title="Share via Apps & Contacts"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-orange-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <Share2 className="w-4 h-4 text-orange-400" />
+                      </div>
+                      <span className="text-[11px] font-medium text-zinc-300 mt-1.5">More Apps</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Direct Link Copy Input */}
+                <div className="pt-2 border-t border-zinc-800">
+                  <p className="text-[11px] font-semibold text-zinc-400 mb-2">Or copy direct link</p>
+                  <div className="flex items-center gap-2 p-1.5 rounded-xl bg-zinc-950 border border-zinc-800 focus-within:border-orange-500/50 transition-colors">
+                    <input
+                      type="text"
+                      readOnly
+                      value={getShortShareUrl(shareModalShort)}
+                      onClick={(e) => {
+                        (e.target as HTMLInputElement).select();
+                        handleCopyLink(getShortShareUrl(shareModalShort));
+                      }}
+                      onFocus={(e) => (e.target as HTMLInputElement).select()}
+                      className="flex-1 bg-transparent text-xs text-zinc-300 outline-none px-2.5 truncate font-mono select-all cursor-pointer"
+                      title="Click to copy link"
+                    />
+                    <Button
+                      onClick={() => handleCopyLink(getShortShareUrl(shareModalShort))}
+                      className={`h-9 px-3.5 text-xs font-semibold rounded-lg shrink-0 transition-all ${
+                        isCopied
+                          ? "bg-emerald-600 hover:bg-emerald-600 text-white"
+                          : "bg-orange-500 hover:bg-orange-600 text-white shadow-md active:scale-95"
+                      }`}
+                    >
+                      {isCopied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 mr-1" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 mr-1" />
+                          Copy Link
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
             </motion.div>
           </div>

@@ -44,7 +44,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isOnboarded, setIsOnboarded] = useState<string | null>(null);
   const [userImage, setUserImage] = useState<string | null>(null);
   const router = useRouter();
-  const BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -55,30 +54,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const storedRole = localStorage.getItem("role");
     const storedOnboarded = localStorage.getItem("isOnboarded");
 
-    if (storedKey && storedSecret) {
-      setApiKey(storedKey);
-      setApiSecret(storedSecret);
+    const validKey = storedKey && storedKey !== "undefined" && storedKey !== "null" && storedKey.trim() !== "" ? storedKey.trim() : null;
+    const validSecret = storedSecret && storedSecret !== "undefined" && storedSecret !== "null" && storedSecret.trim() !== "" ? storedSecret.trim() : null;
+
+    if (validKey && validSecret) {
+      setApiKey(validKey);
+      setApiSecret(validSecret);
       setIsAuthenticated(true);
+    } else {
+      if (storedKey === "undefined" || storedKey === "null") localStorage.removeItem("apiKey");
+      if (storedSecret === "undefined" || storedSecret === "null") localStorage.removeItem("apiSecret");
+      setApiKey(null);
+      setApiSecret(null);
+      setIsAuthenticated(false);
     }
 
-    if (storedUser) {
+    if (storedUser && storedUser !== "undefined" && storedUser !== "null") {
       setCurrentUser(storedUser);
     }
 
-    if (storedFullName) {
+    if (storedFullName && storedFullName !== "undefined" && storedFullName !== "null") {
       setFullName(storedFullName);
     }
 
-    if (storedRole) {
+    if (storedRole && storedRole !== "undefined" && storedRole !== "null") {
       setRole(storedRole);
     }
 
-    if (storedOnboarded) {   // ✅ ADD THIS
+    if (storedOnboarded && storedOnboarded !== "undefined" && storedOnboarded !== "null") {
       setIsOnboarded(storedOnboarded);
     }
 
     const storedUserImage = localStorage.getItem("userImage");
-    if (storedUserImage) {
+    if (storedUserImage && storedUserImage !== "undefined" && storedUserImage !== "null") {
       setUserImage(storedUserImage);
     }
 
@@ -126,17 +134,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [apiKey, apiSecret, isInitialized]);
 
   const getCurrentUser = async (): Promise<string | null> => {
-    if (!apiKey || !apiSecret) return null;
+    const validKey = apiKey && apiKey !== "undefined" && apiKey !== "null" ? apiKey : null;
+    const validSecret = apiSecret && apiSecret !== "undefined" && apiSecret !== "null" ? apiSecret : null;
+    if (!validKey || !validSecret) return null;
 
     try {
       const response = await fetch(
-        "http://103.219.1.138:4412/api/method/frappe.auth.get_logged_user",
+        `${BASE_URL}method/frappe.auth.get_logged_user`,
         {
           method: "GET",
           headers: {
             Accept: "application/json",
             "Content-Type": "application/json",
-            Authorization: `token ${apiKey}:${apiSecret}`,
+            Authorization: `token ${validKey}:${validSecret}`,
           },
           credentials: "include",
         }
@@ -166,12 +176,21 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   ) => {
     try {
-      setApiKey(key);
-      setApiSecret(secret);
-      setIsAuthenticated(true);
+      const cleanKey = key && key !== "undefined" && key !== "null" ? key.trim() : null;
+      const cleanSecret = secret && secret !== "undefined" && secret !== "null" ? secret.trim() : null;
 
-      localStorage.setItem("apiKey", key);
-      localStorage.setItem("apiSecret", secret);
+      if (cleanKey && cleanSecret) {
+        setApiKey(cleanKey);
+        setApiSecret(cleanSecret);
+        setIsAuthenticated(true);
+        localStorage.setItem("apiKey", cleanKey);
+        localStorage.setItem("apiSecret", cleanSecret);
+      } else {
+        setApiKey(null);
+        setApiSecret(null);
+        localStorage.removeItem("apiKey");
+        localStorage.removeItem("apiSecret");
+      }
 
       if (userData) {
         if (userData.email) {

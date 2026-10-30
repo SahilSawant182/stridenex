@@ -212,13 +212,23 @@ export default function StoriesTabContent() {
         
         try {
             setSubmitting(true);
+            const studentEmail =
+                (editingStory?.student && editingStory.student.includes("@") ? editingStory.student : null) ||
+                editingStory?.student_email ||
+                editingStory?.email ||
+                studentProfile?.email_id ||
+                studentProfile?.email ||
+                currentUser ||
+                (typeof window !== "undefined" ? localStorage.getItem("userEmail") : null) ||
+                "";
+
             if (editingStory) {
                 const storyId = editingStory.id || editingStory.name;
                 const payload = {
                     id: storyId,
                     name: storyId,
                     story_id: storyId,
-                    student: editingStory.student || studentProfile?.name || currentUser,
+                    student: studentEmail,
                     outcome_category: outcomeCategory,
                     outcome_title: outcomeTitle,
                     outcome_metric: outcomeMetric || null,
@@ -226,10 +236,10 @@ export default function StoriesTabContent() {
                     status: status
                 };
                 await updateSuccessStory(payload);
-                showToast("Success story updated successfully!", "success");
+                showToast("Story updated successfully", "success");
             } else {
                 const payload = {
-                    student: studentProfile?.name || currentUser,
+                    student: studentEmail,
                     outcome_category: outcomeCategory,
                     outcome_title: outcomeTitle,
                     outcome_metric: outcomeMetric || null,
@@ -237,7 +247,7 @@ export default function StoriesTabContent() {
                     status: status
                 };
                 await createSuccessStory(payload);
-                showToast("Success story published successfully!", "success");
+                showToast("Story published successfully", "success");
             }
 
             setIsOpen(false);
@@ -263,7 +273,7 @@ export default function StoriesTabContent() {
         try {
             setDeleting(true);
             await deleteSuccessStory({ id: storyId });
-            showToast("Success story deleted successfully!", "success");
+            showToast("Story deleted successfully", "success");
             setDeleteConfirmStory(null);
             fetchStories();
         } catch (error: any) {

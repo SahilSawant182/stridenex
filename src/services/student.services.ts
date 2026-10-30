@@ -1067,14 +1067,21 @@ export const getCertificate = async (payload: {
 
 export const initiateSessionBooking = async (payload: any): Promise<any> => {
   try {
+    const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+    const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (apiKey && apiSecret && apiKey !== "undefined" && apiSecret !== "undefined" && apiKey !== "null" && apiSecret !== "null") {
+      headers["Authorization"] = `token ${apiKey.trim()}:${apiSecret.trim()}`;
+    }
+
     const response = await fetch(
       `${BASE_DOMAIN}/api/method/quantbit_billing_platform.quantbit_billing_platform.api.initiate_session_booking`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-
+        headers,
+        credentials: "include",
         body: JSON.stringify({ payload: JSON.stringify(payload) }),
       }
     );
@@ -1150,10 +1157,18 @@ export const getSuccessStories = async (): Promise<any> => {
  */
 export const createSuccessStory = async (data: any): Promise<any> => {
   try {
+    let studentEmail = data?.student;
+    if (!studentEmail || typeof studentEmail !== "string" || !studentEmail.includes("@")) {
+      const storedEmail = typeof window !== "undefined" ? localStorage.getItem("userEmail") : null;
+      if (storedEmail) {
+        studentEmail = storedEmail;
+      }
+    }
     const response = await apiService.post(
       "method/stridenex_app.stridenex_app.doctype.success_story.success_story.create_success_story",
       {
         ...data,
+        student: studentEmail,
         status: data?.status || "Published",
       }
     );
@@ -1170,11 +1185,19 @@ export const createSuccessStory = async (data: any): Promise<any> => {
 export const updateSuccessStory = async (data: any): Promise<any> => {
   try {
     const storyId = data?.id || data?.name || data?.story_id;
+    let studentEmail = data?.student;
+    if (!studentEmail || typeof studentEmail !== "string" || !studentEmail.includes("@")) {
+      const storedEmail = typeof window !== "undefined" ? localStorage.getItem("userEmail") : null;
+      if (storedEmail) {
+        studentEmail = storedEmail;
+      }
+    }
     const response = await apiService.post(
       `method/stridenex_app.stridenex_app.doctype.success_story.success_story.update_success_story?id=${encodeURIComponent(storyId || "")}`,
       {
         ...data,
         id: storyId,
+        student: studentEmail,
         status: data?.status || "Published",
       }
     );

@@ -7,20 +7,41 @@ export const BASE_DOMAIN = BASE_URL.replace(/\/api\/?$/, "") || "";
 export const api = axios.create({
   baseURL: BASE_URL,
   timeout: 600000,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
   },
 });
 
+export const getCleanToken = (key: string): string | null => {
+  if (typeof window === "undefined") return null;
+  const val = localStorage.getItem(key);
+  if (!val || val === "undefined" || val === "null" || val.trim() === "") return null;
+  return val.trim();
+};
+
 // Generic API caller with token injection
 const apiRequest = async (config: AxiosRequestConfig) => {
-  const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
-  const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+  const apiKey = getCleanToken("apiKey");
+  const apiSecret = getCleanToken("apiSecret");
 
-  const headers = {
+  const isAuthRoute =
+    typeof config.url === "string" &&
+    (config.url.includes("login") ||
+      config.url.includes("signup") ||
+      config.url.includes("forgot_password") ||
+      config.url.includes("reset_user_password") ||
+      config.url.includes("send_email_otp") ||
+      config.url.includes("validate_email_otp") ||
+      config.url.includes("send_mobile_otp") ||
+      config.url.includes("validate_mobile_otp") ||
+      config.url.includes("send_verification_otp") ||
+      config.url.includes("verify_verification_otp"));
+
+  const headers: any = {
     ...config.headers,
-    ...(apiKey && apiSecret ? { Authorization: `token ${apiKey}:${apiSecret}` } : {}),
+    ...(!isAuthRoute && apiKey && apiSecret ? { Authorization: `token ${apiKey}:${apiSecret}` } : {}),
   };
   try {
     const response = await api({ ...config, headers });
@@ -35,6 +56,15 @@ const apiRequest = async (config: AxiosRequestConfig) => {
 
     return response.data;
   } catch (error: any) {
+    if (error.response?.status === 401 && typeof window !== "undefined") {
+      const storedKey = localStorage.getItem("apiKey");
+      const storedSecret = localStorage.getItem("apiSecret");
+      if (storedKey === "undefined" || storedKey === "null" || storedSecret === "undefined" || storedSecret === "null") {
+        localStorage.removeItem("apiKey");
+        localStorage.removeItem("apiSecret");
+      }
+    }
+
     if (error.response && error.response.status >= 400 && error.response.status < 500) {
       console.warn(`API Warning (${config.method} ${config.url}):`, error.message || "Request failed");
     } else {
@@ -132,8 +162,8 @@ export const apiService = {
  * Uses multipart/form-data so the binary is sent correctly.
  */
 export const uploadProfilePicture = async (file: File): Promise<{ file_url: string; file_name: string }> => {
-  const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
-  const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+  const apiKey = getCleanToken("apiKey");
+  const apiSecret = getCleanToken("apiSecret");
 
   const formData = new FormData();
   formData.append("file", file);
@@ -142,6 +172,7 @@ export const uploadProfilePicture = async (file: File): Promise<{ file_url: stri
     `${BASE_URL}method/stridenex_app.api_stridenex_app.app.upload_profile_picture`,
     {
       method: "POST",
+      credentials: "include",
       headers: {
         ...(apiKey && apiSecret ? { Authorization: `token ${apiKey}:${apiSecret}` } : {}),
       },
@@ -177,8 +208,8 @@ export const uploadFileApi = async (
   docname: string = "",
   fieldname: string = "marksheet"
 ): Promise<{ file_url: string; file_name: string }> => {
-  const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
-  const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+  const apiKey = getCleanToken("apiKey");
+  const apiSecret = getCleanToken("apiSecret");
 
   const formData = new FormData();
   formData.append("file", file);
@@ -196,6 +227,7 @@ export const uploadFileApi = async (
     `${BASE_DOMAIN}/api/method/stridenex_app.api_stridenex_app.app.upload_file_api`,
     {
       method: "POST",
+      credentials: "include",
       headers,
       body: formData,
     }
@@ -242,8 +274,8 @@ export const createCategory = async (data: { category_name: string, description:
  * Fetch the profile picture URL for the current user.
  */
 export const getProfilePicture = async (): Promise<string | null> => {
-  const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
-  const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+  const apiKey = getCleanToken("apiKey");
+  const apiSecret = getCleanToken("apiSecret");
 
   if (!apiKey || !apiSecret) return null;
 
@@ -251,6 +283,7 @@ export const getProfilePicture = async (): Promise<string | null> => {
     `${BASE_URL}method/stridenex_app.api_stridenex_app.app.get_profile_picture`,
     {
       method: "GET",
+      credentials: "include",
       headers: {
         Authorization: `token ${apiKey}:${apiSecret}`,
         Accept: "application/json",

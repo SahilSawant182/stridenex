@@ -34,8 +34,18 @@ export default function ResumePreviewTabContent({ onBack }: { onBack?: () => voi
 
     const loadPdf = async () => {
       try {
+        const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
+        const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
+        const headers: Record<string, string> = {};
+        if (apiKey && apiSecret && apiKey !== "undefined" && apiSecret !== "undefined" && apiKey !== "null" && apiSecret !== "null") {
+          headers["Authorization"] = `token ${apiKey.trim()}:${apiSecret.trim()}`;
+        }
+
         const url = `${BASE_DOMAIN}/api/method/stridenex_app.api_stridenex_app.student.student.get_student_resume?student=${encodeURIComponent(studentEmail)}&template=${selectedTemplate}`;
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          headers,
+          credentials: "include",
+        });
         if (!response.ok) {
           throw new Error("Failed to load resume");
         }
@@ -96,13 +106,14 @@ export default function ResumePreviewTabContent({ onBack }: { onBack?: () => voi
       const apiKey = typeof window !== "undefined" ? localStorage.getItem("apiKey") : null;
       const apiSecret = typeof window !== "undefined" ? localStorage.getItem("apiSecret") : null;
       const headers: Record<string, string> = {};
-      if (apiKey && apiSecret) {
-        headers["Authorization"] = `token ${apiKey}:${apiSecret}`;
+      if (apiKey && apiSecret && apiKey !== "undefined" && apiSecret !== "undefined" && apiKey !== "null" && apiSecret !== "null") {
+        headers["Authorization"] = `token ${apiKey.trim()}:${apiSecret.trim()}`;
       }
 
       const response = await fetch(`${BASE_DOMAIN}/api/method/stridenex_app.api_stridenex_app.app.upload_file_api`, {
         method: "POST",
         headers,
+        credentials: "include",
         body: formData,
       });
 

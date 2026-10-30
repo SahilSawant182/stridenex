@@ -720,6 +720,16 @@ export default function PlansTabContent() {
           >
             {packages.map((plan) => {
               const isPopular = plan.amount === maxAmount && packages.length > 1;
+              const activePkgName = displayPlan?.data?.package_name || "";
+              const activeExpiryStr = displayPlan
+                ? (displayPlan.kind === "paid" ? displayPlan.data.expiry_date : displayPlan.data.to_date ?? "")
+                : "";
+              const isTokenBasedPlan = displayPlan?.kind === "free" && displayPlan.data.package_type === "Token Based";
+              const remainingDays = activeExpiryStr ? calcRemainingDays(activeExpiryStr) : null;
+              const isCurrentPlan = !!displayPlan &&
+                activePkgName.trim().toLowerCase() === (plan.package_name || "").trim().toLowerCase() &&
+                (isTokenBasedPlan ? true : (remainingDays !== null ? remainingDays > 0 : true));
+
               return (
                 <motion.div
                   key={plan.package_name}
@@ -728,14 +738,21 @@ export default function PlansTabContent() {
                   className="h-full"
                 >
                   <BaseCard
-                    className={`border h-full flex flex-col transition-shadow duration-300 ${isPopular
-                      ? "border-orange-300 shadow-lg shadow-orange-100/50 ring-1 ring-orange-200/50"
-                      : "border-slate-200 hover:shadow-md"
-                      }`}
+                    className={`border h-full flex flex-col transition-all duration-300 ${
+                      isCurrentPlan
+                        ? "border-emerald-400 bg-emerald-50/20 shadow-md shadow-emerald-100/50 ring-2 ring-emerald-400/30"
+                        : isPopular
+                          ? "border-orange-300 shadow-lg shadow-orange-100/50 ring-1 ring-orange-200/50"
+                          : "border-slate-200 hover:shadow-md"
+                    }`}
                   >
                     <div className="p-6 flex flex-col h-full">
                       <div className="flex items-center justify-between mb-3 min-h-[28px]">
-                        {isPopular ? (
+                        {isCurrentPlan ? (
+                          <Badge className="bg-emerald-600 text-white border-0 text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider flex items-center shadow-sm">
+                            <CheckCircle className="w-3 h-3 mr-1" /> Active Plan
+                          </Badge>
+                        ) : isPopular ? (
                           <Badge className="bg-orange-500 text-white border-0 text-[10px] px-2.5 py-0.5 font-bold uppercase tracking-wider">
                             <Sparkles className="w-3 h-3 mr-1" /> Best Value
                           </Badge>
@@ -750,7 +767,7 @@ export default function PlansTabContent() {
                         return (
                           <div className="flex flex-col gap-1 mb-1.5">
                             <div className="flex items-baseline gap-1.5">
-                              <span className={`text-3xl font-black ${isPopular ? "text-orange-500" : "text-slate-800"}`}>
+                              <span className={`text-3xl font-black ${isCurrentPlan ? "text-emerald-700" : isPopular ? "text-orange-500" : "text-slate-800"}`}>
                                 ₹{plan.amount.toLocaleString("en-IN")}
                               </span>
                               <span className="text-xs text-slate-400 font-normal">
@@ -786,7 +803,7 @@ export default function PlansTabContent() {
                         <ul className="space-y-2.5 mb-6 flex-1">
                           {plan.features.map((feature, idx) => (
                             <li key={idx} className="flex items-start gap-2 text-sm text-slate-600">
-                              <CheckCircle className={`w-4 h-4 shrink-0 mt-0.5 ${isPopular ? "text-orange-500" : "text-emerald-500"}`} />
+                              <CheckCircle className={`w-4 h-4 shrink-0 mt-0.5 ${isCurrentPlan ? "text-emerald-600" : isPopular ? "text-orange-500" : "text-emerald-500"}`} />
                               <span className="leading-snug">{feature}</span>
                             </li>
                           ))}
@@ -797,21 +814,27 @@ export default function PlansTabContent() {
                         </div>
                       )}
                       <div className="mt-auto">
-                        <Button
-                          className={`w-full text-sm py-2.5 h-10 font-semibold transition-all duration-200 ${isPopular
-                            ? "bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-sm shadow-orange-200"
-                            : "border-slate-200 text-slate-700 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 bg-white"
-                            }`}
-                          variant={isPopular ? "primary" : "outline"}
-                          onClick={() => handleSelectPlan(plan)}
-                          disabled={redirectingPlan !== null}
-                        >
-                          {redirectingPlan === plan.package_name ? (
-                            <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Redirecting…</>
-                          ) : (
-                            <><Zap className="w-4 h-4 mr-1.5" /> Get Started</>
-                          )}
-                        </Button>
+                        {isCurrentPlan ? (
+                          <div className="w-full text-sm py-2.5 h-10 font-bold rounded-lg flex items-center justify-center bg-emerald-50 text-emerald-700 border border-emerald-300 select-none cursor-default shadow-sm">
+                            <CheckCircle className="w-4 h-4 mr-1.5 text-emerald-600" /> Current Active Plan
+                          </div>
+                        ) : (
+                          <Button
+                            className={`w-full text-sm py-2.5 h-10 font-semibold transition-all duration-200 ${isPopular
+                              ? "bg-orange-500 hover:bg-orange-600 text-white border-0 shadow-sm shadow-orange-200"
+                              : "border-slate-200 text-slate-700 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200 bg-white"
+                              }`}
+                            variant={isPopular ? "primary" : "outline"}
+                            onClick={() => handleSelectPlan(plan)}
+                            disabled={redirectingPlan !== null}
+                          >
+                            {redirectingPlan === plan.package_name ? (
+                              <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Redirecting…</>
+                            ) : (
+                              <><Zap className="w-4 h-4 mr-1.5" /> Get Started</>
+                            )}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </BaseCard>
