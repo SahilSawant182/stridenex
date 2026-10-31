@@ -10,6 +10,7 @@ export interface VideoCategoryDetails {
 export interface VideoItem {
   name: string;
   youtube_url: string;
+  upload_date?: string | null;
   category?: string;
   publication_status?: string;
   creation: string;
