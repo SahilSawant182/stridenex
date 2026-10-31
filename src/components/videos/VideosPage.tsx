@@ -28,8 +28,8 @@ function filterAndSortVideos(rawVideos: VideoItem[]): VideoItem[] {
     const orderA = normalizeDisplayOrder(a.category_details?.display_order);
     const orderB = normalizeDisplayOrder(b.category_details?.display_order);
     if (orderA !== orderB) return orderA - orderB;
-    const dateA = new Date(a.creation.replace(" ", "T")).getTime() || 0;
-    const dateB = new Date(b.creation.replace(" ", "T")).getTime() || 0;
+    const dateA = new Date((a.upload_date || a.creation).replace(" ", "T")).getTime() || 0;
+    const dateB = new Date((b.upload_date || b.creation).replace(" ", "T")).getTime() || 0;
     return dateB - dateA;
   });
 

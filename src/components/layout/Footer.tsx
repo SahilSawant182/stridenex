@@ -18,6 +18,7 @@ import {
   Building2,
   Briefcase,
   Users,
+  Newspaper,
   MessageCircle,
   X
 } from "lucide-react";
@@ -43,7 +44,7 @@ const footerLinks = {
     { label: "Skill Analytics", href: "/institutes/analytics" },
     { label: "Placement Enhancement", href: "/institutes/placement" },
     { label: "Faculty Development", href: "/institutes/faculty" },
-    { label: "Partner With Us", href: "/institutes/partner" },
+    { label: "Partner With Us", href: "/partner-with-us" },
   ],
   forIndustry: [
     { label: "Talent Pipeline", href: "/industry/talent" },
@@ -58,6 +59,11 @@ const footerLinks = {
     { label: "Mentors", href: "/about/mentors" },
     { label: "Careers", href: "/careers" },
     { label: "Contact", href: "/contact" },
+  ],
+  blogsAndEvents: [
+    { label: "Blogs", href: "/blogs" },
+    { label: "Events", href: "/events" },
+    { label: "Our Videos", href: "/our-videos" },
   ],
   legal: [
     { label: "Privacy Policy", href: "/privacy" },
@@ -311,6 +317,32 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
                     >
                       {link.label}
                       <ArrowRight className="w-3 h-3 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all text-slate-300" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
+
+            <motion.div
+              className="col-span-2 xl:col-span-4 min-w-0"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              viewport={{ once: true }}
+            >
+              <div className="mb-4 flex min-h-10 items-center gap-2">
+                <Newspaper className="w-4 h-4 text-white" />
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white">Blogs & Events</h3>
+              </div>
+              <ul className="flex flex-wrap items-center gap-6 sm:gap-8">
+                {footerLinks.blogsAndEvents.map((link) => (
+                  <li key={link.label}>
+                    <Link
+                      href={link.href}
+                      className="text-sm text-slate-300 hover:text-slate-100 transition-colors group flex items-center gap-1"
+                    >
+                      {link.label}
+                      <ArrowRight className="w-3 h-3 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all text-slate-300" />
                     </Link>
                   </li>
                 ))}
