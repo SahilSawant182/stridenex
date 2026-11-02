@@ -62,9 +62,14 @@ export default function PartnerPage() {
         params: { email: currentUser }
       });
 
-      if (res.data && res.data.message?.status === "success" && res.data.message?.data?.partner) {
-        const pData = res.data.message.data.partner;
-        const refCode = res.data.message.data.user?.referal_code;
+      const resData = res.data;
+      const partnerObj = resData?.message?.data?.partner || resData?.data?.partner || resData?.partner;
+      const userObj = resData?.message?.data?.user || resData?.data?.user || resData?.user;
+      const isSuccess = resData?.message?.status === "success" || resData?.status === 200 || resData?.success === true || !!partnerObj;
+
+      if (isSuccess && partnerObj) {
+        const pData = partnerObj;
+        const refCode = userObj?.referal_code || pData.referal_code || resData?.message?.data?.referal_code || resData?.data?.referal_code;
 
         setPartnerData({ ...pData, referal_code: refCode });
       } else {

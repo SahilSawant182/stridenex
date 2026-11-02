@@ -2,12 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { BASE_URL } from "@/services/api.services";
+import { BASE_URL, getReferralModuleCount } from "@/services/api.services";
 import { TrendingUp, BookOpen } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from "recharts";
 
 export interface ReferralData {
-  success: boolean;
+  success?: boolean;
   referral_code: string;
   referrer: string;
   referrer_name: string;
@@ -37,13 +37,34 @@ export default function ReferralPerformanceWidget({ referralCode, role }: Referr
         return;
       }
       try {
-        const res = await axios.post(`${BASE_URL}method/stridenex_app.stridenex_app.doctype.referal_details.referal_details.get_referral_module_count`, {
-          referral_code: referralCode
-        });
+        let resData: any = null;
+        try {
+          const res = await getReferralModuleCount({ referral_code: referralCode });
+          resData = res;
+        } catch {
+          const res = await axios.post(`${BASE_URL}method/stridenex_app.stridenex_app.doctype.referal_details.referal_details.get_referral_module_count`, {
+            referral_code: referralCode
+          });
+          resData = res.data;
+        }
         
-        const data = res.data?.message?.data || res.data?.message || res.data?.data || res.data;
-        if (data && typeof data === 'object' && !Array.isArray(data)) {
-          setReferralData(data as ReferralData);
+        let data: ReferralData | null = null;
+        if (resData?.data && typeof resData.data === 'object' && !Array.isArray(resData.data) && ('counts' in resData.data || 'total' in resData.data)) {
+          data = resData.data as ReferralData;
+        } else if (resData?.message?.data && typeof resData.message.data === 'object' && !Array.isArray(resData.message.data) && ('counts' in resData.message.data || 'total' in resData.message.data)) {
+          data = resData.message.data as ReferralData;
+        } else if (resData?.message && typeof resData.message === 'object' && !Array.isArray(resData.message) && ('counts' in resData.message || 'total' in resData.message)) {
+          data = resData.message as ReferralData;
+        } else if (resData && typeof resData === 'object' && !Array.isArray(resData) && ('counts' in resData || 'total' in resData)) {
+          data = resData as ReferralData;
+        } else if (resData?.data && typeof resData.data === 'object' && !Array.isArray(resData.data)) {
+          data = resData.data as ReferralData;
+        } else if (resData?.message && typeof resData.message === 'object' && !Array.isArray(resData.message)) {
+          data = resData.message as ReferralData;
+        }
+
+        if (data) {
+          setReferralData(data);
         }
       } catch (e) {
         console.error("Failed to fetch referral stats", e);
@@ -55,16 +76,18 @@ export default function ReferralPerformanceWidget({ referralCode, role }: Referr
     fetchReferralStats();
   }, [referralCode]);
 
-  const defaultCounts = { Student: 0, College: 0, Mentor: 0, Industry: 0, Partner: 0 };
+  const defaultCounts: ReferralData['counts'] = { Student: 0, College: 0, Mentor: 0, Industry: 0 };
   const counts = referralData?.counts || defaultCounts;
-  const total = referralData?.total || 0;
+  const total = referralData?.total !== undefined ? referralData.total : (
+    (Number(counts.Student) || 0) + (Number(counts.College) || 0) + (Number(counts.Mentor) || 0) + (Number(counts.Industry) || 0) + (Number(counts.Partner) || 0)
+  );
 
   let chartData = [
     { name: 'Students', value: counts.Student || 0, color: '#3b82f6' }, // Blue
     { name: 'Colleges', value: counts.College || 0, color: '#8b5cf6' }, // Purple
     { name: 'Mentors', value: counts.Mentor || 0, color: '#f59e0b' }, // Amber
     { name: 'Industries', value: counts.Industry || 0, color: '#10b981' }, // Emerald
-    { name: 'Partners', value: counts.Partner || 0, color: '#ef4444' }, // Red
+    ...(counts.Partner !== undefined ? [{ name: 'Partners', value: counts.Partner || 0, color: '#ef4444' }] : []),
   ];
 
   if (role === 'student') {
@@ -89,7 +112,7 @@ export default function ReferralPerformanceWidget({ referralCode, role }: Referr
               <p className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-4">Total Signups</p>
               
               <div className="flex items-center gap-6 mb-6">
-                <h3 className="text-6xl font-black text-slate-400">{total}</h3>
+                <h3 className="text-6xl font-black text-white">{total}</h3>
                 
                 <div className="flex-1 flex flex-col gap-2.5">
                   {chartData.map((item) => (
@@ -114,7 +137,7 @@ export default function ReferralPerformanceWidget({ referralCode, role }: Referr
 
               <p className="text-slate-300 text-sm leading-relaxed mt-auto border-t border-slate-700/50 pt-4">
                 Total users who have successfully registered using your referral code 
-                <span className="font-bold text-white ml-1">&quot;{referralCode}&quot;</span>.
+                <span className="font-bold text-white ml-1">&quot;{referralData?.referral_code || referralCode}&quot;</span>.
               </p>
             </div>
 
@@ -135,6 +158,7 @@ export default function ReferralPerformanceWidget({ referralCode, role }: Referr
                       axisLine={false} 
                       tickLine={false} 
                       tick={{ fill: '#64748b', fontSize: 12 }} 
+                      allowDecimals={false}
                     />
                     <RechartsTooltip 
                       cursor={{ fill: '#f1f5f9' }}

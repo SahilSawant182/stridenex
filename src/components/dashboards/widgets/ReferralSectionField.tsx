@@ -21,8 +21,9 @@ export default function ReferralSectionField({ role, referralCode, showPerforman
     if (referralCode) {
       getReferenceCard({ reference_code: referralCode, module: role })
         .then((res: any) => {
-          if (res?.message?.data?.image_url) {
-            setRefCardUrl(res.message.data.image_url);
+          const imgUrl = res?.message?.data?.image_url || res?.data?.image_url || res?.data?.data?.image_url || res?.image_url;
+          if (imgUrl) {
+            setRefCardUrl(imgUrl);
           }
         })
         .catch(err => console.error("Failed to load reference card", err));

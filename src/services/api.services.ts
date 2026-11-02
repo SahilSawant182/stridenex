@@ -464,3 +464,11 @@ export const getReferenceCard = async (payload: { reference_code: string; module
     data: payload,
   });
 };
+
+export const getReferralModuleCount = async (payload: { referral_code: string }) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.referal_details.referal_details.get_referral_module_count",
+    data: payload,
+  });
+};
