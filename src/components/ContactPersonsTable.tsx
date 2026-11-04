@@ -97,7 +97,13 @@ export const ContactPersonsTable: React.FC<Props> = ({
 
     // Update dropdown position when scrolling
     useEffect(() => {
-        const handleScroll = () => {
+        const handleScroll = (e: Event) => {
+            // Ignore scroll events originating from inside the portal dropdown itself
+            const target = e.target as HTMLElement | null;
+            if (target && (target.classList?.contains('portal-dropdown') || target.closest?.('.portal-dropdown'))) {
+                return;
+            }
+
             requestAnimationFrame(() => {
                 const table = tableContainerRef.current;
                 if (!table) return;
@@ -122,11 +128,24 @@ export const ContactPersonsTable: React.FC<Props> = ({
 
                         const width = Math.max(rect.width, 140);
                         const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
-                        setTitleDropdownPos({
-                            top: rect.bottom + 4,
-                            left: left,
-                            width: width,
-                            index: openTitle
+                        const top = rect.bottom + 4;
+
+                        setTitleDropdownPos(prev => {
+                            if (
+                                prev &&
+                                prev.index === openTitle &&
+                                Math.abs(prev.top - top) < 1 &&
+                                Math.abs(prev.left - left) < 1 &&
+                                prev.width === width
+                            ) {
+                                return prev;
+                            }
+                            return {
+                                top,
+                                left,
+                                width,
+                                index: openTitle
+                            };
                         });
                     }
                 }
@@ -148,11 +167,24 @@ export const ContactPersonsTable: React.FC<Props> = ({
 
                         const width = Math.max(rect.width, 220);
                         const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
-                        setDesignationDropdownPos({
-                            top: rect.bottom + 4,
-                            left: left,
-                            width: width,
-                            index: openDesignation
+                        const top = rect.bottom + 4;
+
+                        setDesignationDropdownPos(prev => {
+                            if (
+                                prev &&
+                                prev.index === openDesignation &&
+                                Math.abs(prev.top - top) < 1 &&
+                                Math.abs(prev.left - left) < 1 &&
+                                prev.width === width
+                            ) {
+                                return prev;
+                            }
+                            return {
+                                top,
+                                left,
+                                width,
+                                index: openDesignation
+                            };
                         });
                     }
                 }
@@ -415,14 +447,18 @@ export const ContactPersonsTable: React.FC<Props> = ({
             {/* TITLE DROPDOWN PORTAL - Increased to 200px */}
             {titleDropdownPos && typeof window !== 'undefined' && createPortal(
                 <div
-                    className="portal-dropdown fixed z-[9999] bg-white border border-slate-200 rounded-md shadow-xl max-h-60 overflow-auto"
+                    className="portal-dropdown fixed z-[9999] bg-white border border-slate-200 rounded-md shadow-xl max-h-60 overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y"
                     style={{
                         top: titleDropdownPos.top,
                         left: titleDropdownPos.left,
                         width: titleDropdownPos.width,
                         minWidth: titleDropdownPos.width,
+                        WebkitOverflowScrolling: 'touch',
+                        touchAction: 'pan-y',
+                        overscrollBehavior: 'contain',
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                 >
                     <div className="py-1">
                         {titleOptions.map((opt: any) => {
@@ -431,7 +467,8 @@ export const ContactPersonsTable: React.FC<Props> = ({
                                 <button
                                     key={val}
                                     type="button"
-                                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2"
+                                    className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2 touch-pan-y"
+                                    style={{ touchAction: 'pan-y' }}
                                     onClick={(e) => {
                                         e.preventDefault();
                                         e.stopPropagation();
@@ -458,14 +495,18 @@ export const ContactPersonsTable: React.FC<Props> = ({
             {/* DESIGNATION DROPDOWN PORTAL */}
             {designationDropdownPos && typeof window !== 'undefined' && createPortal(
                 <div
-                    className="portal-dropdown fixed z-[9999] bg-white border border-slate-200 rounded-md shadow-xl max-h-60 overflow-auto"
+                    className="portal-dropdown fixed z-[9999] bg-white border border-slate-200 rounded-md shadow-xl max-h-60 overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y"
                     style={{
                         top: designationDropdownPos.top,
                         left: designationDropdownPos.left,
                         width: designationDropdownPos.width,
                         minWidth: designationDropdownPos.width,
+                        WebkitOverflowScrolling: 'touch',
+                        touchAction: 'pan-y',
+                        overscrollBehavior: 'contain',
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
                 >
                     {!showCustomDesignation ? (
                         <div className="py-1">
@@ -475,7 +516,8 @@ export const ContactPersonsTable: React.FC<Props> = ({
                                     <button
                                         key={val}
                                         type="button"
-                                        className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2"
+                                        className="w-full text-left px-3 py-2.5 text-sm hover:bg-slate-50 flex items-center gap-2 touch-pan-y"
+                                        style={{ touchAction: 'pan-y' }}
                                         onClick={(e) => {
                                             e.preventDefault();
                                             e.stopPropagation();
@@ -499,7 +541,8 @@ export const ContactPersonsTable: React.FC<Props> = ({
                                     e.stopPropagation();
                                     setShowCustomDesignation(true);
                                 }}
-                                className="px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors border-t border-slate-200 text-accent font-medium"
+                                className="px-3 py-2 text-sm cursor-pointer flex items-center gap-2 hover:bg-slate-50 transition-colors border-t border-slate-200 text-accent font-medium touch-pan-y"
+                                style={{ touchAction: 'pan-y' }}
                             >
                                 <Plus className="w-4 h-4" />
                                 <span>Add Others (Custom Value)</span>

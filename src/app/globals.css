@@ -216,4 +216,10 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  .portal-dropdown {
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+    overscroll-behavior: contain !important;
+  }
 }
