@@ -98,76 +98,73 @@ export const ContactPersonsTable: React.FC<Props> = ({
     // Update dropdown position when scrolling
     useEffect(() => {
         const handleScroll = () => {
-  requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                const table = tableContainerRef.current;
+                if (!table) return;
 
-    const table = tableContainerRef.current;
-    if (!table) return;
+                const tableRect = table.getBoundingClientRect();
 
-    const tableRect = table.getBoundingClientRect();
+                if (openTitle !== null) {
+                    const button = titleButtonRefs.current[openTitle];
 
-    if (openTitle !== null) {
-      const button = titleButtonRefs.current[openTitle];
+                    if (button) {
+                        const rect = button.getBoundingClientRect();
 
-      if (button) {
-        const rect = button.getBoundingClientRect();
+                        // check if button is outside table viewport
+                        if (
+                            rect.bottom < tableRect.top ||
+                            rect.top > tableRect.bottom
+                        ) {
+                            setOpenTitle(null);
+                            setTitleDropdownPos(null);
+                            return;
+                        }
 
-        // check if button is outside table viewport
-        if (
-          rect.bottom < tableRect.top ||
-          rect.top > tableRect.bottom
-        ) {
-          setOpenTitle(null);
-          setTitleDropdownPos(null);
-          return;
-        }
+                        const width = Math.max(rect.width, 140);
+                        const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+                        setTitleDropdownPos({
+                            top: rect.bottom + 4,
+                            left: left,
+                            width: width,
+                            index: openTitle
+                        });
+                    }
+                }
 
-        setTitleDropdownPos({
-          top: rect.bottom + window.scrollY,
-          left: rect.left + window.scrollX,
-          width: 200,
-          index: openTitle
-        });
-      }
-    }
+                if (openDesignation !== null) {
+                    const button = designationButtonRefs.current[openDesignation];
 
-    if (openDesignation !== null) {
-      const button = designationButtonRefs.current[openDesignation];
+                    if (button) {
+                        const rect = button.getBoundingClientRect();
 
-      if (button) {
-        const rect = button.getBoundingClientRect();
+                        if (
+                            rect.bottom < tableRect.top ||
+                            rect.top > tableRect.bottom
+                        ) {
+                            setOpenDesignation(null);
+                            setDesignationDropdownPos(null);
+                            return;
+                        }
 
-        if (
-          rect.bottom < tableRect.top ||
-          rect.top > tableRect.bottom
-        ) {
-          setOpenDesignation(null);
-          setDesignationDropdownPos(null);
-          return;
-        }
+                        const width = Math.max(rect.width, 220);
+                        const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+                        setDesignationDropdownPos({
+                            top: rect.bottom + 4,
+                            left: left,
+                            width: width,
+                            index: openDesignation
+                        });
+                    }
+                }
+            });
+        };
 
-        setDesignationDropdownPos({
-          top: rect.bottom + window.scrollY,
-          left: rect.left + window.scrollX,
-          width: 220,
-          index: openDesignation
-        });
-      }
-    }
-
-  });
-};
-
-        const tableContainer = tableContainerRef.current;
-        if (tableContainer) {
-            tableContainer.addEventListener('scroll', handleScroll, { passive: true });
-            window.addEventListener('scroll', handleScroll);
-        }
+        window.addEventListener('scroll', handleScroll, { capture: true, passive: true });
+        window.addEventListener('resize', handleScroll, { passive: true });
 
         return () => {
-            if (tableContainer) {
-                tableContainer.removeEventListener('scroll', handleScroll);
-                window.removeEventListener('scroll', handleScroll);
-            }
+            window.removeEventListener('scroll', handleScroll, true);
+            window.removeEventListener('resize', handleScroll);
         };
     }, [openTitle, openDesignation]);
 
@@ -179,10 +176,12 @@ export const ContactPersonsTable: React.FC<Props> = ({
             const button = titleButtonRefs.current[index];
             if (button) {
                 const rect = button.getBoundingClientRect();
+                const width = Math.max(rect.width, 140);
+                const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
                 setTitleDropdownPos({
-                    top: rect.bottom + window.scrollY,
-                    left: rect.left + window.scrollX,
-                    width: 200, // Increased width for title dropdown
+                    top: rect.bottom + 4,
+                    left: left,
+                    width: width,
                     index: index
                 });
                 setOpenTitle(index);
@@ -200,10 +199,12 @@ export const ContactPersonsTable: React.FC<Props> = ({
             const button = designationButtonRefs.current[index];
             if (button) {
                 const rect = button.getBoundingClientRect();
+                const width = Math.max(rect.width, 220);
+                const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
                 setDesignationDropdownPos({
-                    top: rect.bottom + window.scrollY,
-                    left: rect.left + window.scrollX,
-                    width: 220,
+                    top: rect.bottom + 4,
+                    left: left,
+                    width: width,
                     index: index
                 });
                 setOpenDesignation(index);
@@ -418,8 +419,8 @@ export const ContactPersonsTable: React.FC<Props> = ({
                     style={{
                         top: titleDropdownPos.top,
                         left: titleDropdownPos.left,
-                        width: 100,
-                        minWidth: 100,
+                        width: titleDropdownPos.width,
+                        minWidth: titleDropdownPos.width,
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
                 >
@@ -461,8 +462,8 @@ export const ContactPersonsTable: React.FC<Props> = ({
                     style={{
                         top: designationDropdownPos.top,
                         left: designationDropdownPos.left,
-                        width: 200,
-                        minWidth: 200,
+                        width: designationDropdownPos.width,
+                        minWidth: designationDropdownPos.width,
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
                 >
