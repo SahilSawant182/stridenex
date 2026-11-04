@@ -232,9 +232,18 @@ export default function LoginPage() {
           localStorage.setItem("roles", JSON.stringify(data.roles));
         } else if (userRole === "mentor") {
           localStorage.setItem("roles", JSON.stringify(["Mentor", "Instructor", "Course Creator"]));
+        } else if (userRole === "college") {
+          localStorage.setItem("roles", JSON.stringify(["College", "Instructor", "Course Creator"]));
+        } else if (userRole === "industry") {
+          localStorage.setItem("roles", JSON.stringify(["Industry", "Instructor", "Course Creator"]));
         }
 
-        if (userRole === "mentor" || (data.roles && (data.roles.includes("Instructor") || data.roles.includes("Course Creator")))) {
+        if (
+          userRole === "mentor" ||
+          userRole === "college" ||
+          userRole === "industry" ||
+          (data.roles && (data.roles.includes("Instructor") || data.roles.includes("Course Creator")))
+        ) {
           localStorage.setItem("isInstructor", "true");
         } else {
           localStorage.setItem("isInstructor", "false");

@@ -20,7 +20,8 @@ import {
   Award,
   Calendar,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  BookOpen
 } from "lucide-react";
 import StatsWidget from "@/components/dashboards/widgets/StatsWidget";
 import ProgressCard from "@/components/dashboards/shared/ProgressCard";
@@ -883,7 +884,7 @@ export default function CollegeDashboardPage() {
       </div>
 
       {/* Additional Stats Row - Minimal design */}
-      <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <BaseCard className="border-slate-200 p-5">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
@@ -919,6 +920,26 @@ export default function CollegeDashboardPage() {
                   : upcomingDrivesList.filter((d: any) => d.status === "Registrations Open").length || "12"}
               </p>
               <p className="text-xs text-slate-600 mt-1">{nextDriveInfo}</p>
+            </div>
+          </div>
+        </BaseCard>
+
+        <BaseCard 
+          className="border-slate-200 p-5 cursor-pointer hover:border-blue-400 hover:shadow-sm transition-all"
+          onClick={() => router.push("/lms/courses")}
+        >
+          <div className="flex items-center justify-between h-full">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
+                <BookOpen className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-slate-500">Learning Management</p>
+                <p className="text-xl font-bold text-slate-800">LMS Studio</p>
+                <p className="text-xs text-blue-600 mt-1 font-semibold flex items-center gap-1">
+                  Access courses & curriculum →
+                </p>
+              </div>
             </div>
           </div>
         </BaseCard>
