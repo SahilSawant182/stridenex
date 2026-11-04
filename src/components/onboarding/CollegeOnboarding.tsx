@@ -530,32 +530,34 @@ export default function CollegeOnboarding({
     setCourses([...courses, { stream: "" }]);
   };
 
-  const handleAddCourses = async () => {
-    if (selectedCourses.length === 0) return;
+  const addCoursesFromSelection = (coursesToAdd: string[]) => {
+    if (!coursesToAdd || coursesToAdd.length === 0) return;
 
-    const newRows = [...addedCoursesTable];
+    setAddedCoursesTable(prev => {
+      const newRows = [...prev];
+      let addedAny = false;
 
-    for (const courseName of selectedCourses) {
-      if (newRows.some(row => row.course === courseName)) continue;
+      for (const courseName of coursesToAdd) {
+        if (!courseName) continue;
+        if (newRows.some(row => row.course === courseName)) continue;
 
-      const courseDetails = coursesList.find(c => c.name === courseName);
-      if (!courseDetails) continue;
+        const courseDetails = coursesList.find(c => c.name === courseName || c.course_name === courseName);
+        const tempId = Math.random().toString(36).substring(7);
 
-      const tempId = Math.random().toString(36).substring(7);
+        const newRow = {
+          id: tempId,
+          course_type: courseDetails?.course_type || (selectedCourseTypes.length > 0 ? selectedCourseTypes.join(", ") : ""),
+          stream: courseDetails?.stream || (selectedStreams.length > 0 ? selectedStreams.join(", ") : ""),
+          course: courseDetails?.course_name || courseDetails?.name || courseName,
+          department: []
+        };
 
-      const newRow = {
-        id: tempId,
-        course_type: courseDetails.course_type,
-        stream: courseDetails.stream,
-        course: courseDetails.name,
-        department: []
-      };
+        newRows.push(newRow);
+        addedAny = true;
+      }
 
-      newRows.push(newRow);
-    }
-
-    setAddedCoursesTable(newRows);
-    setSelectedCourses([]);
+      return addedAny ? newRows : prev;
+    });
 
     if (fieldErrors.courses) {
       setFieldErrors(prev => {
@@ -564,6 +566,13 @@ export default function CollegeOnboarding({
         return newErrors;
       });
     }
+    setError("");
+  };
+
+  const handleAddCourses = async () => {
+    if (selectedCourses.length === 0) return;
+    addCoursesFromSelection(selectedCourses);
+    setSelectedCourses([]);
   };
 
   const handleDepartmentChange = (rowId: string, value: any) => {
@@ -580,7 +589,11 @@ export default function CollegeOnboarding({
   };
 
   const handleRemoveCourseRow = (rowId: string) => {
+    const rowToRemove = addedCoursesTable.find(row => row.id === rowId);
     setAddedCoursesTable(prev => prev.filter(row => row.id !== rowId));
+    if (rowToRemove) {
+      setSelectedCourses(prev => prev.filter(c => c !== rowToRemove.course));
+    }
   };
 
   const toggleDesignationDropdown = (index: number) => {
@@ -678,9 +691,10 @@ export default function CollegeOnboarding({
     return Object.keys(errors).length === 0;
   };
 
-  const validateStep4 = (): boolean => {
+  const validateStep4 = (coursesToCheck = addedCoursesTable): boolean => {
     const errors: Record<string, string> = {};
-    if (addedCoursesTable.length === 0) {
+    const effectiveCount = coursesToCheck.length > 0 ? coursesToCheck.length : selectedCourses.length;
+    if (effectiveCount === 0) {
       errors.courses = "Please add at least one course";
     }
     const invalidContact = contactPersons.some(
@@ -691,7 +705,7 @@ export default function CollegeOnboarding({
     return Object.keys(errors).length === 0;
   };
 
-  const buildUpdatePayload = () => {
+  const buildUpdatePayload = (coursesToUse = addedCoursesTable) => {
     const validContactPersons = contactPersons.filter(
       person => person.title && person.first_name && person.last_name && person.designation && person.contact_no
     );
@@ -705,7 +719,7 @@ export default function CollegeOnboarding({
       email: person.email
     }));
 
-    const formattedCourses = addedCoursesTable.map(row => ({
+    const formattedCourses = coursesToUse.map(row => ({
       course_type: row.course_type,
       stream: row.stream,
       course: row.course,
@@ -948,8 +962,26 @@ export default function CollegeOnboarding({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateStep4()) {
-      const firstError = Object.values(fieldErrors)[0];
+    let coursesToSubmit = [...addedCoursesTable];
+    if (coursesToSubmit.length === 0 && selectedCourses.length > 0) {
+      for (const courseName of selectedCourses) {
+        if (!courseName) continue;
+        if (coursesToSubmit.some(row => row.course === courseName)) continue;
+        const courseDetails = coursesList.find(c => c.name === courseName || c.course_name === courseName);
+        coursesToSubmit.push({
+          id: Math.random().toString(36).substring(7),
+          course_type: courseDetails?.course_type || (selectedCourseTypes.length > 0 ? selectedCourseTypes.join(", ") : ""),
+          stream: courseDetails?.stream || (selectedStreams.length > 0 ? selectedStreams.join(", ") : ""),
+          course: courseDetails?.course_name || courseDetails?.name || courseName,
+          department: []
+        });
+      }
+      setAddedCoursesTable(coursesToSubmit);
+      setSelectedCourses([]);
+    }
+
+    if (!validateStep4(coursesToSubmit)) {
+      const firstError = Object.values(fieldErrors)[0] || (coursesToSubmit.length === 0 ? "Please add at least one course" : "Please check required fields");
       setError(firstError);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -962,7 +994,7 @@ export default function CollegeOnboarding({
     try {
       const userEmail = localStorage.getItem("userEmail") || formData.email || "";
       const url = `${BASE_URL}method/stridenex_app.api_stridenex_app.college.college.update_college?email=${encodeURIComponent(userEmail)}`;
-      const updateData = buildUpdatePayload();
+      const updateData = buildUpdatePayload(coursesToSubmit);
 
       const response = await axios.put(url, updateData, { headers: { 'Content-Type': 'application/json' } });
 
@@ -1651,15 +1683,32 @@ export default function CollegeOnboarding({
                   stream: selectedStreams.join(",")
                 }}
                 mapOptions={(data) => {
-                  const courses = data?.data?.courses || data?.courses || data?.message?.data?.courses || [];
-                  setCoursesList(courses);
+                  const courses = data?.data?.courses
+                    || data?.courses
+                    || data?.message?.data?.courses
+                    || (Array.isArray(data?.data) ? data.data : [])
+                    || (Array.isArray(data?.message) ? data.message : [])
+                    || (Array.isArray(data) ? data : []);
+                  if (Array.isArray(courses) && courses.length > 0) {
+                    setCoursesList(prev => {
+                      const map = new Map();
+                      prev.forEach(item => map.set(item.name || item.course_name, item));
+                      courses.forEach((item: any) => map.set(item.name || item.course_name, item));
+                      return Array.from(map.values());
+                    });
+                  }
                   return courses.map((c: any) => ({
-                    value: c.name,
-                    label: c.course_name || c.name
+                    value: c.name || c.course_name || String(c),
+                    label: c.course_name || c.name || String(c)
                   }));
                 }}
                 value={selectedCourses}
-                onChange={setSelectedCourses}
+                onChange={(val) => {
+                  setSelectedCourses(val);
+                  if (val && val.length > 0) {
+                    addCoursesFromSelection(val);
+                  }
+                }}
                 multiSelect={true}
                 searchable={true}
                 disabled={selectedCourseTypes.length === 0 || selectedStreams.length === 0}
