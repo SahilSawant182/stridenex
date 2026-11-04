@@ -3,6 +3,9 @@ const withPWA = require("next-pwa")({
   disable: true,
 });
 
+const LMS_PORT = process.env.LMS_PORT || (process.env.NODE_ENV === "production" ? "3004" : "3003");
+const LMS_BASE_URL = process.env.LMS_URL || process.env.LMS_INTERNAL_URL || `http://127.0.0.1:${LMS_PORT}`;
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -38,159 +41,159 @@ const nextConfig = {
       // Direct LMS wildcard
       {
         source: "/lms/:path*",
-        destination: "http://127.0.0.1:3003/:path*",
+        destination: `${LMS_BASE_URL}/:path*`,
       },
       {
         source: "/courses",
-        destination: "http://127.0.0.1:3003/courses",
+        destination: `${LMS_BASE_URL}/courses`,
       },
       {
         source: "/courses/:slug",
-        destination: "http://127.0.0.1:3003/course/:slug",
+        destination: `${LMS_BASE_URL}/course/:slug`,
       },
       {
         source: "/course/:path*",
-        destination: "http://127.0.0.1:3003/course/:path*",
+        destination: `${LMS_BASE_URL}/course/:path*`,
       },
       {
         source: "/certificates",
-        destination: "http://127.0.0.1:3003/certificates",
+        destination: `${LMS_BASE_URL}/certificates`,
       },
       {
         source: "/certificates/:path*",
-        destination: "http://127.0.0.1:3003/certificates/:path*",
+        destination: `${LMS_BASE_URL}/certificates/:path*`,
       },
       {
         source: "/certificate-evaluations",
-        destination: "http://127.0.0.1:3003/certificate-evaluations",
+        destination: `${LMS_BASE_URL}/certificate-evaluations`,
       },
       {
         source: "/certificate-evaluations/:path*",
-        destination: "http://127.0.0.1:3003/certificate-evaluations/:path*",
+        destination: `${LMS_BASE_URL}/certificate-evaluations/:path*`,
       },
       {
         source: "/dashboard",
-        destination: "http://127.0.0.1:3003/dashboard",
+        destination: `${LMS_BASE_URL}/dashboard`,
       },
       {
         source: "/enrollments",
-        destination: "http://127.0.0.1:3003/enrollments",
+        destination: `${LMS_BASE_URL}/enrollments`,
       },
       {
         source: "/batches",
-        destination: "http://127.0.0.1:3003/batches",
+        destination: `${LMS_BASE_URL}/batches`,
       },
       {
         source: "/batches/:path*",
-        destination: "http://127.0.0.1:3003/batches/:path*",
+        destination: `${LMS_BASE_URL}/batches/:path*`,
       },
       {
         source: "/batch",
-        destination: "http://127.0.0.1:3003/batch",
+        destination: `${LMS_BASE_URL}/batch`,
       },
       {
         source: "/batch/:path*",
-        destination: "http://127.0.0.1:3003/batch/:path*",
+        destination: `${LMS_BASE_URL}/batch/:path*`,
       },
       {
         source: "/programs",
-        destination: "http://127.0.0.1:3003/programs",
+        destination: `${LMS_BASE_URL}/programs`,
       },
       {
         source: "/programs/:path*",
-        destination: "http://127.0.0.1:3003/programs/:path*",
+        destination: `${LMS_BASE_URL}/programs/:path*`,
       },
       {
         source: "/quizzes",
-        destination: "http://127.0.0.1:3003/quizzes",
+        destination: `${LMS_BASE_URL}/quizzes`,
       },
       {
         source: "/quizzes/:path*",
-        destination: "http://127.0.0.1:3003/quizzes/:path*",
+        destination: `${LMS_BASE_URL}/quizzes/:path*`,
       },
       {
         source: "/assignments",
-        destination: "http://127.0.0.1:3003/assignments",
+        destination: `${LMS_BASE_URL}/assignments`,
       },
       {
         source: "/assignments/:path*",
-        destination: "http://127.0.0.1:3003/assignments/:path*",
+        destination: `${LMS_BASE_URL}/assignments/:path*`,
       },
       {
         source: "/programming-exercises",
-        destination: "http://127.0.0.1:3003/programming-exercises",
+        destination: `${LMS_BASE_URL}/programming-exercises`,
       },
       {
         source: "/programming-exercises/:path*",
-        destination: "http://127.0.0.1:3003/programming-exercises/:path*",
+        destination: `${LMS_BASE_URL}/programming-exercises/:path*`,
       },
       {
         source: "/my-payments",
-        destination: "http://127.0.0.1:3003/my-payments",
+        destination: `${LMS_BASE_URL}/my-payments`,
       },
       {
         source: "/profile/payments",
-        destination: "http://127.0.0.1:3003/profile/payments",
+        destination: `${LMS_BASE_URL}/profile/payments`,
       },
       {
         source: "/sales-earnings",
-        destination: "http://127.0.0.1:3003/sales-earnings",
+        destination: `${LMS_BASE_URL}/sales-earnings`,
       },
       {
         source: "/instructor/settings",
-        destination: "http://127.0.0.1:3003/instructor/settings",
+        destination: `${LMS_BASE_URL}/instructor/settings`,
       },
       {
         source: "/instructor/settings/:path*",
-        destination: "http://127.0.0.1:3003/instructor/settings/:path*",
+        destination: `${LMS_BASE_URL}/instructor/settings/:path*`,
       },
       {
         source: "/categories",
-        destination: "http://127.0.0.1:3003/categories",
+        destination: `${LMS_BASE_URL}/categories`,
       },
       {
         source: "/badges",
-        destination: "http://127.0.0.1:3003/badges",
+        destination: `${LMS_BASE_URL}/badges`,
       },
       {
         source: "/badges/:path*",
-        destination: "http://127.0.0.1:3003/badges/:path*",
+        destination: `${LMS_BASE_URL}/badges/:path*`,
       },
       {
         source: "/course-evaluators",
-        destination: "http://127.0.0.1:3003/course-evaluators",
+        destination: `${LMS_BASE_URL}/course-evaluators`,
       },
       {
         source: "/evaluators",
-        destination: "http://127.0.0.1:3003/evaluators",
+        destination: `${LMS_BASE_URL}/evaluators`,
       },
       {
         source: "/questions",
-        destination: "http://127.0.0.1:3003/questions",
+        destination: `${LMS_BASE_URL}/questions`,
       },
       {
         source: "/questions/:path*",
-        destination: "http://127.0.0.1:3003/questions/:path*",
+        destination: `${LMS_BASE_URL}/questions/:path*`,
       },
       {
         source: "/progress",
-        destination: "http://127.0.0.1:3003/progress",
+        destination: `${LMS_BASE_URL}/progress`,
       },
       {
         source: "/coupons",
-        destination: "http://127.0.0.1:3003/coupons",
+        destination: `${LMS_BASE_URL}/coupons`,
       },
       {
         source: "/coupons/:path*",
-        destination: "http://127.0.0.1:3003/coupons/:path*",
+        destination: `${LMS_BASE_URL}/coupons/:path*`,
       },
       {
         source: "/checkout",
-        destination: "http://127.0.0.1:3003/checkout",
+        destination: `${LMS_BASE_URL}/checkout`,
       },
       {
         source: "/payment-success",
-        destination: "http://127.0.0.1:3003/payment-success",
+        destination: `${LMS_BASE_URL}/payment-success`,
       },
     ];
   },
