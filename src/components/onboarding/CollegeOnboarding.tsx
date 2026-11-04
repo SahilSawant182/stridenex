@@ -97,13 +97,6 @@ export default function CollegeOnboarding({
   const [selectedStreams, setSelectedStreams] = useState<string[]>([]);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [coursesList, setCoursesList] = useState<any[]>([]);
-  const [addedCoursesTable, setAddedCoursesTable] = useState<Array<{
-    id: string;
-    course_type: string;
-    stream: string;
-    course: string;
-    department: any;
-  }>>([]);
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
@@ -408,17 +401,12 @@ export default function CollegeOnboarding({
             stream: c.stream || ""
           })));
 
-          const initialTable = resData.courses.map((c: any, index: number) => {
-            const tempId = `init-${index}-${Math.random().toString(36).substring(7)}`;
-            return {
-              id: tempId,
-              course_type: c.course_type || "",
-              stream: c.stream || "",
-              course: c.course || c.course_name || "",
-              department: c.department ? (typeof c.department === 'string' ? c.department.split(',').map((d:string)=>d.trim()) : c.department) : []
-            };
-          });
-          setAddedCoursesTable(initialTable);
+          const loadedCourses = resData.courses.map((c: any) => c.course || c.course_name || "").filter(Boolean);
+          setSelectedCourses(loadedCourses);
+          const loadedStreams = Array.from(new Set(resData.courses.map((c: any) => c.stream).filter(Boolean))) as string[];
+          if (loadedStreams.length > 0) setSelectedStreams(loadedStreams);
+          const loadedTypes = Array.from(new Set(resData.courses.map((c: any) => c.course_type).filter(Boolean))) as string[];
+          if (loadedTypes.length > 0) setSelectedCourseTypes(loadedTypes);
         }
       }
     } catch (err) {
@@ -530,69 +518,16 @@ export default function CollegeOnboarding({
     setCourses([...courses, { stream: "" }]);
   };
 
-  const addCoursesFromSelection = (coursesToAdd: string[]) => {
-    if (!coursesToAdd || coursesToAdd.length === 0) return;
-
-    setAddedCoursesTable(prev => {
-      const newRows = [...prev];
-      let addedAny = false;
-
-      for (const courseName of coursesToAdd) {
-        if (!courseName) continue;
-        if (newRows.some(row => row.course === courseName)) continue;
-
-        const courseDetails = coursesList.find(c => c.name === courseName || c.course_name === courseName);
-        const tempId = Math.random().toString(36).substring(7);
-
-        const newRow = {
-          id: tempId,
-          course_type: courseDetails?.course_type || (selectedCourseTypes.length > 0 ? selectedCourseTypes.join(", ") : ""),
-          stream: courseDetails?.stream || (selectedStreams.length > 0 ? selectedStreams.join(", ") : ""),
-          course: courseDetails?.course_name || courseDetails?.name || courseName,
-          department: []
-        };
-
-        newRows.push(newRow);
-        addedAny = true;
-      }
-
-      return addedAny ? newRows : prev;
-    });
-
-    if (fieldErrors.courses) {
-      setFieldErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.courses;
-        return newErrors;
-      });
-    }
-    setError("");
-  };
-
   const handleAddCourses = async () => {
-    if (selectedCourses.length === 0) return;
-    addCoursesFromSelection(selectedCourses);
-    setSelectedCourses([]);
-  };
-
-  const handleDepartmentChange = (rowId: string, value: any) => {
-    setAddedCoursesTable(prev => prev.map(row =>
-      row.id === rowId ? { ...row, department: value } : row
-    ));
-    if (fieldErrors.courses) {
-      setFieldErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors.courses;
-        return newErrors;
-      });
-    }
-  };
-
-  const handleRemoveCourseRow = (rowId: string) => {
-    const rowToRemove = addedCoursesTable.find(row => row.id === rowId);
-    setAddedCoursesTable(prev => prev.filter(row => row.id !== rowId));
-    if (rowToRemove) {
-      setSelectedCourses(prev => prev.filter(c => c !== rowToRemove.course));
+    if (selectedCourses.length > 0) {
+      if (fieldErrors.courses) {
+        setFieldErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.courses;
+          return newErrors;
+        });
+      }
+      setError("");
     }
   };
 
@@ -691,10 +626,9 @@ export default function CollegeOnboarding({
     return Object.keys(errors).length === 0;
   };
 
-  const validateStep4 = (coursesToCheck = addedCoursesTable): boolean => {
+  const validateStep4 = (): boolean => {
     const errors: Record<string, string> = {};
-    const effectiveCount = coursesToCheck.length > 0 ? coursesToCheck.length : selectedCourses.length;
-    if (effectiveCount === 0) {
+    if (selectedCourses.length === 0) {
       errors.courses = "Please add at least one course";
     }
     const invalidContact = contactPersons.some(
@@ -705,7 +639,7 @@ export default function CollegeOnboarding({
     return Object.keys(errors).length === 0;
   };
 
-  const buildUpdatePayload = (coursesToUse = addedCoursesTable) => {
+  const buildUpdatePayload = () => {
     const validContactPersons = contactPersons.filter(
       person => person.title && person.first_name && person.last_name && person.designation && person.contact_no
     );
@@ -719,12 +653,15 @@ export default function CollegeOnboarding({
       email: person.email
     }));
 
-    const formattedCourses = coursesToUse.map(row => ({
-      course_type: row.course_type,
-      stream: row.stream,
-      course: row.course,
-      department: Array.isArray(row.department) ? row.department.join(",") : row.department
-    }));
+    const formattedCourses = selectedCourses.map(courseName => {
+      const courseDetails = coursesList.find(c => c.name === courseName || c.course_name === courseName);
+      return {
+        course_type: courseDetails?.course_type || (selectedCourseTypes.length > 0 ? selectedCourseTypes.join(",") : ""),
+        stream: courseDetails?.stream || (selectedStreams.length > 0 ? selectedStreams.join(",") : ""),
+        course: courseDetails?.name || courseDetails?.course_name || courseName,
+        department: ""
+      };
+    });
     const userEmail = localStorage.getItem("userEmail") || formData.email;
 
     return {
@@ -962,26 +899,8 @@ export default function CollegeOnboarding({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    let coursesToSubmit = [...addedCoursesTable];
-    if (coursesToSubmit.length === 0 && selectedCourses.length > 0) {
-      for (const courseName of selectedCourses) {
-        if (!courseName) continue;
-        if (coursesToSubmit.some(row => row.course === courseName)) continue;
-        const courseDetails = coursesList.find(c => c.name === courseName || c.course_name === courseName);
-        coursesToSubmit.push({
-          id: Math.random().toString(36).substring(7),
-          course_type: courseDetails?.course_type || (selectedCourseTypes.length > 0 ? selectedCourseTypes.join(", ") : ""),
-          stream: courseDetails?.stream || (selectedStreams.length > 0 ? selectedStreams.join(", ") : ""),
-          course: courseDetails?.course_name || courseDetails?.name || courseName,
-          department: []
-        });
-      }
-      setAddedCoursesTable(coursesToSubmit);
-      setSelectedCourses([]);
-    }
-
-    if (!validateStep4(coursesToSubmit)) {
-      const firstError = Object.values(fieldErrors)[0] || (coursesToSubmit.length === 0 ? "Please add at least one course" : "Please check required fields");
+    if (!validateStep4()) {
+      const firstError = Object.values(fieldErrors)[0] || (selectedCourses.length === 0 ? "Please add at least one course" : "Please check required fields");
       setError(firstError);
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
@@ -994,7 +913,7 @@ export default function CollegeOnboarding({
     try {
       const userEmail = localStorage.getItem("userEmail") || formData.email || "";
       const url = `${BASE_URL}method/stridenex_app.api_stridenex_app.college.college.update_college?email=${encodeURIComponent(userEmail)}`;
-      const updateData = buildUpdatePayload(coursesToSubmit);
+      const updateData = buildUpdatePayload();
 
       const response = await axios.put(url, updateData, { headers: { 'Content-Type': 'application/json' } });
 
@@ -1706,7 +1625,14 @@ export default function CollegeOnboarding({
                 onChange={(val) => {
                   setSelectedCourses(val);
                   if (val && val.length > 0) {
-                    addCoursesFromSelection(val);
+                    if (fieldErrors.courses) {
+                      setFieldErrors(prev => {
+                        const newErrors = { ...prev };
+                        delete newErrors.courses;
+                        return newErrors;
+                      });
+                    }
+                    setError("");
                   }
                 }}
                 multiSelect={true}
@@ -1728,62 +1654,6 @@ export default function CollegeOnboarding({
               <Plus className="w-3.5 h-3.5" /> Add Course
             </Button>
           </div>
-
-          {addedCoursesTable.length > 0 && (
-            <div className="mt-4 border border-slate-200 rounded-lg overflow-x-auto bg-white shadow-sm">
-              <table className="w-full text-left border-collapse min-w-[550px]">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                    <th className="px-4 py-3 font-medium">Course Type</th>
-                    <th className="px-4 py-3 font-medium">Stream</th>
-                    <th className="px-4 py-3 font-medium">Course</th>
-                    <th className="px-4 py-3 font-medium">Department</th>
-                    <th className="px-4 py-3 font-medium text-center w-16">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
-                  {addedCoursesTable.map((row) => (
-                    <tr key={row.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-4 py-3 font-medium text-slate-900">{row.course_type || "—"}</td>
-                      <td className="px-4 py-3 text-slate-500">{row.stream || "—"}</td>
-                      <td className="px-4 py-3 text-slate-500">{row.course || "—"}</td>
-                      <td className="px-4 py-3">
-                        <Dropdown
-                          id={`dept-${row.id}`}
-                          placeholder="Select Department"
-                          endpoint={`${BASE_URL}method/stridenex_app.stridenex_app.doctype.college_department.college_department.get_departments_by_course`}
-                          params={{
-                            courses: row.course
-                          }}
-                          mapOptions={(data) => {
-                            const depts = data?.data || data?.message?.data || [];
-                            return depts.map((d: any) => ({
-                              value: d.name,
-                              label: d.department_name || d.name
-                            }));
-                          }}
-                          value={row.department}
-                          onChange={(val) => handleDepartmentChange(row.id, val)}
-                          searchable={true}
-                          multiSelect={true}
-                          modalTitle="Select Department"
-                        />
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveCourseRow(row.id)}
-                          className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
 
           {fieldErrors.courses && (
             <p className="text-xs text-red-500 mt-1">{fieldErrors.courses}</p>
