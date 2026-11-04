@@ -75,7 +75,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
   const baseInputClasses =
     "w-full px-3 py-2 bg-white border rounded-lg " +
     "focus:ring-2 focus:ring-accent focus:border-accent " +
-    "transition-all text-sm text-slate-900 placeholder:text-slate-400 " +
+    "transition-all text-base sm:text-sm text-slate-900 placeholder:text-slate-400 " +
     (error ? "border-red-500" : "border-slate-200") + " " +
     (field.inputClassName || "");
 
@@ -482,7 +482,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         placeholder="Search..."
-                        className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                        className="w-full pl-9 pr-3 py-2 text-base sm:text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
                         onClick={(e) => e.stopPropagation()}
                       />
                     </div>
@@ -679,7 +679,7 @@ export default function DynamicField({ field, value, onChange, error }: Props) {
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Search..."
-                    className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+                    className="w-full pl-9 pr-3 py-2 text-base sm:text-sm border border-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>
