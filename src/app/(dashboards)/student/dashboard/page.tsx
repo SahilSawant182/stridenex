@@ -64,6 +64,7 @@ export default function StudentDashboardPage() {
   }>({ newPostings: [], deadlineAlerts: [] });
   const [showTestModal, setShowTestModal] = useState<boolean>(false);
   const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
+  const [hasCompletedTest, setHasCompletedTest] = useState<boolean>(false);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -76,6 +77,9 @@ export default function StudentDashboardPage() {
     const checkOnboarding = async () => {
       try {
         const res = await psychometricApi.checkOnboardingStatus(emailToCheck);
+        const isCompleted = !!(res.has_completed_test || res.test_completed || res.is_onboarded || res.submission);
+        setHasCompletedTest(isCompleted);
+
         if (res.is_first_login && !res.is_onboarded) {
           setShowTestModal(true);
         } else {
@@ -313,18 +317,20 @@ export default function StudentDashboardPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <button
-              onClick={() => setShowHistoryModal(true)}
-              className="flex-1 md:flex-none px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm rounded-xl transition-all border border-slate-200 shadow-sm active:scale-95 whitespace-nowrap flex items-center justify-center gap-2"
-            >
-              <History className="w-4 h-4 text-slate-500" />
-              View History
-            </button>
+            {hasCompletedTest && (
+              <button
+                onClick={() => setShowHistoryModal(true)}
+                className="flex-1 md:flex-none px-4 py-2.5 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm rounded-xl transition-all border border-slate-200 shadow-sm active:scale-95 whitespace-nowrap flex items-center justify-center gap-2"
+              >
+                <History className="w-4 h-4 text-slate-500" />
+                View History
+              </button>
+            )}
             <button
               onClick={() => setShowTestModal(true)}
               className="flex-1 md:flex-none px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all shadow-md active:scale-95 whitespace-nowrap flex items-center justify-center gap-2"
             >
-              Retake Assessment
+              {hasCompletedTest ? "Retake Assessment" : "Take Assessment"}
             </button>
           </div>
         </motion.div>
@@ -350,7 +356,10 @@ export default function StudentDashboardPage() {
       <PsychometricTestModal
         isOpen={showTestModal}
         onClose={() => setShowTestModal(false)}
-        onCompleted={() => setShowTestModal(false)}
+        onCompleted={() => {
+          setShowTestModal(false);
+          setHasCompletedTest(true);
+        }}
         studentEmail={currentUser || undefined}
       />
       <PsychometricHistoryModal
