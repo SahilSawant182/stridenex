@@ -38,162 +38,164 @@ const nextConfig = {
 
   async rewrites() {
     return [
-      // Direct LMS wildcard
+      // 1. Direct LMS wildcard (MUST retain /lms in destination so Port 3004 does not redirect)
       {
         source: "/lms/:path*",
-        destination: `${LMS_BASE_URL}/:path*`,
+        destination: `${LMS_BASE_URL}/lms/:path*`,
       },
+
+      // 2. Direct Root Shorthands mapped to their LMS basePath equivalent
       {
         source: "/courses",
-        destination: `${LMS_BASE_URL}/courses`,
+        destination: `${LMS_BASE_URL}/lms/courses`,
       },
       {
         source: "/courses/:slug",
-        destination: `${LMS_BASE_URL}/course/:slug`,
+        destination: `${LMS_BASE_URL}/lms/course/:slug`,
       },
       {
         source: "/course/:path*",
-        destination: `${LMS_BASE_URL}/course/:path*`,
+        destination: `${LMS_BASE_URL}/lms/course/:path*`,
       },
       {
         source: "/certificates",
-        destination: `${LMS_BASE_URL}/certificates`,
+        destination: `${LMS_BASE_URL}/lms/certificates`,
       },
       {
         source: "/certificates/:path*",
-        destination: `${LMS_BASE_URL}/certificates/:path*`,
+        destination: `${LMS_BASE_URL}/lms/certificates/:path*`,
       },
       {
         source: "/certificate-evaluations",
-        destination: `${LMS_BASE_URL}/certificate-evaluations`,
+        destination: `${LMS_BASE_URL}/lms/certificate-evaluations`,
       },
       {
         source: "/certificate-evaluations/:path*",
-        destination: `${LMS_BASE_URL}/certificate-evaluations/:path*`,
+        destination: `${LMS_BASE_URL}/lms/certificate-evaluations/:path*`,
       },
       {
         source: "/dashboard",
-        destination: `${LMS_BASE_URL}/dashboard`,
+        destination: `${LMS_BASE_URL}/lms/dashboard`,
       },
       {
         source: "/enrollments",
-        destination: `${LMS_BASE_URL}/enrollments`,
+        destination: `${LMS_BASE_URL}/lms/enrollments`,
       },
       {
         source: "/batches",
-        destination: `${LMS_BASE_URL}/batches`,
+        destination: `${LMS_BASE_URL}/lms/batches`,
       },
       {
         source: "/batches/:path*",
-        destination: `${LMS_BASE_URL}/batches/:path*`,
+        destination: `${LMS_BASE_URL}/lms/batches/:path*`,
       },
       {
         source: "/batch",
-        destination: `${LMS_BASE_URL}/batch`,
+        destination: `${LMS_BASE_URL}/lms/batch`,
       },
       {
         source: "/batch/:path*",
-        destination: `${LMS_BASE_URL}/batch/:path*`,
+        destination: `${LMS_BASE_URL}/lms/batch/:path*`,
       },
       {
         source: "/programs",
-        destination: `${LMS_BASE_URL}/programs`,
+        destination: `${LMS_BASE_URL}/lms/programs`,
       },
       {
         source: "/programs/:path*",
-        destination: `${LMS_BASE_URL}/programs/:path*`,
+        destination: `${LMS_BASE_URL}/lms/programs/:path*`,
       },
       {
         source: "/quizzes",
-        destination: `${LMS_BASE_URL}/quizzes`,
+        destination: `${LMS_BASE_URL}/lms/quizzes`,
       },
       {
         source: "/quizzes/:path*",
-        destination: `${LMS_BASE_URL}/quizzes/:path*`,
+        destination: `${LMS_BASE_URL}/lms/quizzes/:path*`,
       },
       {
         source: "/assignments",
-        destination: `${LMS_BASE_URL}/assignments`,
+        destination: `${LMS_BASE_URL}/lms/assignments`,
       },
       {
         source: "/assignments/:path*",
-        destination: `${LMS_BASE_URL}/assignments/:path*`,
+        destination: `${LMS_BASE_URL}/lms/assignments/:path*`,
       },
       {
         source: "/programming-exercises",
-        destination: `${LMS_BASE_URL}/programming-exercises`,
+        destination: `${LMS_BASE_URL}/lms/programming-exercises`,
       },
       {
         source: "/programming-exercises/:path*",
-        destination: `${LMS_BASE_URL}/programming-exercises/:path*`,
+        destination: `${LMS_BASE_URL}/lms/programming-exercises/:path*`,
       },
       {
         source: "/my-payments",
-        destination: `${LMS_BASE_URL}/my-payments`,
+        destination: `${LMS_BASE_URL}/lms/my-payments`,
       },
       {
         source: "/profile/payments",
-        destination: `${LMS_BASE_URL}/profile/payments`,
+        destination: `${LMS_BASE_URL}/lms/profile/payments`,
       },
       {
         source: "/sales-earnings",
-        destination: `${LMS_BASE_URL}/sales-earnings`,
+        destination: `${LMS_BASE_URL}/lms/sales-earnings`,
       },
       {
         source: "/instructor/settings",
-        destination: `${LMS_BASE_URL}/instructor/settings`,
+        destination: `${LMS_BASE_URL}/lms/instructor/settings`,
       },
       {
         source: "/instructor/settings/:path*",
-        destination: `${LMS_BASE_URL}/instructor/settings/:path*`,
+        destination: `${LMS_BASE_URL}/lms/instructor/settings/:path*`,
       },
       {
         source: "/categories",
-        destination: `${LMS_BASE_URL}/categories`,
+        destination: `${LMS_BASE_URL}/lms/categories`,
       },
       {
         source: "/badges",
-        destination: `${LMS_BASE_URL}/badges`,
+        destination: `${LMS_BASE_URL}/lms/badges`,
       },
       {
         source: "/badges/:path*",
-        destination: `${LMS_BASE_URL}/badges/:path*`,
+        destination: `${LMS_BASE_URL}/lms/badges/:path*`,
       },
       {
         source: "/course-evaluators",
-        destination: `${LMS_BASE_URL}/course-evaluators`,
+        destination: `${LMS_BASE_URL}/lms/course-evaluators`,
       },
       {
         source: "/evaluators",
-        destination: `${LMS_BASE_URL}/evaluators`,
+        destination: `${LMS_BASE_URL}/lms/evaluators`,
       },
       {
         source: "/questions",
-        destination: `${LMS_BASE_URL}/questions`,
+        destination: `${LMS_BASE_URL}/lms/questions`,
       },
       {
         source: "/questions/:path*",
-        destination: `${LMS_BASE_URL}/questions/:path*`,
+        destination: `${LMS_BASE_URL}/lms/questions/:path*`,
       },
       {
         source: "/progress",
-        destination: `${LMS_BASE_URL}/progress`,
+        destination: `${LMS_BASE_URL}/lms/progress`,
       },
       {
         source: "/coupons",
-        destination: `${LMS_BASE_URL}/coupons`,
+        destination: `${LMS_BASE_URL}/lms/coupons`,
       },
       {
         source: "/coupons/:path*",
-        destination: `${LMS_BASE_URL}/coupons/:path*`,
+        destination: `${LMS_BASE_URL}/lms/coupons/:path*`,
       },
       {
         source: "/checkout",
-        destination: `${LMS_BASE_URL}/checkout`,
+        destination: `${LMS_BASE_URL}/lms/checkout`,
       },
       {
         source: "/payment-success",
-        destination: `${LMS_BASE_URL}/payment-success`,
+        destination: `${LMS_BASE_URL}/lms/payment-success`,
       },
     ];
   },

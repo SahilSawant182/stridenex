@@ -236,12 +236,15 @@ export default function LoginPage() {
           localStorage.setItem("roles", JSON.stringify(["College", "Instructor", "Course Creator"]));
         } else if (userRole === "industry") {
           localStorage.setItem("roles", JSON.stringify(["Industry", "Instructor", "Course Creator"]));
+        } else if (userRole === "partner") {
+          localStorage.setItem("roles", JSON.stringify(["Partner", "Instructor", "Course Creator"]));
         }
 
         if (
           userRole === "mentor" ||
           userRole === "college" ||
           userRole === "industry" ||
+          userRole === "partner" ||
           (data.roles && (data.roles.includes("Instructor") || data.roles.includes("Course Creator")))
         ) {
           localStorage.setItem("isInstructor", "true");
