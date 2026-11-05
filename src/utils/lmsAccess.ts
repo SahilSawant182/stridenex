@@ -5,10 +5,11 @@
 export async function checkLmsAccess(emailOverride?: string | null): Promise<boolean> {
   if (typeof window === "undefined") return false;
 
-  const role = localStorage.getItem("role")?.toLowerCase();
+  const role = (localStorage.getItem("role") || "").toLowerCase();
+  const rolesStr = (localStorage.getItem("roles") || "").toLowerCase();
 
-  // 1. PARTNER HAS NO PLANS: Partner users have NO plan restrictions
-  if (role === "partner") {
+  // 1. PARTNER HAS NO PLANS: Partner users have NO plan restrictions and 100% free full authoring
+  if (role.includes("partner") || rolesStr.includes("partner")) {
     localStorage.setItem("has_lms_access", "true");
     localStorage.setItem("isInstructor", "true");
     return true;
@@ -16,12 +17,12 @@ export async function checkLmsAccess(emailOverride?: string | null): Promise<boo
 
   // 2. Administrators always have 100% full access
   try {
-    const rolesStr = localStorage.getItem("roles");
-    if (rolesStr) {
-      const parsed = rolesStr.startsWith("[") ? JSON.parse(rolesStr) : rolesStr;
+    const rawRoles = localStorage.getItem("roles");
+    if (rawRoles) {
+      const parsed = rawRoles.startsWith("[") ? JSON.parse(rawRoles) : rawRoles;
       const isAdmin = Array.isArray(parsed)
         ? parsed.some((r: string) => ["administrator", "system manager"].includes(r.toLowerCase()))
-        : /administrator|system manager/i.test(rolesStr);
+        : /administrator|system manager/i.test(rawRoles);
       if (isAdmin) {
         localStorage.setItem("has_lms_access", "true");
         localStorage.setItem("isInstructor", "true");
@@ -30,14 +31,8 @@ export async function checkLmsAccess(emailOverride?: string | null): Promise<boo
     }
   } catch {}
 
-  // 3. Fast-path check from cached localStorage if already authorized
-  const cachedAccess = localStorage.getItem("has_lms_access") === "true";
-  const cachedInstructor = localStorage.getItem("isInstructor") === "true";
-  if (cachedAccess && cachedInstructor) {
-    return true;
-  }
-
-  // 4. Verify with backend endpoint
+  // 3. For College, Industry, Mentor and other accounts: Live backend verification
+  // Do NOT permanently trust stale localStorage cache
   try {
     const userEmail =
       emailOverride ||

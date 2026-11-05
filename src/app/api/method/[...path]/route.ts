@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// Ignore SSL certificate hostname errors for internal proxying if needed
+if (process.env.NODE_TLS_REJECT_UNAUTHORIZED === undefined) {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+}
+
 // Server-to-server backend URL (never exposed to the browser)
 const BACKEND_INTERNAL_URL = (
     process.env.BACKEND_INTERNAL_URL ||
@@ -8,7 +13,7 @@ const BACKEND_INTERNAL_URL = (
     "https://devstridenex.quantcloud.in"
 ).replace(/\/$/, "");
 
-// Frappe site name used in X-Frappe-Site-Name header
+// Frappe site name used in X-Frappe-Site-Name and Host header
 const DEFAULT_SITE_NAME = (() => {
     try {
         return new URL(BACKEND_INTERNAL_URL).hostname;
@@ -20,7 +25,7 @@ const DEFAULT_SITE_NAME = (() => {
 const FRAPPE_SITE_NAME =
     process.env.FRAPPE_SITE_NAME ||
     process.env.NEXT_PUBLIC_FRAPPE_SITE_NAME ||
-    DEFAULT_SITE_NAME;
+    "devstridenex.quantcloud.in";
 
 async function handleProxy(
     req: NextRequest,
@@ -32,21 +37,14 @@ async function handleProxy(
 
     const targetUrl = `${BACKEND_INTERNAL_URL}/api/method/${pathStr}${searchParams}`;
 
-    // Resolve site name: avoid sending 'localhost' to multi-tenant Frappe backend
-    const incomingHost = req.headers.get("host")?.split(":")[0];
-    const isLocal = !incomingHost || incomingHost === "localhost" || incomingHost === "127.0.0.1";
-    const siteName = FRAPPE_SITE_NAME || (!isLocal ? incomingHost : DEFAULT_SITE_NAME);
+    // Resolve site name: always use the Frappe site name for multi-tenant routing
+    const siteName = FRAPPE_SITE_NAME || DEFAULT_SITE_NAME;
 
     const headers: Record<string, string> = {
+        "Host": siteName,
         "X-Frappe-Site-Name": siteName,
         "Accept": "application/json",
     };
-
-    try {
-        headers["Host"] = new URL(targetUrl).host;
-    } catch {
-        headers["Host"] = siteName;
-    }
 
     const contentType = req.headers.get("content-type");
     if (contentType) headers["Content-Type"] = contentType;
