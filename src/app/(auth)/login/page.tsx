@@ -228,28 +228,33 @@ export default function LoginPage() {
         });
 
         // Sync roles and instructor flag for LMS integration
-        if (data.roles && Array.isArray(data.roles)) {
-          localStorage.setItem("roles", JSON.stringify(data.roles));
-        } else if (userRole === "mentor") {
-          localStorage.setItem("roles", JSON.stringify(["Mentor", "Instructor", "Course Creator"]));
-        } else if (userRole === "college") {
-          localStorage.setItem("roles", JSON.stringify(["College", "Instructor", "Course Creator"]));
-        } else if (userRole === "industry") {
-          localStorage.setItem("roles", JSON.stringify(["Industry", "Instructor", "Course Creator"]));
-        } else if (userRole === "partner") {
-          localStorage.setItem("roles", JSON.stringify(["Partner", "Instructor", "Course Creator"]));
-        }
+        localStorage.setItem("user", email);
+        localStorage.setItem("email", email);
 
-        if (
-          userRole === "mentor" ||
-          userRole === "college" ||
-          userRole === "industry" ||
-          userRole === "partner" ||
-          (data.roles && (data.roles.includes("Instructor") || data.roles.includes("Course Creator")))
-        ) {
+        if (userRole === "partner") {
+          localStorage.setItem("roles", JSON.stringify(["Partner", "Instructor", "Course Creator"]));
           localStorage.setItem("isInstructor", "true");
+          localStorage.setItem("has_lms_access", "true");
         } else {
-          localStorage.setItem("isInstructor", "false");
+          // Store roles returned by backend
+          if (data.roles && Array.isArray(data.roles)) {
+            localStorage.setItem("roles", JSON.stringify(data.roles));
+          }
+          
+          const rolesList = data.roles || [];
+          const hasInstructorRole =
+            rolesList.includes("Instructor") ||
+            rolesList.includes("Course Creator") ||
+            rolesList.includes("Administrator") ||
+            rolesList.includes("System Manager");
+
+          if (hasInstructorRole) {
+            localStorage.setItem("isInstructor", "true");
+            localStorage.setItem("has_lms_access", "true");
+          } else {
+            localStorage.setItem("isInstructor", "false");
+            localStorage.setItem("has_lms_access", "false");
+          }
         }
 
         if (userRole === "college") {

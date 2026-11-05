@@ -20,9 +20,11 @@ const getRoleIcon = (role: string, className: string = "w-4 h-4") => {
 };
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
+import LmsUpgradeModal from "@/components/modals/LmsUpgradeModal";
+import { checkLmsAccess } from "@/utils/lmsAccess";
 
 interface SidebarProps {
-  role: DashboardRole;
+  role: DashboardRole | "partner" | string;
   collapsed?: boolean;
   onToggle?: () => void;
   isMobile?: boolean;
@@ -34,19 +36,43 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
   const router = useRouter();
   const { logout, fullName, userImage, currentUser } = useAuth();
   const imageUrl = buildProfileImageUrl(userImage);
-  const config = dashboardConfig[role];
+  const config = dashboardConfig[role as DashboardRole] || dashboardConfig.college;
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const handleLinkClick = async (e: React.MouseEvent, href: string) => {
+    if (href === "/lms/courses") {
+      if ((role as string) === "partner") {
+        if (isMobile && onClose) onClose();
+        return;
+      }
+      if (role === "college" || role === "industry" || role === "mentor") {
+        e.preventDefault();
+        const hasAccess = await checkLmsAccess(currentUser);
+        if (hasAccess) {
+          if (isMobile && onClose) onClose();
+          router.push("/lms/courses");
+        } else {
+          setShowUpgradeModal(true);
+        }
+        return;
+      }
+    }
+    if (isMobile && onClose) {
+      onClose();
+    }
+  };
 
   useEffect(() => {
     if (role !== "student" || !currentUser) return;
-    
+
     // 1. Try to read from localStorage first
     const cachedProfile = localStorage.getItem("studentProfile");
     if (cachedProfile) {
       try {
         setProfile(JSON.parse(cachedProfile));
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // 2. Fetch from API
@@ -67,7 +93,7 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
 
   const isFirstOrSecondYear = () => {
     if (!profile) return false;
-    
+
     // Only apply the 1st/2nd year restriction if the course type is UG
     const courseType = String(profile.course_type || "").trim().toLowerCase();
     if (courseType !== "ug") return false;
@@ -171,9 +197,8 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
         }`}>
         <div
           onClick={handleLogoClick}
-          className={`flex items-center cursor-pointer group ${
-            collapsed ? 'w-full justify-center' : 'gap-2'
-          }`}
+          className={`flex items-center cursor-pointer group ${collapsed ? 'w-full justify-center' : 'gap-2'
+            }`}
         >
           {collapsed ? (
             <img
@@ -194,8 +219,8 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
           <button
             onClick={onToggle}
             className={`p-1.5 rounded-full border shadow-sm transition-all duration-300 z-10 ${isShortsPage
-                ? 'border-zinc-850 bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800'
-                : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-500'
+              ? 'border-zinc-850 bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800'
+              : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-500'
               } ${collapsed ? 'absolute -right-3 top-6' : ''}`}
           >
             {collapsed ? (
@@ -222,7 +247,7 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
             <Link
               key={link.name}
               href={link.href}
-              onClick={isMobile ? onClose : undefined}
+              onClick={(e) => handleLinkClick(e, link.href)}
               onMouseEnter={() => setHoveredItem(link.name)}
               onMouseLeave={() => setHoveredItem(null)}
               className={`
@@ -241,15 +266,13 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
               `}
             >
               <Icon
-                className={`${
-                  collapsed ? "w-6 h-6" : "w-5 h-5"
-                } shrink-0 transition-colors ${
-                  isActive
+                className={`${collapsed ? "w-6 h-6" : "w-5 h-5"
+                  } shrink-0 transition-colors ${isActive
                     ? getActiveIconStyles()
                     : isShortsPage
                       ? "text-zinc-500 group-hover:text-zinc-300"
                       : "text-slate-400 group-hover:text-slate-600"
-                }`}
+                  }`}
               />
 
               {!collapsed && (
@@ -319,6 +342,12 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
           </div>
         )}
       </div>
+
+      <LmsUpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        role={role}
+      />
     </motion.div>
   );
 }
