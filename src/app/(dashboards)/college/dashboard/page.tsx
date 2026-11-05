@@ -240,14 +240,6 @@ export default function CollegeDashboardPage() {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const handleLmsStudioClick = async () => {
-    const hasLms = localStorage.getItem("has_lms_access") === "true";
-    const isInstructor = localStorage.getItem("isInstructor") === "true";
-
-    if (hasLms && isInstructor) {
-      router.push("/lms/courses");
-      return;
-    }
-
     try {
       const allowed = await checkLmsAccess(currentUser || collegeDetails?.email);
       if (allowed) {

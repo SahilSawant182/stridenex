@@ -24,10 +24,20 @@ export default function LmsUpgradeModal({ isOpen, onClose, role }: LmsUpgradeMod
 
   const handleUpgradeClick = () => {
     onClose();
-    if (role === "college") {
+    const normalizedRole = (
+      role ||
+      (typeof window !== "undefined" ? localStorage.getItem("userRole") : "") ||
+      ""
+    ).toLowerCase().trim();
+
+    if (normalizedRole === "college") {
       router.push("/college/dashboard/plans");
-    } else if (role === "industry") {
+    } else if (normalizedRole === "industry") {
       router.push("/industry/dashboard/plans");
+    } else if (normalizedRole === "mentor") {
+      router.push("/mentor/dashboard/plans");
+    } else if (normalizedRole === "student") {
+      router.push("/student/dashboard/plans");
     } else {
       router.push("/billing/pricing");
     }

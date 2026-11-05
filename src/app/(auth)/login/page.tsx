@@ -240,20 +240,33 @@ export default function LoginPage() {
           if (data.roles && Array.isArray(data.roles)) {
             localStorage.setItem("roles", JSON.stringify(data.roles));
           }
-          
-          const rolesList = data.roles || [];
-          const hasInstructorRole =
-            rolesList.includes("Instructor") ||
-            rolesList.includes("Course Creator") ||
+
+          const rolesList: string[] = data.roles || [];
+          const isAdmin =
             rolesList.includes("Administrator") ||
             rolesList.includes("System Manager");
 
-          if (hasInstructorRole) {
+          if (isAdmin) {
             localStorage.setItem("isInstructor", "true");
             localStorage.setItem("has_lms_access", "true");
           } else {
-            localStorage.setItem("isInstructor", "false");
-            localStorage.setItem("has_lms_access", "false");
+            // For College, Industry, Mentor: backend strips "Instructor" if package does not include LMS
+            const hasInstructorRole =
+              rolesList.includes("Instructor") ||
+              rolesList.includes("Course Creator");
+
+            if (hasInstructorRole) {
+              localStorage.setItem("isInstructor", "true");
+              localStorage.setItem("has_lms_access", "true");
+            } else {
+              localStorage.setItem("isInstructor", "false");
+              localStorage.setItem("has_lms_access", "false");
+            }
+
+            // Perform live LMS access sync for college/industry/mentor to verify package entitlement
+            import("@/utils/lmsAccess").then(({ checkLmsAccess }) => {
+              checkLmsAccess(email).catch(console.error);
+            });
           }
         }
 
@@ -564,8 +577,8 @@ export default function LoginPage() {
                         {resetStep === "password"
                           ? "Set New Password"
                           : resetStep === "success"
-                          ? "Password Reset Done"
-                          : "Reset Password"}
+                            ? "Password Reset Done"
+                            : "Reset Password"}
                       </h3>
                       <p className="text-xs text-slate-500">
                         {resetStep === "email" && "Step 1 of 3: Verification"}
@@ -593,8 +606,8 @@ export default function LoginPage() {
                         resetStep === "email"
                           ? "33%"
                           : resetStep === "otp"
-                          ? "66%"
-                          : "100%"
+                            ? "66%"
+                            : "100%"
                     }}
                   />
                 </div>
