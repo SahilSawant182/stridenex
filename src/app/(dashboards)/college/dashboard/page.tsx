@@ -30,6 +30,8 @@ import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
 import { useAuth } from "@/context/AuthContext";
 import SuccessStoriesFooter from "@/components/dashboards/student/SuccessStoriesFooter";
+import LmsUpgradeModal from "@/components/modals/LmsUpgradeModal";
+import { checkLmsAccess } from "@/utils/lmsAccess";
 import {
   getCollegeDetails,
   getPlacementStats,
@@ -235,6 +237,28 @@ export default function CollegeDashboardPage() {
   const [onboardingGrowth, setOnboardingGrowth] = useState<any>(null);
   const [topSkillGaps, setTopSkillGaps] = useState<any>(null);
   const [apiErrors, setApiErrors] = useState<Record<string, string>>({});
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const handleLmsStudioClick = async () => {
+    const hasLms = localStorage.getItem("has_lms_access") === "true";
+    const isInstructor = localStorage.getItem("isInstructor") === "true";
+
+    if (hasLms && isInstructor) {
+      router.push("/lms/courses");
+      return;
+    }
+
+    try {
+      const allowed = await checkLmsAccess(currentUser || collegeDetails?.email);
+      if (allowed) {
+        router.push("/lms/courses");
+      } else {
+        setShowUpgradeModal(true);
+      }
+    } catch {
+      setShowUpgradeModal(true);
+    }
+  };
 
   // Load college details from localStorage or API
   useEffect(() => {
@@ -926,7 +950,7 @@ export default function CollegeDashboardPage() {
 
         <BaseCard 
           className="border-slate-200 p-5 cursor-pointer hover:border-blue-400 hover:shadow-sm transition-all"
-          onClick={() => router.push("/lms/courses")}
+          onClick={handleLmsStudioClick}
         >
           <div className="flex items-center justify-between h-full">
             <div className="flex items-center gap-4">
@@ -953,6 +977,12 @@ export default function CollegeDashboardPage() {
           hideShareButton={true}
         />
       </motion.div>
+
+      <LmsUpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        role="college"
+      />
     </motion.div>
   );
 }
