@@ -176,13 +176,22 @@ export default function PartnerPage() {
               Partner Portal
             </span>
           </div>
-          <button
-            onClick={confirmLogout}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Sign Out</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push("/lms/courses")}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg shadow-sm hover:from-blue-700 hover:to-indigo-700 transition-all text-sm"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>LMS Studio</span>
+            </button>
+            <button
+              onClick={confirmLogout}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
+          </div>
         </div>
       </header>
 
