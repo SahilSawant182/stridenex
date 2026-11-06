@@ -85,9 +85,10 @@ export const collegeConfig: RoleConfig = {
     { name: "Notice Board", href: "/college/dashboard/notice-board", icon: BarChart },
     // { name: "Reports", href: "/college/dashboard/reports", icon: Calendar },
     { name: "LMS Studio", href: "/lms/courses", icon: BookOpen },
+    { name: "Settings", href: "/college/dashboard/settings", icon: Settings },
   ],
   bottomLinks: [
-    { name: "Settings", href: "/college/settings", icon: Settings },
+    { name: "Settings", href: "/college/dashboard/settings", icon: Settings },
     { name: "Support", href: "/support", icon: HelpCircle },
   ],
 };
@@ -135,7 +136,7 @@ export const industryConfig: RoleConfig = {
     { name: "Settings", href: "/industry/dashboard/settings", icon: Settings },
   ],
   bottomLinks: [
-    { name: "Settings", href: "/industry/settings", icon: Settings },
+    { name: "Settings", href: "/industry/dashboard/settings", icon: Settings },
     { name: "Support", href: "/support", icon: HelpCircle },
   ],
 };

@@ -5,6 +5,8 @@ import InterventionsTabContent from "@/components/dashboards/college/Interventio
 import NoticeBoardTabContent from "@/components/dashboards/college/NoticeBoardTabContent";
 import ReportsTabContent from "@/components/dashboards/college/ReportsTabContent";
 import PlansTabContent from "@/components/dashboards/college/PlansTabContent";
+import CollegeMembersTabContent from "@/components/dashboards/college/CollegeMembersTabContent";
+import CollegeSettingsTabContent from "@/components/dashboards/college/CollegeSettingsTabContent";
 import CommonTabContent from "@/components/dashboards/shared/CommonTabContent";
 import { use } from "react";
 
@@ -18,6 +20,8 @@ export default function DynamicCollegeTabPage({ params }: { params: Promise<{ ta
     if (unwrappedParams.tab === "notice-board") return <NoticeBoardTabContent />;
     if (unwrappedParams.tab === "reports") return <ReportsTabContent />;
     if (unwrappedParams.tab === "plans" || unwrappedParams.tab === "plan") return <PlansTabContent />;
+    if (unwrappedParams.tab === "settings") return <CollegeSettingsTabContent />;
+    if (unwrappedParams.tab === "members" || unwrappedParams.tab === "team" || unwrappedParams.tab === "staff") return <CollegeMembersTabContent />;
 
     return <CommonTabContent title={unwrappedParams.tab} />;
 }

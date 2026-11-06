@@ -61,6 +61,7 @@ const tabConfig = {
     { name: "Interventions", path: "/college/dashboard/interventions", icon: Building2 },
     { name: "Community", path: "/college/dashboard/community", icon: Users },
     { name: "Notice Board", path: "/college/dashboard/notice-board", icon: BarChart },
+    { name: "Settings", path: "/college/dashboard/settings", icon: Settings },
   ],
   mentor: [
     { name: "Overview", icon: LayoutDashboard, path: "/mentor/dashboard" },
