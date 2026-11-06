@@ -784,3 +784,229 @@ export const deleteOfferTemplate = async (name: string) => {
     throw error;
   }
 };
+
+/* ─── Industry / College Members Management APIs ─── */
+export interface IndustryMember {
+  row_id: number | null;
+  /** Primary email field returned by API (new format) */
+  member_user?: string;
+  /** Legacy field aliases — keep for backward compat */
+  user?: string;
+  email?: string;
+  first_name: string;
+  last_name?: string | null;
+  salutation?: string | null;
+  designation: string;
+  contact_no?: string | null;
+  member_type: "Owner" | "Admin" | "Member" | "HR" | string;
+  /** Legacy org field */
+  industry?: string;
+  /** New org field */
+  name?: string;
+}
+
+export interface IndustryMembersResponse {
+  status: number;
+  message: string;
+  industry: string;
+  company_name: string;
+  logged_in_member_type: string;
+  total_members: number;
+  data: IndustryMember[];
+}
+
+/** Resolves authorization header from local storage tokens */
+export const getMemberAuthHeaders = (): Record<string, string> => {
+  if (typeof window === "undefined") return {};
+
+  const clean = (val: any): string | null => {
+    if (!val || val === "undefined" || val === "null") return null;
+    if (typeof val !== "string") return null;
+    const trimmed = val.replace(/^["']|["']$/g, "").trim();
+    return trimmed.length > 0 ? trimmed : null;
+  };
+
+  // 1. Direct apiKey & apiSecret
+  const apiKey = clean(localStorage.getItem("apiKey")) || clean(localStorage.getItem("api_key"));
+  const apiSecret = clean(localStorage.getItem("apiSecret")) || clean(localStorage.getItem("api_secret"));
+
+  if (apiKey && apiSecret) {
+    return { Authorization: `token ${apiKey}:${apiSecret}` };
+  }
+
+  // 2. Direct token / authToken / access_token
+  const rawToken =
+    clean(localStorage.getItem("token")) ||
+    clean(localStorage.getItem("authToken")) ||
+    clean(localStorage.getItem("access_token"));
+
+  if (rawToken) {
+    return {
+      Authorization:
+        rawToken.startsWith("token ") || rawToken.startsWith("Bearer ")
+          ? rawToken
+          : `token ${rawToken}`,
+    };
+  }
+
+  // 3. Nested in key_details
+  try {
+    const kd = localStorage.getItem("key_details");
+    if (kd) {
+      const parsed = JSON.parse(kd);
+      const k = clean(parsed?.api_key || parsed?.apiKey);
+      const s = clean(parsed?.api_secret || parsed?.apiSecret);
+      if (k && s) {
+        return { Authorization: `token ${k}:${s}` };
+      }
+    }
+  } catch (_) {}
+
+  // 4. Nested in collegeDetails / industryData / userData
+  try {
+    for (const itemKey of ["collegeDetails", "industryData", "userData"]) {
+      const raw = localStorage.getItem(itemKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const k = clean(parsed?.api_key || parsed?.apiKey || parsed?.key_details?.api_key);
+        const s = clean(parsed?.api_secret || parsed?.apiSecret || parsed?.key_details?.api_secret);
+        if (k && s) {
+          return { Authorization: `token ${k}:${s}` };
+        }
+      }
+    }
+  } catch (_) {}
+
+  return {};
+};
+
+/** GET members — sends name & user_type as query params (Frappe GET), with fallback to POST */
+export const getIndustryMembers = async (
+  orgName?: string,
+  userType: "Industry" | "College" = "Industry"
+) => {
+  const safeName = (orgName || "").trim();
+  if (!safeName) {
+    return {
+      status: 200,
+      message: "No organization name provided",
+      data: [],
+      total_members: 0,
+    };
+  }
+
+  const headers = getMemberAuthHeaders();
+
+  // 1. Try GET (standard Frappe whitelist for read queries)
+  try {
+    const params = new URLSearchParams();
+    params.append("name", safeName);
+    params.append("user_type", userType);
+    params.append("company_name", safeName);
+    params.append("industry", safeName);
+    const query = params.toString();
+    const url = `method/stridenex_app.api_stridenex_app.industry.industry.get_industry_members?${query}`;
+    return await baseApiService.get(url, { headers });
+  } catch (getError: any) {
+    const status = getError?.status || getError?.response?.status;
+    const msg = String(getError?.message || "");
+    // If the method only allows POST, fallback to POST
+    if (status === 403 || status === 405 || msg.includes("Not permitted")) {
+      try {
+        return await baseApiService.post(
+          "method/stridenex_app.api_stridenex_app.industry.industry.get_industry_members",
+          { name: safeName, user_type: userType },
+          { headers }
+        );
+      } catch (postError) {
+        console.error("Both GET and POST failed for get_industry_members:", postError);
+        throw postError;
+      }
+    }
+    throw getError;
+  }
+};
+
+/** ADD a new member (separate endpoint from update) */
+export const addIndustryMember = async (payload: {
+  user_type: "Industry" | "College";
+  first_name: string;
+  last_name?: string | null;
+  salutation?: string | null;
+  designation?: string;
+  contact_no?: string | null;
+  member_user: string;
+  member_type?: string;
+  name: string;
+  row_id?: number | null;
+}) => {
+  try {
+    const headers = getMemberAuthHeaders();
+    const response = await baseApiService.post(
+      "method/stridenex_app.api_stridenex_app.industry.industry.add_industry_member",
+      payload,
+      { headers }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error adding industry member:", error);
+    throw error;
+  }
+};
+
+/** UPDATE an existing member */
+export const updateIndustryMember = async (payload: {
+  user_type: "Industry" | "College";
+  first_name: string;
+  last_name?: string | null;
+  salutation?: string | null;
+  designation?: string;
+  contact_no?: string | null;
+  member_user: string;
+  member_type?: string;
+  name: string;
+  row_id?: number | null;
+}) => {
+  try {
+    const headers = getMemberAuthHeaders();
+    const response = await baseApiService.post(
+      "method/stridenex_app.api_stridenex_app.industry.industry.update_industry_member",
+      payload,
+      { headers }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error updating industry member:", error);
+    throw error;
+  }
+};
+
+/** REMOVE a member — payload: user_type, name, row_id */
+export const removeIndustryMember = async (payload: {
+  user_type: "Industry" | "College" | string;
+  name: string;
+  row_id?: number | string | null;
+  member_user?: string;
+  [key: string]: any;
+}) => {
+  try {
+    const headers = getMemberAuthHeaders();
+    const body: Record<string, any> = {
+      user_type: payload.user_type,
+      name: payload.name,
+      row_id: payload.row_id,
+    };
+    if (payload.member_user) {
+      body.member_user = payload.member_user;
+    }
+    const response = await baseApiService.post(
+      "method/stridenex_app.api_stridenex_app.industry.industry.remove_industry_member",
+      body,
+      { headers }
+    );
+    return response;
+  } catch (error) {
+    console.error("Error removing industry member:", error);
+    throw error;
+  }
+};

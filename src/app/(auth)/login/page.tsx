@@ -230,11 +230,17 @@ export default function LoginPage() {
         // Sync roles and instructor flag for LMS integration
         localStorage.setItem("user", email);
         localStorage.setItem("email", email);
+        if (typeof document !== "undefined") {
+          document.cookie = `user_role=${userRole}; path=/`;
+        }
 
         if (userRole === "partner") {
           localStorage.setItem("roles", JSON.stringify(["Partner", "Instructor", "Course Creator"]));
           localStorage.setItem("isInstructor", "true");
           localStorage.setItem("has_lms_access", "true");
+          if (typeof document !== "undefined") {
+            document.cookie = "has_lms_access=true; path=/";
+          }
         } else {
           // Store roles returned by backend
           if (data.roles && Array.isArray(data.roles)) {
@@ -249,6 +255,9 @@ export default function LoginPage() {
           if (isAdmin) {
             localStorage.setItem("isInstructor", "true");
             localStorage.setItem("has_lms_access", "true");
+            if (typeof document !== "undefined") {
+              document.cookie = "has_lms_access=true; path=/";
+            }
           } else {
             // For College, Industry, Mentor: backend strips "Instructor" if package does not include LMS
             const hasInstructorRole =
@@ -258,9 +267,15 @@ export default function LoginPage() {
             if (hasInstructorRole) {
               localStorage.setItem("isInstructor", "true");
               localStorage.setItem("has_lms_access", "true");
+              if (typeof document !== "undefined") {
+                document.cookie = "has_lms_access=true; path=/";
+              }
             } else {
               localStorage.setItem("isInstructor", "false");
               localStorage.setItem("has_lms_access", "false");
+              if (typeof document !== "undefined") {
+                document.cookie = "has_lms_access=false; path=/";
+              }
             }
 
             // Perform live LMS access sync for college/industry/mentor to verify package entitlement

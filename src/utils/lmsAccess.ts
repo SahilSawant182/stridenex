@@ -12,6 +12,7 @@ export async function checkLmsAccess(emailOverride?: string | null): Promise<boo
   if (role.includes("partner") || rolesStr.includes("partner")) {
     localStorage.setItem("has_lms_access", "true");
     localStorage.setItem("isInstructor", "true");
+    document.cookie = "has_lms_access=true; path=/";
     return true;
   }
 
@@ -26,6 +27,7 @@ export async function checkLmsAccess(emailOverride?: string | null): Promise<boo
       if (isAdmin) {
         localStorage.setItem("has_lms_access", "true");
         localStorage.setItem("isInstructor", "true");
+        document.cookie = "has_lms_access=true; path=/";
         return true;
       }
     }
@@ -58,10 +60,12 @@ export async function checkLmsAccess(emailOverride?: string | null): Promise<boo
     if (hasAccess) {
       localStorage.setItem("has_lms_access", "true");
       localStorage.setItem("isInstructor", isInstructor ? "true" : "false");
+      document.cookie = "has_lms_access=true; path=/";
       return true;
     } else {
       localStorage.setItem("has_lms_access", "false");
       localStorage.setItem("isInstructor", "false");
+      document.cookie = "has_lms_access=false; path=/";
       return false;
     }
   } catch (err) {
