@@ -28,7 +28,10 @@ import {
   Plus,
   Info,
   GraduationCap,
-  ChevronDown
+  ChevronDown,
+  Lock,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { useIndustry } from "@/context/IndustryContext";
 import { useAuth } from "@/context/AuthContext";
@@ -52,6 +55,7 @@ interface MemberFormData {
   email: string;
   contact_no: string;
   member_type: string;
+  password?: string;
 }
 
 const INITIAL_FORM: MemberFormData = {
@@ -63,6 +67,7 @@ const INITIAL_FORM: MemberFormData = {
   email: "",
   contact_no: "",
   member_type: "Member",
+  password: "",
 };
 
 const SALUTATIONS = ["Mr", "Ms", "Mrs", "Dr", "Prof"];
@@ -90,6 +95,7 @@ export default function IndustryMembersTabContent() {
   const [formData, setFormData] = useState<MemberFormData>({ ...INITIAL_FORM });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Designation dropdown states
   const [designations, setDesignations] = useState<string[]>([]);
@@ -231,6 +237,7 @@ export default function IndustryMembersTabContent() {
     setFormData({ ...INITIAL_FORM });
     setDesignationSearch("");
     setDesignationDropdownOpen(false);
+    setShowPassword(false);
     setIsEditing(false);
     setFormError(null);
     setIsModalOpen(true);
@@ -246,9 +253,11 @@ export default function IndustryMembersTabContent() {
       email: member.member_user || member.email || member.user || "",
       contact_no: member.contact_no || "",
       member_type: member.member_type || "Member",
+      password: "",
     });
     setDesignationSearch(member.designation || "");
     setDesignationDropdownOpen(false);
+    setShowPassword(false);
     setIsEditing(true);
     setFormError(null);
     setIsModalOpen(true);
@@ -276,6 +285,16 @@ export default function IndustryMembersTabContent() {
       return;
     }
 
+    if (!isEditing && (!formData.password || formData.password.trim().length < 6)) {
+      setFormError("Password is required for new members (minimum 6 characters).");
+      return;
+    }
+
+    if (isEditing && formData.password && formData.password.trim().length < 6) {
+      setFormError("Password must be at least 6 characters if you want to update it.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       // Ensure custom designation exists in Frappe records so it never fails link validation
@@ -292,6 +311,13 @@ export default function IndustryMembersTabContent() {
         member_type: formData.member_type || "Member",
         name: companyName,
         ...(formData.row_id != null ? { row_id: formData.row_id } : {}),
+        ...(formData.password && formData.password.trim()
+          ? {
+            password: formData.password.trim(),
+            user_password: formData.password.trim(),
+            new_password: formData.password.trim(),
+          }
+          : {}),
       };
 
       if (isEditing) {
@@ -943,6 +969,42 @@ export default function IndustryMembersTabContent() {
                     </p>
                   </div>
 
+                  {/* Password input */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-slate-700">
+                        Password {isEditing ? <span className="text-slate-400 font-normal">(Optional)</span> : <span className="text-red-500">*</span>}
+                      </label>
+                      {isEditing && (
+                        <span className="text-[11px] text-slate-400">Leave blank to keep existing password</span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        required={!isEditing}
+                        placeholder={isEditing ? "Enter new password to update..." : "Enter member password (min 6 characters)"}
+                        value={formData.password || ""}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        className="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 focus:bg-white transition-all outline-none placeholder:text-slate-400"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition p-1 cursor-pointer"
+                        title={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    {!isEditing && (
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        The member will use this password alongside their email to sign in.
+                      </p>
+                    )}
+                  </div>
+
                   {/* Designation & Contact */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -1009,9 +1071,8 @@ export default function IndustryMembersTabContent() {
                                           setDesignationSearch(d);
                                           setDesignationDropdownOpen(false);
                                         }}
-                                        className={`w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between transition-colors hover:bg-purple-50/60 cursor-pointer ${
-                                          isSelected ? "bg-purple-50 text-purple-900 font-bold" : "text-slate-700"
-                                        }`}
+                                        className={`w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between transition-colors hover:bg-purple-50/60 cursor-pointer ${isSelected ? "bg-purple-50 text-purple-900 font-bold" : "text-slate-700"
+                                          }`}
                                       >
                                         <span className="truncate">{d}</span>
                                         {isSelected && <Check className="w-3.5 h-3.5 text-purple-600 shrink-0" />}
