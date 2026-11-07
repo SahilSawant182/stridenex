@@ -939,6 +939,9 @@ export const addIndustryMember = async (payload: {
   member_type?: string;
   name: string;
   row_id?: number | null;
+  password?: string | null;
+  user_password?: string | null;
+  new_password?: string | null;
 }) => {
   try {
     const headers = getMemberAuthHeaders();
@@ -966,6 +969,9 @@ export const updateIndustryMember = async (payload: {
   member_type?: string;
   name: string;
   row_id?: number | null;
+  password?: string | null;
+  user_password?: string | null;
+  new_password?: string | null;
 }) => {
   try {
     const headers = getMemberAuthHeaders();
