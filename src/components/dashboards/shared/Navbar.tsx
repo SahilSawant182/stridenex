@@ -625,6 +625,13 @@ export default function Navbar({ role }: NavbarProps) {
                   >
                     <CreditCard className="w-4 h-4" /> Plans
                   </Link>
+                  <Link
+                    href="/profile/payments"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg flex items-center gap-2"
+                  >
+                    <CreditCard className="w-4 h-4" /> Payments & Invoices
+                  </Link>
                   <button
                     onClick={() => {
                       setShowLogoutModal(true);

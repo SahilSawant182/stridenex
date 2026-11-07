@@ -62,9 +62,14 @@ export default function PartnerPage() {
         params: { email: currentUser }
       });
 
-      if (res.data && res.data.message?.status === "success" && res.data.message?.data?.partner) {
-        const pData = res.data.message.data.partner;
-        const refCode = res.data.message.data.user?.referal_code;
+      const resData = res.data;
+      const partnerObj = resData?.message?.data?.partner || resData?.data?.partner || resData?.partner;
+      const userObj = resData?.message?.data?.user || resData?.data?.user || resData?.user;
+      const isSuccess = resData?.message?.status === "success" || resData?.status === 200 || resData?.success === true || !!partnerObj;
+
+      if (isSuccess && partnerObj) {
+        const pData = partnerObj;
+        const refCode = userObj?.referal_code || pData.referal_code || resData?.message?.data?.referal_code || resData?.data?.referal_code;
 
         setPartnerData({ ...pData, referal_code: refCode });
       } else {
@@ -171,13 +176,22 @@ export default function PartnerPage() {
               Partner Portal
             </span>
           </div>
-          <button
-            onClick={confirmLogout}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Sign Out</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push("/lms/courses")}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg shadow-sm hover:from-blue-700 hover:to-indigo-700 transition-all text-sm"
+            >
+              <BookOpen className="w-4 h-4" />
+              <span>LMS Studio</span>
+            </button>
+            <button
+              onClick={confirmLogout}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
+          </div>
         </div>
       </header>
 

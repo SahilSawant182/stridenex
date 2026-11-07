@@ -17,14 +17,17 @@ export const api = axios.create({
 export const getCleanToken = (key: string): string | null => {
   if (typeof window === "undefined") return null;
   const val = localStorage.getItem(key);
-  if (!val || val === "undefined" || val === "null" || val.trim() === "") return null;
-  return val.trim();
+  if (!val || val === "undefined" || val === "null") return null;
+  const trimmed = val.replace(/^["']|["']$/g, "").trim();
+  if (trimmed === "") return null;
+  return trimmed;
 };
 
 // Generic API caller with token injection
 const apiRequest = async (config: AxiosRequestConfig) => {
-  const apiKey = getCleanToken("apiKey");
-  const apiSecret = getCleanToken("apiSecret");
+  const apiKey = getCleanToken("apiKey") || getCleanToken("api_key");
+  const apiSecret = getCleanToken("apiSecret") || getCleanToken("api_secret");
+  const rawToken = getCleanToken("token") || getCleanToken("authToken") || getCleanToken("access_token");
 
   const isAuthRoute =
     typeof config.url === "string" &&
@@ -39,9 +42,20 @@ const apiRequest = async (config: AxiosRequestConfig) => {
       config.url.includes("send_verification_otp") ||
       config.url.includes("verify_verification_otp"));
 
+  let resolvedAuthHeader: string | null = null;
+  if (!isAuthRoute) {
+    if (apiKey && apiSecret) {
+      resolvedAuthHeader = `token ${apiKey}:${apiSecret}`;
+    } else if (rawToken) {
+      resolvedAuthHeader = rawToken.startsWith("token ") || rawToken.startsWith("Bearer ")
+        ? rawToken
+        : `token ${rawToken}`;
+    }
+  }
+
   const headers: any = {
-    ...config.headers,
-    ...(!isAuthRoute && apiKey && apiSecret ? { Authorization: `token ${apiKey}:${apiSecret}` } : {}),
+    ...(resolvedAuthHeader ? { Authorization: resolvedAuthHeader } : {}),
+    ...config.headers, // user-provided headers override if explicitly given
   };
   try {
     const response = await api({ ...config, headers });
@@ -461,6 +475,14 @@ export const getReferenceCard = async (payload: { reference_code: string; module
   return apiRequest({
     method: "POST",
     url: "method/stridenex_app.stridenex_app.doctype.stridenex_partner.stridenex_partner.get_reference_card",
+    data: payload,
+  });
+};
+
+export const getReferralModuleCount = async (payload: { referral_code: string }) => {
+  return apiRequest({
+    method: "POST",
+    url: "method/stridenex_app.stridenex_app.doctype.referal_details.referal_details.get_referral_module_count",
     data: payload,
   });
 };

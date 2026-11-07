@@ -228,16 +228,61 @@ export default function LoginPage() {
         });
 
         // Sync roles and instructor flag for LMS integration
-        if (data.roles && Array.isArray(data.roles)) {
-          localStorage.setItem("roles", JSON.stringify(data.roles));
-        } else if (userRole === "mentor") {
-          localStorage.setItem("roles", JSON.stringify(["Mentor", "Instructor", "Course Creator"]));
+        localStorage.setItem("user", email);
+        localStorage.setItem("email", email);
+        if (typeof document !== "undefined") {
+          document.cookie = `user_role=${userRole}; path=/`;
         }
 
-        if (userRole === "mentor" || (data.roles && (data.roles.includes("Instructor") || data.roles.includes("Course Creator")))) {
+        if (userRole === "partner") {
+          localStorage.setItem("roles", JSON.stringify(["Partner", "Instructor", "Course Creator"]));
           localStorage.setItem("isInstructor", "true");
+          localStorage.setItem("has_lms_access", "true");
+          if (typeof document !== "undefined") {
+            document.cookie = "has_lms_access=true; path=/";
+          }
         } else {
-          localStorage.setItem("isInstructor", "false");
+          // Store roles returned by backend
+          if (data.roles && Array.isArray(data.roles)) {
+            localStorage.setItem("roles", JSON.stringify(data.roles));
+          }
+
+          const rolesList: string[] = data.roles || [];
+          const isAdmin =
+            rolesList.includes("Administrator") ||
+            rolesList.includes("System Manager");
+
+          if (isAdmin) {
+            localStorage.setItem("isInstructor", "true");
+            localStorage.setItem("has_lms_access", "true");
+            if (typeof document !== "undefined") {
+              document.cookie = "has_lms_access=true; path=/";
+            }
+          } else {
+            // For College, Industry, Mentor: backend strips "Instructor" if package does not include LMS
+            const hasInstructorRole =
+              rolesList.includes("Instructor") ||
+              rolesList.includes("Course Creator");
+
+            if (hasInstructorRole) {
+              localStorage.setItem("isInstructor", "true");
+              localStorage.setItem("has_lms_access", "true");
+              if (typeof document !== "undefined") {
+                document.cookie = "has_lms_access=true; path=/";
+              }
+            } else {
+              localStorage.setItem("isInstructor", "false");
+              localStorage.setItem("has_lms_access", "false");
+              if (typeof document !== "undefined") {
+                document.cookie = "has_lms_access=false; path=/";
+              }
+            }
+
+            // Perform live LMS access sync for college/industry/mentor to verify package entitlement
+            import("@/utils/lmsAccess").then(({ checkLmsAccess }) => {
+              checkLmsAccess(email).catch(console.error);
+            });
+          }
         }
 
         if (userRole === "college") {
@@ -547,8 +592,8 @@ export default function LoginPage() {
                         {resetStep === "password"
                           ? "Set New Password"
                           : resetStep === "success"
-                          ? "Password Reset Done"
-                          : "Reset Password"}
+                            ? "Password Reset Done"
+                            : "Reset Password"}
                       </h3>
                       <p className="text-xs text-slate-500">
                         {resetStep === "email" && "Step 1 of 3: Verification"}
@@ -576,8 +621,8 @@ export default function LoginPage() {
                         resetStep === "email"
                           ? "33%"
                           : resetStep === "otp"
-                          ? "66%"
-                          : "100%"
+                            ? "66%"
+                            : "100%"
                     }}
                   />
                 </div>

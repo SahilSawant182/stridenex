@@ -1,8 +1,8 @@
-import { 
-  BookOpen, 
-  Target, 
-  TrendingUp, 
-  Users, 
+import {
+  BookOpen,
+  Target,
+  TrendingUp,
+  Users,
   Newspaper,
   Phone,
   Info,
@@ -16,6 +16,8 @@ import {
   Building2,
   Handshake,
   Lightbulb,
+  Video,
+  Calendar,
   type LucideIcon
 } from "lucide-react";
 
@@ -42,7 +44,7 @@ export interface NavCategory {
 }
 
 export const navigationConfig: Record<string, NavCategory> = {
-about: {
+  about: {
     label: "About",
     href: "/about", // Main category link
     icon: Info,
@@ -50,15 +52,15 @@ about: {
       {
         title: "Company",
         items: [
-          { 
-            label: "Our Story", 
-            href: "/about/our-story", 
+          {
+            label: "Our Story",
+            href: "/about/our-story",
             icon: Heart,
             description: "Why StrideNex was created",
           },
-          { 
-            label: "Leadership", 
-            href: "/about/leadership", 
+          {
+            label: "Leadership",
+            href: "/about/leadership",
             icon: Users,
             description: "Guided by experience, driven by purpose",
           },
@@ -67,15 +69,15 @@ about: {
       {
         title: "Platform",
         items: [
-          { 
-            label: "Capabilities", 
-            href: "/about/capabilities", 
+          {
+            label: "Capabilities",
+            href: "/about/capabilities",
             icon: Sparkles,
             description: "Building a connected talent ecosystem",
           },
-          { 
-            label: "Core Solutions", 
-            href: "/about/solutions", 
+          {
+            label: "Core Solutions",
+            href: "/about/solutions",
             icon: Target,
             description: "Three pathways. One structured journey",
           },
@@ -84,15 +86,15 @@ about: {
       {
         title: "Connect",
         items: [
-          { 
-            label: "Contact Us", 
-            href: "/contact-us", 
+          {
+            label: "Contact Us",
+            href: "/contact-us",
             icon: Phone,
             description: "Get in touch with our team",
           },
-          { 
-            label: "Partner With Us", 
-            href: "/partner-with-us", 
+          {
+            label: "Partner With Us",
+            href: "/partner-with-us",
             icon: Handshake,
             description: "Join our ecosystem",
             badge: "Join Us",
@@ -110,23 +112,23 @@ about: {
       {
         title: "For Students",
         items: [
-          { 
-            label: "Skill Facilitating", 
-            href: "/solutions/skill-facilitating", 
+          {
+            label: "Skill Facilitating",
+            href: "/solutions/skill-facilitating",
             icon: Code,
             description: "Become industry-ready before you graduate",
             badge: "Popular",
             badgeColor: "accent"
           },
-          { 
-            label: "Entrepreneur Development", 
-            href: "/solutions/entrepreneur", 
+          {
+            label: "Entrepreneur Development",
+            href: "/solutions/entrepreneur",
             icon: Rocket,
             description: "Transform ideas into scalable ventures",
           },
-          { 
-            label: "Higher Education", 
-            href: "/solutions/higher-education", 
+          {
+            label: "Higher Education",
+            href: "/solutions/higher-education",
             icon: GraduationCap,
             description: "Prepare for advanced academic excellence",
           },
@@ -135,15 +137,15 @@ about: {
       {
         title: "For Institutes",
         items: [
-          { 
-            label: "Industry Integration", 
-            href: "/institutes/integration", 
+          {
+            label: "Industry Integration",
+            href: "/institutes/integration",
             icon: Building2,
             description: "Enhance placement success",
           },
-          { 
-            label: "Skill Analytics", 
-            href: "/institutes/analytics", 
+          {
+            label: "Skill Analytics",
+            href: "/institutes/analytics",
             icon: TrendingUp,
             description: "Track student performance insights",
           },
@@ -152,15 +154,15 @@ about: {
       {
         title: "For Industry",
         items: [
-          { 
-            label: "Talent Pipeline", 
-            href: "/industry/talent", 
+          {
+            label: "Talent Pipeline",
+            href: "/industry/talent",
             icon: Users,
             description: "Access pre-evaluated candidate pools",
           },
-          { 
-            label: "Partnership Programs", 
-            href: "/industry/partnerships", 
+          {
+            label: "Partnership Programs",
+            href: "/industry/partnerships",
             icon: Handshake,
             description: "Collaborate on curriculum and projects",
           },
@@ -168,7 +170,7 @@ about: {
       },
     ]
   },
-  
+
   pathways: {
     label: "Pathways",
     icon: TrendingUp,
@@ -176,9 +178,9 @@ about: {
       {
         title: "Skill Track",
         items: [
-          { 
-            label: "Skill Facilitating Program", 
-            href: "/pathways/skill-facilitating", 
+          {
+            label: "Skill Facilitating Program",
+            href: "/pathways/skill-facilitating",
             icon: Code,
             description: "Job-ready capabilities through applied learning",
           },
@@ -187,9 +189,9 @@ about: {
       {
         title: "Entrepreneur Track",
         items: [
-          { 
-            label: "Entrepreneur Development", 
-            href: "/pathways/entrepreneur", 
+          {
+            label: "Entrepreneur Development",
+            href: "/pathways/entrepreneur",
             icon: Rocket,
             description: "From idea validation to venture readiness",
           },
@@ -198,9 +200,9 @@ about: {
       {
         title: "Education Track",
         items: [
-          { 
-            label: "Higher Education Pathway", 
-            href: "/pathways/higher-education", 
+          {
+            label: "Higher Education Pathway",
+            href: "/pathways/higher-education",
             icon: GraduationCap,
             description: "Guided specialization and profile strengthening",
           },
@@ -208,7 +210,7 @@ about: {
       },
     ]
   },
-  
+
   outcomes: {
     label: "Outcomes",
     icon: Award,
@@ -216,9 +218,9 @@ about: {
       {
         title: "For Students",
         items: [
-          { 
-            label: "Student Success", 
-            href: "/outcomes/students", 
+          {
+            label: "Student Success",
+            href: "/outcomes/students",
             icon: Users,
             description: "Real stories of career transformation",
           }
@@ -227,9 +229,9 @@ about: {
       {
         title: "For Institutes",
         items: [
-          { 
-            label: "Institute Outcomes", 
-            href: "/outcomes/institutes", 
+          {
+            label: "Institute Outcomes",
+            href: "/outcomes/institutes",
             icon: Building2,
             description: "Enhanced placement and reputation",
           }
@@ -238,9 +240,9 @@ about: {
       {
         title: "For Industry",
         items: [
-          { 
-            label: "Industry Impact", 
-            href: "/outcomes/industry", 
+          {
+            label: "Industry Impact",
+            href: "/outcomes/industry",
             icon: Briefcase,
             description: "Reduced hiring risk, better talent",
           }
@@ -248,32 +250,58 @@ about: {
       }
     ]
   },
-  
-  blogs: {
-    label: "Blogs",
-    href: "/blogs",
+
+  blogsAndEvents: {
+    label: "Blogs & Events",
     icon: Newspaper,
-    sections: []
+    sections: [
+      {
+        title: "Blogs",
+        items: [
+          {
+            label: "Blogs",
+            href: "/blogs",
+            icon: BookOpen,
+            description: "Read our latest blogs and updates",
+          }
+        ]
+      },
+      {
+        title: "Events",
+        items: [
+          {
+            label: "Events",
+            href: "/events",
+            icon: Calendar,
+            description: "Discover upcoming events and opportunities",
+          }
+        ]
+      },
+      {
+        title: "Videos",
+        items: [
+          {
+            label: "Our Videos",
+            href: "/our-videos",
+            icon: Video,
+            description: "Watch our latest videos and insights",
+          }
+        ]
+      }
+    ]
   },
-  
-  events: {
-    label: "Events",
-    href: "/blogs",
-    icon: Newspaper,
-    sections: []
-  },
-  
+
   partner: {
     label: "Partner With Us",
     href: "/partner-with-us",
     icon: Handshake,
     sections: []
   },
-  
+
   join: {
     label: "Join Us",
     href: "/signup",
-    icon: Sparkles, 
+    icon: Sparkles,
     sections: [
       {
         title: "For Students",
@@ -316,6 +344,17 @@ about: {
             href: "/signup?role=industry",
             icon: Briefcase,
             description: "Access skilled talent",
+          }
+        ]
+      },
+      {
+        title: "For Partners",
+        items: [
+          {
+            label: "Partner",
+            href: "/partner-with-us",
+            icon: Handshake,
+            description: "Collaborate with us for mutual growth",
           }
         ]
       }

@@ -13,14 +13,18 @@ import {
   Calendar,
   ChevronRight,
   ClipboardList,
-  Loader2
+  Loader2,
+  BookOpen
 } from "lucide-react";
 import StatsWidget from "@/components/dashboards/widgets/StatsWidget";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
 import { useIndustry } from "@/context/IndustryContext";
+import { useAuth } from "@/context/AuthContext";
 import { getApplicationStatusCount } from "@/services/industry.services";
 import { useRouter } from "next/navigation";
+import LmsUpgradeModal from "@/components/modals/LmsUpgradeModal";
+import { checkLmsAccess } from "@/utils/lmsAccess";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -88,10 +92,25 @@ const initialPipelineStages = [
 export default function IndustryOverviewPage() {
   const router = useRouter();
   const { industryData } = useIndustry();
+  const { currentUser } = useAuth();
   const [pipelineStages, setPipelineStages] = useState(initialPipelineStages);
   const [loadingPipeline, setLoadingPipeline] = useState(false);
 
   const [appliedCount, setAppliedCount] = useState<number>(0);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const handleLmsStudioClick = async () => {
+    try {
+      const allowed = await checkLmsAccess(currentUser || (industryData as any)?.company_email);
+      if (allowed) {
+        router.push("/lms/courses");
+      } else {
+        setShowUpgradeModal(true);
+      }
+    } catch {
+      setShowUpgradeModal(true);
+    }
+  };
 
   useEffect(() => {
     const fetchPipelineCounts = async () => {
@@ -260,11 +279,25 @@ export default function IndustryOverviewPage() {
                 </div>
                 <span className="font-medium text-slate-700 text-sm flex-1">Post Live Project</span>
               </button>
+              <button
+                onClick={handleLmsStudioClick}
+                className="w-full text-left px-4 py-3 border border-slate-200 rounded-xl flex items-center gap-3 hover:border-slate-300 hover:bg-slate-50 transition-colors"
+              >
+                <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center shrink-0">
+                  <BookOpen className="w-4 h-4 text-purple-600" />
+                </div>
+                <span className="font-medium text-slate-700 text-sm flex-1">LMS Studio</span>
+              </button>
             </div>
           </BaseCard>
         </motion.div>
       </div>
 
+      <LmsUpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        role="industry"
+      />
     </motion.div>
   );
 }
