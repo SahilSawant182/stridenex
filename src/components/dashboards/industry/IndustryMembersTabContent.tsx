@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -27,7 +27,8 @@ import {
   MoreVertical,
   Plus,
   Info,
-  GraduationCap
+  GraduationCap,
+  ChevronDown
 } from "lucide-react";
 import { useIndustry } from "@/context/IndustryContext";
 import { useAuth } from "@/context/AuthContext";
@@ -36,6 +37,8 @@ import {
   addIndustryMember,
   updateIndustryMember,
   removeIndustryMember,
+  getMasterData,
+  createDesignation,
   IndustryMember
 } from "@/services/industry.services";
 import { toast } from "sonner";
@@ -87,6 +90,13 @@ export default function IndustryMembersTabContent() {
   const [formData, setFormData] = useState<MemberFormData>({ ...INITIAL_FORM });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Designation dropdown states
+  const [designations, setDesignations] = useState<string[]>([]);
+  const [loadingDesignations, setLoadingDesignations] = useState(false);
+  const [designationDropdownOpen, setDesignationDropdownOpen] = useState(false);
+  const [designationSearch, setDesignationSearch] = useState("");
+  const designationDropdownRef = useRef<HTMLDivElement>(null);
 
   // Delete confirmation modal states
   const [memberToDelete, setMemberToDelete] = useState<IndustryMember | null>(null);
@@ -140,9 +150,75 @@ export default function IndustryMembersTabContent() {
     }
   };
 
+  const loadDesignations = async () => {
+    try {
+      setLoadingDesignations(true);
+      const all: string[] = [];
+      let page = 1;
+      let hasMore = true;
+      while (hasMore && page <= 5) {
+        const res = await getMasterData("Designation", { page });
+        const items = res?.data || res?.message || [];
+        if (Array.isArray(items) && items.length > 0) {
+          items.forEach((item: any) => {
+            const name = typeof item === "string" ? item : item?.name;
+            if (name && !all.includes(name)) all.push(name);
+          });
+          hasMore = res?.pagination?.has_next === true;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+      all.sort((a, b) => a.localeCompare(b));
+      setDesignations(all);
+    } catch (err) {
+      console.error("Failed to load designations:", err);
+    } finally {
+      setLoadingDesignations(false);
+    }
+  };
+
+  const ensureDesignationExists = async (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    try {
+      await createDesignation(trimmed);
+      setDesignations((prev) => {
+        if (prev.some((d) => d.toLowerCase() === trimmed.toLowerCase())) return prev;
+        return [...prev, trimmed].sort((a, b) => a.localeCompare(b));
+      });
+    } catch (err: any) {
+      // Duplicate entry or already exists is fine
+      console.warn("Designation ensure notice:", err?.message || err);
+    }
+  };
+
   useEffect(() => {
     fetchMembers();
+    loadDesignations();
   }, [companyName, currentUser]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        designationDropdownRef.current &&
+        !designationDropdownRef.current.contains(e.target as Node)
+      ) {
+        setDesignationDropdownOpen(false);
+      }
+    };
+    if (designationDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [designationDropdownOpen]);
+
+  const filteredDesignations = useMemo(() => {
+    if (!designationSearch.trim()) return designations;
+    const q = designationSearch.toLowerCase().trim();
+    return designations.filter((d) => d.toLowerCase().includes(q));
+  }, [designations, designationSearch]);
 
   const handleCopy = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -153,6 +229,8 @@ export default function IndustryMembersTabContent() {
 
   const openAddModal = () => {
     setFormData({ ...INITIAL_FORM });
+    setDesignationSearch("");
+    setDesignationDropdownOpen(false);
     setIsEditing(false);
     setFormError(null);
     setIsModalOpen(true);
@@ -169,6 +247,8 @@ export default function IndustryMembersTabContent() {
       contact_no: member.contact_no || "",
       member_type: member.member_type || "Member",
     });
+    setDesignationSearch(member.designation || "");
+    setDesignationDropdownOpen(false);
     setIsEditing(true);
     setFormError(null);
     setIsModalOpen(true);
@@ -198,6 +278,9 @@ export default function IndustryMembersTabContent() {
 
     setSubmitting(true);
     try {
+      // Ensure custom designation exists in Frappe records so it never fails link validation
+      await ensureDesignationExists(formData.designation.trim());
+
       const payload: any = {
         user_type: "Industry" as const,
         member_user: emailTrimmed,
@@ -866,16 +949,111 @@ export default function IndustryMembersTabContent() {
                       <label className="block text-xs font-bold text-slate-700 mb-1.5">
                         Designation <span className="text-red-500">*</span>
                       </label>
-                      <div className="relative">
-                        <Briefcase className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <div className="relative" ref={designationDropdownRef}>
+                        <Briefcase className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
                         <input
                           required
                           type="text"
-                          placeholder="e.g. Lead HR / Tech Recruiter"
-                          value={formData.designation}
-                          onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                          className="w-full pl-9 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 focus:bg-white transition-all outline-none placeholder:text-slate-400"
+                          placeholder="Select or enter designation..."
+                          value={designationDropdownOpen ? designationSearch : formData.designation}
+                          onFocus={() => {
+                            setDesignationSearch(formData.designation);
+                            setDesignationDropdownOpen(true);
+                          }}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setDesignationSearch(val);
+                            setFormData((prev) => ({ ...prev, designation: val }));
+                            if (!designationDropdownOpen) setDesignationDropdownOpen(true);
+                          }}
+                          className="w-full pl-9 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600 focus:bg-white transition-all outline-none placeholder:text-slate-400"
                         />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!designationDropdownOpen) {
+                              setDesignationSearch(formData.designation);
+                            }
+                            setDesignationDropdownOpen(!designationDropdownOpen);
+                          }}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-md transition cursor-pointer"
+                        >
+                          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${designationDropdownOpen ? "rotate-180" : ""}`} />
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        <AnimatePresence>
+                          {designationDropdownOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute z-50 left-0 right-0 top-full mt-1.5 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden max-h-56 flex flex-col"
+                            >
+                              {loadingDesignations && designations.length === 0 ? (
+                                <div className="p-4 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-600" />
+                                  <span>Loading designations...</span>
+                                </div>
+                              ) : (
+                                <div className="overflow-y-auto divide-y divide-slate-100 flex-1">
+                                  {filteredDesignations.map((d) => {
+                                    const isSelected = formData.designation.toLowerCase() === d.toLowerCase();
+                                    return (
+                                      <button
+                                        key={d}
+                                        type="button"
+                                        onClick={() => {
+                                          setFormData((prev) => ({ ...prev, designation: d }));
+                                          setDesignationSearch(d);
+                                          setDesignationDropdownOpen(false);
+                                        }}
+                                        className={`w-full text-left px-3.5 py-2.5 text-xs flex items-center justify-between transition-colors hover:bg-purple-50/60 cursor-pointer ${
+                                          isSelected ? "bg-purple-50 text-purple-900 font-bold" : "text-slate-700"
+                                        }`}
+                                      >
+                                        <span className="truncate">{d}</span>
+                                        {isSelected && <Check className="w-3.5 h-3.5 text-purple-600 shrink-0" />}
+                                      </button>
+                                    );
+                                  })}
+
+                                  {filteredDesignations.length === 0 && !designationSearch.trim() && (
+                                    <div className="p-3 text-center text-xs text-slate-400">
+                                      No designations available
+                                    </div>
+                                  )}
+
+                                  {/* Custom designation addition option */}
+                                  {designationSearch.trim() &&
+                                    !designations.some(
+                                      (d) => d.toLowerCase() === designationSearch.trim().toLowerCase()
+                                    ) && (
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          const customName = designationSearch.trim();
+                                          setFormData((prev) => ({ ...prev, designation: customName }));
+                                          setDesignationDropdownOpen(false);
+                                          await ensureDesignationExists(customName);
+                                        }}
+                                        className="w-full text-left px-3.5 py-2.5 text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100/80 flex items-center justify-between transition-colors border-t border-purple-100 cursor-pointer"
+                                      >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <Plus className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                                          <span className="truncate">Add &ldquo;{designationSearch.trim()}&rdquo; as new</span>
+                                        </div>
+                                        <span className="text-[10px] font-bold uppercase tracking-wider bg-purple-200/60 text-purple-800 px-1.5 py-0.5 rounded">
+                                          Custom
+                                        </span>
+                                      </button>
+                                    )}
+                                </div>
+                              )}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </div>
 
