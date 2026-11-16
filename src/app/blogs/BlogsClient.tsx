@@ -52,7 +52,7 @@ export default function BlogsPage() {
       const data = await res.json();
       if (data.message && data.message.data) {
         const fetchedBlogs = data.message.data;
-        fetchedBlogs.sort((a: Blog, b: Blog) => new Date(a.creation.replace(" ", "T")).getTime() - new Date(b.creation.replace(" ", "T")).getTime());
+        fetchedBlogs.sort((a:Blog, b: Blog) => new Date(b.creation.replace("", "T")).getTime() - new Date(a.creation.replace("", "T")).getTime());
         setBlogs(fetchedBlogs);
         
         // Auto-open blog if ID is in URL
