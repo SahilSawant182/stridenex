@@ -54,8 +54,18 @@ export async function checkLmsAccess(emailOverride?: string | null): Promise<boo
     }
 
     const data = await res.json();
-    const hasAccess = Boolean(data?.message?.has_access);
-    const isInstructor = Boolean(data?.message?.is_instructor ?? hasAccess);
+    const msg = data?.message || {};
+    const hasAccess = Boolean(msg.has_access);
+    const isInstructor = Boolean(msg.is_instructor ?? hasAccess);
+    const canAccessStridenex = msg.can_access_stridenex !== undefined ? Boolean(msg.can_access_stridenex) : true;
+    const canSwitchView = msg.can_switch_view !== undefined ? Boolean(msg.can_switch_view) : hasAccess;
+
+    localStorage.setItem("can_access_stridenex", String(canAccessStridenex));
+    localStorage.setItem("can_switch_view", String(canSwitchView));
+    if (typeof document !== "undefined") {
+      document.cookie = `can_access_stridenex=${canAccessStridenex}; path=/; max-age=86400`;
+      document.cookie = `can_switch_view=${canSwitchView}; path=/; max-age=86400`;
+    }
 
     if (hasAccess) {
       localStorage.setItem("has_lms_access", "true");
