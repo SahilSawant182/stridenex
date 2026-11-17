@@ -657,6 +657,12 @@ export default function IndustryOnboarding({
 
                     setSuccess("Industry onboarding completed successfully!");
                     localStorage.clear();
+                    if (userEmail) {
+                        localStorage.setItem(`is_first_login_${userEmail}`, "true");
+                        sessionStorage.setItem(`is_first_login_${userEmail}`, "true");
+                        sessionStorage.setItem("newly_registered_email", userEmail);
+                    }
+                    sessionStorage.setItem("just_signed_up", "true");
                     setTimeout(() => {
                         // ✅ Check if coming from mobile
                         if (isMobileSource) {
@@ -668,6 +674,12 @@ export default function IndustryOnboarding({
                 } else {
                     setSuccess("Industry onboarding completed successfully!");
                     localStorage.clear();
+                    if (userEmail) {
+                        localStorage.setItem(`is_first_login_${userEmail}`, "true");
+                        sessionStorage.setItem(`is_first_login_${userEmail}`, "true");
+                        sessionStorage.setItem("newly_registered_email", userEmail);
+                    }
+                    sessionStorage.setItem("just_signed_up", "true");
                     setTimeout(() => {
                         window.location.href = "/login";
                     }, 1500);

@@ -947,8 +947,15 @@ export default function StudentOnboarding({
         // Set success message (this will show in green Alert)
         setSuccess(typeof responseData?.message === 'string' ? responseData.message : "Student registered successfully!");
 
-        // Clear onboarding-specific localStorage items
+        // Clear onboarding-specific localStorage items, but keep first-login markers for post-registration tour
+        const registeredEmail = localStorage.getItem("userEmail") || formData.email || "";
         localStorage.clear();
+        if (registeredEmail) {
+          localStorage.setItem(`is_first_login_${registeredEmail}`, "true");
+          sessionStorage.setItem(`is_first_login_${registeredEmail}`, "true");
+          sessionStorage.setItem("just_signed_up", "true");
+          sessionStorage.setItem("newly_registered_email", registeredEmail);
+        }
 
         // Clear any errors
         setError("");

@@ -246,6 +246,10 @@ export default function SignupPage() {
           localStorage.setItem("userFirstName", data.firstName);
           localStorage.setItem("userLastName", data.lastName);
           localStorage.setItem("userPassword", data.password);
+          localStorage.setItem(`is_first_login_${data.email}`, "true");
+          sessionStorage.setItem(`is_first_login_${data.email}`, "true");
+          sessionStorage.setItem("just_signed_up", "true");
+          sessionStorage.setItem("newly_registered_email", data.email);
 
           // Navigate based on selected role
           if (selectedRole === "student") {

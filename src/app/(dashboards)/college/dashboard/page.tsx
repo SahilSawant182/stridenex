@@ -239,6 +239,31 @@ export default function CollegeDashboardPage() {
   const [topSkillGaps, setTopSkillGaps] = useState<any>(null);
   const [apiErrors, setApiErrors] = useState<Record<string, string>>({});
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [isFirstLoginUser, setIsFirstLoginUser] = useState<boolean>(false);
+
+  useEffect(() => {
+    const emailToCheck = currentUser || (typeof window !== "undefined" ? localStorage.getItem("currentUser") : null);
+    if (!emailToCheck) return;
+
+    const userKey = `has_seen_college_tour_${emailToCheck}`;
+    const hasSeen = typeof window !== "undefined" && (
+      localStorage.getItem(userKey) === "true" ||
+      sessionStorage.getItem(`completed_college_tour_${emailToCheck}`) === "true"
+    );
+
+    if (hasSeen) {
+      setIsFirstLoginUser(false);
+      return;
+    }
+
+    const storedFirst = typeof window !== "undefined" && (
+      localStorage.getItem(`is_first_login_${emailToCheck}`) === "true" ||
+      sessionStorage.getItem(`is_first_login_${emailToCheck}`) === "true" ||
+      sessionStorage.getItem("just_signed_up") === "true"
+    );
+
+    setIsFirstLoginUser(!!storedFirst);
+  }, [currentUser]);
 
   const handleLmsStudioClick = async () => {
     try {
@@ -976,7 +1001,7 @@ export default function CollegeDashboardPage() {
         onClose={() => setShowUpgradeModal(false)}
         role="college"
       />
-      <CollegeGuidelineTour collegeEmail={currentUser || undefined} />
+      <CollegeGuidelineTour collegeEmail={currentUser || undefined} isFirstLogin={isFirstLoginUser} />
     </motion.div>
   );
 }

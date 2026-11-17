@@ -155,9 +155,11 @@ export default function IndustryGuidelineTour({
     const userKey = industryEmail ? `has_seen_industry_tour_${industryEmail}` : "has_seen_industry_tour";
     const hasSeen = localStorage.getItem(userKey) === "true";
 
+    const isFirstTimeUser = isFirstLogin;
+
     let timer: NodeJS.Timeout | null = null;
     // ONLY auto-launch if explicitly first-time login
-    if (isFirstLogin && !hasSeen) {
+    if (isFirstTimeUser && !hasSeen) {
       timer = setTimeout(() => {
         startTour();
       }, 800);
@@ -228,6 +230,12 @@ export default function IndustryGuidelineTour({
     setIsOpen(false);
     const userKey = industryEmail ? `has_seen_industry_tour_${industryEmail}` : "has_seen_industry_tour";
     localStorage.setItem(userKey, "true");
+    if (industryEmail && typeof window !== "undefined") {
+      sessionStorage.setItem(`completed_industry_tour_${industryEmail}`, "true");
+      localStorage.setItem(`is_first_login_${industryEmail}`, "false");
+      sessionStorage.removeItem(`is_first_login_${industryEmail}`);
+      sessionStorage.removeItem("just_signed_up");
+    }
   };
 
   if (!mounted) return null;

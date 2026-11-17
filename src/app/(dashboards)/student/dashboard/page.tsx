@@ -100,26 +100,26 @@ export default function StudentDashboardPage() {
         const isCompleted = !!(res.has_completed_test || res.test_completed || res.is_onboarded || res.submission);
         setHasCompletedTest(isCompleted);
 
-        const justSignedUp = typeof window !== "undefined" && (
+        const hasSeenTour = typeof window !== "undefined" && (
+          localStorage.getItem(`has_seen_student_tour_${emailToCheck}`) === "true" ||
+          sessionStorage.getItem(`completed_student_tour_${emailToCheck}`) === "true"
+        );
+
+        // Strictly differentiate: Only true first-time login users who haven't seen the tour
+        const isExplicitFirstLogin = !hasSeenTour && (
           localStorage.getItem(`is_first_login_${emailToCheck}`) === "true" ||
           sessionStorage.getItem("just_signed_up") === "true"
         );
 
-        if (res.is_first_login) {
-          setIsFirstLoginUser(true);
-          if (!res.is_onboarded && !isCompleted) {
-            setShowTestModal(true);
-          } else {
-            setShowTestModal(false);
-          }
-        } else if (justSignedUp && !isCompleted) {
-          setIsFirstLoginUser(true);
+        setIsFirstLoginUser(!!isExplicitFirstLogin);
+
+        // Show test modal only for genuine first-time students who haven't completed it
+        if (isExplicitFirstLogin && !res.is_onboarded && !isCompleted) {
+          setShowTestModal(true);
         } else {
-          // Old user: disable test modal, disable auto-tour, mark seen
           setShowTestModal(false);
-          setIsFirstLoginUser(false);
-          if (typeof window !== "undefined") {
-            localStorage.setItem(`has_seen_student_tour_${emailToCheck}`, "true");
+          if (hasSeenTour && typeof window !== "undefined") {
+            localStorage.setItem(`is_first_login_${emailToCheck}`, "false");
           }
         }
       } catch (err) {

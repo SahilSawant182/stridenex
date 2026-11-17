@@ -230,6 +230,19 @@ export default function LoginPage() {
         // Sync roles and instructor flag for LMS integration
         localStorage.setItem("user", email);
         localStorage.setItem("email", email);
+        if (data.is_first_login !== undefined) {
+          localStorage.setItem(`is_first_login_${email}`, String(data.is_first_login));
+        } else {
+          const justSignedUp = typeof window !== "undefined" &&
+            sessionStorage.getItem("just_signed_up") === "true" &&
+            sessionStorage.getItem("newly_registered_email") === email;
+
+          if (justSignedUp) {
+            localStorage.setItem(`is_first_login_${email}`, "true");
+          } else {
+            localStorage.setItem(`is_first_login_${email}`, "false");
+          }
+        }
         if (typeof document !== "undefined") {
           document.cookie = `user_role=${userRole}; path=/`;
         }

@@ -1007,6 +1007,13 @@ export default function MentorOnboarding({
           }
           // ─── BILLING INTEGRATION ENDS HERE ──────────────────────────────────
 
+          if (userEmail) {
+            localStorage.setItem(`is_first_login_${userEmail}`, "true");
+            sessionStorage.setItem(`is_first_login_${userEmail}`, "true");
+            sessionStorage.setItem("newly_registered_email", userEmail);
+          }
+          sessionStorage.setItem("just_signed_up", "true");
+
           setSuccess(
             "Mentor onboarding completed successfully! You will be redirected to login page."
           );
