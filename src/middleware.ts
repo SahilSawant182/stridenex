@@ -4,6 +4,22 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Intercept users who are not permitted to access StrideNex hub
+  const canAccessStridenex = request.cookies.get("can_access_stridenex")?.value;
+  if (canAccessStridenex === "false") {
+    const isDashboardRoute =
+      pathname.startsWith("/industry") ||
+      pathname.startsWith("/college") ||
+      pathname.startsWith("/mentor") ||
+      pathname.startsWith("/student");
+
+    if (isDashboardRoute) {
+      const isInstructor = request.cookies.get("isInstructor")?.value === "true";
+      const redirectTarget = isInstructor ? "/lms/dashboard?view=instructor" : "/lms/courses";
+      return NextResponse.redirect(new URL(redirectTarget, request.url));
+    }
+  }
+
   // Intercept direct browser navigation to LMS authoring routes
   const isLmsAuthoringRoute =
     pathname === "/lms/courses" ||
@@ -55,6 +71,10 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/industry/:path*",
+    "/college/:path*",
+    "/mentor/:path*",
+    "/student/:path*",
     "/lms/courses",
     "/courses",
     "/lms/course/create",
