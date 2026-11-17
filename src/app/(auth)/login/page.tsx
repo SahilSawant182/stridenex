@@ -223,17 +223,46 @@ export default function LoginPage() {
               const api_secret = data.key_details?.api_secret || data.api_secret || "";
               const fullName = data.full_name || formValues.username.split("@")[0];
               const email = data.user || formValues.username;
+              const isInstructorMember = op.member_type === "Instructor" || op.tier === "instructor_member";
+              const initialMode = isInstructorMember ? "instructor" : "learner";
 
               localStorage.setItem("user", email);
               localStorage.setItem("email", email);
+              localStorage.setItem("userEmail", email);
+              localStorage.setItem("fullName", fullName);
+              localStorage.setItem("userName", fullName);
+              localStorage.setItem("isInstructor", isInstructorMember ? "true" : "false");
+              localStorage.setItem("lms_active_view_mode", initialMode);
+              localStorage.setItem("can_switch_view", String(op.can_switch_view));
+              localStorage.setItem("can_access_stridenex", String(op.can_access_stridenex));
+              localStorage.setItem("has_lms_access", String(op.has_lms_access));
+              localStorage.setItem("member_type", op.member_type || "");
+              localStorage.setItem("tier", op.tier || "");
+              localStorage.setItem("operational_profile", JSON.stringify(op));
+
+              if (typeof document !== "undefined") {
+                document.cookie = `isInstructor=${isInstructorMember}; path=/; max-age=86400`;
+                document.cookie = `lms_active_view_mode=${initialMode}; path=/; max-age=86400`;
+                document.cookie = `can_switch_view=${op.can_switch_view}; path=/; max-age=86400`;
+                document.cookie = `can_access_stridenex=${op.can_access_stridenex}; path=/; max-age=86400`;
+                document.cookie = `has_lms_access=${op.has_lms_access}; path=/; max-age=86400`;
+                document.cookie = `member_type=${op.member_type}; path=/; max-age=86400`;
+                document.cookie = `tier=${op.tier}; path=/; max-age=86400`;
+                document.cookie = `user_role=${isInstructorMember ? "instructor" : "student"}; path=/; max-age=86400`;
+                document.cookie = `operational_profile=${encodeURIComponent(JSON.stringify(op))}; path=/; max-age=86400`;
+              }
+
               if (data.roles && Array.isArray(data.roles)) {
                 localStorage.setItem("roles", JSON.stringify(data.roles));
+                if (isInstructorMember) {
+                  localStorage.setItem("lms_saved_instructor_roles", JSON.stringify(data.roles));
+                }
               }
 
               await login(api_key, api_secret, {
                 email,
                 fullName,
-                role: "student",
+                role: isInstructorMember ? "instructor" : "student",
                 isOnboarded: data.is_onboarded,
                 userImage: data.user_image
               });
