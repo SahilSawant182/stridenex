@@ -146,9 +146,11 @@ export default function CollegeGuidelineTour({
     const userKey = collegeEmail ? `has_seen_college_tour_${collegeEmail}` : "has_seen_college_tour";
     const hasSeen = localStorage.getItem(userKey) === "true";
 
+    const isFirstTimeUser = isFirstLogin;
+
     let timer: NodeJS.Timeout | null = null;
     // ONLY auto-launch if explicitly first-time login
-    if (isFirstLogin && !hasSeen) {
+    if (isFirstTimeUser && !hasSeen) {
       timer = setTimeout(() => {
         startTour();
       }, 800);
@@ -219,6 +221,12 @@ export default function CollegeGuidelineTour({
     setIsOpen(false);
     const userKey = collegeEmail ? `has_seen_college_tour_${collegeEmail}` : "has_seen_college_tour";
     localStorage.setItem(userKey, "true");
+    if (collegeEmail && typeof window !== "undefined") {
+      sessionStorage.setItem(`completed_college_tour_${collegeEmail}`, "true");
+      localStorage.setItem(`is_first_login_${collegeEmail}`, "false");
+      sessionStorage.removeItem(`is_first_login_${collegeEmail}`);
+      sessionStorage.removeItem("just_signed_up");
+    }
   };
 
   if (!mounted) return null;

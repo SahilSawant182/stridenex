@@ -154,9 +154,11 @@ export default function MentorGuidelineTour({
     const userKey = mentorEmail ? `has_seen_mentor_tour_${mentorEmail}` : "has_seen_mentor_tour";
     const hasSeen = localStorage.getItem(userKey) === "true";
 
+    const isFirstTimeUser = isFirstLogin;
+
     let timer: NodeJS.Timeout | null = null;
     // ONLY auto-launch if explicitly first-time login
-    if (isFirstLogin && !hasSeen) {
+    if (isFirstTimeUser && !hasSeen) {
       timer = setTimeout(() => {
         startTour();
       }, 800);
@@ -227,6 +229,12 @@ export default function MentorGuidelineTour({
     setIsOpen(false);
     const userKey = mentorEmail ? `has_seen_mentor_tour_${mentorEmail}` : "has_seen_mentor_tour";
     localStorage.setItem(userKey, "true");
+    if (mentorEmail && typeof window !== "undefined") {
+      sessionStorage.setItem(`completed_mentor_tour_${mentorEmail}`, "true");
+      localStorage.setItem(`is_first_login_${mentorEmail}`, "false");
+      sessionStorage.removeItem(`is_first_login_${mentorEmail}`);
+      sessionStorage.removeItem("just_signed_up");
+    }
   };
 
   if (!mounted) return null;

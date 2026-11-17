@@ -99,6 +99,31 @@ export default function IndustryOverviewPage() {
 
   const [appliedCount, setAppliedCount] = useState<number>(0);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [isFirstLoginUser, setIsFirstLoginUser] = useState<boolean>(false);
+
+  useEffect(() => {
+    const emailToCheck = currentUser || (typeof window !== "undefined" ? localStorage.getItem("currentUser") : null);
+    if (!emailToCheck) return;
+
+    const userKey = `has_seen_industry_tour_${emailToCheck}`;
+    const hasSeen = typeof window !== "undefined" && (
+      localStorage.getItem(userKey) === "true" ||
+      sessionStorage.getItem(`completed_industry_tour_${emailToCheck}`) === "true"
+    );
+
+    if (hasSeen) {
+      setIsFirstLoginUser(false);
+      return;
+    }
+
+    const storedFirst = typeof window !== "undefined" && (
+      localStorage.getItem(`is_first_login_${emailToCheck}`) === "true" ||
+      sessionStorage.getItem(`is_first_login_${emailToCheck}`) === "true" ||
+      sessionStorage.getItem("just_signed_up") === "true"
+    );
+
+    setIsFirstLoginUser(!!storedFirst);
+  }, [currentUser]);
 
   const handleLmsStudioClick = async () => {
     try {
@@ -299,7 +324,7 @@ export default function IndustryOverviewPage() {
         onClose={() => setShowUpgradeModal(false)}
         role="industry"
       />
-      <IndustryGuidelineTour industryEmail={currentUser || undefined} />
+      <IndustryGuidelineTour industryEmail={currentUser || undefined} isFirstLogin={isFirstLoginUser} />
     </motion.div>
   );
 }

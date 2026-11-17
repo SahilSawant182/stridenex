@@ -285,6 +285,9 @@ export default function StudentGuidelineTour({
     localStorage.setItem(userKey, "true");
     if (studentEmail && typeof window !== "undefined") {
       sessionStorage.setItem(`completed_student_tour_${studentEmail}`, "true");
+      localStorage.setItem(`is_first_login_${studentEmail}`, "false");
+      sessionStorage.removeItem(`is_first_login_${studentEmail}`);
+      sessionStorage.removeItem("just_signed_up");
     }
     if (onTourClose) {
       onTourClose();
