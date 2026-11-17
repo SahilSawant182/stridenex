@@ -179,6 +179,8 @@ export default function HorizontalTabs({ role }: HorizontalTabsProps) {
               key={tab.path}
               href={tab.path}
               title={tab.name}
+              data-tour-tab={tab.name}
+              id={`tour-tab-${tab.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
               className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${isActive
                 ? "text-slate-900 bg-slate-100 scale-105"
                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 hover:scale-105"

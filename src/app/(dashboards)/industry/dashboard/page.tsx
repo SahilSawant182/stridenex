@@ -25,6 +25,7 @@ import { getApplicationStatusCount } from "@/services/industry.services";
 import { useRouter } from "next/navigation";
 import LmsUpgradeModal from "@/components/modals/LmsUpgradeModal";
 import { checkLmsAccess } from "@/utils/lmsAccess";
+import IndustryGuidelineTour from "@/components/dashboards/industry/IndustryGuidelineTour";
 
 const container: Variants = {
   hidden: { opacity: 0 },
@@ -298,6 +299,7 @@ export default function IndustryOverviewPage() {
         onClose={() => setShowUpgradeModal(false)}
         role="industry"
       />
+      <IndustryGuidelineTour industryEmail={currentUser || undefined} />
     </motion.div>
   );
 }

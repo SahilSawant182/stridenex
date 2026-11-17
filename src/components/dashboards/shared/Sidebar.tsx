@@ -247,6 +247,8 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
             <Link
               key={link.name}
               href={link.href}
+              data-tour-sidebar={link.name}
+              id={`tour-sidebar-${link.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
               onClick={(e) => handleLinkClick(e, link.href)}
               onMouseEnter={() => setHoveredItem(link.name)}
               onMouseLeave={() => setHoveredItem(null)}

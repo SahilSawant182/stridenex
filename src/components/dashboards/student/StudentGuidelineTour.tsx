@@ -1,370 +1,495 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-    X,
-    ChevronRight,
-    ChevronLeft,
-    Sparkles,
-    Play,
-    Check,
-    HelpCircle,
-    HelpCircle as TourIcon,
-    Compass
+  X,
+  ChevronRight,
+  ChevronLeft,
+  Sparkles,
+  LayoutDashboard,
+  BookOpen,
+  Code,
+  Target,
+  CheckSquare,
+  FolderGit2,
+  Briefcase,
+  Award,
+  Building2,
+  UserCircle,
+  Video,
+  Users,
+  Calendar,
+  Compass
 } from "lucide-react";
 import { createPortal } from "react-dom";
-import { Button } from "@/components/ui/button";
-import { getStudentGuidelines, completeStudentGuidelineStep } from "@/services/student.services";
-import { BASE_DOMAIN } from "@/services/api.services";
 
-interface GuidelineStep {
-    name: string;
-    title: string;
-    module: string;
-    tab: string;
-    step_no: number;
-    description: string;
-    video_url: string | null;
-    image: string | null;
-    is_mandatory: number;
-    status: "Pending" | "Completed";
+export interface StudentSidebarTourStep {
+  id: string;
+  name: string;
+  title: string;
+  icon: any;
+  badge: string;
+  description: string;
 }
+
+export const STUDENT_SIDEBAR_STEPS: StudentSidebarTourStep[] = [
+  {
+    id: "tour-sidebar-overview",
+    name: "Overview",
+    title: "Overview Dashboard",
+    icon: LayoutDashboard,
+    badge: "Home Base",
+    description: "Your central hub tracking skill readiness scores, habit consistency heatmaps, opportunity alerts, and quick profile actions."
+  },
+  {
+    id: "tour-sidebar-courses",
+    name: "Courses",
+    title: "Learning Courses",
+    icon: BookOpen,
+    badge: "LMS Studio",
+    description: "Explore interactive learning modules, track your enrolled video courses, and complete exercises to level up your skillset."
+  },
+  {
+    id: "tour-sidebar-skill-ledger",
+    name: "Skill Ledger",
+    title: "Verified Skill Ledger",
+    icon: Code,
+    badge: "Competencies",
+    description: "Your digital competency passport. Track and verify your technical, problem-solving, and soft skills with verified badges."
+  },
+  {
+    id: "tour-sidebar-skill-path",
+    name: "Skill Path",
+    title: "Personalized Skill Path",
+    icon: Target,
+    badge: "Roadmaps",
+    description: "Step-by-step career roadmaps designed to help you bridge your learning gaps and reach your target job roles."
+  },
+  {
+    id: "tour-sidebar-habits",
+    name: "Habits",
+    title: "Learning Habits & Streaks",
+    icon: CheckSquare,
+    badge: "Consistency",
+    description: "Build daily study discipline. Monitor coding practice streaks, problem-solving goals, and weekly activity consistency."
+  },
+  {
+    id: "tour-sidebar-projects",
+    name: "Projects",
+    title: "Project Portfolio",
+    icon: FolderGit2,
+    badge: "Proof of Work",
+    description: "Showcase capstone, academic, and open-source projects with live demo URLs, GitHub repositories, and tech stacks for recruiters."
+  },
+  {
+    id: "tour-sidebar-internships",
+    name: "Internships",
+    title: "Industry Internships",
+    icon: Briefcase,
+    badge: "Hands-on",
+    description: "Discover and apply for verified corporate internships tailored to your branch, academic year, and verified skill set."
+  },
+  {
+    id: "tour-sidebar-jobs",
+    name: "Jobs",
+    title: "Full-Time Jobs",
+    icon: Award,
+    badge: "Placements",
+    description: "Explore entry-level jobs and placement opportunities from verified hiring partners, with direct application tracking."
+  },
+  {
+    id: "tour-sidebar-campus-drives",
+    name: "Campus Drives",
+    title: "On-Campus Drives",
+    icon: Building2,
+    badge: "Recruitment",
+    description: "Stay informed about on-campus recruitment events, company eligibility requirements, interview schedules, and drive updates."
+  },
+  {
+    id: "tour-sidebar-mentors",
+    name: "Mentors",
+    title: "1-on-1 Mentorship",
+    icon: UserCircle,
+    badge: "Expert Guidance",
+    description: "Book one-on-one sessions with industry mentors and alumni for career advice, resume reviews, and mock technical interviews."
+  },
+  {
+    id: "tour-sidebar-shorts",
+    name: "Shorts",
+    title: "Quick Learning Shorts",
+    icon: Video,
+    badge: "Video Tips",
+    description: "Watch bite-sized educational video reels highlighting interview preparation, technical tips, and real-world career advice."
+  },
+  {
+    id: "tour-sidebar-community",
+    name: "Community",
+    title: "Student Community",
+    icon: Users,
+    badge: "Discussions",
+    description: "Connect with peers, join topic-specific channels, discuss technical problems, and collaborate on shared challenges."
+  },
+  {
+    id: "tour-sidebar-events",
+    name: "Events",
+    title: "Hackathons & Events",
+    icon: Calendar,
+    badge: "Workshops",
+    description: "Register for live webinars, coding competitions, hackathons, and campus tech symposiums to elevate your profile."
+  }
+];
 
 interface StudentGuidelineTourProps {
-    studentEmail: string;
+  studentEmail?: string;
+  disabled?: boolean;
+  isFirstLogin?: boolean;
 }
 
-export default function StudentGuidelineTour({ studentEmail }: StudentGuidelineTourProps) {
-    const [steps, setSteps] = useState<GuidelineStep[]>([]);
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [isOpen, setIsOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [completingStep, setCompletingStep] = useState(false);
-    const [mounted, setMounted] = useState(false);
+export default function StudentGuidelineTour({
+  studentEmail,
+  disabled,
+  isFirstLogin = false
+}: StudentGuidelineTourProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [mounted, setMounted] = useState(false);
+  const [targetRect, setTargetRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
 
-    // Load guidelines on mount
-    useEffect(() => {
-        setMounted(true);
-        fetchGuidelines();
-    }, [studentEmail]);
+  const [activeSteps, setActiveSteps] = useState<StudentSidebarTourStep[]>(STUDENT_SIDEBAR_STEPS);
+  const popupRef = useRef<HTMLDivElement>(null);
 
-    const fetchGuidelines = async (forceOpen = false) => {
-        if (!studentEmail) return;
-        setLoading(true);
-        try {
-            const res = await getStudentGuidelines("Student", null, studentEmail);
-            const data = res?.message || res?.data;
-            if (data && Array.isArray(data.steps) && data.steps.length > 0) {
-                // Sort steps by step_no
-                const sortedSteps = [...data.steps].sort((a, b) => a.step_no - b.step_no);
-                setSteps(sortedSteps);
+  const startTour = useCallback(() => {
+    if (disabled) return;
 
-                // Auto-open if progress is not complete and user hasn't dismissed it
-                const isDismissed = localStorage.getItem("dismissed_student_tour") === "true";
-                const hasPending = sortedSteps.some(s => s.status === "Pending");
+    // Query elements in sidebar first, with fallback to horizontal tabs if needed
+    const presentSteps = STUDENT_SIDEBAR_STEPS.filter((step) => {
+      const el =
+        document.querySelector(`[data-tour-sidebar="${step.name}"]`) ||
+        document.getElementById(step.id) ||
+        document.querySelector(`[data-tour-tab="${step.name}"]`);
+      return !!el;
+    });
 
-                if (forceOpen || (hasPending && !isDismissed)) {
-                    // Find first pending step index
-                    const firstPending = sortedSteps.findIndex(s => s.status === "Pending");
-                    setCurrentIndex(firstPending !== -1 ? firstPending : 0);
-                    setIsOpen(true);
-                }
-            }
-        } catch (error) {
-            console.error("Error loading student guidelines:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const stepsToUse = presentSteps.length > 0 ? presentSteps : STUDENT_SIDEBAR_STEPS;
+    setActiveSteps(stepsToUse);
+    setCurrentIndex(0);
+    setIsOpen(true);
+  }, [disabled]);
 
-    if (!mounted) return null;
-    if (steps.length === 0) return null;
+  useEffect(() => {
+    setMounted(true);
 
-    const currentStep = steps[currentIndex];
-    const totalSteps = steps.length;
-    const progressPercentage = Math.round(((currentIndex + 1) / totalSteps) * 100);
+    if (disabled) {
+      setIsOpen(false);
+      return;
+    }
 
-    // Helper to build media URL
-    const getMediaUrl = (url: string | null | undefined) => {
-        if (!url) return null;
-        if (url.startsWith("http")) return url;
-        return `${BASE_DOMAIN}${url}`;
-    };
-
-    const handleNext = async () => {
-        if (currentStep.status === "Pending" && studentEmail) {
-            setCompletingStep(true);
-            try {
-                await completeStudentGuidelineStep(currentStep.name, studentEmail);
-
-                // Update local status of the step
-                const updatedSteps = [...steps];
-                updatedSteps[currentIndex].status = "Completed";
-                setSteps(updatedSteps);
-            } catch (error) {
-                console.error("Error completing onboarding step:", error);
-            } finally {
-                setCompletingStep(false);
-            }
-        }
-
-        if (currentIndex < totalSteps - 1) {
-            setCurrentIndex(currentIndex + 1);
-        } else {
-            // Last step: close and mark tour dismissed
-            localStorage.setItem("dismissed_student_tour", "true");
-            setIsOpen(false);
-        }
-    };
-
-    const handleBack = () => {
-        if (currentIndex > 0) {
-            setCurrentIndex(currentIndex - 1);
-        }
-    };
-
-    const handleSkip = () => {
-        localStorage.setItem("dismissed_student_tour", "true");
-        setIsOpen(false);
-    };
-
-    const handleManualOpen = () => {
-        fetchGuidelines(true);
-    };
-
-    return (
-        <>
-            {/* Floating help/tour trigger at the bottom right */}
-            <button
-                onClick={handleManualOpen}
-                className="fixed bottom-6 right-6 z-40 bg-gradient-to-r from-primary to-royal text-white shadow-2xl rounded-full p-3 hover:scale-110 active:scale-95 transition-all duration-200 cursor-pointer flex items-center justify-center group"
-                title="App Quick Tour"
-                aria-label="App Quick Tour"
-            >
-                <Compass className="w-6 h-6 animate-spin-slow group-hover:rotate-45 transition-transform duration-300" />
-                <span className="max-w-0 overflow-hidden group-hover:max-w-xs group-hover:ml-2 transition-all duration-300 ease-in-out whitespace-nowrap text-sm font-semibold">
-                    Quick Guide
-                </span>
-            </button>
-
-            {createPortal(
-                <AnimatePresence>
-                    {isOpen && (
-                        <>
-                            {/* Dark Backdrop */}
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={handleSkip}
-                                className="fixed inset-0 bg-black/60 backdrop-blur-md z-[9998]"
-                            />
-
-                            {/* Guided Tour Dialog Wrapper */}
-                            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 md:p-6 pointer-events-none">
-                                <motion.div
-                                    initial={{ opacity: 0, scale: 0.95, y: 30 }}
-                                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95, y: 30 }}
-                                    transition={{ type: "spring", duration: 0.5, bounce: 0.2 }}
-                                    className="w-full max-w-4xl max-h-[85vh] md:max-h-[90vh] bg-white dark:bg-slate-900 rounded-2xl shadow-3xl overflow-hidden flex flex-col border border-slate-100 dark:border-slate-800 pointer-events-auto"
-                                >
-                                    {/* Header */}
-                                    <div className="px-6 py-4 bg-gradient-to-r from-primary to-royal text-white flex items-center justify-between relative shrink-0">
-                                        <div className="flex items-center gap-2">
-                                            <Sparkles className="w-5 h-5 text-accent animate-pulse" />
-                                            <span className="text-sm font-semibold tracking-wider uppercase text-blue-100">
-                                                Step {currentIndex + 1} of {totalSteps}
-                                            </span>
-                                        </div>
-
-                                        <div className="text-center absolute left-1/2 -translate-x-1/2 hidden md:block">
-                                            <h3 className="font-bold text-lg">App Onboarding & Features</h3>
-                                        </div>
-
-                                        <button
-                                            onClick={handleSkip}
-                                            className="p-1 rounded-full hover:bg-white/10 text-white/80 hover:text-white transition-colors"
-                                        >
-                                            <X className="w-6 h-6" />
-                                        </button>
-                                    </div>
-
-                                    {/* Progress Bar */}
-                                    <div className="w-full bg-slate-100 dark:bg-slate-850 h-1.5 shrink-0">
-                                        <motion.div
-                                            className="bg-accent h-full"
-                                            initial={{ width: 0 }}
-                                            animate={{ width: `${progressPercentage}%` }}
-                                            transition={{ duration: 0.3 }}
-                                        />
-                                    </div>
-
-                                    {/* Content Panel */}
-                                    <div className="flex-1 overflow-y-auto p-6 md:p-8 grid grid-cols-1 md:grid-cols-12 gap-8 items-stretch">
-
-                                        {/* Left Column: Text & Instructions */}
-                                        <div className="md:col-span-7 flex flex-col justify-between space-y-6">
-                                            <div className="space-y-4">
-                                                {currentStep.tab && (
-                                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/50">
-                                                        Feature: {currentStep.tab}
-                                                    </span>
-                                                )}
-
-                                                <h2 className="text-2xl md:text-3xl font-extrabold text-slate-850 dark:text-white tracking-tight leading-tight">
-                                                    {currentStep.title}
-                                                </h2>
-
-                                                {/* Description rendered safely */}
-                                                <div
-                                                    className="text-slate-650 dark:text-slate-300 text-base md:text-lg leading-relaxed prose dark:prose-invert max-w-none prose-p:my-2 prose-ul:list-disc prose-ul:ml-5"
-                                                    dangerouslySetInnerHTML={{ __html: currentStep.description }}
-                                                />
-                                            </div>
-
-                                            {/* Step Status Badge */}
-                                            <div className="pt-2 flex items-center gap-2">
-                                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${currentStep.status === "Completed"
-                                                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/40"
-                                                        : "bg-orange-50 text-orange-700 dark:bg-orange-950/30 dark:text-orange-400 border border-orange-100 dark:border-orange-900/40 animate-pulse"
-                                                    }`}>
-                                                    {currentStep.status === "Completed" ? (
-                                                        <>
-                                                            <Check className="w-3.5 h-3.5" />
-                                                            Completed
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <div className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
-                                                            To Explore
-                                                        </>
-                                                    )}
-                                                </span>
-                                                {currentStep.is_mandatory === 1 && (
-                                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400 border border-red-100 dark:border-red-900/40">
-                                                        Mandatory
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Right Column: Visual Preview */}
-                                        <div className="md:col-span-5 flex flex-col justify-center items-center bg-slate-50 dark:bg-slate-950/30 rounded-xl p-4 border border-slate-100 dark:border-slate-800 min-h-[250px] md:min-h-0 relative overflow-hidden">
-                                            {/* Background Gradients */}
-                                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-                                            <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
-
-                                            <AnimatePresence mode="wait">
-                                                {currentStep.image ? (
-                                                    <motion.img
-                                                        key={`image-${currentIndex}`}
-                                                        initial={{ opacity: 0, scale: 0.95 }}
-                                                        animate={{ opacity: 1, scale: 1 }}
-                                                        exit={{ opacity: 0, scale: 0.95 }}
-                                                        transition={{ duration: 0.2 }}
-                                                        src={getMediaUrl(currentStep.image) || ""}
-                                                        alt={currentStep.title}
-                                                        className="max-w-full max-h-[300px] object-contain rounded-lg shadow-md border border-slate-200 dark:border-slate-800 z-10"
-                                                    />
-                                                ) : currentStep.video_url ? (
-                                                    <motion.div
-                                                        key={`video-${currentIndex}`}
-                                                        initial={{ opacity: 0 }}
-                                                        animate={{ opacity: 1 }}
-                                                        exit={{ opacity: 0 }}
-                                                        className="w-full flex flex-col items-center justify-center space-y-3 z-10 p-4"
-                                                    >
-                                                        <div className="relative group cursor-pointer w-full aspect-video bg-black rounded-lg flex items-center justify-center shadow-md overflow-hidden">
-                                                            <iframe
-                                                                src={getMediaUrl(currentStep.video_url) || ""}
-                                                                title="Video Guideline"
-                                                                className="w-full h-full border-0 absolute inset-0"
-                                                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                                                allowFullScreen
-                                                            />
-                                                        </div>
-                                                        <span className="text-xs text-slate-500 flex items-center gap-1 font-medium">
-                                                            <Play className="w-3.5 h-3.5" /> Video Demonstration
-                                                        </span>
-                                                    </motion.div>
-                                                ) : (
-                                                    // Fallback Illustration when no image or video is configured
-                                                    <motion.div
-                                                        key={`fallback-${currentIndex}`}
-                                                        initial={{ opacity: 0, scale: 0.9 }}
-                                                        animate={{ opacity: 1, scale: 1 }}
-                                                        exit={{ opacity: 0, scale: 0.9 }}
-                                                        className="flex flex-col items-center justify-center space-y-4 text-center z-10 p-6"
-                                                    >
-                                                        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/10 to-royal/10 dark:from-primary/20 dark:to-royal/20 flex items-center justify-center text-primary dark:text-blue-400 border border-primary/10">
-                                                            <Compass className="w-8 h-8 animate-pulse text-accent" />
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <h4 className="font-bold text-slate-750 dark:text-slate-200 text-sm">
-                                                                {currentStep.tab || "Dashboard"} Feature
-                                                            </h4>
-                                                            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-[200px]">
-                                                                Follow the steps on the left to learn about this tool and get started.
-                                                            </p>
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </div>
-
-                                    </div>
-
-                                    {/* Footer Controls */}
-                                    <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
-                                        <Button
-                                            variant="outline"
-                                            onClick={handleSkip}
-                                            className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 border-slate-200 hover:border-slate-350 dark:border-slate-800"
-                                            disabled={currentStep.is_mandatory === 1}
-                                        >
-                                            Skip Tour
-                                        </Button>
-
-                                        <div className="flex items-center gap-3">
-                                            <Button
-                                                variant="outline"
-                                                onClick={handleBack}
-                                                disabled={currentIndex === 0}
-                                                className="border-slate-250 dark:border-slate-800"
-                                            >
-                                                <ChevronLeft className="w-4 h-4 mr-1" /> Back
-                                            </Button>
-
-                                            <Button
-                                                variant="accent"
-                                                onClick={handleNext}
-                                                disabled={completingStep}
-                                                className="min-w-[100px] flex items-center justify-center font-semibold"
-                                            >
-                                                {completingStep ? (
-                                                    <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                                                ) : currentIndex === totalSteps - 1 ? (
-                                                    <>
-                                                        Finish <Check className="w-4 h-4 ml-1.5" />
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        Next <ChevronRight className="w-4 h-4 ml-1" />
-                                                    </>
-                                                )}
-                                            </Button>
-                                        </div>
-                                    </div>
-
-                                </motion.div>
-                            </div>
-                        </>
-                    )}
-                </AnimatePresence>,
-                document.body
-            )}
-        </>
+    const userKey = studentEmail ? `has_seen_student_tour_${studentEmail}` : "has_seen_student_tour";
+    const hasCompletedTour = typeof window !== "undefined" && (
+      sessionStorage.getItem(`completed_student_tour_${studentEmail}`) === "true" ||
+      localStorage.getItem(userKey) === "true"
     );
+
+    let timer: NodeJS.Timeout | null = null;
+    // Auto-launch for NEW users (isFirstLogin === true) who haven't completed the tour
+    if (isFirstLogin && !hasCompletedTour) {
+      timer = setTimeout(() => {
+        startTour();
+      }, 500);
+    }
+
+    const handleCustomTrigger = () => {
+      startTour();
+    };
+    window.addEventListener("open-student-tour", handleCustomTrigger);
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("open-student-tour", handleCustomTrigger);
+    };
+  }, [disabled, startTour, studentEmail, isFirstLogin]);
+
+  // Update target rect when currentIndex changes or on window resize
+  const updateTargetPosition = useCallback(() => {
+    if (!isOpen || activeSteps.length === 0) return;
+    const currentStep = activeSteps[currentIndex];
+    if (!currentStep) return;
+
+    // Search in sidebar first, then by ID, then in horizontal tabs
+    const el =
+      document.querySelector(`[data-tour-sidebar="${currentStep.name}"]`) ||
+      document.getElementById(currentStep.id) ||
+      document.querySelector(`[data-tour-tab="${currentStep.name}"]`);
+
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+      const rect = el.getBoundingClientRect();
+      setTargetRect({
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+      });
+    } else {
+      setTargetRect(null);
+    }
+  }, [isOpen, currentIndex, activeSteps]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const timer = setTimeout(updateTargetPosition, 100);
+    window.addEventListener("resize", updateTargetPosition);
+    window.addEventListener("scroll", updateTargetPosition, true);
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", updateTargetPosition);
+      window.removeEventListener("scroll", updateTargetPosition, true);
+    };
+  }, [isOpen, currentIndex, updateTargetPosition]);
+
+  const handleNext = () => {
+    if (currentIndex < activeSteps.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
+    } else {
+      finishTour();
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex((prev) => prev - 1);
+    }
+  };
+
+  const finishTour = () => {
+    setIsOpen(false);
+    const userKey = studentEmail ? `has_seen_student_tour_${studentEmail}` : "has_seen_student_tour";
+    localStorage.setItem(userKey, "true");
+    if (studentEmail && typeof window !== "undefined") {
+      sessionStorage.setItem(`completed_student_tour_${studentEmail}`, "true");
+    }
+  };
+
+  if (!mounted) return null;
+
+  const currentStep = activeSteps[currentIndex] || activeSteps[0];
+  const totalSteps = activeSteps.length;
+  const StepIcon = currentStep.icon;
+
+  // Calculate popup position anchored to the right of the sidebar item
+  let popupTop = 100;
+  let popupLeft = 260;
+  let arrowTop = 32; // px from top of popup
+  const popupWidth = typeof window !== "undefined" ? Math.min(360, window.innerWidth - 32) : 340;
+  const popupHeight = 220;
+
+  if (targetRect && typeof window !== "undefined") {
+    const isSidebarOnLeft = targetRect.left < window.innerWidth / 2;
+
+    if (isSidebarOnLeft && targetRect.left + targetRect.width + popupWidth + 24 < window.innerWidth) {
+      // Place to the right of the sidebar item
+      popupLeft = targetRect.left + targetRect.width + 16;
+      // Align vertically with the item
+      let computedTop = targetRect.top + targetRect.height / 2 - 50;
+      // Keep within screen bounds
+      if (computedTop < 16) computedTop = 16;
+      if (computedTop + popupHeight > window.innerHeight - 16) {
+        computedTop = window.innerHeight - popupHeight - 16;
+      }
+      popupTop = computedTop;
+      // Arrow pointing left towards sidebar item
+      const itemCenterY = targetRect.top + targetRect.height / 2;
+      arrowTop = Math.max(16, Math.min(popupHeight - 20, itemCenterY - popupTop));
+    } else {
+      // Fallback below item
+      popupTop = targetRect.top + targetRect.height + 14;
+      popupLeft = Math.max(16, Math.min(window.innerWidth - popupWidth - 16, targetRect.left));
+      arrowTop = 0;
+    }
+  }
+
+  const tourContent = (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[99999] pointer-events-none">
+          {/* Transparent click catcher to allow closing on outside click without blurring or darkening the background */}
+          <div
+            onClick={finishTour}
+            className="absolute inset-0 pointer-events-auto bg-transparent"
+          />
+
+          {/* Highlight ring/spotlight directly over the active sidebar item */}
+          {targetRect && (
+            <motion.div
+              layoutId="tour-sidebar-highlight"
+              initial={false}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              style={{
+                position: "fixed",
+                top: targetRect.top - 3,
+                left: targetRect.left - 4,
+                width: targetRect.width + 8,
+                height: targetRect.height + 6,
+              }}
+              className="rounded-xl border-2 border-orange-500 bg-orange-500/10 shadow-[0_0_18px_rgba(249,115,22,0.45)] ring-4 ring-orange-400/20 z-[100000] pointer-events-none flex items-center justify-end pr-2"
+            >
+              <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping" />
+            </motion.div>
+          )}
+
+          {/* Tethered Tour Popup Card (pointer-events-auto so buttons are interactive) */}
+          <motion.div
+            ref={popupRef}
+            initial={{ opacity: 0, x: -10, scale: 0.96 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: -10, scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 450, damping: 32 }}
+            style={{
+              position: "fixed",
+              top: popupTop,
+              left: popupLeft,
+              width: popupWidth,
+            }}
+            className="pointer-events-auto z-[100001] bg-white rounded-2xl shadow-2xl border border-slate-200/90 overflow-hidden text-slate-800"
+          >
+            {/* Left-pointing caret arrow pointing directly to the sidebar item */}
+            <div
+              style={{ top: arrowTop }}
+              className="absolute -left-2 w-4 h-4 bg-white border-b border-l border-slate-200 transform rotate-45 z-10"
+            />
+
+            {/* Header */}
+            <div className="relative bg-gradient-to-r from-orange-50 via-amber-50 to-white px-5 pt-3.5 pb-2.5 border-b border-orange-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-orange-500 text-white flex items-center justify-center shadow-sm">
+                  <StepIcon className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-orange-600 bg-orange-100/90 px-2 py-0.5 rounded-full">
+                      {currentStep.badge}
+                    </span>
+                    <span className="text-xs text-slate-400 font-medium">
+                      Tab {currentIndex + 1} of {totalSteps}
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-900 mt-0.5">
+                    {currentStep.name}
+                  </h4>
+                </div>
+              </div>
+
+              <button
+                onClick={finishTour}
+                className="w-7 h-7 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition-colors"
+                title="Skip tour"
+                aria-label="Skip tour"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Description Body */}
+            <div className="px-5 py-3">
+              <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                {currentStep.description}
+              </p>
+            </div>
+
+            {/* Carousel Dots & Navigation Controls */}
+            <div className="px-5 pb-3.5 pt-2 flex flex-col gap-2.5 border-t border-slate-100 bg-slate-50/60">
+              {/* Carousel Indicator Dots */}
+              <div className="flex items-center justify-center gap-1.5 py-0.5">
+                {activeSteps.map((step, idx) => {
+                  const isActive = idx === currentIndex;
+                  return (
+                    <button
+                      key={step.id}
+                      onClick={() => setCurrentIndex(idx)}
+                      title={`Go to ${step.name} (${idx + 1}/${totalSteps})`}
+                      aria-label={`Go to ${step.name}`}
+                      className={`h-2 transition-all duration-200 rounded-full ${
+                        isActive
+                          ? "w-6 bg-orange-600 shadow-sm"
+                          : "w-2 bg-slate-300 hover:bg-slate-400"
+                      }`}
+                    />
+                  );
+                })}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between gap-2 pt-0.5">
+                <button
+                  onClick={handlePrev}
+                  disabled={currentIndex === 0}
+                  className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    currentIndex === 0
+                      ? "text-slate-300 bg-transparent cursor-not-allowed"
+                      : "text-slate-700 bg-white border border-slate-200 hover:bg-slate-100 active:scale-95 shadow-sm"
+                  }`}
+                >
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                  Previous
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={finishTour}
+                    className="text-xs font-medium text-slate-400 hover:text-slate-600 px-2 py-1 transition-colors"
+                  >
+                    Skip
+                  </button>
+
+                  <button
+                    onClick={handleNext}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold bg-orange-600 hover:bg-orange-700 text-white shadow-md hover:shadow-orange-200 active:scale-95 transition-all"
+                  >
+                    {currentIndex === totalSteps - 1 ? (
+                      <>
+                        Finish Tour
+                        <Sparkles className="w-3.5 h-3.5" />
+                      </>
+                    ) : (
+                      <>
+                        Next
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+
+  return (
+    <>
+      {/* Floating Tour Restart Button (discreet at bottom right) */}
+      {!isOpen && !disabled && (
+        <button
+          onClick={startTour}
+          className="fixed bottom-6 right-6 z-40 bg-white hover:bg-orange-50 text-slate-700 hover:text-orange-600 border border-slate-200 hover:border-orange-300 shadow-md hover:shadow-lg rounded-full p-2.5 transition-all duration-200 group flex items-center gap-2 pointer-events-auto"
+          title="Explore Student Tabs Tour"
+          aria-label="Explore Student Tabs Tour"
+        >
+          <Compass className="w-5 h-5 text-orange-500 group-hover:rotate-45 transition-transform duration-300" />
+          <span className="text-xs font-semibold pr-1 hidden sm:inline">Tabs Guide</span>
+        </button>
+      )}
+
+      {/* Portal Tour Overlay */}
+      {typeof document !== "undefined" && createPortal(tourContent, document.body)}
+    </>
+  );
 }

@@ -175,36 +175,28 @@ function Calendar({
           )
         },
         Dropdown: ({ value, onChange, options, ...props }: import("react-day-picker").DropdownProps) => {
-          const selected = options?.find((child) => child.value === value)
-          const handleChange = (value: string) => {
-            const changeEvent = {
-              target: { value },
-            } as React.ChangeEvent<HTMLSelectElement>
-            onChange?.(changeEvent)
-          }
           return (
-            <Select
-              value={value?.toString()}
-              onValueChange={(value) => {
-                handleChange(value)
-              }}
-            >
-              <SelectTrigger className="pr-1.5 focus:ring-0 h-8 font-medium">
-                <SelectValue>{selected?.label}</SelectValue>
-              </SelectTrigger>
-              <SelectContent position="popper" className="max-h-[280px] overflow-y-auto z-[9999] bg-white border-slate-200">
+            <div className="relative inline-flex items-center">
+              <select
+                value={value?.toString()}
+                onChange={(e) => {
+                  onChange?.(e)
+                }}
+                className="appearance-none bg-white hover:bg-slate-50 font-medium text-xs text-slate-800 h-8 pl-2.5 pr-6 rounded-md border border-slate-200 cursor-pointer focus:outline-none focus:ring-1 focus:ring-orange-500 transition-colors shadow-xs"
+              >
                 {options?.map((option, id: number) => (
-                  <SelectItem 
+                  <option 
                     key={`${option.value}-${id}`} 
-                    value={option.value?.toString() ?? ""} 
+                    value={option.value} 
                     disabled={option.disabled}
-                    className="focus:!bg-slate-100 focus:!text-slate-900"
+                    className="py-1 text-slate-900 bg-white"
                   >
                     {option.label}
-                  </SelectItem>
+                  </option>
                 ))}
-              </SelectContent>
-            </Select>
+              </select>
+              <ChevronDownIcon className="absolute right-1.5 h-3.5 w-3.5 pointer-events-none text-slate-500" />
+            </div>
           )
         },
         ...components,

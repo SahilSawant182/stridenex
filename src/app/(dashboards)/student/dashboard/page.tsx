@@ -65,6 +65,7 @@ export default function StudentDashboardPage() {
   const [showTestModal, setShowTestModal] = useState<boolean>(false);
   const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
   const [hasCompletedTest, setHasCompletedTest] = useState<boolean>(false);
+  const [isFirstLoginUser, setIsFirstLoginUser] = useState<boolean>(false);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -80,10 +81,27 @@ export default function StudentDashboardPage() {
         const isCompleted = !!(res.has_completed_test || res.test_completed || res.is_onboarded || res.submission);
         setHasCompletedTest(isCompleted);
 
-        if (res.is_first_login && !res.is_onboarded) {
-          setShowTestModal(true);
+        const justSignedUp = typeof window !== "undefined" && (
+          localStorage.getItem(`is_first_login_${emailToCheck}`) === "true" ||
+          sessionStorage.getItem("just_signed_up") === "true"
+        );
+
+        if (res.is_first_login) {
+          setIsFirstLoginUser(true);
+          if (!res.is_onboarded && !isCompleted) {
+            setShowTestModal(true);
+          } else {
+            setShowTestModal(false);
+          }
+        } else if (justSignedUp && !isCompleted) {
+          setIsFirstLoginUser(true);
         } else {
+          // Old user: disable test modal, disable auto-tour, mark seen
           setShowTestModal(false);
+          setIsFirstLoginUser(false);
+          if (typeof window !== "undefined") {
+            localStorage.setItem(`has_seen_student_tour_${emailToCheck}`, "true");
+          }
         }
       } catch (err) {
         console.error("Failed to check student onboarding status", err);
@@ -352,13 +370,31 @@ export default function StudentDashboardPage() {
           <SuccessStoriesFooter />
         </motion.div>
       </motion.div>
-      {currentUser && <StudentGuidelineTour studentEmail={currentUser!} />}
+      {currentUser && (
+        <StudentGuidelineTour
+          studentEmail={currentUser!}
+          isFirstLogin={isFirstLoginUser}
+          disabled={showTestModal}
+        />
+      )}
       <PsychometricTestModal
         isOpen={showTestModal}
-        onClose={() => setShowTestModal(false)}
+        onClose={() => {
+          setShowTestModal(false);
+          if (isFirstLoginUser) {
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent("open-student-tour"));
+            }, 300);
+          }
+        }}
         onCompleted={() => {
           setShowTestModal(false);
           setHasCompletedTest(true);
+          if (isFirstLoginUser) {
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent("open-student-tour"));
+            }, 300);
+          }
         }}
         studentEmail={currentUser || undefined}
       />

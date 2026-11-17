@@ -28,6 +28,7 @@ import ProgressCard from "@/components/dashboards/shared/ProgressCard";
 import ListCard from "@/components/dashboards/shared/ListCard";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { CardHeader } from "@/components/dashboards/shared/CardHeader";
+import CollegeGuidelineTour from "@/components/dashboards/college/CollegeGuidelineTour";
 import { useAuth } from "@/context/AuthContext";
 import SuccessStoriesFooter from "@/components/dashboards/student/SuccessStoriesFooter";
 import LmsUpgradeModal from "@/components/modals/LmsUpgradeModal";
@@ -975,6 +976,7 @@ export default function CollegeDashboardPage() {
         onClose={() => setShowUpgradeModal(false)}
         role="college"
       />
+      <CollegeGuidelineTour collegeEmail={currentUser || undefined} />
     </motion.div>
   );
 }
