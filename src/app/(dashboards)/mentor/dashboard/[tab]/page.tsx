@@ -6,6 +6,7 @@ import SessionHistoryTabContent from "@/components/dashboards/mentor/SessionHist
 import PayoutsTabContent from "@/components/dashboards/mentor/PayoutsTabContent";
 import MyProfileTabContent from "@/components/dashboards/mentor/MyProfileTabContent";
 import PlansTabContent from "@/components/dashboards/student/PlanTabContent";
+import SupportTabContent from "@/components/dashboards/shared/SupportTabContent";
 import CommonTabContent from "@/components/dashboards/shared/CommonTabContent";
 import { use } from "react";
 
@@ -15,6 +16,8 @@ export default function DynamicMentorTabPage({ params }: { params: Promise<{ tab
   const tab = unwrappedParams.tab;
   
   switch(tab) {
+    case "support":
+      return <SupportTabContent role="mentor" />;
     case "schedule":
       return <ScheduleTabContent />;
     case "offerings":

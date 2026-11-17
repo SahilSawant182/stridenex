@@ -22,6 +22,7 @@ import ResumeTabContent from "@/components/dashboards/student/ResumeTabContent";
 import ResumePreviewTabContent from "@/components/dashboards/student/ResumePreviewTabContent";
 import CampusDrivesTabContent from "@/components/dashboards/student/CampusDrivesTabContent";
 import SuccessStoriesFooter from "@/components/dashboards/student/SuccessStoriesFooter";
+import SupportTabContent from "@/components/dashboards/shared/SupportTabContent";
 
 export default function DynamicStudentTabPage({ params }: { params: Promise<{ tab: string }> }) {
   const unwrappedParams = use(params);
@@ -30,17 +31,21 @@ export default function DynamicStudentTabPage({ params }: { params: Promise<{ ta
   const { hasActivePlan, loading } = useStudentPlan();
 
   const isPlanTab = tab === "plans" || tab === "plan";
+  const isSupportTab = tab === "support";
 
-  // Redirect locked tabs to plans page
+  // Redirect locked tabs to plans page (Support and Plans remain unlocked)
   useEffect(() => {
-    if (!loading && hasActivePlan === false && !isPlanTab) {
+    if (!loading && hasActivePlan === false && !isPlanTab && !isSupportTab) {
       router.replace("/student/dashboard/plans");
     }
-  }, [loading, hasActivePlan, isPlanTab, router]);
+  }, [loading, hasActivePlan, isPlanTab, isSupportTab, router]);
 
   const renderTab = () => {
     if (isPlanTab) {
       return <PlanTabContent />;
+    }
+    if (isSupportTab) {
+      return <SupportTabContent role="student" />;
     }
 
     if (!loading && hasActivePlan === false) {

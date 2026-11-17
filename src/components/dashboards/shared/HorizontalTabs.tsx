@@ -57,6 +57,7 @@ const tabConfig = {
     { name: "Community", icon: Users, path: "/student/dashboard/community" },
     { name: "Events", icon: Calendar, path: "/student/dashboard/events" },
     { name: "Plans", icon: CreditCard, path: "/student/dashboard/plans" },
+    { name: "Support", icon: HelpCircle, path: "/student/dashboard/support" },
   ],
   college: [
     { name: "Overview", path: "/college/dashboard", icon: LayoutDashboard },
@@ -66,6 +67,7 @@ const tabConfig = {
     { name: "Community", path: "/college/dashboard/community", icon: Users },
     { name: "Notice Board", path: "/college/dashboard/notice-board", icon: BarChart },
     { name: "Settings", path: "/college/dashboard/settings", icon: Settings },
+    { name: "Support", path: "/college/dashboard/support", icon: HelpCircle },
   ],
   mentor: [
     { name: "Overview", icon: LayoutDashboard, path: "/mentor/dashboard" },
@@ -76,6 +78,7 @@ const tabConfig = {
     { name: "Session History", icon: BookOpen, path: "/mentor/dashboard/session-history" },
     { name: "Payouts & Commission", icon: MessageSquare, path: "/mentor/dashboard/payouts" },
     { name: "My Profile", icon: TrendingUp, path: "/mentor/dashboard/profile" },
+    { name: "Support", icon: HelpCircle, path: "/mentor/dashboard/support" },
   ],
   industry: [
     { name: "Overview", icon: LayoutDashboard, path: "/industry/dashboard" },
@@ -88,6 +91,7 @@ const tabConfig = {
     // { name: "Feedback", icon: Star, path: "/industry/dashboard/feedback" },
     // { name: "Analytics", icon: Calendar, path: "/industry/dashboard/analytics" },
     { name: "Settings", icon: Settings, path: "/industry/dashboard/settings" },
+    { name: "Support", icon: HelpCircle, path: "/industry/dashboard/support" },
   ],
 };
 

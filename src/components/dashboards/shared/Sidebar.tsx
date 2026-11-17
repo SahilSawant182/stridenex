@@ -316,6 +316,65 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
 
       {/* Bottom Links & User Profile */}
       <div className={`transition-colors duration-300 ${collapsed ? 'p-2' : 'p-4'} ${isShortsPage ? 'bg-[#0b0b0b]' : 'bg-slate-50/50'}`}>
+        {/* Support Navigation Item (at bottom, separated from other items) */}
+        {(() => {
+          const supportHref = `/${role}/dashboard/support`;
+          const isSupportActive = pathname === supportHref || pathname.startsWith(`${supportHref}/`);
+          return (
+            <div className="mb-3">
+              <Link
+                href={supportHref}
+                data-tour-sidebar="Support"
+                id="tour-sidebar-support"
+                onClick={(e) => handleLinkClick(e, supportHref)}
+                onMouseEnter={() => setHoveredItem("Support")}
+                onMouseLeave={() => setHoveredItem(null)}
+                className={`
+                  relative flex items-center
+                  transition-all duration-200 group
+                  ${isSupportActive
+                    ? getActiveTabStyles()
+                    : isShortsPage
+                      ? "text-zinc-400 hover:bg-zinc-800/60 hover:text-white font-medium"
+                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-900 font-medium"
+                  }
+                  ${collapsed
+                    ? "w-11 h-11 mx-auto justify-center rounded-xl p-0"
+                    : "w-full gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:border-slate-200/60"
+                  }
+                `}
+              >
+                <HelpCircle
+                  className={`${collapsed ? "w-6 h-6" : "w-5 h-5"} shrink-0 transition-colors ${
+                    isSupportActive
+                      ? getActiveIconStyles()
+                      : isShortsPage
+                        ? "text-zinc-500 group-hover:text-zinc-300"
+                        : "text-slate-400 group-hover:text-slate-600"
+                  }`}
+                />
+
+                {!collapsed && (
+                  <span className={`flex-1 text-[14px] tracking-wide ${isSupportActive ? "font-bold" : "font-medium"}`}>
+                    Support
+                  </span>
+                )}
+
+                {/* Tooltip for collapsed state */}
+                {collapsed && hoveredItem === "Support" && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="absolute left-full ml-3 px-3 py-1.5 bg-slate-800 text-white text-xs font-medium rounded-md shadow-lg whitespace-nowrap z-50 pointer-events-none"
+                  >
+                    Support
+                  </motion.div>
+                )}
+              </Link>
+            </div>
+          );
+        })()}
+
         {/* User Profile */}
         {!collapsed ? (
           <div className={`pt-4 border-t flex items-center gap-3 transition-colors duration-300 ${isShortsPage ? 'border-zinc-800' : 'border-slate-200/60'}`}>

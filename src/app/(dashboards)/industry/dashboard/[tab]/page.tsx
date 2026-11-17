@@ -13,6 +13,7 @@ import FeedbackTabContent from "@/components/dashboards/industry/FeedbackTabCont
 import SettingsTabContent from "@/components/dashboards/industry/SettingsTabContent";
 import JobsTabContent from "@/components/dashboards/industry/JobsTabContent";
 import IndustryMembersTabContent from "@/components/dashboards/industry/IndustryMembersTabContent";
+import SupportTabContent from "@/components/dashboards/shared/SupportTabContent";
 
 export default function IndustryTabContent({
   params
@@ -23,6 +24,8 @@ export default function IndustryTabContent({
 
   const renderTab = () => {
     switch (resolvedParams.tab) {
+      case "support":
+        return <SupportTabContent role="industry" />;
       case "company-profile":
         return <CompanyProfileTabContent />;
       case "find-talent":

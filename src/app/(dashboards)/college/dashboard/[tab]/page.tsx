@@ -7,12 +7,14 @@ import ReportsTabContent from "@/components/dashboards/college/ReportsTabContent
 import PlansTabContent from "@/components/dashboards/college/PlansTabContent";
 import CollegeMembersTabContent from "@/components/dashboards/college/CollegeMembersTabContent";
 import CollegeSettingsTabContent from "@/components/dashboards/college/CollegeSettingsTabContent";
+import SupportTabContent from "@/components/dashboards/shared/SupportTabContent";
 import CommonTabContent from "@/components/dashboards/shared/CommonTabContent";
 import { use } from "react";
 
 export default function DynamicCollegeTabPage({ params }: { params: Promise<{ tab: string }> }) {
     const unwrappedParams = use(params);
 
+    if (unwrappedParams.tab === "support") return <SupportTabContent role="college" />;
     if (unwrappedParams.tab === "students") return <StudentsTabContent />;
     if (unwrappedParams.tab === "campus-drives") return <CampusDrivesTabContent />;
     if (unwrappedParams.tab === "nep-ugc") return <NepUgcTabContent />;

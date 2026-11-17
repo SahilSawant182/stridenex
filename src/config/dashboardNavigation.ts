@@ -67,7 +67,7 @@ export const studentConfig: RoleConfig = {
   ],
   bottomLinks: [
     { name: "Settings", href: "/student/settings", icon: Settings },
-    { name: "Support", href: "/support", icon: HelpCircle },
+    { name: "Support", href: "/student/dashboard/support", icon: HelpCircle },
   ],
 };
 
@@ -91,7 +91,7 @@ export const collegeConfig: RoleConfig = {
   ],
   bottomLinks: [
     { name: "Settings", href: "/college/dashboard/settings", icon: Settings },
-    { name: "Support", href: "/support", icon: HelpCircle },
+    { name: "Support", href: "/college/dashboard/support", icon: HelpCircle },
   ],
 };
 
@@ -114,7 +114,7 @@ export const mentorConfig: RoleConfig = {
   ],
   bottomLinks: [
     { name: "Settings", href: "/mentor/settings", icon: Settings },
-    { name: "Support", href: "/support", icon: HelpCircle },
+    { name: "Support", href: "/mentor/dashboard/support", icon: HelpCircle },
   ],
 };
 
@@ -139,7 +139,7 @@ export const industryConfig: RoleConfig = {
   ],
   bottomLinks: [
     { name: "Settings", href: "/industry/dashboard/settings", icon: Settings },
-    { name: "Support", href: "/support", icon: HelpCircle },
+    { name: "Support", href: "/industry/dashboard/support", icon: HelpCircle },
   ],
 };
 
