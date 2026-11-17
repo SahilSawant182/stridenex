@@ -40,6 +40,19 @@ function isFullyOnboarded(role: string, flag: number): boolean {
   return flag >= threshold;
 }
 
+export interface OperationalProfile {
+  tier: "instructor_member" | "learner_member" | "admin_member" | "owner" | "student" | "individual";
+  member_type: "Instructor" | "Member" | "Admin" | "Owner" | "Student" | "Individual";
+  organization_name: string | null;
+  organization_type: "Industry" | "College" | null;
+  has_lms_access: boolean;
+  can_access_stridenex: boolean;
+  can_switch_view: boolean;
+  allowed_views: string[];
+  default_redirect: string | null;
+  plan_message: string | null;
+}
+
 export default function LoginPage() {
   const [appName] = useState<string>("StrideNex");
   const [bgImage] = useState<string | null>(null);
@@ -83,6 +96,20 @@ export default function LoginPage() {
   useEffect(() => {
     // Wait until basic auth state is populated
     if (!isAuthenticated || !role) return;
+
+    // Check if user is an LMS-only user with a default redirect
+    try {
+      const opRaw = localStorage.getItem("operational_profile");
+      if (opRaw) {
+        const op: OperationalProfile = JSON.parse(opRaw);
+        if (op.can_access_stridenex === false && op.default_redirect?.startsWith("/lms")) {
+          const lmsBase = process.env.NEXT_PUBLIC_LMS_URL || (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") ? "http://localhost:3004" : "");
+          const target = op.default_redirect.startsWith("/lms") ? op.default_redirect : `/lms${op.default_redirect}`;
+          window.location.href = lmsBase ? `${lmsBase.replace(/\/lms\/?$/, "")}${target}` : target;
+          return;
+        }
+      }
+    } catch {}
 
     // Partner bypass: Partners do not have onboarding, so we skip the isOnboarded check
     if (role === "partner") {
@@ -160,6 +187,65 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (data.message === "Logged In") {
+        const op: OperationalProfile | undefined = data.operational_profile;
+        if (op) {
+          localStorage.setItem("operational_profile", JSON.stringify(op));
+          localStorage.setItem("can_access_stridenex", String(op.can_access_stridenex));
+          localStorage.setItem("can_switch_view", String(op.can_switch_view));
+          localStorage.setItem("has_lms_access", String(op.has_lms_access));
+          localStorage.setItem("member_type", op.member_type || "");
+          localStorage.setItem("tier", op.tier || "");
+          localStorage.setItem(
+            "isInstructor",
+            op.member_type === "Instructor" || op.tier === "instructor_member" || op.tier === "owner" ? "true" : "false"
+          );
+
+          if (typeof document !== "undefined") {
+            document.cookie = `has_lms_access=${op.has_lms_access}; path=/; max-age=86400`;
+            document.cookie = `can_access_stridenex=${op.can_access_stridenex}; path=/; max-age=86400`;
+            document.cookie = `can_switch_view=${op.can_switch_view}; path=/; max-age=86400`;
+            document.cookie = `member_type=${op.member_type}; path=/; max-age=86400`;
+            document.cookie = `tier=${op.tier}; path=/; max-age=86400`;
+            document.cookie = `operational_profile=${encodeURIComponent(JSON.stringify(op))}; path=/; max-age=86400`;
+          }
+
+          if (op.default_redirect) {
+            if (op.default_redirect === "/lms/no-access") {
+              setError(
+                op.plan_message ||
+                "Your organization's administrator does not have an active LMS subscription. Please ask your administrator to upgrade the plan to gain LMS access."
+              );
+              setLoading(false);
+              return;
+            }
+            if (op.default_redirect.startsWith("/lms")) {
+              const api_key = data.key_details?.api_key || data.api_key || "";
+              const api_secret = data.key_details?.api_secret || data.api_secret || "";
+              const fullName = data.full_name || formValues.username.split("@")[0];
+              const email = data.user || formValues.username;
+
+              localStorage.setItem("user", email);
+              localStorage.setItem("email", email);
+              if (data.roles && Array.isArray(data.roles)) {
+                localStorage.setItem("roles", JSON.stringify(data.roles));
+              }
+
+              await login(api_key, api_secret, {
+                email,
+                fullName,
+                role: "student",
+                isOnboarded: data.is_onboarded,
+                userImage: data.user_image
+              });
+
+              const lmsBase = process.env.NEXT_PUBLIC_LMS_URL || (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") ? "http://localhost:3004" : "");
+              const target = op.default_redirect.startsWith("/lms") ? op.default_redirect : `/lms${op.default_redirect}`;
+              window.location.href = lmsBase ? `${lmsBase.replace(/\/lms\/?$/, "")}${target}` : target;
+              return;
+            }
+          }
+        }
+
         const api_key = data.key_details?.api_key || data.api_key || "";
         const api_secret = data.key_details?.api_secret || data.api_secret || "";
         const fullName =
