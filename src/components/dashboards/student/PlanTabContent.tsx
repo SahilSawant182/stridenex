@@ -21,11 +21,13 @@ import {
   Users,
   ChevronDown,
   ChevronUp,
+  Lock,
 } from "lucide-react";
 import { BaseCard } from "@/components/dashboards/shared/BaseCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getBillingPackagesByType, getBillingUrl, getUserSubscriptionDashboard } from "@/services/common.services";
+import { isStudentPlanActive } from "@/utils/studentPlan";
 import type {
   SubscriptionDashboardResponse,
   ActiveSubscription,
@@ -611,6 +613,13 @@ export default function PlansTabContent() {
 
         if (dashboardRes.status === "fulfilled") {
           setDashboard(dashboardRes.value);
+          const active = isStudentPlanActive(dashboardRes.value);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("has_active_student_plan", active ? "true" : "false");
+            window.dispatchEvent(
+              new CustomEvent("student-plan-updated", { detail: { isActive: active } })
+            );
+          }
         } else {
           console.warn("Failed to fetch subscription dashboard:", dashboardRes.reason);
           // Non-fatal: plans grid still shown
@@ -688,6 +697,24 @@ export default function PlansTabContent() {
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+
+      {/* Locked notice for students without active plan */}
+      {accountType === "student" && !isStudentPlanActive(dashboard) && (
+        <motion.div
+          variants={item}
+          className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 flex items-center gap-3 text-amber-900 shadow-sm"
+        >
+          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+            <Lock className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-amber-900">Dashboard Tabs Are Currently Locked</h4>
+            <p className="text-xs text-amber-700 mt-0.5">
+              An active subscription is required to unlock your Overview, Skill Ledger, Projects, Internships, and other career tools. Select a plan below to activate your access.
+            </p>
+          </div>
+        </motion.div>
+      )}
 
       {/* 1. Active / Expired Plan Banner */}
       {displayPlan && (

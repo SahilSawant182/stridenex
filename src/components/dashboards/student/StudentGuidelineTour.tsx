@@ -20,7 +20,8 @@ import {
   Video,
   Users,
   Calendar,
-  Compass
+  Compass,
+  CreditCard
 } from "lucide-react";
 import { createPortal } from "react-dom";
 
@@ -137,6 +138,14 @@ export const STUDENT_SIDEBAR_STEPS: StudentSidebarTourStep[] = [
     icon: Calendar,
     badge: "Workshops",
     description: "Register for live webinars, coding competitions, hackathons, and campus tech symposiums to elevate your profile."
+  },
+  {
+    id: "tour-sidebar-plans",
+    name: "Plans",
+    title: "Subscription Plans",
+    icon: CreditCard,
+    badge: "Membership",
+    description: "Select and activate your subscription plan to unlock all verified learning pathways, recruiter drives, and career tools."
   }
 ];
 
@@ -144,12 +153,14 @@ interface StudentGuidelineTourProps {
   studentEmail?: string;
   disabled?: boolean;
   isFirstLogin?: boolean;
+  onTourClose?: () => void;
 }
 
 export default function StudentGuidelineTour({
   studentEmail,
   disabled,
-  isFirstLogin = false
+  isFirstLogin = false,
+  onTourClose
 }: StudentGuidelineTourProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -274,6 +285,9 @@ export default function StudentGuidelineTour({
     localStorage.setItem(userKey, "true");
     if (studentEmail && typeof window !== "undefined") {
       sessionStorage.setItem(`completed_student_tour_${studentEmail}`, "true");
+    }
+    if (onTourClose) {
+      onTourClose();
     }
   };
 

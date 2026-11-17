@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { motion, Variants } from "framer-motion";
 import StudentBannerWidget from "@/components/dashboards/widgets/RoleBannerWidget";
 import HorizontalTabs from "@/components/dashboards/shared/HorizontalTabs";
@@ -17,6 +18,7 @@ import StudentGuidelineTour from "@/components/dashboards/student/StudentGuideli
 import PsychometricTestModal from "@/components/PsychometricTestModal";
 import PsychometricHistoryModal from "@/components/PsychometricHistoryModal";
 import { psychometricApi } from "@/services/psychometricApi";
+import { fetchAndCacheStudentPlanStatus, useStudentPlan } from "@/utils/studentPlan";
 import { Sparkles, History } from "lucide-react";
 
 const container: Variants = {
@@ -43,7 +45,9 @@ const item: Variants = {
 };
 
 export default function StudentDashboardPage() {
+  const router = useRouter();
   const { currentUser, isInitialized } = useAuth();
+  const { hasActivePlan, loading: planLoading } = useStudentPlan();
 
   const [statsData, setStatsData] = useState<any>(() => {
     if (typeof window !== "undefined") {
@@ -66,6 +70,21 @@ export default function StudentDashboardPage() {
   const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
   const [hasCompletedTest, setHasCompletedTest] = useState<boolean>(false);
   const [isFirstLoginUser, setIsFirstLoginUser] = useState<boolean>(false);
+
+  // If returning student has no active plan and is not taking first login tour, redirect to Plans
+  useEffect(() => {
+    if (planLoading || isFirstLoginUser) return;
+    if (hasActivePlan === false) {
+      router.replace("/student/dashboard/plans");
+    }
+  }, [hasActivePlan, planLoading, isFirstLoginUser, router]);
+
+  const handleTourClose = async () => {
+    const active = await fetchAndCacheStudentPlanStatus();
+    if (!active) {
+      router.push("/student/dashboard/plans");
+    }
+  };
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -375,6 +394,7 @@ export default function StudentDashboardPage() {
           studentEmail={currentUser!}
           isFirstLogin={isFirstLoginUser}
           disabled={showTestModal}
+          onTourClose={handleTourClose}
         />
       )}
       <PsychometricTestModal

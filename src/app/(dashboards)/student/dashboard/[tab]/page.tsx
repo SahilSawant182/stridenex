@@ -1,7 +1,13 @@
+"use client";
+
+import { use, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useStudentPlan } from "@/utils/studentPlan";
+import { Lock, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import CommonTabContent from "@/components/dashboards/shared/CommonTabContent";
 import SkillsTabContent from "@/components/dashboards/student/SkillsTabContent";
 import PathTabContent from "@/components/dashboards/student/PathTabContent";
-import { use } from "react";
 import CommunityTabContent from "@/components/dashboards/student/CommunityTabContent";
 import InternshipTabContent from "@/components/dashboards/student/InternshipTabContent";
 import HabitsTabContent from "@/components/dashboards/student/HabitsTabContent";
@@ -20,8 +26,44 @@ import SuccessStoriesFooter from "@/components/dashboards/student/SuccessStories
 export default function DynamicStudentTabPage({ params }: { params: Promise<{ tab: string }> }) {
   const unwrappedParams = use(params);
   const tab = unwrappedParams.tab;
+  const router = useRouter();
+  const { hasActivePlan, loading } = useStudentPlan();
+
+  const isPlanTab = tab === "plans" || tab === "plan";
+
+  // Redirect locked tabs to plans page
+  useEffect(() => {
+    if (!loading && hasActivePlan === false && !isPlanTab) {
+      router.replace("/student/dashboard/plans");
+    }
+  }, [loading, hasActivePlan, isPlanTab, router]);
 
   const renderTab = () => {
+    if (isPlanTab) {
+      return <PlanTabContent />;
+    }
+
+    if (!loading && hasActivePlan === false) {
+      return (
+        <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600 mb-4 shadow-sm">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800">Plan Required</h2>
+          <p className="text-sm text-slate-500 max-w-md mt-1 mb-6">
+            All dashboard tabs are locked until an active plan is purchased. Please choose a subscription plan to unlock full access.
+          </p>
+          <Button
+            onClick={() => router.push("/student/dashboard/plans")}
+            className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-6 py-2.5 rounded-xl shadow-md inline-flex items-center gap-2"
+          >
+            <span>View Subscription Plans</span>
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+        </div>
+      );
+    }
+
     if (tab === "resume" || tab === "profile") {
       return <ResumeTabContent />;
     }
@@ -64,21 +106,18 @@ export default function DynamicStudentTabPage({ params }: { params: Promise<{ ta
     if (tab === "stories") {
       return <StoriesTabContent />;
     }
-    if (tab === "plans" || tab === "plan") {
-      return <PlanTabContent />;
-    }
     return <CommonTabContent title={tab} />;
   };
 
-  const showFooter = tab !== "shorts" && 
-                     tab !== "community" && 
-                     tab !== "stories" && 
-                     tab !== "path" && 
-                     tab !== "habits" && 
-                     tab !== "mentors" &&
-                     tab !== "resume" &&
-                     tab !== "profile";
-
+  const showFooter =
+    tab !== "shorts" &&
+    tab !== "community" &&
+    tab !== "stories" &&
+    tab !== "path" &&
+    tab !== "habits" &&
+    tab !== "mentors" &&
+    tab !== "resume" &&
+    tab !== "profile";
 
   return (
     <div className="flex flex-col min-h-full justify-between">

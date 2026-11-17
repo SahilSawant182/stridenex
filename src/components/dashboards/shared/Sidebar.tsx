@@ -7,7 +7,8 @@ import { dashboardConfig, type DashboardRole } from "@/config/dashboardNavigatio
 import { useAuth } from "@/context/AuthContext";
 import { buildProfileImageUrl } from "@/services/api.services";
 import { getStudentByEmail } from "@/services/student.services";
-import { LogOut, Settings, HelpCircle, ChevronLeft, ChevronRight, GraduationCap, University, Briefcase, UserCheck, User } from "lucide-react";
+import { LogOut, Settings, HelpCircle, ChevronLeft, ChevronRight, GraduationCap, University, Briefcase, UserCheck, User, Lock } from "lucide-react";
+import { useStudentPlan } from "@/utils/studentPlan";
 
 const getRoleIcon = (role: string, className: string = "w-4 h-4") => {
   switch (role) {
@@ -40,8 +41,16 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const { hasActivePlan } = useStudentPlan();
+  const isStudentWithoutPlan = role === "student" && hasActivePlan === false;
 
   const handleLinkClick = async (e: React.MouseEvent, href: string) => {
+    if (isStudentWithoutPlan && href !== "/student/dashboard/plans") {
+      e.preventDefault();
+      router.push("/student/dashboard/plans");
+      if (isMobile && onClose) onClose();
+      return;
+    }
     if (href === "/lms/courses") {
       if ((role as string) === "partner") {
         if (isMobile && onClose) onClose();
@@ -242,6 +251,7 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
             : (pathname === link.href || pathname.startsWith(`${link.href}/`));
 
           const Icon = link.icon;
+          const isLocked = isStudentWithoutPlan && link.href !== "/student/dashboard/plans";
 
           return (
             <Link
@@ -255,6 +265,7 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
               className={`
                 relative flex items-center
                 transition-all duration-200 group
+                ${isLocked ? "opacity-65 hover:opacity-100" : ""}
                 ${isActive
                   ? getActiveTabStyles()
                   : isShortsPage
@@ -281,6 +292,13 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
                 <span className={`flex-1 text-[14px] tracking-wide ${isActive ? "font-bold" : "font-medium"}`}>{link.name}</span>
               )}
 
+              {isLocked && !collapsed && (
+                <Lock className="w-3.5 h-3.5 text-amber-500 shrink-0 ml-auto" />
+              )}
+              {isLocked && collapsed && (
+                <Lock className="w-2.5 h-2.5 text-amber-500 absolute top-1.5 right-1.5" />
+              )}
+
               {/* Tooltip for collapsed state */}
               {collapsed && hoveredItem === link.name && (
                 <motion.div
@@ -288,7 +306,7 @@ export default function Sidebar({ role, collapsed = false, onToggle, isMobile, o
                   animate={{ opacity: 1, x: 0 }}
                   className="absolute left-full ml-3 px-3 py-1.5 bg-slate-800 text-white text-xs font-medium rounded-md shadow-lg whitespace-nowrap z-50 pointer-events-none"
                 >
-                  {link.name}
+                  {link.name} {isLocked ? "(Locked - Plan Required)" : ""}
                 </motion.div>
               )}
             </Link>

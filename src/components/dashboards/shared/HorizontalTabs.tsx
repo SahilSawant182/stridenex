@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { getStudentByEmail } from "@/services/student.services";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useStudentPlan } from "@/utils/studentPlan";
 import {
   LayoutDashboard,
   Code,
@@ -32,7 +33,9 @@ import {
   Star,
   FolderGit2,
   Settings,
-  HelpCircle
+  HelpCircle,
+  CreditCard,
+  Lock
 } from "lucide-react";
 
 interface HorizontalTabsProps {
@@ -53,6 +56,7 @@ const tabConfig = {
     { name: "Shorts", icon: Video, path: "/student/dashboard/shorts" },
     { name: "Community", icon: Users, path: "/student/dashboard/community" },
     { name: "Events", icon: Calendar, path: "/student/dashboard/events" },
+    { name: "Plans", icon: CreditCard, path: "/student/dashboard/plans" },
   ],
   college: [
     { name: "Overview", path: "/college/dashboard", icon: LayoutDashboard },
@@ -89,8 +93,11 @@ const tabConfig = {
 
 export default function HorizontalTabs({ role }: HorizontalTabsProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { currentUser } = useAuth();
   const [profile, setProfile] = useState<any>(null);
+  const { hasActivePlan } = useStudentPlan();
+  const isStudentWithoutPlan = role === "student" && hasActivePlan === false;
 
   useEffect(() => {
     if (role !== "student" || !currentUser) return;
@@ -174,20 +181,33 @@ export default function HorizontalTabs({ role }: HorizontalTabsProps) {
             ? pathname === tab.path
             : (pathname === tab.path || pathname?.startsWith(`${tab.path}/`));
 
+          const isLocked = isStudentWithoutPlan && tab.path !== "/student/dashboard/plans";
+
           return (
             <Link
               key={tab.path}
               href={tab.path}
-              title={tab.name}
+              title={isLocked ? `${tab.name} (Locked - Plan Required)` : tab.name}
               data-tour-tab={tab.name}
               id={`tour-tab-${tab.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`}
-              className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${isActive
+              onClick={(e) => {
+                if (isLocked) {
+                  e.preventDefault();
+                  router.push("/student/dashboard/plans");
+                }
+              }}
+              className={`relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${
+                isLocked ? "opacity-65 hover:opacity-100" : ""
+              } ${isActive
                 ? "text-slate-900 bg-slate-100 scale-105"
                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-50 hover:scale-105"
                 }`}
             >
               <span className="relative z-10 flex items-center justify-center">
                 <Icon className={`w-5 h-5 ${isActive ? getActiveColor() : 'text-slate-500'}`} />
+                {isLocked && (
+                  <Lock className="w-2.5 h-2.5 text-amber-500 absolute -top-1 -right-1" />
+                )}
               </span>
             </Link>
           );

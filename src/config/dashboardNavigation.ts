@@ -21,6 +21,7 @@ import {
   UserCheck,
   FolderGit2,
   Award,
+  CreditCard,
   type LucideIcon
 } from "lucide-react";
 
@@ -61,6 +62,7 @@ export const studentConfig: RoleConfig = {
     { name: "Shorts", href: "/student/dashboard/shorts", icon: Video },
     { name: "Community", href: "/student/dashboard/community", icon: Users },
     { name: "Events", href: "/student/dashboard/events", icon: Calendar },
+    { name: "Plans", href: "/student/dashboard/plans", icon: CreditCard },
     // { name: "Stories", href: "/student/dashboard/stories", icon: BookOpen },
   ],
   bottomLinks: [
