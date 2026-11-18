@@ -109,6 +109,7 @@ export const mentorConfig: RoleConfig = {
     { name: "Requests", href: "/mentor/dashboard/requests", icon: HelpCircle },
     { name: "Session History", href: "/mentor/dashboard/session-history", icon: BookOpen },
     { name: "Payouts & Commission", href: "/mentor/dashboard/payouts", icon: MessageSquare },
+    { name: "Team Members", href: "/mentor/dashboard/members", icon: Users },
     { name: "My Profile", href: "/mentor/dashboard/profile", icon: TrendingUp },
     { name: "LMS Studio", href: "/lms/courses", icon: BookOpen }
   ],
