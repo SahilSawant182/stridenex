@@ -893,10 +893,13 @@ export const getMemberAuthHeaders = (): Record<string, string> => {
   return {};
 };
 
+// Allow "Mentor" across all member operations
+export type OrgUserType = "Industry" | "College" | "Mentor";
+
 /** GET members — sends name & user_type as query params (Frappe GET), with fallback to POST */
 export const getIndustryMembers = async (
   orgName?: string,
-  userType: "Industry" | "College" = "Industry"
+  userType: OrgUserType = "Industry"
 ) => {
   const safeName = (orgName || "").trim();
   if (!safeName) {
@@ -942,7 +945,7 @@ export const getIndustryMembers = async (
 
 /** ADD a new member (separate endpoint from update) */
 export const addIndustryMember = async (payload: {
-  user_type: "Industry" | "College";
+  user_type: OrgUserType;
   first_name: string;
   last_name?: string | null;
   salutation?: string | null;
@@ -972,7 +975,7 @@ export const addIndustryMember = async (payload: {
 
 /** UPDATE an existing member */
 export const updateIndustryMember = async (payload: {
-  user_type: "Industry" | "College";
+  user_type: OrgUserType;
   first_name: string;
   last_name?: string | null;
   salutation?: string | null;
@@ -1002,7 +1005,7 @@ export const updateIndustryMember = async (payload: {
 
 /** REMOVE a member — payload: user_type, name, row_id */
 export const removeIndustryMember = async (payload: {
-  user_type: "Industry" | "College" | string;
+  user_type: OrgUserType | string;
   name: string;
   row_id?: number | string | null;
   member_user?: string;
@@ -1032,7 +1035,7 @@ export const removeIndustryMember = async (payload: {
 
 /** TOGGLE MEMBER STATUS (Activate / Deactivate) */
 export const toggleMemberStatus = async (payload: {
-  user_type: "Industry" | "College";
+  user_type: OrgUserType;
   name: string;
   member_email: string;
   row_id?: number | string | null;
