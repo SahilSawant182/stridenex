@@ -68,7 +68,7 @@ const INITIAL_FORM: MemberFormData = {
 };
 
 const SALUTATIONS = ["Mr", "Ms", "Mrs", "Dr", "Prof"];
-const MEMBER_TYPES = ["Admin", "Member", "Instructor"] as const;
+const MEMBER_TYPES = ["Member", "Instructor"] as const;
 
 export default function CollegeMembersTabContent() {
   const { currentUser } = useAuth();
@@ -296,6 +296,7 @@ export default function CollegeMembersTabContent() {
   };
 
   const openEditModal = (member: IndustryMember) => {
+    if ((member.member_type || "").toLowerCase() === "owner") return;
     setFormData({
       row_id: member.row_id ?? null,
       salutation: member.salutation || "Mr",
@@ -793,8 +794,12 @@ export default function CollegeMembersTabContent() {
                           {canManage && (
                             <button
                               onClick={() => openEditModal(member)}
-                              className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 transition-all shadow-2xs cursor-pointer"
-                              title="Edit member details"
+                              disabled={isOwner}
+                              className={`p-1.5 rounded-lg border transition-all shadow-2xs ${isOwner
+                                ? "border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed"
+                                : "border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 cursor-pointer"
+                                }`}
+                              title={isOwner ? "College Owner cannot be edited here" : "Edit member details"}
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </button>
@@ -872,7 +877,12 @@ export default function CollegeMembersTabContent() {
                     <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
                       <button
                         onClick={() => openEditModal(member)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-xs cursor-pointer"
+                        disabled={isOwner}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-bold transition shadow-xs ${isOwner
+                          ? "border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed"
+                          : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700 cursor-pointer"
+                          }`}
+                        title={isOwner ? "College Owner cannot be edited here" : "Edit member details"}
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                         <span>Edit</span>
@@ -1179,7 +1189,7 @@ export default function CollegeMembersTabContent() {
                     <label className="block text-xs font-bold text-slate-700 mb-1.5">
                       Access Role <span className="text-red-500">*</span>
                     </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       {MEMBER_TYPES.map((type) => {
                         const isSelected = formData.member_type.toLowerCase() === type.toLowerCase();
                         return (
@@ -1195,9 +1205,7 @@ export default function CollegeMembersTabContent() {
                             <div className="flex items-center justify-between w-full mb-1">
                               <span className="font-bold text-xs">{type}</span>
                               <div className={isSelected ? "text-blue-600" : "text-slate-400"}>
-                                {type === "Admin" ? (
-                                  <ShieldCheck className="w-4 h-4" />
-                                ) : type === "Instructor" ? (
+                                {type === "Instructor" ? (
                                   <GraduationCap className="w-4 h-4" />
                                 ) : (
                                   <UserCheck className="w-4 h-4" />
@@ -1205,11 +1213,9 @@ export default function CollegeMembersTabContent() {
                               </div>
                             </div>
                             <p className="text-[11px] text-slate-500 leading-tight">
-                              {type === "Admin"
-                                ? "Main user — Full access to manage college staff, drives & settings"
-                                : type === "Instructor"
-                                  ? "Faculty & educator — LMS studio, courses, sessions & grading"
-                                  : "Standard member — Access to student analytics & campus drives"}
+                              {type === "Instructor"
+                                ? "Faculty & educator — LMS studio, courses, sessions & grading"
+                                : "Standard member — Access to student analytics & campus drives"}
                             </p>
                           </button>
                         );
