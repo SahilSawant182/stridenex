@@ -786,19 +786,31 @@ export const deleteOfferTemplate = async (name: string) => {
 };
 
 /* ─── Industry / College Members Management APIs ─── */
+export interface MemberQuotaInfo {
+  active_package: string | null;
+  max_users: number; // 0 = unlimited, >0 = strict quota
+  active_users: number;
+  total_members: number;
+  remaining_users: number | null;
+  can_add_more: boolean;
+  is_locked: boolean;
+  quota_message: string;
+}
+
 export interface IndustryMember {
-  row_id: number | null;
-  /** Primary email field returned by API (new format) */
-  member_user?: string;
-  /** Legacy field aliases — keep for backward compat */
+  row_id?: number | string | null;
   user?: string;
-  email?: string;
-  first_name: string;
+  first_name?: string | null;
   last_name?: string | null;
   salutation?: string | null;
-  designation: string;
+  designation?: string | null;
   contact_no?: string | null;
-  member_type: "Owner" | "Admin" | "Member" | "HR" | string;
+  email?: string;
+  member_user?: string;
+  member_type?: string;
+  is_active?: boolean;
+  enabled?: number; // 1 = Active, 0 = Inactive
+  is_owner?: boolean;
   /** Legacy org field */
   industry?: string;
   /** New org field */
@@ -813,6 +825,7 @@ export interface IndustryMembersResponse {
   logged_in_member_type: string;
   total_members: number;
   data: IndustryMember[];
+  quota?: MemberQuotaInfo;
 }
 
 /** Resolves authorization header from local storage tokens */
@@ -938,7 +951,7 @@ export const addIndustryMember = async (payload: {
   member_user: string;
   member_type?: string;
   name: string;
-  row_id?: number | null;
+  row_id?: number | string | null;
   password?: string | null;
   user_password?: string | null;
   new_password?: string | null;
@@ -968,7 +981,7 @@ export const updateIndustryMember = async (payload: {
   member_user: string;
   member_type?: string;
   name: string;
-  row_id?: number | null;
+  row_id?: number | string | null;
   password?: string | null;
   user_password?: string | null;
   new_password?: string | null;
@@ -1013,6 +1026,28 @@ export const removeIndustryMember = async (payload: {
     return response;
   } catch (error) {
     console.error("Error removing industry member:", error);
+    throw error;
+  }
+};
+
+/** TOGGLE MEMBER STATUS (Activate / Deactivate) */
+export const toggleMemberStatus = async (payload: {
+  user_type: "Industry" | "College";
+  name: string;
+  member_email: string;
+  row_id?: number | string | null;
+  target_status?: boolean; // true = activate, false = deactivate
+}) => {
+  try {
+    const headers = getMemberAuthHeaders();
+    const response = await baseApiService.post(
+      "method/stridenex_app.api_stridenex_app.industry.industry.toggle_member_status",
+      payload,
+      { headers }
+    );
+    return response?.message || response?.data || response;
+  } catch (error) {
+    console.error("Error toggling member status:", error);
     throw error;
   }
 };

@@ -39,12 +39,14 @@ import {
   removeIndustryMember,
   getMasterData,
   createDesignation,
+  toggleMemberStatus,
+  MemberQuotaInfo,
   IndustryMember,
 } from "@/services/industry.services";
 import { toast } from "sonner";
 
 interface MemberFormData {
-  row_id: number | null;
+  row_id: number | string | null;
   salutation: string;
   first_name: string;
   last_name: string;
@@ -122,6 +124,8 @@ export default function CollegeMembersTabContent() {
   }, [currentUser]);
 
   const [members, setMembers] = useState<IndustryMember[]>([]);
+  const [quota, setQuota] = useState<MemberQuotaInfo | null>(null);
+  const [togglingEmail, setTogglingEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [loggedInMemberType, setLoggedInMemberType] = useState<string>("Member");
@@ -186,6 +190,10 @@ export default function CollegeMembersTabContent() {
           : [];
 
       setMembers(rawMembers);
+
+      if (apiResponse?.quota) {
+        setQuota(apiResponse.quota);
+      }
 
       if (apiResponse?.logged_in_member_type) {
         setLoggedInMemberType(apiResponse.logged_in_member_type);
@@ -448,6 +456,104 @@ export default function CollegeMembersTabContent() {
     }
   };
 
+  const handleToggleStatus = async (member: IndustryMember) => {
+    const email = member.member_user || member.email || member.user || "";
+    if (!email || member.is_owner || (member.member_type || "").toLowerCase() === "owner") {
+      return; // Owner cannot be toggled
+    }
+
+    const currentActive = member.is_active ?? member.enabled === 1;
+    const targetStatus = !currentActive;
+
+    // Pre-check if trying to activate while quota is locked
+    if (targetStatus && quota && quota.max_users > 0 && quota.is_locked) {
+      toast.error(
+        `Plan limit reached (${quota.active_users}/${quota.max_users}). Deactivate an active member first, or upgrade your plan.`
+      );
+      return;
+    }
+
+    const targetOrg =
+      collegeName ||
+      (() => {
+        try {
+          const stored = localStorage.getItem("collegeDetails");
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            return parsed?.college_name || parsed?.name || "";
+          }
+        } catch (_) {}
+        return "";
+      })() ||
+      currentUser ||
+      "";
+
+    if (!targetOrg) {
+      toast.error("College name not found. Please refresh and try again.");
+      return;
+    }
+
+    try {
+      setTogglingEmail(email);
+
+      const res = await toggleMemberStatus({
+        user_type: "College",
+        name: targetOrg,
+        member_email: email,
+        row_id: member.row_id,
+        target_status: targetStatus,
+      });
+
+      const isNowActive = res?.is_active ?? targetStatus;
+
+      // Update local state immediately
+      setMembers((prev) =>
+        prev.map((m) => {
+          const mEmail = m.member_user || m.email || m.user || "";
+          if (mEmail.toLowerCase() === email.toLowerCase()) {
+            return {
+              ...m,
+              is_active: isNowActive,
+              enabled: isNowActive ? 1 : 0,
+            };
+          }
+          return m;
+        })
+      );
+
+      // Update quota metrics
+      setQuota((prev) => {
+        if (!prev || prev.max_users <= 0) return prev;
+        const newActiveCount = isNowActive ? prev.active_users + 1 : Math.max(0, prev.active_users - 1);
+        const isLocked = newActiveCount >= prev.max_users;
+        return {
+          ...prev,
+          active_users: newActiveCount,
+          remaining_users: Math.max(0, prev.max_users - newActiveCount),
+          can_add_more: !isLocked,
+          is_locked: isLocked,
+        };
+      });
+
+      toast.success(
+        isNowActive
+          ? `Member ${email} activated successfully.`
+          : `Member ${email} deactivated. 1 quota slot freed up.`
+      );
+    } catch (err: any) {
+      const errorMsg =
+        err?.response?.data?.message ||
+        err?.response?.data?._server_messages ||
+        err?.message ||
+        "Failed to update member status";
+      toast.error(typeof errorMsg === "string" ? errorMsg.replace(/<[^>]*>?/gm, "") : "Failed to toggle status");
+      // Refresh members list to sync state from backend
+      fetchMembers(true);
+    } finally {
+      setTogglingEmail(null);
+    }
+  };
+
   const filteredMembers = useMemo(() => {
     return members.filter((member) => {
       if (selectedRoleFilter !== "All") {
@@ -560,8 +666,21 @@ export default function CollegeMembersTabContent() {
           </button>
           {canManage && (
             <button
-              onClick={openAddModal}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold shadow-sm shadow-blue-600/20 active:scale-95 transition-all cursor-pointer"
+              onClick={() => {
+                if (quota && quota.max_users > 0 && quota.is_locked) {
+                  toast.error(
+                    `Plan Member Limit Reached! Your plan allows max ${quota.max_users} active members. Upgrade your plan or deactivate an existing member first.`
+                  );
+                  return;
+                }
+                openAddModal();
+              }}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-white text-sm font-bold shadow-sm transition-all cursor-pointer ${
+                quota?.is_locked
+                  ? "bg-slate-400 hover:bg-slate-500 shadow-slate-400/20"
+                  : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/20 active:scale-95"
+              }`}
+              title={quota?.is_locked ? "Plan limit reached. Deactivate a member or upgrade." : "Add Member"}
             >
               <UserPlus className="w-4 h-4" />
               <span>Add Member</span>
@@ -618,6 +737,67 @@ export default function CollegeMembersTabContent() {
           <span className="text-xs text-slate-400 font-medium">Staff &amp; coordinators</span>
         </div>
       </div>
+
+      {/* ── Plan Member Quota Banner ── */}
+      {quota && (
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-slate-50 to-blue-50/40 border border-slate-200/80 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div
+              className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm ${
+                quota.is_locked ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"
+              }`}
+            >
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold text-slate-900">
+                  {quota.active_package || "Current Plan"}
+                </p>
+                {quota.is_locked && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                    Quota Full
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-500">
+                {quota.max_users > 0
+                  ? `${quota.active_users} of ${quota.max_users} active member slots used`
+                  : `${quota.active_users} active members (Unlimited quota)`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {quota.max_users > 0 && (
+              <div className="hidden sm:flex items-center gap-2">
+                <div className="w-28 h-2 bg-slate-200 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-300 ${
+                      quota.is_locked ? "bg-amber-500" : "bg-blue-600"
+                    }`}
+                    style={{
+                      width: `${Math.min(100, (quota.active_users / quota.max_users) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <span className="text-xs font-semibold text-slate-600 font-mono">
+                  {quota.active_users}/{quota.max_users}
+                </span>
+              </div>
+            )}
+
+            {quota.is_locked && (
+              <a
+                href="/partner/billing"
+                className="text-xs font-bold text-blue-700 hover:text-blue-800 underline underline-offset-2 ml-1"
+              >
+                Upgrade Plan
+              </a>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Search & Filter Bar ── */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
@@ -697,8 +877,20 @@ export default function CollegeMembersTabContent() {
           </p>
           {canManage && !searchQuery && selectedRoleFilter === "All" && (
             <button
-              onClick={openAddModal}
-              className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
+              onClick={() => {
+                if (quota && quota.max_users > 0 && quota.is_locked) {
+                  toast.error(
+                    `Plan Member Limit Reached! Your plan allows max ${quota.max_users} active members. Upgrade your plan or deactivate an existing member first.`
+                  );
+                  return;
+                }
+                openAddModal();
+              }}
+              className={`mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-white text-xs font-bold transition shadow-xs cursor-pointer ${
+                quota?.is_locked
+                  ? "bg-slate-400 hover:bg-slate-500"
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
             >
               <UserPlus className="w-3.5 h-3.5" />
               <span>Add First Member</span>
@@ -716,6 +908,7 @@ export default function CollegeMembersTabContent() {
                   <th className="py-3.5 px-6">Designation</th>
                   <th className="py-3.5 px-6">Contact &amp; Email</th>
                   <th className="py-3.5 px-6">Role &amp; Access</th>
+                  <th className="py-3.5 px-6">Status</th>
                   <th className="py-3.5 px-6 text-right">Actions</th>
                 </tr>
               </thead>
@@ -787,6 +980,52 @@ export default function CollegeMembersTabContent() {
                           {roleBadge.icon}
                           <span>{member.member_type || "Member"}</span>
                         </span>
+                      </td>
+
+                      {/* Status & Toggle */}
+                      <td className="py-4 px-6">
+                        {isOwner ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-semibold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Always Active
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={!canManage || togglingEmail === userEmail}
+                              onClick={() => handleToggleStatus(member)}
+                              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden disabled:opacity-50 disabled:cursor-not-allowed ${
+                                member.is_active ?? member.enabled === 1 ? "bg-emerald-600" : "bg-slate-300"
+                              }`}
+                              title={
+                                member.is_active ?? member.enabled === 1
+                                  ? "Click to deactivate member"
+                                  : "Click to activate member"
+                              }
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                                  member.is_active ?? member.enabled === 1 ? "translate-x-5" : "translate-x-0"
+                                }`}
+                              />
+                            </button>
+
+                            {togglingEmail === userEmail ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
+                            ) : (
+                              <span
+                                className={`text-xs font-semibold ${
+                                  member.is_active ?? member.enabled === 1
+                                    ? "text-emerald-700 font-medium"
+                                    : "text-slate-500 font-medium"
+                                }`}
+                              >
+                                {member.is_active ?? member.enabled === 1 ? "Active" : "Inactive"}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </td>
 
                       <td className="py-4 px-6 text-right">
@@ -869,6 +1108,36 @@ export default function CollegeMembersTabContent() {
                       <div className="flex items-center gap-2">
                         <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                         <span>{member.contact_no}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <span className="text-xs text-slate-500 font-medium">Status:</span>
+                    {isOwner ? (
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-semibold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Always Active
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={!canManage || togglingEmail === userEmail}
+                          onClick={() => handleToggleStatus(member)}
+                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out disabled:opacity-50 ${
+                            member.is_active ?? member.enabled === 1 ? "bg-emerald-600" : "bg-slate-300"
+                          }`}
+                        >
+                          <span
+                            className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition duration-200 ease-in-out ${
+                              member.is_active ?? member.enabled === 1 ? "translate-x-4" : "translate-x-0"
+                            }`}
+                          />
+                        </button>
+                        <span className="text-xs font-medium text-slate-600">
+                          {member.is_active ?? member.enabled === 1 ? "Active" : "Inactive"}
+                        </span>
                       </div>
                     )}
                   </div>
