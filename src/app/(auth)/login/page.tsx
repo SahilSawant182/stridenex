@@ -109,7 +109,7 @@ export default function LoginPage() {
           return;
         }
       }
-    } catch {}
+    } catch { }
 
     // Partner bypass: Partners do not have onboarding, so we skip the isOnboarded check
     if (role === "partner") {
@@ -188,24 +188,27 @@ export default function LoginPage() {
 
       if (data.message === "Logged In") {
         const op: OperationalProfile | undefined = data.operational_profile;
+        const userRoles = Array.isArray(data.roles) ? data.roles : [];
+        const hasInstructorRole = userRoles.some((r: string) => ["Instructor", "Course Creator"].includes(r));
+
         if (op) {
+          const isInstructorUser = op.member_type === "Instructor" || op.tier === "instructor_member" || op.tier === "owner" || hasInstructorRole;
+
           localStorage.setItem("operational_profile", JSON.stringify(op));
           localStorage.setItem("can_access_stridenex", String(op.can_access_stridenex));
-          localStorage.setItem("can_switch_view", String(op.can_switch_view));
+          localStorage.setItem("can_switch_view", String(isInstructorUser ? true : op.can_switch_view));
           localStorage.setItem("has_lms_access", String(op.has_lms_access));
           localStorage.setItem("member_type", op.member_type || "");
           localStorage.setItem("tier", op.tier || "");
-          localStorage.setItem(
-            "isInstructor",
-            op.member_type === "Instructor" || op.tier === "instructor_member" || op.tier === "owner" ? "true" : "false"
-          );
+          localStorage.setItem("isInstructor", isInstructorUser ? "true" : "false");
 
           if (typeof document !== "undefined") {
             document.cookie = `has_lms_access=${op.has_lms_access}; path=/; max-age=86400`;
             document.cookie = `can_access_stridenex=${op.can_access_stridenex}; path=/; max-age=86400`;
-            document.cookie = `can_switch_view=${op.can_switch_view}; path=/; max-age=86400`;
+            document.cookie = `can_switch_view=${isInstructorUser ? true : op.can_switch_view}; path=/; max-age=86400`;
             document.cookie = `member_type=${op.member_type}; path=/; max-age=86400`;
             document.cookie = `tier=${op.tier}; path=/; max-age=86400`;
+            document.cookie = `isInstructor=${isInstructorUser}; path=/; max-age=86400`;
             document.cookie = `operational_profile=${encodeURIComponent(JSON.stringify(op))}; path=/; max-age=86400`;
           }
 
@@ -223,7 +226,7 @@ export default function LoginPage() {
               const api_secret = data.key_details?.api_secret || data.api_secret || "";
               const fullName = data.full_name || formValues.username.split("@")[0];
               const email = data.user || formValues.username;
-              const isInstructorMember = op.member_type === "Instructor" || op.tier === "instructor_member";
+              const isInstructorMember = op.member_type === "Instructor" || op.tier === "instructor_member" || hasInstructorRole;
               const initialMode = isInstructorMember ? "instructor" : "learner";
 
               localStorage.setItem("user", email);
@@ -233,21 +236,21 @@ export default function LoginPage() {
               localStorage.setItem("userName", fullName);
               localStorage.setItem("isInstructor", isInstructorMember ? "true" : "false");
               localStorage.setItem("lms_active_view_mode", initialMode);
-              localStorage.setItem("can_switch_view", String(op.can_switch_view));
+              localStorage.setItem("can_switch_view", isInstructorMember ? "true" : String(op.can_switch_view));
               localStorage.setItem("can_access_stridenex", String(op.can_access_stridenex));
               localStorage.setItem("has_lms_access", String(op.has_lms_access));
-              localStorage.setItem("member_type", op.member_type || "");
-              localStorage.setItem("tier", op.tier || "");
+              localStorage.setItem("member_type", isInstructorMember ? "Instructor" : (op.member_type || ""));
+              localStorage.setItem("tier", isInstructorMember ? "instructor_member" : (op.tier || ""));
               localStorage.setItem("operational_profile", JSON.stringify(op));
 
               if (typeof document !== "undefined") {
                 document.cookie = `isInstructor=${isInstructorMember}; path=/; max-age=86400`;
                 document.cookie = `lms_active_view_mode=${initialMode}; path=/; max-age=86400`;
-                document.cookie = `can_switch_view=${op.can_switch_view}; path=/; max-age=86400`;
+                document.cookie = `can_switch_view=${isInstructorMember ? true : op.can_switch_view}; path=/; max-age=86400`;
                 document.cookie = `can_access_stridenex=${op.can_access_stridenex}; path=/; max-age=86400`;
                 document.cookie = `has_lms_access=${op.has_lms_access}; path=/; max-age=86400`;
-                document.cookie = `member_type=${op.member_type}; path=/; max-age=86400`;
-                document.cookie = `tier=${op.tier}; path=/; max-age=86400`;
+                document.cookie = `member_type=${isInstructorMember ? "Instructor" : op.member_type}; path=/; max-age=86400`;
+                document.cookie = `tier=${isInstructorMember ? "instructor_member" : op.tier}; path=/; max-age=86400`;
                 document.cookie = `user_role=${isInstructorMember ? "instructor" : "student"}; path=/; max-age=86400`;
                 document.cookie = `operational_profile=${encodeURIComponent(JSON.stringify(op))}; path=/; max-age=86400`;
               }
@@ -268,8 +271,8 @@ export default function LoginPage() {
               });
 
               const lmsBase = process.env.NEXT_PUBLIC_LMS_URL || (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") ? "http://localhost:3004" : "");
-              const target = op.default_redirect.startsWith("/lms") ? op.default_redirect : `/lms${op.default_redirect}`;
-              window.location.href = lmsBase ? `${lmsBase.replace(/\/lms\/?$/, "")}${target}` : target;
+              const redirectPath = isInstructorMember ? "/lms/dashboard?view=instructor" : (op.default_redirect.startsWith("/lms") ? op.default_redirect : `/lms${op.default_redirect}`);
+              window.location.href = lmsBase ? `${lmsBase.replace(/\/lms\/?$/, "")}${redirectPath}` : redirectPath;
               return;
             }
           }
@@ -345,19 +348,6 @@ export default function LoginPage() {
         // Sync roles and instructor flag for LMS integration
         localStorage.setItem("user", email);
         localStorage.setItem("email", email);
-        if (data.is_first_login !== undefined) {
-          localStorage.setItem(`is_first_login_${email}`, String(data.is_first_login));
-        } else {
-          const justSignedUp = typeof window !== "undefined" &&
-            sessionStorage.getItem("just_signed_up") === "true" &&
-            sessionStorage.getItem("newly_registered_email") === email;
-
-          if (justSignedUp) {
-            localStorage.setItem(`is_first_login_${email}`, "true");
-          } else {
-            localStorage.setItem(`is_first_login_${email}`, "false");
-          }
-        }
         if (typeof document !== "undefined") {
           document.cookie = `user_role=${userRole}; path=/`;
         }
