@@ -165,6 +165,19 @@ export default function IndustryGuidelineTour({
       }, 800);
     }
 
+    // Auto-launch when triggered from Support page or tour query param
+    const shouldForceTour =
+      typeof window !== "undefined" &&
+      (sessionStorage.getItem("launch_tour_on_mount") === "true" ||
+        new URLSearchParams(window.location.search).get("tour") === "true");
+
+    if (shouldForceTour) {
+      sessionStorage.removeItem("launch_tour_on_mount");
+      timer = setTimeout(() => {
+        startTour();
+      }, 400);
+    }
+
     const handleCustomTrigger = () => {
       startTour();
     };

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   HelpCircle,
-  Phone,
   Mail,
   MapPin,
   Clock,
@@ -13,14 +14,27 @@ import {
   Send,
   Compass,
   CheckCircle2,
-  BookOpen,
-  ShieldCheck,
-  MessageSquare,
   Sparkles,
-  ExternalLink,
-  Building2
+  Ticket,
+  PlusCircle,
+  MessageSquare,
+  AlertCircle,
+  ArrowLeft,
+  RefreshCw,
+  User,
+  Shield,
+  Layers,
+  X,
+  ExternalLink
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { BASE_DOMAIN } from "@/services/api.services";
+import {
+  ticketService,
+  TicketSummary,
+  TicketDetail,
+  TicketComment,
+} from "@/services/ticket.services";
 
 interface SupportTabContentProps {
   role?: "student" | "college" | "mentor" | "industry" | string;
@@ -31,11 +45,9 @@ interface FaqItem {
   question: string;
   answer: string;
   category: "General" | "Account & Security" | "Platform & Features" | "Billing & Plans";
-  roles?: string[];
 }
 
 const FAQS_DATA: FaqItem[] = [
-  // General FAQs
   {
     id: "gen-1",
     question: "What is StrideNex and how does it empower my journey?",
@@ -47,551 +59,1118 @@ const FAQS_DATA: FaqItem[] = [
     id: "gen-2",
     question: "Can I access StrideNex on both Web and Mobile devices?",
     answer:
-      "Yes! StrideNex is fully cross-platform. You can access the complete web portal from any modern desktop browser, or install the StrideNex Mobile app on your Android or iOS smartphone for on-the-go notifications, habit updates, course streaming, and mentor requests.",
+      "Yes! StrideNex is fully cross-platform. You can access the complete web portal from any modern desktop browser, or install the StrideNex Mobile app on your smartphone for on-the-go notifications, habit updates, course streaming, and mentor requests.",
     category: "General",
   },
   {
-    id: "gen-3",
-    question: "How do I take the interactive platform tour again?",
+    id: "feat-1",
+    question: "How does the Employability Score work?",
     answer:
-      "You can launch the guided tour at any time by clicking the 'Launch Guided Tour' button in the Quick Resources section below, or by clicking the floating 'Tabs Guide' button located in the bottom-right corner of your dashboard.",
-    category: "General",
-  },
-
-  // Student specific FAQs
-  {
-    id: "stu-1",
-    question: "How is my Employability Score calculated?",
-    answer:
-      "Your Employability Score is dynamically computed based on four pillars: verified technical skills in your Skill Ledger, consistency in your daily Habit Tracker, completion of LMS courses and real-world projects, and your academic CGPA. Consistently adding verified skills and maintaining habit streaks increases your score.",
+      "The Employability Score is dynamically computed using proprietary algorithms assessing your verified skills, project complexity, habit consistency, psychometric traits, and academic performance.",
     category: "Platform & Features",
-    roles: ["student"],
   },
   {
-    id: "stu-2",
-    question: "Why are some dashboard tabs locked with a plan badge?",
+    id: "feat-2",
+    question: "How do I take or retake the interactive platform tour?",
     answer:
-      "Certain advanced features (such as applying to premium Jobs & Internships, direct Mentor bookings, and unlimited LMS certifications) require an active student subscription plan. You can view all available plans, student discounts, and unlock access instantly in the Plans tab.",
-    category: "Billing & Plans",
-    roles: ["student"],
-  },
-  {
-    id: "stu-3",
-    question: "How do I participate in Campus Placement Drives?",
-    answer:
-      "Navigate to the 'Campus Drives' tab to see active and upcoming recruitment drives posted by partner companies and your college placement cell. Check the eligibility criteria, complete your profile to at least 80%, and click 'Apply Now' to submit your verified resume.",
+      "Click the 'Launch Guided Tour' button in the quick cards at the top of this Support page, or click the 'Tabs Guide' button located in your dashboard navigation at any time.",
     category: "Platform & Features",
-    roles: ["student"],
-  },
-
-  // College specific FAQs
-  {
-    id: "col-1",
-    question: "How does the College Placement Cell schedule campus recruitment drives?",
-    answer:
-      "Colleges can create and invite verified industry partners to virtual or on-campus drives from the 'Campus Drives' tab. You can set minimum eligibility thresholds (CGPA, backlogs, required skills), track student opt-ins in real-time, and download consolidated shortlisted batches with one click.",
-    category: "Platform & Features",
-    roles: ["college"],
   },
   {
-    id: "col-2",
-    question: "How can faculty track cohort skill readiness and NEP 2020 compliance?",
+    id: "acc-1",
+    question: "How do I update my profile details and verification credentials?",
     answer:
-      "The 'Student Analytics' and 'Interventions' tabs offer real-time cohort distribution charts, skill gap analyses, and automated alerts for students needing academic support, aligned with National Education Policy (NEP) outcome metrics.",
-    category: "Platform & Features",
-    roles: ["college"],
-  },
-
-  // Industry specific FAQs
-  {
-    id: "ind-1",
-    question: "How does Industry post new internship or job vacancies?",
-    answer:
-      "Navigate to the 'Internship Posts' or 'Job Profiles' tabs and click 'Create New Opening'. Specify required tech stack proficiencies, stipend/salary, job location (remote/onsite), and automatic screening criteria to receive pre-evaluated candidates.",
-    category: "Platform & Features",
-    roles: ["industry"],
-  },
-  {
-    id: "ind-2",
-    question: "How does the Application Pipeline work?",
-    answer:
-      "The 'Application Pipeline' provides an automated Kanban board to review student applications, inspect verified Skill Ledger achievements, schedule interviews, and issue offer letters with transparent status tracking.",
-    category: "Platform & Features",
-    roles: ["industry"],
-  },
-
-  // Mentor specific FAQs
-  {
-    id: "men-1",
-    question: "How do mentors set their schedule and 1:1 availability?",
-    answer:
-      "Head to the 'Schedule' tab to define your weekly calendar slots, available meeting durations (30 min or 60 min), and session topics. Incoming student requests will automatically reflect in your 'Requests' dashboard for confirmation.",
-    category: "Platform & Features",
-    roles: ["mentor"],
-  },
-  {
-    id: "men-2",
-    question: "When and how are mentor session payouts processed?",
-    answer:
-      "Session earnings are tracked in the 'Payouts & Commission' tab. Once a mentorship call is marked as completed by both parties, your verified balance is credited and disbursed to your linked bank account on a bi-weekly cycle.",
-    category: "Billing & Plans",
-    roles: ["mentor"],
-  },
-
-  // Account & Security
-  {
-    id: "sec-1",
-    question: "How do I reset or update my account password?",
-    answer:
-      "You can update your password from your Profile Settings. If you have forgotten your password, click the 'Forgot Password' link on the login page to receive a secure OTP verification on your registered email address.",
+      "Navigate to your Profile or Settings tab from the sidebar. You can update your bio, social links, resume, educational credentials, and contact preferences directly.",
     category: "Account & Security",
   },
   {
-    id: "sec-2",
-    question: "Is my personal, academic, and payment data secure?",
+    id: "acc-2",
+    question: "Is my personal data and document upload secure on StrideNex?",
     answer:
-      "Absolutely. StrideNex employs industry-grade 256-bit SSL encryption, tokenized authentication, and strict role-based access controls. We never store raw payment card data, and all transactions are processed through certified PCI-DSS compliant payment gateways.",
+      "All credentials, resumes, transcripts, and financial records are encrypted with end-to-end industry-standard security protocols and role-based permissions.",
     category: "Account & Security",
+  },
+  {
+    id: "bill-1",
+    question: "How do subscription plans and unlock permissions work?",
+    answer:
+      "Students require an active subscription plan to unlock full access across all specialized dashboard tabs. If your plan expires or is pending, access will be locked until an active plan is chosen.",
+    category: "Billing & Plans",
   },
 ];
 
-export default function SupportTabContent({ role = "student" }: SupportTabContentProps) {
-  const { currentUser, fullName } = useAuth();
-  const [activeCategory, setActiveCategory] = useState<string>("All");
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [expandedFaqId, setExpandedFaqId] = useState<string | null>("gen-1");
+/**
+ * Clean & sanitize untrusted HTML messages from backend.
+ * Renders HTML tags (e.g. <p>, <b>, <br>) as proper elements rather than raw text,
+ * and transforms <img src="..."> tags into styled interactive image elements.
+ */
+const sanitizeAndProcessHtml = (html: string, baseDomain: string): string => {
+  if (!html) return "";
+  if (typeof window === "undefined") {
+    return html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "");
+  }
 
-  // Contact form state
-  const [ticketSubject, setTicketSubject] = useState("");
-  const [ticketCategory, setTicketCategory] = useState("General Inquiry");
-  const [ticketMessage, setTicketMessage] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  try {
+    let doc: Document;
+    if (typeof (Document as any).parseHTML === "function") {
+      doc = (Document as any).parseHTML(html);
+    } else {
+      const parser = new DOMParser();
+      doc = parser.parseFromString(html, "text/html");
+    }
 
-  // Filtered FAQs based on user role, category, and search query
-  const filteredFaqs = useMemo(() => {
-    return FAQS_DATA.filter((faq) => {
-      // Role filter: if FAQ has specific roles, only show if current role matches
-      if (faq.roles && !faq.roles.includes(role)) {
-        return false;
+    // Strip unsafe elements
+    const dangerousElements = doc.querySelectorAll(
+      "script, iframe, object, embed, form, input, button, link, style"
+    );
+    dangerousElements.forEach((el) => el.remove());
+
+    // Clean inline event handlers and javascript: URLs
+    const allNodes = doc.querySelectorAll("*");
+    allNodes.forEach((node) => {
+      for (let i = node.attributes.length - 1; i >= 0; i--) {
+        const attr = node.attributes[i];
+        const name = attr.name.toLowerCase();
+        const value = attr.value.trim().toLowerCase();
+        if (
+          name.startsWith("on") ||
+          value.startsWith("javascript:") ||
+          value.startsWith("vbscript:")
+        ) {
+          node.removeAttribute(attr.name);
+        }
       }
-      // Category filter
-      if (activeCategory !== "All" && faq.category !== activeCategory) {
-        return false;
-      }
-      // Search query filter
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
-        const matchesQuestion = faq.question.toLowerCase().includes(query);
-        const matchesAnswer = faq.answer.toLowerCase().includes(query);
-        return matchesQuestion || matchesAnswer;
-      }
-      return true;
     });
-  }, [role, activeCategory, searchQuery]);
 
-  const toggleFaq = (id: string) => {
-    setExpandedFaqId((prev) => (prev === id ? null : id));
-  };
+    // Fix relative image urls & add responsive styling
+    const imgNodes = doc.querySelectorAll("img");
+    imgNodes.forEach((img) => {
+      const src = img.getAttribute("src") || "";
+      if (
+        src &&
+        !src.startsWith("http://") &&
+        !src.startsWith("https://") &&
+        !src.startsWith("data:") &&
+        !src.startsWith("blob:")
+      ) {
+        const cleanPath = src.startsWith("/") ? src : `/${src}`;
+        img.setAttribute("src", `${baseDomain}${cleanPath}`);
+      }
+      img.setAttribute("loading", "lazy");
+      img.setAttribute(
+        "class",
+        "chat-attachment-img max-w-full max-h-80 rounded-xl my-2 border border-slate-200 dark:border-slate-700/80 shadow-xs cursor-pointer hover:opacity-95 transition-all block object-contain"
+      );
+      img.setAttribute("alt", img.getAttribute("alt") || "Attachment Image");
+    });
 
-  const handleTicketSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!ticketMessage.trim()) return;
+    return doc.body.innerHTML;
+  } catch (err) {
+    console.error("HTML sanitize error:", err);
+    return html;
+  }
+};
 
-    setIsSubmitting(true);
-    // Simulate support ticket dispatch
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitSuccess(true);
-      setTicketSubject("");
-      setTicketMessage("");
-      setTimeout(() => setSubmitSuccess(false), 5000);
-    }, 800);
-  };
+interface RichMessageContentProps {
+  content: string;
+  isUser?: boolean;
+  onImageClick?: (src: string) => void;
+}
 
-  const launchTourGuide = () => {
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent(`open-${role}-tour`));
+const RichMessageContent: React.FC<RichMessageContentProps> = ({
+  content,
+  isUser = false,
+  onImageClick,
+}) => {
+  const sanitizedHtml = useMemo(() => {
+    if (!content) return "";
+    return sanitizeAndProcessHtml(content, BASE_DOMAIN);
+  }, [content]);
+
+  const hasHtmlTags = useMemo(() => {
+    return /<[a-z][\s\S]*>/i.test(content || "");
+  }, [content]);
+
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target && target.tagName.toLowerCase() === "img") {
+      const src = (target as HTMLImageElement).getAttribute("src");
+      if (src && onImageClick) {
+        onImageClick(src);
+      }
     }
   };
 
-  // Role Accent Styles
-  const getRoleAccent = () => {
-    switch (role) {
-      case "college":
-        return {
-          gradient: "from-emerald-500 to-green-600",
-          bgLight: "bg-emerald-50",
-          borderLight: "border-emerald-200",
-          text: "text-emerald-600",
-          btn: "bg-emerald-600 hover:bg-emerald-700",
-          pill: "bg-emerald-100 text-emerald-800",
-        };
-      case "industry":
-        return {
-          gradient: "from-purple-600 to-indigo-600",
-          bgLight: "bg-purple-50",
-          borderLight: "border-purple-200",
-          text: "text-purple-600",
-          btn: "bg-purple-600 hover:bg-purple-700",
-          pill: "bg-purple-100 text-purple-800",
-        };
-      case "mentor":
-        return {
-          gradient: "from-violet-600 to-purple-600",
-          bgLight: "bg-violet-50",
-          borderLight: "border-violet-200",
-          text: "text-violet-600",
-          btn: "bg-violet-600 hover:bg-violet-700",
-          pill: "bg-violet-100 text-violet-800",
-        };
-      case "student":
-      default:
-        return {
-          gradient: "from-orange-500 to-amber-600",
-          bgLight: "bg-orange-50",
-          borderLight: "border-orange-200",
-          text: "text-orange-600",
-          btn: "bg-orange-600 hover:bg-orange-700",
-          pill: "bg-orange-100 text-orange-800",
-        };
-    }
-  };
-
-  const accent = getRoleAccent();
+  if (!hasHtmlTags) {
+    return (
+      <div className="whitespace-pre-wrap break-words leading-relaxed text-xs">
+        {content}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 pb-16 max-w-7xl mx-auto px-4 sm:px-6">
-      {/* ─── Compact Header ─────────────────────────────────────────── */}
-      <div className="rounded-2xl bg-white border border-slate-200/90 p-5 sm:p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-5">
-        <div className="flex items-start gap-4">
-          <div className={`w-12 h-12 rounded-2xl ${accent.bgLight} ${accent.borderLight} border flex items-center justify-center shrink-0 shadow-xs`}>
-            <HelpCircle className={`w-6 h-6 ${accent.text}`} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${accent.pill}`}>
-                Support & Help Center
-              </span>
+    <div
+      onClick={handleClick}
+      className={`rich-chat-content break-words leading-relaxed text-xs ${
+        isUser
+          ? "text-white [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_a]:text-white [&_a]:underline [&_img]:border-white/30"
+          : "text-slate-800 dark:text-slate-100 [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_a]:text-orange-600 dark:[&_a]:text-orange-400 [&_a]:underline"
+      }`}
+      dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
+    />
+  );
+};
+
+export const SupportTabContent: React.FC<SupportTabContentProps> = ({ role = "student" }) => {
+  const router = useRouter();
+  const { currentUser, role: userRole } = useAuth();
+
+  // Active section: "faqs" | "raise-ticket" | "my-tickets"
+  const [activeTab, setActiveTab] = useState<"faqs" | "raise-ticket" | "my-tickets">("faqs");
+
+  // FAQs State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [expandedFaq, setExpandedFaq] = useState<string | null>(null);
+
+  // Tickets List State
+  const [tickets, setTickets] = useState<TicketSummary[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [ticketListError, setTicketListError] = useState<string | null>(null);
+
+  // Selected Ticket Conversation State
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [ticketDetail, setTicketDetail] = useState<TicketDetail | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [replyMessage, setReplyMessage] = useState("");
+  const [submittingReply, setSubmittingReply] = useState(false);
+  const [replyError, setReplyError] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  // Raise Ticket Form State
+  const [ticketSubject, setTicketSubject] = useState("");
+  const [ticketPriority, setTicketPriority] = useState<"Low" | "Medium" | "High" | "Urgent">("Medium");
+  const [ticketDescription, setTicketDescription] = useState("");
+  const [submittingTicket, setSubmittingTicket] = useState(false);
+  const [createTicketSuccess, setCreateTicketSuccess] = useState<string | null>(null);
+  const [createTicketError, setCreateTicketError] = useState<string | null>(null);
+
+  // Launch Tour Handler
+  const [launchingTour, setLaunchingTour] = useState(false);
+
+  const handleLaunchTour = () => {
+    if (typeof window !== "undefined") {
+      setLaunchingTour(true);
+      const targetRole = (role || "student").toLowerCase();
+
+      // Set flag so the target dashboard will immediately auto-start the tour upon arrival
+      sessionStorage.setItem("launch_tour_on_mount", "true");
+
+      // Dispatch module-specific event in case the tour component is already mounted
+      window.dispatchEvent(new CustomEvent(`open-${targetRole}-tour`));
+
+      // Navigate to the dashboard overview where the tour steps & elements live
+      router.push(`/${targetRole}/dashboard?tour=true`);
+
+      setTimeout(() => {
+        setLaunchingTour(false);
+      }, 1200);
+    }
+  };
+
+  // Fetch Tickets
+  const fetchMyTickets = useCallback(async () => {
+    setLoadingTickets(true);
+    setTicketListError(null);
+    try {
+      const res: any = await ticketService.getMyTickets();
+      const list = res?.data?.tickets || res?.message?.data?.tickets || res?.message?.tickets || res?.tickets || [];
+      setTickets(Array.isArray(list) ? list : []);
+    } catch (err: any) {
+      console.error("Error fetching tickets:", err);
+      setTicketListError(err?.message || "Failed to load support tickets. Please try again.");
+    } finally {
+      setLoadingTickets(false);
+    }
+  }, []);
+
+  // Fetch Single Ticket Details
+  const fetchTicketDetails = useCallback(async (ticketId: string) => {
+    setLoadingDetail(true);
+    setReplyError(null);
+    try {
+      const res: any = await ticketService.getTicketDetails(ticketId);
+      const detail = res?.data || res?.message?.data || res?.message;
+      if (detail && detail.ticket_id) {
+        setTicketDetail(detail);
+      } else {
+        setTicketDetail(null);
+      }
+    } catch (err: any) {
+      console.error("Error fetching ticket details:", err);
+      setReplyError(err?.message || "Failed to load ticket conversation.");
+    } finally {
+      setLoadingDetail(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "my-tickets") {
+      fetchMyTickets();
+    }
+  }, [activeTab, fetchMyTickets]);
+
+  useEffect(() => {
+    if (selectedTicketId) {
+      fetchTicketDetails(selectedTicketId);
+    }
+  }, [selectedTicketId, fetchTicketDetails]);
+
+  // Handle Create Ticket
+  const handleCreateTicket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ticketSubject.trim()) {
+      setCreateTicketError("Please enter a ticket subject.");
+      return;
+    }
+    if (!ticketDescription.trim()) {
+      setCreateTicketError("Please describe your issue or question.");
+      return;
+    }
+
+    setSubmittingTicket(true);
+    setCreateTicketError(null);
+    setCreateTicketSuccess(null);
+
+    try {
+      const res: any = await ticketService.createTicket({
+        subject: ticketSubject.trim(),
+        description: ticketDescription.trim(),
+        priority: ticketPriority,
+      });
+
+      const newTicketId =
+        res?.data?.ticket_id ||
+        res?.data?.id ||
+        res?.message?.data?.ticket_id ||
+        res?.message?.ticket_id;
+
+      setCreateTicketSuccess(
+        newTicketId
+          ? `Ticket #${newTicketId} created successfully! Our support team will assist you shortly.`
+          : "Support ticket created successfully!"
+      );
+      setTicketSubject("");
+      setTicketDescription("");
+      setTicketPriority("Medium");
+
+      // Refresh tickets list
+      fetchMyTickets();
+    } catch (err: any) {
+      console.error("Error creating ticket:", err);
+      setCreateTicketError(err?.message || "Failed to submit ticket. Please try again.");
+    } finally {
+      setSubmittingTicket(false);
+    }
+  };
+
+  // Handle Reply to Ticket
+  const handleSendReply = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTicketId || !replyMessage.trim()) return;
+
+    setSubmittingReply(true);
+    setReplyError(null);
+
+    try {
+      await ticketService.addTicketComment({
+        ticket_id: selectedTicketId,
+        message: replyMessage.trim(),
+      });
+      setReplyMessage("");
+      // Refresh conversation
+      await fetchTicketDetails(selectedTicketId);
+    } catch (err: any) {
+      console.error("Error replying to ticket:", err);
+      setReplyError(err?.message || "Failed to post reply. Please try again.");
+    } finally {
+      setSubmittingReply(false);
+    }
+  };
+
+  // Filtered FAQs
+  const filteredFaqs = useMemo(() => {
+    return FAQS_DATA.filter((faq) => {
+      const matchesSearch =
+        faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        faq.answer.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCat =
+        selectedCategory === "All" || faq.category === selectedCategory;
+      return matchesSearch && matchesCat;
+    });
+  }, [searchQuery, selectedCategory]);
+
+  const getStatusBadge = (status: string) => {
+    const s = (status || "").toLowerCase();
+    if (s === "open") {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+          Open
+        </span>
+      );
+    }
+    if (s === "replied") {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700 border border-purple-200">
+          <MessageSquare className="w-3 h-3" />
+          Replied
+        </span>
+      );
+    }
+    if (s === "resolved" || s === "closed") {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
+          <CheckCircle2 className="w-3 h-3" />
+          {status}
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
+        {status || "In Progress"}
+      </span>
+    );
+  };
+
+  const getPriorityBadge = (priority: string) => {
+    const p = (priority || "").toLowerCase();
+    if (p === "urgent") {
+      return (
+        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-700 border border-rose-200 uppercase">
+          Urgent
+        </span>
+      );
+    }
+    if (p === "high") {
+      return (
+        <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-orange-100 text-orange-700 border border-orange-200 uppercase">
+          High
+        </span>
+      );
+    }
+    if (p === "low") {
+      return (
+        <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+          Low
+        </span>
+      );
+    }
+    return (
+      <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+        Medium
+      </span>
+    );
+  };
+
+  return (
+    <div className="w-full space-y-6 pb-12">
+      {/* Sleek, Compact Header Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 text-white shadow-md border border-slate-800">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-medium text-indigo-200">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>StrideNex Help Desk & Support</span>
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
-              How can we help you?
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white">
+              How can we assist you today?
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Explore frequently asked questions, platform guidelines, or reach out to our team.
+            <p className="text-xs md:text-sm text-slate-300 max-w-2xl">
+              Search frequently asked questions, launch guided platform walkthroughs, or raise and track support tickets directly.
             </p>
           </div>
-        </div>
 
-        {/* Live Search Bar */}
-        <div className="relative w-full md:w-80 shrink-0">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search FAQs & topics..."
-            className="w-full pl-9 pr-8 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-slate-300 focus:bg-white transition-all shadow-2xs"
-          />
-          {searchQuery && (
+          <div className="flex items-center gap-2 self-start md:self-center">
             <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 hover:text-slate-700"
+              onClick={() => {
+                setSelectedTicketId(null);
+                setActiveTab("raise-ticket");
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs md:text-sm font-semibold shadow-lg shadow-orange-500/25 transition-all transform active:scale-95"
             >
-              ✕
+              <PlusCircle className="w-4 h-4" />
+              <span>Raise Ticket</span>
             </button>
-          )}
+            <button
+              onClick={() => {
+                setSelectedTicketId(null);
+                setActiveTab("my-tickets");
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs md:text-sm font-medium transition-all"
+            >
+              <Ticket className="w-4 h-4 text-indigo-300" />
+              <span>My Tickets</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* ─── Quick Actions & Resources ──────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      {/* 3 Quick Cards In A Single Row: Interactive Tour, Email Desk, Contact Details */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Card 1: Interactive Tour */}
-        <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
-          <div>
-            <div className={`w-11 h-11 rounded-xl ${accent.bgLight} ${accent.text} flex items-center justify-center mb-4`}>
-              <Compass className="w-6 h-6 animate-spin-slow" />
+        <div className="flex flex-col justify-between p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+          <div className="space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+              <Compass className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">Interactive Tour</h3>
-            <p className="text-xs text-slate-500 leading-relaxed mb-4">
-              Need a step-by-step walkthrough of all dashboard features and navigation tabs?
-            </p>
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-white text-base">
+                Interactive Tour
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                Step-by-step walkthrough of dashboard features, metrics, and navigation tabs.
+              </p>
+            </div>
           </div>
           <button
-            onClick={launchTourGuide}
-            className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold text-white ${accent.btn} shadow-sm hover:shadow transition-all inline-flex items-center justify-center gap-2`}
+            onClick={handleLaunchTour}
+            disabled={launchingTour}
+            className="mt-4 w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-semibold shadow-sm transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer disabled:opacity-80"
           >
-            <span>Launch Guided Tour</span>
-            <Sparkles className="w-3.5 h-3.5" />
+            {launchingTour ? (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Launching Tour...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Launch Guided Tour</span>
+              </>
+            )}
           </button>
         </div>
 
-        {/* Card 2: Contact Hotline */}
-        <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
-          <div>
-            <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
-              <Phone className="w-6 h-6" />
+        {/* Card 2: Email Desk */}
+        <div className="flex flex-col justify-between p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+          <div className="space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <Mail className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">Direct Hotline</h3>
-            <p className="text-xs text-slate-500 leading-relaxed mb-4">
-              Speak with a support representative directly during business hours (Mon-Fri, 9am-6pm IST).
-            </p>
-          </div>
-          <a
-            href="tel:+919225297767"
-            className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white shadow-sm hover:shadow transition-all inline-flex items-center justify-center gap-2"
-          >
-            <span>Call (+91) 9225297767</span>
-          </a>
-        </div>
-
-        {/* Card 3: Email Support */}
-        <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
-          <div>
-            <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
-              <Mail className="w-6 h-6" />
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-white text-base">
+                Email Desk
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                Send inquiries, feedback, or logs. We respond within 24 business hours.
+              </p>
             </div>
-            <h3 className="text-base font-bold text-slate-900 mb-1">Email Desk</h3>
-            <p className="text-xs text-slate-500 leading-relaxed mb-4">
-              Send us detailed inquiries, feedback, or screenshots. We respond within 24 business hours.
-            </p>
           </div>
           <a
             href="mailto:info@stridenex.ai"
-            className="w-full py-2.5 px-4 rounded-xl text-xs font-bold bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 shadow-sm transition-all inline-flex items-center justify-center gap-2"
+            className="mt-4 w-full py-2.5 px-4 rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-semibold transition-all flex items-center justify-center gap-2"
           >
-            <span>Email info@stridenex.ai</span>
+            <Mail className="w-3.5 h-3.5" />
+            <span>info@stridenex.ai</span>
           </a>
+        </div>
+
+        {/* Card 3: Contact Details (Pune, Maharashtra, India) */}
+        <div className="flex flex-col justify-between p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-shadow">
+          <div className="space-y-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <MapPin className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900 dark:text-white text-base">
+                Office Location
+              </h3>
+              <p className="text-xs font-medium text-slate-700 dark:text-slate-300 mt-1">
+                Pune, Maharashtra, India
+              </p>
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                <Clock className="w-3 h-3 text-slate-400" />
+                <span>Mon – Fri • 9:00 AM – 6:00 PM IST</span>
+              </div>
+            </div>
+          </div>
+          <Link
+            href={`/contact-us?from=/${role || "student"}/dashboard/support`}
+            className="mt-4 w-full py-2.5 px-4 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 hover:bg-amber-100/60 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-xs font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            <span>Contact Details</span>
+          </Link>
         </div>
       </div>
 
-      {/* ─── Two-Column Layout: FAQs & Contact Us Form ──────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* ── Left Column: FAQs (7 Cols) ───────────────────────── */}
-        <div className="lg:col-span-7 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-extrabold text-slate-900 tracking-tight">
-                Frequently Asked Questions
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Quick answers to common questions about {role} workflows and platform tools.
-              </p>
-            </div>
+      {/* Main Support Sections Navigation Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setSelectedTicketId(null);
+              setActiveTab("faqs");
+            }}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
+              activeTab === "faqs" && !selectedTicketId
+                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+          >
+            <HelpCircle className="w-4 h-4" />
+            <span>FAQs</span>
+          </button>
 
-            {/* Category Pills */}
-            <div className="flex flex-wrap gap-1.5">
-              {["All", "Platform & Features", "Billing & Plans", "Account & Security"].map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                    activeCategory === cat
-                      ? `${accent.btn} text-white shadow-sm`
-                      : "bg-slate-100 hover:bg-slate-200 text-slate-600"
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
+          <button
+            onClick={() => {
+              setSelectedTicketId(null);
+              setActiveTab("raise-ticket");
+            }}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
+              activeTab === "raise-ticket" && !selectedTicketId
+                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>Raise a Ticket</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setSelectedTicketId(null);
+              setActiveTab("my-tickets");
+            }}
+            className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 ${
+              activeTab === "my-tickets" || selectedTicketId
+                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm"
+                : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"
+            }`}
+          >
+            <Ticket className="w-4 h-4" />
+            <span>My Tickets</span>
+            {tickets.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-orange-500 text-white">
+                {tickets.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {activeTab === "faqs" && (
+          <div className="relative w-full sm:w-72">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search questions or topics..."
+              className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 1: FAQs */}
+      {activeTab === "faqs" && (
+        <div className="space-y-4">
+          {/* Category Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2">
+            {["All", "General", "Platform & Features", "Account & Security", "Billing & Plans"].map((category) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  selectedCategory === category
+                    ? "bg-orange-50 text-orange-600 dark:bg-orange-950/40 dark:text-orange-400 border border-orange-200 dark:border-orange-800 font-semibold"
+                    : "bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800 hover:bg-slate-100"
+                }`}
+              >
+                {category}
+              </button>
+            ))}
           </div>
 
           {/* FAQ Accordion List */}
           <div className="space-y-3">
-            {filteredFaqs.length > 0 ? (
+            {filteredFaqs.length === 0 ? (
+              <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <HelpCircle className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                  No matching questions found
+                </p>
+                <p className="text-xs text-slate-500 mt-1">
+                  Try another search query or raise a support ticket directly.
+                </p>
+              </div>
+            ) : (
               filteredFaqs.map((faq) => {
-                const isOpen = expandedFaqId === faq.id;
+                const isOpen = expandedFaq === faq.id;
                 return (
                   <div
                     key={faq.id}
-                    className="border border-slate-200 rounded-2xl bg-white overflow-hidden shadow-xs hover:border-slate-300 transition-colors"
+                    className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs transition-all"
                   >
                     <button
-                      onClick={() => toggleFaq(faq.id)}
-                      className="w-full text-left p-4 sm:p-5 flex items-center justify-between gap-4 focus:outline-none"
+                      onClick={() => setExpandedFaq(isOpen ? null : faq.id)}
+                      className="w-full flex items-center justify-between p-4 text-left transition-colors hover:bg-slate-50/50 dark:hover:bg-slate-800/50"
                     >
-                      <span className="text-sm font-semibold text-slate-900">
-                        {faq.question}
-                      </span>
+                      <div className="flex items-center gap-3 pr-2">
+                        <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0" />
+                        <span className="text-xs md:text-sm font-semibold text-slate-900 dark:text-white">
+                          {faq.question}
+                        </span>
+                      </div>
                       <ChevronDown
                         className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${
                           isOpen ? "rotate-180 text-orange-500" : ""
                         }`}
                       />
                     </button>
-                    <AnimatePresence initial={false}>
+                    <AnimatePresence>
                       {isOpen && (
                         <motion.div
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
                           transition={{ duration: 0.2 }}
-                          className="overflow-hidden"
+                          className="px-4 pb-4 pt-1 border-t border-slate-100 dark:border-slate-800/80"
                         >
-                          <div className="px-5 pb-5 pt-1 text-xs sm:text-sm text-slate-600 leading-relaxed border-t border-slate-100">
+                          <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed pl-5">
                             {faq.answer}
-                          </div>
+                          </p>
                         </motion.div>
                       )}
                     </AnimatePresence>
                   </div>
                 );
               })
-            ) : (
-              <div className="text-center py-12 px-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50/50">
-                <Search className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                <p className="text-sm font-medium text-slate-700">No matching questions found</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  Try adjusting your search terms or select "All" categories.
-                </p>
-              </div>
             )}
           </div>
         </div>
+      )}
 
-        {/* ── Right Column: Official Contact & Ticket Form (5 Cols) ─ */}
-        <div className="lg:col-span-5 space-y-6">
-          {/* Official Contact Details Card */}
-          <div className="p-6 rounded-3xl bg-white border border-slate-200 shadow-sm space-y-5">
-            <h3 className="text-base font-bold text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
-              <Building2 className="w-4 h-4 text-slate-500" />
-              <span>Official Contact Details</span>
-            </h3>
-
-            <div className="space-y-4 text-xs sm:text-sm">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0 mt-0.5">
-                  <Phone className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-800">Phone Support</div>
-                  <a href="tel:+919225297767" className="text-slate-600 hover:text-orange-600 font-medium">
-                    (+91) 9225297767
-                  </a>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-                  <Mail className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-800">Email Address</div>
-                  <a href="mailto:info@stridenex.ai" className="text-slate-600 hover:text-blue-600 font-medium">
-                    info@stridenex.ai
-                  </a>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-800">Headquarters</div>
-                  <p className="text-slate-600 leading-relaxed text-xs">
-                    B2/20, Saudamini Co-Operative Housing Society, Paud Road, Kothrud, Pune, (MH) India 411038
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 mt-0.5">
-                  <Clock className="w-4 h-4" />
-                </div>
-                <div>
-                  <div className="font-semibold text-slate-800">Working Hours</div>
-                  <p className="text-slate-600 text-xs">Monday – Friday: 9:00 AM – 6:00 PM IST</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Query / Ticket Form */}
-          <div className="p-6 rounded-3xl bg-slate-900 text-white shadow-xl space-y-4">
+      {/* SECTION 2: RAISE A TICKET */}
+      {activeTab === "raise-ticket" && (
+        <div className="w-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-6 sm:p-7 shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 mb-5">
             <div>
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <MessageSquare className="w-4 h-4 text-orange-400" />
-                <span>Send Us a Message</span>
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Have a specific question or issue? Leave your message and we'll reply directly to {currentUser || "your registered email"}.
+              <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Ticket className="w-4 h-4 text-orange-500" />
+                <span>Create Support Ticket</span>
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Submit an inquiry or report an issue. Our support team will assist you.
               </p>
             </div>
+            <span className="text-[11px] px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium capitalize">
+              Role: {role}
+            </span>
+          </div>
 
-            {submitSuccess && (
-              <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-                <span>Thank you! Your message has been received. Our team will get back to you shortly.</span>
+          {createTicketSuccess && (
+            <div className="mb-4 p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>{createTicketSuccess}</span>
+            </div>
+          )}
+
+          {createTicketError && (
+            <div className="mb-4 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{createTicketError}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleCreateTicket} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Subject <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={ticketSubject}
+                onChange={(e) => setTicketSubject(e.target.value)}
+                placeholder="e.g., Unable to book mentorship session or upload certificate"
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Priority Level
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-w-lg">
+                {(["Low", "Medium", "High", "Urgent"] as const).map((p) => (
+                  <button
+                    type="button"
+                    key={p}
+                    onClick={() => setTicketPriority(p)}
+                    className={`py-2 text-xs font-medium rounded-xl border text-center transition-all ${
+                      ticketPriority === p
+                        ? "bg-orange-500 border-orange-500 text-white font-semibold shadow-xs"
+                        : "border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
 
-            <form onSubmit={handleTicketSubmit} className="space-y-3.5">
-              <div>
-                <label className="text-[11px] font-semibold text-slate-300 uppercase tracking-wider block mb-1">
-                  Query Category
-                </label>
-                <select
-                  value={ticketCategory}
-                  onChange={(e) => setTicketCategory(e.target.value)}
-                  className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white text-xs focus:outline-none focus:ring-1 focus:ring-orange-400"
-                >
-                  <option value="General Inquiry" className="text-slate-900">General Inquiry</option>
-                  <option value="Technical Issue" className="text-slate-900">Technical Issue / Bug</option>
-                  <option value="Billing & Subscription" className="text-slate-900">Billing & Subscription</option>
-                  <option value="Courses & LMS" className="text-slate-900">Courses & LMS Studio</option>
-                  <option value="Placement Drives" className="text-slate-900">Placement & Drives</option>
-                  <option value="Feedback" className="text-slate-900">Feature Request / Feedback</option>
-                </select>
-              </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                Issue Description <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                required
+                rows={5}
+                value={ticketDescription}
+                onChange={(e) => setTicketDescription(e.target.value)}
+                placeholder="Please describe what occurred in detail, including steps to reproduce, relevant tab names, or transaction details..."
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+              />
+            </div>
 
-              <div>
-                <label className="text-[11px] font-semibold text-slate-300 uppercase tracking-wider block mb-1">
-                  Subject
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={ticketSubject}
-                  onChange={(e) => setTicketSubject(e.target.value)}
-                  placeholder="Brief summary of your question..."
-                  className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-slate-400 text-xs focus:outline-none focus:ring-1 focus:ring-orange-400"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-semibold text-slate-300 uppercase tracking-wider block mb-1">
-                  Message Details
-                </label>
-                <textarea
-                  required
-                  rows={4}
-                  value={ticketMessage}
-                  onChange={(e) => setTicketMessage(e.target.value)}
-                  placeholder="Describe what you need help with..."
-                  className="w-full px-3 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-slate-400 text-xs focus:outline-none focus:ring-1 focus:ring-orange-400 resize-none"
-                />
-              </div>
-
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setTicketSubject("");
+                  setTicketDescription("");
+                  setCreateTicketError(null);
+                  setActiveTab("my-tickets");
+                }}
+                className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+              >
+                View Existing Tickets
+              </button>
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className="w-full py-3 px-4 rounded-xl text-xs font-bold bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-md transition-all inline-flex items-center justify-center gap-2 disabled:opacity-50"
+                disabled={submittingTicket}
+                className="px-5 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold shadow-md shadow-orange-500/20 transition-all flex items-center gap-2 disabled:opacity-50"
               >
-                {isSubmitting ? (
-                  <span>Sending Message...</span>
+                {submittingTicket ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Submitting Ticket...</span>
+                  </>
                 ) : (
                   <>
-                    <span>Submit Query</span>
                     <Send className="w-3.5 h-3.5" />
+                    <span>Submit Ticket</span>
                   </>
                 )}
               </button>
-            </form>
-          </div>
+            </div>
+          </form>
         </div>
-      </div>
+      )}
+
+      {/* SECTION 3: MY TICKETS LIST OR CONVERSATION CHAT VIEW */}
+      {activeTab === "my-tickets" && (
+        <div>
+          {/* TICKET CONVERSATION VIEW */}
+          {selectedTicketId ? (
+            <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+              {/* Conversation Header */}
+              <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setSelectedTicketId(null);
+                      setTicketDetail(null);
+                    }}
+                    className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors"
+                    title="Back to Tickets"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                        #{ticketDetail?.ticket_id || selectedTicketId}
+                      </span>
+                      {ticketDetail && getStatusBadge(ticketDetail.status)}
+                      {ticketDetail && getPriorityBadge(ticketDetail.priority)}
+                    </div>
+                    <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white mt-0.5">
+                      {ticketDetail?.subject || "Ticket Details"}
+                    </h2>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => fetchTicketDetails(selectedTicketId)}
+                  disabled={loadingDetail}
+                  className="self-end sm:self-center px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingDetail ? "animate-spin" : ""}`} />
+                  <span>Refresh</span>
+                </button>
+              </div>
+
+              {/* Conversation Messages Container */}
+              <div className="p-4 sm:p-6 space-y-4 max-h-[500px] overflow-y-auto bg-slate-50/30 dark:bg-slate-900/50">
+                {loadingDetail && !ticketDetail ? (
+                  <div className="py-12 text-center text-slate-500 flex flex-col items-center gap-2">
+                    <RefreshCw className="w-6 h-6 animate-spin text-orange-500" />
+                    <p className="text-xs">Loading ticket conversation...</p>
+                  </div>
+                ) : ticketDetail ? (
+                  <>
+                    {/* Original Issue Card */}
+                    <div className="p-4 rounded-xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+                      <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
+                        <span className="font-semibold text-slate-700 dark:text-slate-300">
+                          Initial Description
+                        </span>
+                        <span>{ticketDetail.created_at || "Opened"}</span>
+                      </div>
+                      <RichMessageContent
+                        content={ticketDetail.description}
+                        isUser={false}
+                        onImageClick={setPreviewImage}
+                      />
+                    </div>
+
+                    {/* Chat Comments Stream */}
+                    {ticketDetail.comments && ticketDetail.comments.length > 0 ? (
+                      ticketDetail.comments.map((comment: TicketComment, idx: number) => {
+                        const isUserMsg = comment.is_user;
+                        return (
+                          <div
+                            key={comment.comment_id || idx}
+                            className={`flex flex-col ${
+                              isUserMsg ? "items-end" : "items-start"
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 mb-1 px-1">
+                              {isUserMsg ? (
+                                <>
+                                  <User className="w-3 h-3 text-orange-500" />
+                                  <span className="font-medium text-slate-700 dark:text-slate-300">
+                                    You
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <Shield className="w-3 h-3 text-indigo-500" />
+                                  <span className="font-medium text-indigo-600 dark:text-indigo-400">
+                                    Support Desk ({comment.comment_by || "Agent"})
+                                  </span>
+                                </>
+                              )}
+                              <span>•</span>
+                              <span>{comment.created_at || ""}</span>
+                            </div>
+
+                            <div
+                              className={`max-w-[85%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl text-xs leading-relaxed ${
+                                isUserMsg
+                                  ? "bg-orange-500 text-white rounded-br-xs shadow-xs"
+                                  : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-xs border border-slate-200 dark:border-slate-700 shadow-xs"
+                              }`}
+                            >
+                              <RichMessageContent
+                                content={comment.message}
+                                isUser={isUserMsg}
+                                onImageClick={setPreviewImage}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="py-6 text-center text-xs text-slate-500 dark:text-slate-400">
+                        No agent comments yet. Our team will review your ticket and reply here.
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="py-8 text-center text-xs text-rose-500">
+                    Failed to load ticket details. Please click Refresh or select another ticket.
+                  </div>
+                )}
+              </div>
+
+              {/* Reply Input Bar */}
+              <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+                {replyError && (
+                  <div className="mb-2 p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{replyError}</span>
+                  </div>
+                )}
+                <form onSubmit={handleSendReply} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={replyMessage}
+                    onChange={(e) => setReplyMessage(e.target.value)}
+                    placeholder="Type your reply or additional details here..."
+                    className="flex-1 px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={submittingReply || !replyMessage.trim()}
+                    className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    {submittingReply ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Send className="w-3.5 h-3.5" />
+                    )}
+                    <span>Send</span>
+                  </button>
+                </form>
+              </div>
+            </div>
+          ) : (
+            /* TICKETS LIST VIEW */
+            <div className="space-y-3">
+              <div className="flex items-center justify-between pb-1">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    My Raised Tickets
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Track status and conversation history with our support team.
+                  </p>
+                </div>
+                <button
+                  onClick={fetchMyTickets}
+                  disabled={loadingTickets}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingTickets ? "animate-spin" : ""}`} />
+                  <span>Refresh List</span>
+                </button>
+              </div>
+
+              {ticketListError && (
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{ticketListError}</span>
+                </div>
+              )}
+
+              {loadingTickets ? (
+                <div className="py-12 text-center text-slate-500 flex flex-col items-center gap-2">
+                  <RefreshCw className="w-6 h-6 animate-spin text-orange-500" />
+                  <p className="text-xs">Fetching your support tickets...</p>
+                </div>
+              ) : tickets.length === 0 ? (
+                <div className="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+                  <Ticket className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    No tickets found
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                    You have not raised any support tickets yet. If you need any assistance, click the button below.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab("raise-ticket")}
+                    className="mt-4 px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold transition-all inline-flex items-center gap-1.5"
+                  >
+                    <PlusCircle className="w-3.5 h-3.5" />
+                    <span>Raise a New Ticket</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {tickets.map((t) => (
+                    <div
+                      key={t.ticket_id}
+                      onClick={() => setSelectedTicketId(t.ticket_id)}
+                      className="p-4 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-orange-300 dark:hover:border-orange-800 shadow-xs hover:shadow-sm transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
+                            #{t.ticket_id}
+                          </span>
+                          {getStatusBadge(t.status)}
+                          {getPriorityBadge(t.priority)}
+                        </div>
+                        <h4 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white">
+                          {t.subject}
+                        </h4>
+                        <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                          <span>Created: {t.creation || "Recent"}</span>
+                          {t.modified && <span>• Updated: {t.modified}</span>}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        <span className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline flex items-center gap-1">
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>View Thread</span>
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Image Preview Lightbox Modal */}
+      <AnimatePresence>
+        {previewImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setPreviewImage(null)}
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4"
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="relative max-w-4xl max-h-[90vh] bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-700 flex flex-col"
+            >
+              <div className="p-3 bg-slate-950/80 border-b border-slate-800 flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-300">
+                  Attachment Image Preview
+                </span>
+                <div className="flex items-center gap-2">
+                  <a
+                    href={previewImage}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                    title="Open Original in New Tab"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                  <button
+                    onClick={() => setPreviewImage(null)}
+                    className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
+                    title="Close Preview"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="p-4 flex items-center justify-center overflow-auto max-h-[calc(90vh-60px)]">
+                <img
+                  src={previewImage}
+                  alt="Attachment Preview"
+                  className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
-}
+};
+
+export default SupportTabContent;
+

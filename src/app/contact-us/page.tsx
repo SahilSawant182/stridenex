@@ -1,8 +1,48 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Phone, Mail, MapPin } from "lucide-react";
+import { Phone, Mail, MapPin, ArrowLeft } from "lucide-react";
+
+/**
+ * Display the back button ONLY when user comes from a module support page
+ * (e.g., /student/dashboard/support, /college/dashboard/support, /industry/dashboard/support, /mentor/dashboard/support)
+ */
+function SupportBackButton() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const fromParam = searchParams.get("from");
+
+  const isFromSupport = Boolean(
+    fromParam &&
+      (fromParam.includes("/dashboard/support") ||
+        fromParam.includes("/support"))
+  );
+
+  if (!isFromSupport || !fromParam) {
+    return null;
+  }
+
+  let moduleLabel = "Support";
+  if (fromParam.includes("student")) moduleLabel = "Student Support";
+  else if (fromParam.includes("college")) moduleLabel = "College Support";
+  else if (fromParam.includes("industry")) moduleLabel = "Industry Support";
+  else if (fromParam.includes("mentor")) moduleLabel = "Mentor Support";
+
+  return (
+    <div className="mb-8 flex items-center justify-start">
+      <button
+        type="button"
+        onClick={() => router.push(fromParam)}
+        className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white text-xs sm:text-sm font-semibold backdrop-blur-md transition-all transform active:scale-95 group shadow-sm cursor-pointer"
+      >
+        <ArrowLeft className="w-4 h-4 text-orange-400 group-hover:-translate-x-1 transition-transform" />
+        <span>Back to {moduleLabel}</span>
+      </button>
+    </div>
+  );
+}
 
 export default function ContactUsPage() {
   const [formData, setFormData] = useState({
@@ -100,6 +140,9 @@ export default function ContactUsPage() {
       </div>
 
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <Suspense fallback={null}>
+          <SupportBackButton />
+        </Suspense>
 
         {/* Header - Top Center */}
         <motion.div

@@ -59,7 +59,7 @@ const footerLinks = {
     { label: "Leadership", href: "/about/leadership" },
     { label: "Mentors", href: "/about/mentors" },
     { label: "Careers", href: "/careers" },
-    { label: "Contact", href: "/contact" },
+    { label: "Contact", href: "/contact-us" },
   ],
   blogsAndEvents: [
     { label: "Blogs", href: "/blogs" },
