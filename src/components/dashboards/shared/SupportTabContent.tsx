@@ -25,7 +25,15 @@ import {
   Shield,
   Layers,
   X,
-  ExternalLink
+  ExternalLink,
+  Paperclip,
+  FileText,
+  File,
+  Video,
+  Image as ImageIcon,
+  Film,
+  Download,
+  UploadCloud
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { BASE_DOMAIN } from "@/services/api.services";
@@ -34,6 +42,7 @@ import {
   TicketSummary,
   TicketDetail,
   TicketComment,
+  TicketAttachment,
 } from "@/services/ticket.services";
 
 interface SupportTabContentProps {
@@ -222,6 +231,159 @@ const RichMessageContent: React.FC<RichMessageContentProps> = ({
   );
 };
 
+const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25 MB
+
+const formatFileSize = (bytes?: number): string => {
+  if (!bytes || bytes <= 0) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+};
+
+const getFileCategory = (filename: string): "image" | "video" | "doc" => {
+  const ext = (filename || "").split(".").pop()?.toLowerCase() || "";
+  if (["png", "jpg", "jpeg", "webp", "gif", "svg"].includes(ext)) return "image";
+  if (["mp4", "webm", "mov", "mkv", "avi"].includes(ext)) return "video";
+  return "doc";
+};
+
+const getFullMediaUrl = (url?: string): string => {
+  if (!url) return "";
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("blob:") ||
+    url.startsWith("data:")
+  ) {
+    return url;
+  }
+  const base = BASE_DOMAIN || "https://devstridenex.quantcloud.in";
+  return `${base.replace(/\/+$/, "")}/${url.replace(/^\/+/, "")}`;
+};
+
+const TicketAttachmentGrid: React.FC<{
+  attachments?: TicketAttachment[];
+  isUser?: boolean;
+  onImageClick?: (url: string) => void;
+}> = ({ attachments, isUser = false, onImageClick }) => {
+  if (!attachments || attachments.length === 0) return null;
+
+  return (
+    <div className="mt-2.5 space-y-2">
+      {attachments.map((att, i) => {
+        const fullUrl = getFullMediaUrl(att.file_url);
+        const cat = getFileCategory(att.file_name);
+        const sizeText = formatFileSize(att.file_size);
+
+        if (cat === "image") {
+          return (
+            <div key={i} className="group relative inline-block max-w-full">
+              <img
+                src={fullUrl}
+                alt={att.file_name}
+                onClick={() => onImageClick && onImageClick(fullUrl)}
+                className="max-h-60 max-w-full rounded-xl border border-slate-200 dark:border-slate-700 object-contain bg-slate-50 dark:bg-slate-900 cursor-pointer shadow-xs hover:opacity-95 transition-opacity"
+              />
+              <div className="mt-1 flex items-center justify-between text-[10px] text-slate-500 px-1">
+                <span className="truncate max-w-[200px]" title={att.file_name}>{att.file_name}</span>
+                {sizeText ? <span>{sizeText}</span> : null}
+              </div>
+            </div>
+          );
+        }
+
+        if (cat === "video") {
+          return (
+            <div key={i} className="max-w-md rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 bg-black">
+              <video
+                controls
+                preload="metadata"
+                className="w-full max-h-60 object-contain"
+                src={fullUrl}
+              >
+                Your browser does not support video playback.
+              </video>
+              <div className="p-2 bg-slate-900 text-[11px] text-slate-300 flex items-center justify-between">
+                <span className="truncate max-w-[220px]" title={att.file_name}>{att.file_name}</span>
+                <span className="text-slate-400">{sizeText}</span>
+              </div>
+            </div>
+          );
+        }
+
+        // Documents, PDFs, TXT, etc.
+        return (
+          <a
+            key={i}
+            href={fullUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            download={att.file_name}
+            className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-xs transition-all max-w-md ${
+              isUser
+                ? "bg-orange-600/20 border-white/20 text-white hover:bg-orange-600/30"
+                : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-xs"
+            }`}
+          >
+            <div className={`p-2 rounded-lg shrink-0 ${isUser ? "bg-white/20 text-white" : "bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400"}`}>
+              <FileText className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold truncate text-[11px] sm:text-xs">{att.file_name}</p>
+              <p className={`text-[10px] ${isUser ? "text-orange-100" : "text-slate-400"}`}>
+                {sizeText || "Document"}
+              </p>
+            </div>
+            <Download className="w-3.5 h-3.5 shrink-0 opacity-70 group-hover:opacity-100" />
+          </a>
+        );
+      })}
+    </div>
+  );
+};
+
+const SelectedFilesPreview: React.FC<{
+  files: File[];
+  onRemove: (index: number) => void;
+}> = ({ files, onRemove }) => {
+  if (!files || files.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-2 pt-1">
+      {files.map((file, idx) => {
+        const cat = getFileCategory(file.name);
+        return (
+          <div
+            key={idx}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800/60 text-xs text-slate-800 dark:text-slate-200 shadow-2xs"
+          >
+            {cat === "image" ? (
+              <ImageIcon className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+            ) : cat === "video" ? (
+              <Film className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+            ) : (
+              <FileText className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+            )}
+            <span className="max-w-[140px] truncate text-[11px] font-medium" title={file.name}>
+              {file.name}
+            </span>
+            <span className="text-[10px] text-slate-400">
+              ({formatFileSize(file.size)})
+            </span>
+            <button
+              type="button"
+              onClick={() => onRemove(idx)}
+              className="p-0.5 rounded-full hover:bg-orange-200/50 dark:hover:bg-orange-900/50 text-slate-500 hover:text-slate-800 dark:hover:text-white"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 export const SupportTabContent: React.FC<SupportTabContentProps> = ({ role = "student" }) => {
   const router = useRouter();
   const { currentUser, role: userRole } = useAuth();
@@ -244,6 +406,8 @@ export const SupportTabContent: React.FC<SupportTabContentProps> = ({ role = "st
   const [ticketDetail, setTicketDetail] = useState<TicketDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [replyMessage, setReplyMessage] = useState("");
+  const [replyFiles, setReplyFiles] = useState<File[]>([]);
+  const replyFileInputRef = React.useRef<HTMLInputElement>(null);
   const [submittingReply, setSubmittingReply] = useState(false);
   const [replyError, setReplyError] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -252,9 +416,51 @@ export const SupportTabContent: React.FC<SupportTabContentProps> = ({ role = "st
   const [ticketSubject, setTicketSubject] = useState("");
   const [ticketPriority, setTicketPriority] = useState<"Low" | "Medium" | "High" | "Urgent">("Medium");
   const [ticketDescription, setTicketDescription] = useState("");
+  const [ticketFiles, setTicketFiles] = useState<File[]>([]);
+  const createFileInputRef = React.useRef<HTMLInputElement>(null);
   const [submittingTicket, setSubmittingTicket] = useState(false);
   const [createTicketSuccess, setCreateTicketSuccess] = useState<string | null>(null);
   const [createTicketError, setCreateTicketError] = useState<string | null>(null);
+
+  const handleTicketFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const incoming = Array.from(e.target.files);
+    const oversized = incoming.filter((f) => f.size > MAX_FILE_SIZE_BYTES);
+    if (oversized.length > 0) {
+      setCreateTicketError(
+        `File "${oversized[0].name}" exceeds the maximum allowed size of 25MB.`
+      );
+      e.target.value = "";
+      return;
+    }
+    setTicketFiles((prev) => [...prev, ...incoming]);
+    setCreateTicketError(null);
+    e.target.value = "";
+  };
+
+  const removeTicketFile = (index: number) => {
+    setTicketFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleReplyFilesSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const incoming = Array.from(e.target.files);
+    const oversized = incoming.filter((f) => f.size > MAX_FILE_SIZE_BYTES);
+    if (oversized.length > 0) {
+      setReplyError(
+        `File "${oversized[0].name}" exceeds the maximum allowed size of 25MB.`
+      );
+      e.target.value = "";
+      return;
+    }
+    setReplyFiles((prev) => [...prev, ...incoming]);
+    setReplyError(null);
+    e.target.value = "";
+  };
+
+  const removeReplyFile = (index: number) => {
+    setReplyFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
   // Launch Tour Handler
   const [launchingTour, setLaunchingTour] = useState(false);
@@ -348,6 +554,7 @@ export const SupportTabContent: React.FC<SupportTabContentProps> = ({ role = "st
         subject: ticketSubject.trim(),
         description: ticketDescription.trim(),
         priority: ticketPriority,
+        attachments: ticketFiles,
       });
 
       const newTicketId =
@@ -364,6 +571,7 @@ export const SupportTabContent: React.FC<SupportTabContentProps> = ({ role = "st
       setTicketSubject("");
       setTicketDescription("");
       setTicketPriority("Medium");
+      setTicketFiles([]);
 
       // Refresh tickets list
       fetchMyTickets();
@@ -378,7 +586,9 @@ export const SupportTabContent: React.FC<SupportTabContentProps> = ({ role = "st
   // Handle Reply to Ticket
   const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTicketId || !replyMessage.trim()) return;
+    const hasText = !!replyMessage.trim();
+    const hasFiles = replyFiles.length > 0;
+    if (!selectedTicketId || (!hasText && !hasFiles)) return;
 
     setSubmittingReply(true);
     setReplyError(null);
@@ -386,9 +596,11 @@ export const SupportTabContent: React.FC<SupportTabContentProps> = ({ role = "st
     try {
       await ticketService.addTicketComment({
         ticket_id: selectedTicketId,
-        message: replyMessage.trim(),
+        message: replyMessage.trim() || (hasFiles ? "Attached file(s)" : ""),
+        attachments: replyFiles,
       });
       setReplyMessage("");
+      setReplyFiles([]);
       // Refresh conversation
       await fetchTicketDetails(selectedTicketId);
     } catch (err: any) {
@@ -836,6 +1048,50 @@ export const SupportTabContent: React.FC<SupportTabContentProps> = ({ role = "st
               />
             </div>
 
+            {/* Media & Document Attachments */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  Attachments (Optional)
+                </label>
+                <span className="text-[11px] text-slate-400">
+                  Images, Videos, PDFs, Docs (Max 25MB each)
+                </span>
+              </div>
+
+              <input
+                type="file"
+                ref={createFileInputRef}
+                multiple
+                accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+                onChange={handleTicketFilesSelect}
+                className="hidden"
+                id="create-ticket-file-input"
+              />
+
+              <div
+                onClick={() => createFileInputRef.current?.click()}
+                className="cursor-pointer border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-orange-500/50 dark:hover:border-orange-500/50 rounded-xl p-4 text-center transition-all bg-slate-50/50 dark:bg-slate-950/30 hover:bg-orange-50/20"
+              >
+                <div className="flex flex-col items-center justify-center gap-1.5">
+                  <div className="p-2 rounded-full bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400">
+                    <UploadCloud className="w-4 h-4" />
+                  </div>
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
+                    Click to browse or drop media / document files
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    Supports PNG, JPG, MP4, WEBM, PDF, DOC, DOCX, TXT (up to 25MB)
+                  </p>
+                </div>
+              </div>
+
+              <SelectedFilesPreview
+                files={ticketFiles}
+                onRemove={removeTicketFile}
+              />
+            </div>
+
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 type="button"
@@ -936,6 +1192,15 @@ export const SupportTabContent: React.FC<SupportTabContentProps> = ({ role = "st
                         isUser={false}
                         onImageClick={setPreviewImage}
                       />
+                      {ticketDetail.attachments && ticketDetail.attachments.length > 0 && (
+                        <div className="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-700/60">
+                          <TicketAttachmentGrid
+                            attachments={ticketDetail.attachments}
+                            isUser={false}
+                            onImageClick={setPreviewImage}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {/* Chat Comments Stream */}
@@ -981,6 +1246,21 @@ export const SupportTabContent: React.FC<SupportTabContentProps> = ({ role = "st
                                 isUser={isUserMsg}
                                 onImageClick={setPreviewImage}
                               />
+                              {comment.attachments && comment.attachments.length > 0 && (
+                                <div
+                                  className={`mt-2 pt-2 border-t ${
+                                    isUserMsg
+                                      ? "border-orange-400/40"
+                                      : "border-slate-200 dark:border-slate-700"
+                                  }`}
+                                >
+                                  <TicketAttachmentGrid
+                                    attachments={comment.attachments}
+                                    isUser={isUserMsg}
+                                    onImageClick={setPreviewImage}
+                                  />
+                                </div>
+                              )}
                             </div>
                           </div>
                         );
@@ -999,14 +1279,36 @@ export const SupportTabContent: React.FC<SupportTabContentProps> = ({ role = "st
               </div>
 
               {/* Reply Input Bar */}
-              <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <div className="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-2">
                 {replyError && (
-                  <div className="mb-2 p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-1.5">
+                  <div className="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-1.5">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                     <span>{replyError}</span>
                   </div>
                 )}
+                {/* Selected Reply Files Preview */}
+                <SelectedFilesPreview
+                  files={replyFiles}
+                  onRemove={removeReplyFile}
+                />
+                <input
+                  type="file"
+                  ref={replyFileInputRef}
+                  multiple
+                  accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+                  onChange={handleReplyFilesSelect}
+                  className="hidden"
+                  id="reply-ticket-file-input"
+                />
                 <form onSubmit={handleSendReply} className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => replyFileInputRef.current?.click()}
+                    className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-orange-500 hover:border-orange-500/40 bg-slate-50 dark:bg-slate-950 transition-colors"
+                    title="Attach file (Images, Videos, PDFs, Docs up to 25MB)"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                  </button>
                   <input
                     type="text"
                     value={replyMessage}
@@ -1016,7 +1318,7 @@ export const SupportTabContent: React.FC<SupportTabContentProps> = ({ role = "st
                   />
                   <button
                     type="submit"
-                    disabled={submittingReply || !replyMessage.trim()}
+                    disabled={submittingReply || (!replyMessage.trim() && replyFiles.length === 0)}
                     className="px-4 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 disabled:opacity-50"
                   >
                     {submittingReply ? (

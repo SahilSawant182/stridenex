@@ -53,10 +53,50 @@ const apiRequest = async (config: AxiosRequestConfig) => {
     }
   }
 
+  // If request data is FormData, send via native fetch to guarantee multipart/form-data boundary
+  if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+    let url = config.url || "";
+    if (!url.startsWith("http")) {
+      url = `${BASE_URL}${url.replace(/^\/+/, "")}`;
+    }
+
+    const fetchHeaders: Record<string, string> = {
+      Accept: "application/json",
+    };
+    if (resolvedAuthHeader) {
+      fetchHeaders["Authorization"] = resolvedAuthHeader;
+    }
+    // Note: Do NOT set Content-Type header so browser automatically sets multipart/form-data; boundary=...
+
+    try {
+      const fetchResponse = await fetch(url, {
+        method: (config.method || "POST").toUpperCase(),
+        credentials: "include",
+        headers: fetchHeaders,
+        body: config.data,
+      });
+
+      const resData = await fetchResponse.json();
+      if (!fetchResponse.ok || (resData?.http_status_code && resData.http_status_code >= 400)) {
+        const msg = resData?.message?.message || resData?.message || resData?.exception || `Request failed (${fetchResponse.status})`;
+        const customError = new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+        (customError as any).status = fetchResponse.status;
+        (customError as any).response = { data: resData };
+        throw customError;
+      }
+
+      return resData;
+    } catch (err: any) {
+      console.error(`API Error (${config.method || "POST"} ${config.url}):`, err.message || err);
+      throw err;
+    }
+  }
+
   const headers: any = {
     ...(resolvedAuthHeader ? { Authorization: resolvedAuthHeader } : {}),
     ...config.headers, // user-provided headers override if explicitly given
   };
+
   try {
     const response = await api({ ...config, headers });
     
