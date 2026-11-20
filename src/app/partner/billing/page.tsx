@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle,
   BookOpen,
@@ -11,6 +11,7 @@ import {
   LogOut,
   RefreshCw,
   User,
+  Smartphone,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -33,9 +34,41 @@ import ReferralShareWidget from "@/components/partner/billing/ReferralShareWidge
 import PayoutStatementsTable from "@/components/partner/billing/PayoutStatementsTable";
 import AdminPayoutSheetsPanel from "@/components/partner/billing/AdminPayoutSheetsPanel";
 
-export default function PartnerBillingPage() {
-  const { currentUser, logout, isAuthenticated, isInitialized, role } = useAuth();
+function PartnerBillingPageContent() {
+  const { currentUser, login, logout, isAuthenticated, isInitialized, role } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const sourceParam = searchParams?.get("source") || searchParams?.get("from");
+    const storedMobile = typeof window !== "undefined" && sessionStorage.getItem("is_mobile_view") === "true";
+    if (sourceParam === "mobile" || storedMobile) {
+      setIsMobile(true);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("is_mobile_view", "true");
+      }
+    }
+  }, [searchParams]);
+
+  // Handle incoming mobile session auth parameters
+  const qApiKey = searchParams?.get("apiKey");
+  const qApiSecret = searchParams?.get("apiSecret");
+  const qUser = searchParams?.get("user") || searchParams?.get("email");
+  const qFullName = searchParams?.get("fullName") || searchParams?.get("name");
+  const hasAuthParams = !!(qApiKey && qApiSecret);
+
+  useEffect(() => {
+    if (hasAuthParams && (!isAuthenticated || !currentUser)) {
+      login(qApiKey!, qApiSecret!, {
+        email: qUser || undefined,
+        fullName: qFullName || undefined,
+        role: "partner",
+        isOnboarded: "1",
+      });
+    }
+  }, [hasAuthParams, qApiKey, qApiSecret, qUser, qFullName, isAuthenticated, currentUser, login]);
 
   const normalizedRole = (role || "").toLowerCase();
   const isPartner = normalizedRole === "partner";
@@ -55,11 +88,45 @@ export default function PartnerBillingPage() {
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
+  const handleBackToMobile = async () => {
+    try {
+      await logout("/login");
+    } catch (e) {
+      console.error("Logout error", e);
+    }
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch {}
+
+    try {
+      if (typeof window !== "undefined" && (window as any).ReactNativeWebView) {
+        (window as any).ReactNativeWebView.postMessage(
+          JSON.stringify({ type: "BACK_TO_MOBILE_LOGIN", action: "logout" })
+        );
+      }
+    } catch (e) {
+      console.error("Failed to post message to mobile", e);
+    }
+
+    if (typeof window !== "undefined") {
+      window.location.href = "https://testwebstridenex.quantcloud.in/login";
+    }
+  };
+
+  const handleLogout = () => {
+    if (isMobile) {
+      handleBackToMobile();
+    } else {
+      logout("/login");
+    }
+  };
+
   useEffect(() => {
-    if (isInitialized && (!isAuthenticated || !isAuthorized)) {
+    if (isInitialized && !hasAuthParams && (!isAuthenticated || !isAuthorized)) {
       router.push("/login");
     }
-  }, [isInitialized, isAuthenticated, isAuthorized, router]);
+  }, [isInitialized, isAuthenticated, isAuthorized, hasAuthParams, router]);
 
   const fetchBillingDashboard = useCallback(async () => {
     if (!isAuthenticated || !isAuthorized) return;
@@ -157,23 +224,24 @@ export default function PartnerBillingPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50/60 via-slate-50 to-blue-50/60 font-sans pb-20 relative">
+    <div className="min-h-screen bg-white sm:bg-gradient-to-br sm:from-indigo-50/60 sm:via-slate-50 sm:to-blue-50/60 font-sans pb-20 relative">
       {/* Decorative background */}
-      <div className="fixed inset-0 z-0 bg-[radial-gradient(#94a3b8_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.1] pointer-events-none" />
-      <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-blue-100/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
-      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-indigo-100/50 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none" />
+      <div className="hidden sm:block fixed inset-0 z-0 bg-[radial-gradient(#94a3b8_1px,transparent_1px)] [background-size:24px_24px] opacity-[0.1] pointer-events-none" />
+      <div className="hidden sm:block fixed top-0 right-0 w-[600px] h-[600px] bg-blue-100/50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+      <div className="hidden sm:block fixed bottom-0 left-0 w-[500px] h-[500px] bg-indigo-100/50 rounded-full blur-3xl translate-y-1/3 -translate-x-1/4 pointer-events-none" />
 
       {/* Header */}
-      <header className="bg-white/75 backdrop-blur-2xl border-b border-white/60 sticky top-0 z-20 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Link href="/partner" className="flex items-center">
+      <header className="bg-white/80 backdrop-blur-2xl border-b border-slate-200/60 sticky top-0 z-20 shadow-sm">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <Link href={isMobile ? "/partner?source=mobile" : "/partner"} className="flex items-center">
               <Image
                 src="/images/Logo.png"
                 alt="StrideNex Logo"
                 width={136}
                 height={38}
-                className="object-contain"
+                className="w-24 sm:w-32 md:w-36 h-auto object-contain"
+                priority
               />
             </Link>
             <span className="hidden md:inline-block px-2.5 py-1 bg-blue-50 text-blue-700 text-[11px] font-bold rounded uppercase tracking-wider border border-blue-100">
@@ -183,14 +251,14 @@ export default function PartnerBillingPage() {
             {/* Navigation Tabs */}
             <nav className="hidden sm:flex items-center gap-1 ml-2 bg-slate-100/80 p-1 rounded-xl">
               <Link
-                href="/partner"
+                href={isMobile ? "/partner?source=mobile" : "/partner"}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
               >
                 <User className="w-3.5 h-3.5" />
                 Profile &amp; Referrals
               </Link>
               <Link
-                href="/partner/billing"
+                href={isMobile ? "/partner/billing?source=mobile" : "/partner/billing"}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white text-blue-700 shadow-sm"
               >
                 <CreditCard className="w-3.5 h-3.5" />
@@ -199,28 +267,39 @@ export default function PartnerBillingPage() {
             </nav>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+            {isMobile && (
+              <button
+                type="button"
+                onClick={handleBackToMobile}
+                className="hidden sm:flex items-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white font-medium rounded-lg shadow-sm transition-all text-xs sm:text-sm border border-slate-700"
+              >
+                <Smartphone className="w-4 h-4 text-orange-400" />
+                <span>Back to Mobile</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={fetchBillingDashboard}
               disabled={loading}
-              className="p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+              className="p-1.5 sm:p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
               title="Refresh billing data"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${loading ? "animate-spin" : ""}`} />
             </button>
             <button
               type="button"
-              onClick={() => router.push("/lms/courses")}
-              className="flex items-center gap-2 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg shadow-sm hover:from-blue-700 hover:to-indigo-700 transition-all text-xs sm:text-sm"
+              onClick={() => router.push(isMobile ? "/lms/courses?source=mobile" : "/lms/courses")}
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-3.5 sm:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-lg shadow-sm hover:from-blue-700 hover:to-indigo-700 transition-all text-xs sm:text-sm whitespace-nowrap"
             >
-              <BookOpen className="w-4 h-4" />
-              <span className="hidden sm:inline">LMS Studio</span>
+              <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span>LMS Studio</span>
             </button>
             <button
               type="button"
               onClick={() => setShowLogoutConfirm(true)}
-              className="flex items-center gap-2 px-3 py-2 text-xs sm:text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              title="Sign Out"
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Sign Out</span>
@@ -229,16 +308,26 @@ export default function PartnerBillingPage() {
         </div>
 
         {/* Mobile sub-nav */}
-        <div className="sm:hidden border-t border-slate-100 px-4 py-2 flex items-center gap-2 bg-white/80">
+        <div className="sm:hidden border-t border-slate-100 px-3 py-2 flex items-center gap-2 bg-white/95 backdrop-blur-md">
+          {isMobile && (
+            <button
+              type="button"
+              onClick={handleBackToMobile}
+              className="flex items-center justify-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white shadow-sm border border-slate-700 shrink-0"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-orange-400" />
+              <span>Back</span>
+            </button>
+          )}
           <Link
-            href="/partner"
-            className="flex-1 text-center py-1.5 rounded-lg text-xs font-semibold text-slate-600 bg-slate-100"
+            href={isMobile ? "/partner?source=mobile" : "/partner"}
+            className="flex-1 text-center py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-slate-100"
           >
             Profile &amp; Referrals
           </Link>
           <Link
-            href="/partner/billing"
-            className="flex-1 text-center py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-600"
+            href={isMobile ? "/partner/billing?source=mobile" : "/partner/billing"}
+            className="flex-1 text-center py-1.5 rounded-lg text-xs font-semibold text-white bg-blue-600 shadow-sm"
           >
             Billing &amp; Earnings
           </Link>
@@ -330,7 +419,7 @@ export default function PartnerBillingPage() {
               </button>
               <button
                 type="button"
-                onClick={() => logout("/login")}
+                onClick={handleLogout}
                 className="flex-1 py-2.5 text-sm font-medium text-white hover:bg-red-700 bg-red-600 rounded-xl transition-colors shadow-sm"
               >
                 Yes, Sign Out
@@ -340,5 +429,22 @@ export default function PartnerBillingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PartnerBillingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center font-sans">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-slate-500 font-medium">Loading billing dashboard...</p>
+          </div>
+        </div>
+      }
+    >
+      <PartnerBillingPageContent />
+    </Suspense>
   );
 }
