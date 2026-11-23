@@ -49,6 +49,21 @@ export default function SharedCommunityDiscussionView({ community, onBack, onRef
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isSubmittingCategory, setIsSubmittingCategory] = useState(false);
 
+  const currentUserEmail = (typeof window !== "undefined"
+    ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || localStorage.getItem("email") || localStorage.getItem("user") || "")
+    : "").trim().toLowerCase();
+  const currentUserPrefix = currentUserEmail.includes("@") ? currentUserEmail.split("@")[0] : currentUserEmail;
+
+  const commOwner = (community?.community_owner || community?.owner || "").trim().toLowerCase();
+  const commOwnerPrefix = commOwner.includes("@") ? commOwner.split("@")[0] : commOwner;
+
+  const isOwner = Boolean(
+    currentUserEmail && commOwner && (
+      currentUserEmail === commOwner ||
+      (currentUserPrefix && commOwnerPrefix && currentUserPrefix === commOwnerPrefix)
+    )
+  );
+
   const [showCustomCategoryForm, setShowCustomCategoryForm] = useState(false);
   const [selectedSuggestedCategory, setSelectedSuggestedCategory] = useState<number | null>(null);
   const [customCategoryName, setCustomCategoryName] = useState("");
@@ -93,6 +108,10 @@ export default function SharedCommunityDiscussionView({ community, onBack, onRef
 
   const handleApproveMember = async (memberDocName: string) => {
     if (!memberDocName) return;
+    if (!isOwner) {
+      showToast("Only the community creator can approve members.", "error");
+      return;
+    }
     try {
       setApprovingMemberId(memberDocName);
       const response = await updateCommunityMemberStatus({
@@ -127,6 +146,10 @@ export default function SharedCommunityDiscussionView({ community, onBack, onRef
 
   const handleRemoveMember = async (memberDocName: string) => {
     if (!memberDocName) return;
+    if (!isOwner) {
+      showToast("Only the community creator can remove members.", "error");
+      return;
+    }
     try {
       setRemovingMemberId(memberDocName);
       const response = await removeCommunityMember({ name: memberDocName });
@@ -156,6 +179,10 @@ export default function SharedCommunityDiscussionView({ community, onBack, onRef
   const { showToast } = useToast();
 
   const handleCreateCategory = async (formData: Record<string, any>) => {
+    if (!isOwner) {
+      showToast("Only the community creator can add categories.", "error");
+      return;
+    }
     try {
       setIsSubmittingCategory(true);
       const response = await createCategory({
@@ -185,6 +212,10 @@ export default function SharedCommunityDiscussionView({ community, onBack, onRef
   };
 
   const handleCreateTag = async (formData: Record<string, any>) => {
+    if (!isOwner) {
+      showToast("Only the community creator can add tags.", "error");
+      return;
+    }
     try {
       setIsSubmittingTag(true);
       const response = await apiService.post(
@@ -463,7 +494,9 @@ export default function SharedCommunityDiscussionView({ community, onBack, onRef
           <div className="p-4 border-t border-slate-200">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Categories</h3>
-              <Plus className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-700" onClick={() => setIsCategoryModalOpen(true)} />
+              {isOwner && (
+                <Plus className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-700" onClick={() => setIsCategoryModalOpen(true)} />
+              )}
             </div>
             <div className="space-y-1">
               {categories.length > 0 ? (
@@ -484,7 +517,9 @@ export default function SharedCommunityDiscussionView({ community, onBack, onRef
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Tags</h3>
               <div className="flex items-center gap-2">
-                <Plus className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-700" onClick={() => setIsTagModalOpen(true)} />
+                {isOwner && (
+                  <Plus className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-700" onClick={() => setIsTagModalOpen(true)} />
+                )}
                 <span className="text-slate-400 text-xs">▼</span>
               </div>
             </div>
@@ -857,49 +892,51 @@ export default function SharedCommunityDiscussionView({ community, onBack, onRef
                               {member.status || "Pending"}
                             </span>
 
-                            <div className="flex items-center gap-2">
-                              {isPending && (
+                            {isOwner && (
+                              <div className="flex items-center gap-2">
+                                {isPending && (
+                                  <button
+                                    onClick={() => handleApproveMember(memberId)}
+                                    disabled={isApproving || isRemoving}
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
+                                  >
+                                    {isApproving ? (
+                                      <>
+                                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                        Approving...
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Check className="w-3.5 h-3.5" />
+                                        Approve
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+                                
                                 <button
-                                  onClick={() => handleApproveMember(memberId)}
-                                  disabled={isApproving || isRemoving}
-                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
+                                  onClick={() => {
+                                    if (window.confirm("Are you sure you want to remove this member?")) {
+                                      handleRemoveMember(memberId);
+                                    }
+                                  }}
+                                  disabled={isRemoving || isApproving}
+                                  className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
                                 >
-                                  {isApproving ? (
+                                  {isRemoving ? (
                                     <>
                                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                      Approving...
+                                      Removing...
                                     </>
                                   ) : (
                                     <>
-                                      <Check className="w-3.5 h-3.5" />
-                                      Approve
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                      Remove
                                     </>
                                   )}
                                 </button>
-                              )}
-                              
-                              <button
-                                onClick={() => {
-                                  if (window.confirm("Are you sure you want to remove this member?")) {
-                                    handleRemoveMember(memberId);
-                                  }
-                                }}
-                                disabled={isRemoving || isApproving}
-                                className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-lg text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer"
-                              >
-                                {isRemoving ? (
-                                  <>
-                                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                    Removing...
-                                  </>
-                                ) : (
-                                  <>
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                    Remove
-                                  </>
-                                )}
-                              </button>
-                            </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );

@@ -50,7 +50,7 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
   const fetchCommunities = async () => {
     setIsLoading(true);
     try {
-      const email = typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || "") : "";
+      const email = typeof window !== "undefined" ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || localStorage.getItem("email") || localStorage.getItem("user") || "") : "";
       const capitalizedUserType = userType.charAt(0).toUpperCase() + userType.slice(1);
       const response = await getCommunities({
         user: email,
@@ -63,6 +63,7 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
           else if (Array.isArray(response?.data?.communities)) communitiesArray = response.data.communities;
           else communitiesArray = [];
         }
+
         setCommunities(Array.isArray(communitiesArray) ? communitiesArray : []);
       }
     } catch (error: any) {
@@ -110,6 +111,8 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
           name: data.community_name,
           category: data.community_type,
           description: data.description,
+          community_owner: data.community_owner || data.owner || fallbackCommunity?.community_owner || fallbackCommunity?.owner,
+          owner: data.owner || data.community_owner || fallbackCommunity?.owner || fallbackCommunity?.community_owner,
         });
       } else if (fallbackCommunity) {
         setCommunityDetails({
@@ -118,6 +121,8 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
           name: fallbackCommunity.community_name,
           category: fallbackCommunity.community_type,
           description: fallbackCommunity.description,
+          community_owner: fallbackCommunity.community_owner || fallbackCommunity.owner,
+          owner: fallbackCommunity.owner || fallbackCommunity.community_owner,
         });
       }
     } catch (error: any) {
@@ -129,6 +134,8 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
           name: fallbackCommunity.community_name,
           category: fallbackCommunity.community_type,
           description: fallbackCommunity.description,
+          community_owner: fallbackCommunity.community_owner || fallbackCommunity.owner,
+          owner: fallbackCommunity.owner || fallbackCommunity.community_owner,
         });
       }
     }
@@ -142,10 +149,26 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
   };
 
 
-  const filteredCommunities = (Array.isArray(communities) ? communities : []).filter(c => 
-    c.community_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.description?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const currentUserEmail = (typeof window !== "undefined"
+    ? (localStorage.getItem("currentUser") || localStorage.getItem("userEmail") || localStorage.getItem("email") || localStorage.getItem("user") || "")
+    : "").trim().toLowerCase();
+  const currentUserPrefix = currentUserEmail.includes("@") ? currentUserEmail.split("@")[0] : currentUserEmail;
+
+  const isMyCommunity = (c: any) => {
+    if (!currentUserEmail) return false;
+    const owner = (c.community_owner || c.owner || "").trim().toLowerCase();
+    if (!owner) return false;
+    if (owner === currentUserEmail) return true;
+    const ownerPrefix = owner.includes("@") ? owner.split("@")[0] : owner;
+    return Boolean(currentUserPrefix && ownerPrefix && currentUserPrefix === ownerPrefix);
+  };
+
+  const filteredCommunities = (Array.isArray(communities) ? communities : []).filter(c => {
+    return (
+      c.community_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  });
 
   if (selectedCommunityId && communityDetails) {
     return (
@@ -225,19 +248,35 @@ export default function SharedCommunityTabContent({ userType }: SharedCommunityT
                 <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
                   {community.community_type === "Private" ? <Lock className="w-6 h-6" /> : <Globe className="w-6 h-6" />}
                 </div>
-                <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-full">
-                  {community.community_type || "Public"}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  {isMyCommunity(community) && (
+                    <span className="px-2.5 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold rounded-full flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      Owner
+                    </span>
+                  )}
+                  <span className="px-3 py-1 bg-slate-100 text-slate-600 text-xs font-semibold rounded-full">
+                    {community.community_type || "Public"}
+                  </span>
+                </div>
               </div>
               <h3 className="font-bold text-slate-800 text-lg mb-2 line-clamp-1">{community.community_name}</h3>
               <p className="text-slate-500 text-sm line-clamp-2 mb-4 h-10">
                 {community.description || "No description provided."}
               </p>
-              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-slate-500 text-sm">
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                <div className="flex items-center gap-2">
                   <Users className="w-4 h-4" />
-                  <span>{community.member_count || 1} members</span>
+                  <span>
+                    {community.member_count !== undefined ? community.member_count : 0}{" "}
+                    {community.member_count === 1 ? "member" : "members"}
+                  </span>
                 </div>
+                {Boolean(community.community_owner || (community as any).owner) && (
+                  <span className="text-slate-400 font-medium truncate max-w-[140px]">
+                    by {((community.community_owner || (community as any).owner) as string).split("@")[0]}
+                  </span>
+                )}
               </div>
             </motion.div>
           ))}
