@@ -20,6 +20,15 @@ export function middleware(request: NextRequest) {
     }
   }
 
+  // VentureLab is for students only. If we know the role and it isn't a student, send them home.
+  // (A missing cookie is allowed through here; the VentureLab shell re-checks on the client.)
+  if (pathname.startsWith("/venturelab")) {
+    const venturelabRole = (request.cookies.get("user_role")?.value || "").toLowerCase();
+    if (venturelabRole && venturelabRole !== "student") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+  }
+
   // Intercept direct browser navigation to LMS authoring routes
   const isLmsAuthoringRoute =
     pathname === "/lms/courses" ||
@@ -71,6 +80,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/venturelab/:path*",
     "/industry/:path*",
     "/college/:path*",
     "/mentor/:path*",

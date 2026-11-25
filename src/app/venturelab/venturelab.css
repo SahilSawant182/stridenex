@@ -1,0 +1,104 @@
+/* VentureLab module styles — design tokens, animations, and the BMC grid.
+   Scoped under .venturelab-root so nothing leaks into the rest of StrideNex. */
+
+.venturelab-root {
+  --primary-blue: #0f0fbd;
+  --primary-blue-hover: #2e2ed9;
+  --accent-orange: #ff6b00;
+  --accent-orange-hover: #ff8533;
+  --bg-slate: #f6f6f8;
+  --card-bg: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #475569;
+  --text-sub: #64748b;
+  --border-color: #e2e8f0;
+  --status-success: #10b981;
+  --status-warning: #f59e0b;
+  --status-danger: #ef4444;
+
+  font-family: Inter, system-ui, sans-serif;
+  background: var(--bg-slate);
+  color: var(--text-main);
+}
+
+/* ---------- Animations (Radix portals render outside .venturelab-root) ---------- */
+@keyframes vl-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes vl-zoom { from { opacity: 0; scale: 0.96; } to { opacity: 1; scale: 1; } }
+@keyframes vl-slide-r { from { translate: 100% 0; } to { translate: 0 0; } }
+@keyframes vl-slide-l { from { translate: -100% 0; } to { translate: 0 0; } }
+@keyframes vl-rise { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
+
+.vl-fade-in { animation: vl-fade 160ms ease-out; }
+.vl-zoom-in { animation: vl-zoom 180ms cubic-bezier(0.16, 1, 0.3, 1); }
+.vl-slide-in-right { animation: vl-slide-r 280ms cubic-bezier(0.16, 1, 0.3, 1); }
+.vl-slide-in-left { animation: vl-slide-l 280ms cubic-bezier(0.16, 1, 0.3, 1); }
+.vl-rise { animation: vl-rise 260ms ease-out both; }
+
+/* ---------- Business Model Canvas grid ----------
+   Desktop (>=1024px): authentic Osterwalder 10-column layout.
+   Tablet (768–1023px): 2-column stacked layout — keeps cards legible.
+   Mobile (<768px): single column, in storytelling order. */
+.vl-bmc-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+  grid-template-areas: "cs" "vp" "ch" "cr" "rs" "kr" "ka" "kp" "co";
+}
+
+@media (min-width: 768px) {
+  .vl-bmc-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "cs vp"
+      "ch cr"
+      "kr ka"
+      "kp kp"
+      "co rs";
+  }
+}
+
+@media (min-width: 1024px) {
+  .vl-bmc-grid {
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    grid-template-rows: minmax(200px, auto) minmax(200px, auto) minmax(170px, auto);
+    grid-template-areas:
+      "kp kp ka ka vp vp cr cr cs cs"
+      "kp kp kr kr vp vp ch ch cs cs"
+      "co co co co co rs rs rs rs rs";
+  }
+}
+
+/* Mini preview canvas (Idea Discovery) always keeps the true layout — it's a thumbnail. */
+.vl-bmc-mini {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  grid-template-rows: 1fr 1fr 0.8fr;
+  grid-template-areas:
+    "kp kp ka ka vp vp cr cr cs cs"
+    "kp kp kr kr vp vp ch ch cs cs"
+    "co co co co co rs rs rs rs rs";
+}
+
+/* Reveal replay */
+.vl-reveal-hidden { opacity: 0; scale: 0.94; }
+.vl-reveal-shown { opacity: 1; scale: 1; transition: opacity 380ms ease-out, scale 380ms cubic-bezier(0.16, 1, 0.3, 1); }
+
+.vl-scrollbar-none { scrollbar-width: none; }
+.vl-scrollbar-none::-webkit-scrollbar { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .vl-fade-in, .vl-zoom-in, .vl-slide-in-right, .vl-slide-in-left, .vl-rise { animation: none; }
+  .vl-reveal-shown { transition: none; }
+}
+
+@media print {
+  .vl-no-print { display: none !important; }
+}
+
+/* Idea Discovery "book page" flip */
+@keyframes vl-page-fwd { from { opacity: 0; translate: 18px 0; } to { opacity: 1; translate: 0 0; } }
+@keyframes vl-page-back { from { opacity: 0; translate: -18px 0; } to { opacity: 1; translate: 0 0; } }
+.vl-page-fwd { animation: vl-page-fwd 240ms ease-out; }
+.vl-page-back { animation: vl-page-back 240ms ease-out; }
+@media (prefers-reduced-motion: reduce) { .vl-page-fwd, .vl-page-back { animation: none; } }
