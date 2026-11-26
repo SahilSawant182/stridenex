@@ -19,6 +19,7 @@ export default function ConditionalLayout({
         pathname?.startsWith('/blogs') ||
         pathname?.startsWith('/events') ||
         pathname?.startsWith('/our-videos') ||
+        pathname?.startsWith('/newsletters') ||
         pathname?.startsWith('/bloggers') ||
         pathname?.startsWith('/insights') ||
         pathname?.startsWith('/students/') ||
