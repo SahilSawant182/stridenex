@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import {
@@ -21,12 +20,17 @@ import {
   Newspaper,
   Handshake,
   MessageCircle,
-  X
+  X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import NewsletterSubscribeForm from "@/components/newsletters/NewsletterSubscribeForm";
 import { FaXTwitter } from "react-icons/fa6";
-import { FaWhatsapp, FaFacebook, FaLinkedin, FaInstagram, FaYoutube } from "react-icons/fa";
+import {
+  FaWhatsapp,
+  FaFacebook,
+  FaLinkedin,
+  FaInstagram,
+  FaYoutube,
+} from "react-icons/fa";
 
 interface FooterProps {
   appName?: string;
@@ -34,7 +38,10 @@ interface FooterProps {
 
 const footerLinks = {
   forStudents: [
-    { label: "Skill Facilitating Program", href: "/students/skill-facilitating" },
+    {
+      label: "Skill Facilitating Program",
+      href: "/students/skill-facilitating",
+    },
     { label: "Mentorship", href: "/students/mentorship" },
     { label: "Success Stories", href: "/students/success-stories" },
     { label: "Entrepreneur Development", href: "/students/entrepreneur" },
@@ -61,10 +68,12 @@ const footerLinks = {
     { label: "Careers", href: "/careers" },
     { label: "Contact", href: "/contact-us" },
   ],
-  blogsAndEvents: [
+  resources: [
     { label: "Blogs", href: "/blogs" },
     { label: "Events", href: "/events" },
-    { label: "Our Videos", href: "/our-videos" },
+    { label: "All Newsletters", href: "/newsletters" },
+    { label: "Webinar Library", href: "/webinar-library" },
+    { label: "Resource Library", href: "/resource-library" },
   ],
   legal: [
     { label: "Privacy Policy", href: "/privacy" },
@@ -76,11 +85,31 @@ const footerLinks = {
 };
 
 const socialLinks = [
-  { icon: FaFacebook, href: "https://facebook.com/stridenex", label: "Facebook", hoverColor: "group-hover:text-[#1877F2]" },
+  {
+    icon: FaFacebook,
+    href: "https://facebook.com/stridenex",
+    label: "Facebook",
+    hoverColor: "group-hover:text-[#1877F2]",
+  },
   // { icon: X, href: "https://twitter.com/stridenex", label: "X (Twitter)", customIcon: FaXTwitter, hoverColor: "group-hover:text-black" },
-  { icon: FaLinkedin, href: "https://linkedin.com/company/stridenex", label: "LinkedIn", hoverColor: "group-hover:text-[#0077B5]" },
-  { icon: FaInstagram, href: "https://instagram.com/stridenex", label: "Instagram", hoverColor: "group-hover:text-[#E4405F]" },
-  { icon: FaYoutube, href: "https://www.youtube.com/@stridenex", label: "YouTube", hoverColor: "group-hover:text-[#FF0000]" },
+  {
+    icon: FaLinkedin,
+    href: "https://linkedin.com/company/stridenex",
+    label: "LinkedIn",
+    hoverColor: "group-hover:text-[#0077B5]",
+  },
+  {
+    icon: FaInstagram,
+    href: "https://instagram.com/stridenex",
+    label: "Instagram",
+    hoverColor: "group-hover:text-[#E4405F]",
+  },
+  {
+    icon: FaYoutube,
+    href: "https://www.youtube.com/@stridenex",
+    label: "YouTube",
+    hoverColor: "group-hover:text-[#FF0000]",
+  },
   // { icon: MessageCircle, href: "https://whatsapp.com/stridenex", label: "WhatsApp", customIcon: FaWhatsapp, hoverColor: "group-hover:text-[#25D366]" },
 ];
 
@@ -93,27 +122,18 @@ const contactInfo = {
 };
 
 export default function Footer({ appName = "StrideNex" }: FooterProps) {
-  const [email, setEmail] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
-
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email) {
-      setSubscribed(true);
-      setEmail("");
-      setTimeout(() => setSubscribed(false), 3000);
-    }
-  };
-
   return (
     <footer className="relative bg-gradient-to-b from-slate-900 to-slate-950 text-white overflow-hidden">
       <h2 className="sr-only">Footer</h2>
       {/* Animated Background Pattern */}
       <div className="absolute inset-0 opacity-5">
-        <div className="absolute inset-0" style={{
-          backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
-          backgroundSize: '40px 40px',
-        }} />
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
+            backgroundSize: "40px 40px",
+          }}
+        />
       </div>
 
       {/* Floating Gradient Orbs */}
@@ -144,9 +164,9 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
 
       <div className="max-w-7xl mx-auto px-6 py-20 relative z-10">
         {/* Main Footer Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 items-start gap-12 mb-12">
+        <div className="grid grid-cols-1 items-start gap-12 mb-12 lg:grid-cols-[repeat(16,minmax(0,1fr))]">
           {/* Brand Column */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-4">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -162,22 +182,28 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
                   />
                 </div>
                 <div>
-                  <span className="text-2xl font-black tracking-tighter text-white">{appName}</span>
-                  <p className="text-xs text-slate-400 mt-0.5">Pathways to Your Future</p>
+                  <span className="text-2xl font-black tracking-tighter text-white">
+                    {appName}
+                  </span>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Pathways to Your Future
+                  </p>
                 </div>
               </div>
 
               <p className="text-slate-300 text-sm leading-relaxed">
-                StrideNex is a collaborative career development platform connecting education, innovation, and industry to enable structured growth pathways for the next generation workforce.
+                StrideNex is a collaborative career development platform
+                connecting education, innovation, and industry to enable
+                structured growth pathways for the next generation workforce.
               </p>
             </motion.div>
           </div>
 
           {/* Links Columns */}
           {/* <div className="lg:col-span-6 grid grid-cols-2 md:grid-cols-4 gap-8"> */}
-          <div className="grid grid-cols-2 gap-x-8 gap-y-10 lg:col-span-9 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-10 lg:col-span-12 xl:grid-cols-[subgrid] xl:gap-x-12">
             <motion.div
-              className="min-w-0"
+              className="min-w-0 xl:col-span-3"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
@@ -186,7 +212,9 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
               {/* <div className="flex items-center gap-2 mb-4"> */}
               <div className="mb-4 flex min-h-10 items-center gap-2">
                 <GraduationCap className="w-4 h-4 text-white" />
-                <h3 className="text-sm font-bold uppercase tracking-wider text-white">For Students</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                  For Students
+                </h3>
               </div>
               <ul className="space-y-2">
                 {footerLinks.forStudents.map((link) => (
@@ -204,7 +232,7 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
             </motion.div>
 
             <motion.div
-              className="min-w-0"
+              className="min-w-0 xl:col-span-3"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
@@ -213,7 +241,9 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
               {/* <div className="flex items-center gap-2 mb-4"> */}
               <div className="mb-4 flex min-h-10 items-center gap-2">
                 <Building2 className="w-4 h-4 text-white" />
-                <h3 className="text-sm font-bold uppercase tracking-wider text-white">For Institutes</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                  For Institutes
+                </h3>
               </div>
               <ul className="space-y-2">
                 {footerLinks.forInstitutes.map((link) => (
@@ -231,7 +261,7 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
             </motion.div>
 
             <motion.div
-              className="min-w-0"
+              className="min-w-0 xl:col-span-3"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
@@ -240,7 +270,9 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
               {/* <div className="flex items-center gap-2 mb-4"> */}
               <div className="mb-4 flex min-h-10 items-center gap-2">
                 <Briefcase className="w-4 h-4 text-white" />
-                <h3 className="text-sm font-bold uppercase tracking-wider text-white">For Industry</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                  For Industry
+                </h3>
               </div>
               <ul className="space-y-2">
                 {footerLinks.forIndustry.map((link) => (
@@ -258,7 +290,7 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
             </motion.div>
 
             <motion.div
-              className="min-w-0"
+              className="min-w-0 xl:col-span-3"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.4 }}
@@ -267,7 +299,9 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
               {/* <div className="flex items-center gap-2 mb-4"> */}
               <div className="mb-4 flex min-h-10 items-center gap-2">
                 <Users className="w-4 h-4 text-white" />
-                <h3 className="text-sm font-bold uppercase tracking-wider text-white">Company</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                  Company
+                </h3>
               </div>
               <ul className="space-y-2">
                 {footerLinks.company.map((link) => (
@@ -284,68 +318,13 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
               </ul>
             </motion.div>
           </div>
-
-          {/* Newsletter Column */}
-          {/* <div className="lg:col-span-3">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.5 }}
-              viewport={{ once: true }}
-              className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-2xl p-6 border border-slate-700"
-            >
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-5 h-5 text-white" />
-                <h3 className="text-lg font-bold text-white">Stay Updated</h3>
-              </div>
-              <p className="text-sm text-slate-300 mb-4">
-                Get the latest insights on career development, industry trends, and program updates.
-              </p>
-
-              <form onSubmit={handleSubscribe} className="space-y-3">
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-                  <Input
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 bg-slate-800/50 border-slate-700 text-white placeholder:text-slate-500 focus:border-primary"
-                    required
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  variant="accent"
-                  className="btn-footer-cta group"
-                >
-                  {subscribed ? "Thanks for subscribing!" : "Subscribe to Newsletter"}
-                  {!subscribed && <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />}
-                </Button>
-              </form>
-
-              {subscribed && (
-                <motion.p
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-sm text-green-400 mt-3"
-                >
-                  ✓ Check your inbox for confirmation
-                </motion.p>
-              )}
-
-              <p className="text-xs text-slate-300 mt-4">
-                We respect your privacy. Unsubscribe at any time.
-              </p>
-            </motion.div>
-          </div> */}
         </div>
 
-        {/* Three-Part Secondary Row: 1) Contact & Social, 2) Blogs & Events, 3) Partner With Us */}
-        <div className="grid grid-cols-1 md:grid-cols-3 items-start gap-8 lg:gap-12 pt-8 border-t border-slate-800/60 mb-16">
+        {/* Footer Info, Blogs & Events, Partner, and Newsletter */}
+        <div className="grid grid-cols-1 items-start gap-8 border-t border-slate-800/60 pt-8 mb-16 sm:grid-cols-2 xl:grid-cols-[repeat(16,minmax(0,1fr))] lg:gap-12">
           {/* Part 1: Email, Address, and Social Icons */}
           <motion.div
-            className="min-w-0"
+            className="min-w-0 xl:col-span-4"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
@@ -355,7 +334,10 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
             <div className="space-y-2 mb-6">
               <div className="flex items-center gap-2 text-sm text-slate-300">
                 <Mail className="w-4 h-4 text-white" />
-                <a href={`mailto:${contactInfo.email}`} className="text-slate-300 hover:text-white transition-colors">
+                <a
+                  href={`mailto:${contactInfo.email}`}
+                  className="text-slate-300 hover:text-white transition-colors"
+                >
                   {contactInfo.email}
                 </a>
               </div>
@@ -385,16 +367,18 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
                   {/* {social.customIcon ? (
                     <social.customIcon className={`w-5 h-5 transition-colors ${social.hoverColor}`} />
                   ) : ( */}
-                  <social.icon className={`w-5 h-5 transition-colors ${social.hoverColor}`} />
+                  <social.icon
+                    className={`w-5 h-5 transition-colors ${social.hoverColor}`}
+                  />
                   {/* )} */}
                 </motion.a>
               ))}
             </div>
           </motion.div>
 
-          {/* Part 2: Blogs & Events Section */}
+          {/* Resources Section */}
           <motion.div
-            className="min-w-0"
+            className="min-w-0 xl:col-span-3"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.5 }}
@@ -402,10 +386,12 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
           >
             <div className="mb-4 flex min-h-10 items-center gap-2">
               <Newspaper className="w-4 h-4 text-white" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">Blogs & Events</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                Resources
+              </h3>
             </div>
             <ul className="space-y-2">
-              {footerLinks.blogsAndEvents.map((link) => (
+              {footerLinks.resources.map((link) => (
                 <li key={link.label}>
                   <Link
                     href={link.href}
@@ -421,7 +407,7 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
 
           {/* Part 3: Partner With Us */}
           <motion.div
-            className="min-w-0"
+            className="min-w-0 xl:col-span-3"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.6 }}
@@ -429,7 +415,9 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
           >
             <div className="mb-4 flex min-h-10 items-center gap-2">
               <Handshake className="w-4 h-4 text-white" />
-              <h3 className="text-sm font-bold uppercase tracking-wider text-white">Partner With Us</h3>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                Partner With Us
+              </h3>
             </div>
             <ul className="space-y-2">
               <li>
@@ -442,6 +430,26 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
                 </Link>
               </li>
             </ul>
+          </motion.div>
+
+          {/* Newsletter Signup */}
+          <motion.div
+            className="min-w-0 xl:col-span-6"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.7 }}
+            viewport={{ once: true }}
+          >
+            <div className="mb-4 flex min-h-10 items-center gap-2">
+              <Mail className="h-4 w-4 text-white" />
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                Newsletter
+              </h3>
+            </div>
+            <p className="mb-3 text-sm text-slate-300">
+              Get internship alerts, mentoring insights, and hiring updates.
+            </p>
+            <NewsletterSubscribeForm compact />
           </motion.div>
         </div>
 
@@ -509,13 +517,19 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
           </div>
 
           <div className="flex items-center gap-6">
-            <Link href="/privacy-policy"
-              target="_blank" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+            <Link
+              href="/privacy-policy"
+              target="_blank"
+              className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            >
               Privacy
             </Link>
             <span className="text-slate-700">•</span>
-            <Link href="/terms-of-use"
-              target="_blank" className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+            <Link
+              href="/terms-of-use"
+              target="_blank"
+              className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+            >
               Terms
             </Link>
             {/* <span className="text-slate-700">•</span>
@@ -538,9 +552,17 @@ export default function Footer({ appName = "StrideNex" }: FooterProps) {
 
       {/* Decorative Bottom Wave */}
       <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-0">
-        <svg className="relative block w-full h-8" data-name="wave" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120" preserveAspectRatio="none">
-          <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
-            className="fill-slate-950 opacity-50"></path>
+        <svg
+          className="relative block w-full h-8"
+          data-name="wave"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 1200 120"
+          preserveAspectRatio="none"
+        >
+          <path
+            d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V0H0V27.35A600.21,600.21,0,0,0,321.39,56.44Z"
+            className="fill-slate-950 opacity-50"
+          ></path>
         </svg>
       </div>
     </footer>

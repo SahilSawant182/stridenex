@@ -377,12 +377,22 @@ export default function PublicNavbar({ }: NavbarProps) {
               style={{ originY: 0 }}
             >
               <div className="max-w-7xl mx-auto px-6 py-6">
-                <div className="flex flex-col md:flex-row flex-wrap gap-6 md:gap-8 lg:gap-12 justify-center">
+                <div
+                  className={
+                    activeMegaMenu === "blogsAndEvents"
+                      ? "grid grid-cols-[repeat(3,minmax(0,280px))] gap-6 md:gap-8 lg:gap-12 max-w-7xl mx-auto justify-center"
+                      : "flex flex-col md:flex-row flex-wrap gap-6 md:gap-8 lg:gap-12 justify-center"
+                  }
+                >
                   {navItems.find(item => item.key === activeMegaMenu)?.sections.map((section) => (
                     <motion.div
                       key={section.title}
                       variants={sectionVariants}
-                      className="space-y-4 w-full md:flex-1 md:min-w-[220px] md:max-w-[280px]"
+                      className={
+                        activeMegaMenu === "blogsAndEvents"
+                          ? "w-full max-w-[280px] space-y-4"
+                          : "space-y-4 w-full md:flex-1 md:min-w-[220px] md:max-w-[280px]"
+                      }
                     >
                       <h4 className="text-xs font-bold uppercase tracking-wider text-gradient-orange">
                         {section.title}
