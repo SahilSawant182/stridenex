@@ -1,4 +1,18 @@
-export type CommissionType = "Flat Rate" | "Per Module" | "Tiered" | string;
+export type CommissionType =
+  | "Per Module"
+  | "Flat Amount"
+  | "Tiered Volume"
+  | "Flat Rate"
+  | "Tiered"
+  | string;
+
+export type PayoutCycle =
+  | "Monthly"
+  | "Weekly"
+  | "Quarterly"
+  | "Custom Days"
+  | "Manual"
+  | string;
 
 export type PayoutStatus =
   | "Pending"
@@ -13,16 +27,38 @@ export interface ModuleRateItem {
   rate?: number;
   commission_rate?: number;
   reward_per_referral?: number;
+  /** @deprecated Deprecated by business - partner commissions are based purely on Referral Rewards */
   conversion_bonus?: number;
 }
 
 export interface TierRateItem {
+  tier_number?: number;
   tier_name?: string;
-  min_referrals?: number;
-  max_referrals?: number | null;
+  label?: string;
+  min_referrals: number;
+  max_referrals: number | null;
   rate?: number;
+  reward_per_referral?: number;
   commission_rate?: number;
   commission_percentage?: number;
+}
+
+export interface TierProgressInfo {
+  tier_number: number;
+  tier_name: string;
+  label: string;
+  min_referrals: number;
+  max_referrals: number;
+  reward_per_referral: number;
+}
+
+export interface PartnerCategoryHistoryItem {
+  name: string;
+  category: string;
+  commission_type: string;
+  effective_from: string;
+  effective_to?: string | null;
+  status: "Active" | "Expired" | string;
 }
 
 export interface PartnerBillingSummary {
@@ -41,6 +77,10 @@ export interface PartnerBillingSummary {
   applicable_rate?: number | string | null;
   applicable_rates?: Record<string, number> | ModuleRateItem[] | TierRateItem[] | null;
   rate_display?: string | null;
+  active_commission_plan_price?: number;
+  current_tier?: TierProgressInfo;
+  next_tier?: TierProgressInfo | null;
+  referrals_needed_for_next_tier?: number;
   total_referrals_lifetime?: number;
   lifetime_referrals?: number;
   total_referrals?: number;
@@ -50,13 +90,18 @@ export interface PartnerBillingSummary {
   total_earned_lifetime?: number;
   total_earned?: number;
   total_paid?: number;
+  total_paid_amount?: number;
+  approved_payout_amount?: number;
   pending_payout_amount?: number;
   pending_payout?: number;
   carry_forward_amount?: number;
   min_payout_amount?: number;
-  payout_cycle?: string;
+  payout_cycle?: PayoutCycle;
+  /** @deprecated Deprecated by business - partner commissions are based purely on Referral Rewards */
   conversion_bonus?: number;
   billing_settings?: string | PartnerBillingSettings | null;
+  statements?: PartnerBillingStatement[];
+  category_history?: PartnerCategoryHistoryItem[];
 }
 
 export interface TdsConfig {
@@ -73,9 +118,10 @@ export interface PartnerBillingSettings {
   module_rates?: Record<string, number> | ModuleRateItem[];
   tiers?: TierRateItem[];
   tier_rates?: TierRateItem[];
-  payout_cycle?: string;
+  payout_cycle?: PayoutCycle;
   min_payout_amount?: number;
   reward_per_referral?: number;
+  /** @deprecated Deprecated by business - partner commissions are based purely on Referral Rewards */
   conversion_bonus?: number;
   tds_applicable?: boolean | number;
   tds_rate?: number;
@@ -85,6 +131,9 @@ export interface PartnerBillingSettings {
 }
 
 export interface PartnerCategoryInfo {
+  partner?: string;
+  partner_name?: string;
+  partner_email?: string;
   has_active_category?: boolean;
   category?: string | null;
   category_name?: string | null;
@@ -101,9 +150,11 @@ export interface PartnerCategoryInfo {
   settings?: PartnerBillingSettings | null;
   settings_name?: string | null;
   commission_type?: CommissionType;
-  payout_cycle?: string;
+  payout_cycle?: PayoutCycle;
   min_payout_amount?: number;
+  active_commission_plan_price?: number;
   reward_per_referral?: number;
+  /** @deprecated Deprecated by business - partner commissions are based purely on Referral Rewards */
   conversion_bonus?: number;
   flat_reward_amount?: number;
   student_reward_amount?: number;
@@ -116,7 +167,11 @@ export interface PartnerCategoryInfo {
   mentor_commission_rate?: number;
   industry_commission_rate?: number;
   commission_tiers?: TierRateItem[];
-  tds_applicable?: boolean | number;
+  current_tier?: TierProgressInfo;
+  next_tier?: TierProgressInfo | null;
+  referrals_needed_for_next_tier?: number;
+  total_referrals?: number;
+  tds_applicable?: 0 | 1 | boolean | number;
   tds_rate?: number;
   tds_threshold?: number;
   tds_percentage?: number;
@@ -126,20 +181,24 @@ export interface PartnerCategoryInfo {
 }
 
 export interface PartnerBillingStatement {
-  name?: string;
-  period?: string;
+  name: string;
+  period: string;
   period_start?: string;
   period_end?: string;
   start_date?: string;
   end_date?: string;
   category?: string;
+  commission_type?: string;
+  commission_rate?: string | number | Record<string, number>;
   total_referrals?: number;
   converted_referrals?: number;
-  gross_commission?: number;
+  gross_commission: number;
+  /** @deprecated Deprecated by business - partner commissions are based purely on Referral Rewards */
   conversion_bonus?: number;
-  tds_amount?: number;
+  tds_rate?: number;
+  tds_amount: number;
   tds_deducted?: number;
-  net_payout?: number;
+  net_payout: number;
   status: PayoutStatus;
   payment_date?: string | null;
   transaction_reference?: string | null;
@@ -149,13 +208,19 @@ export interface PartnerBillingStatement {
   remarks?: string | null;
 }
 
+export type PartnerStatement = PartnerBillingStatement;
+
 export interface ModuleEarningItem {
   module: "Student" | "College" | "Mentor" | "Industry" | string;
+  count?: number;
   referral_count: number;
-  converted_count: number;
+  converted_count?: number;
   earned_amount: number;
   rate?: number;
 }
+
+export type ModuleEarning = ModuleEarningItem;
+export type ModuleEarningsResponse = ModuleEarningItem[];
 
 export interface PartnerPayoutSheet {
   name: string;
@@ -184,6 +249,7 @@ export interface OnboardingPartnerCategory {
     mentor?: number;
     college?: number;
     flat_reward?: number;
+    /** @deprecated Deprecated by business - partner commissions are based purely on Referral Rewards */
     conversion_bonus?: number;
     tiers?: Array<{ min: number; max: number; reward: number }>;
   };

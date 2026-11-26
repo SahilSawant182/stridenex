@@ -363,34 +363,38 @@ function PartnerBillingPageContent() {
           </div>
         )}
 
-        {/* 1. Category & Plan Banner */}
-        <CategoryPlanBanner
-          categoryInfo={categoryInfo}
-          summary={summary}
-          loading={loading}
-        />
-
-        {/* 2. KPI Summary Cards */}
+        {/* SECTION 1: Standardized Top KPI Bar (4 Cards) */}
         <BillingKpiCards
           summary={summary}
           categoryInfo={categoryInfo}
           loading={loading}
         />
 
-        {/* 3. Module-wise Earnings Breakdown & Chart */}
-        <ModuleEarningsBreakdown items={moduleEarnings} loading={loading} />
+        {/* SECTION 2: Currently Active Plan Banner */}
+        <CategoryPlanBanner
+          categoryInfo={categoryInfo}
+          summary={summary}
+          loading={loading}
+        />
 
-        {/* 4. Referral Code & Share Card Widget */}
+        {/* SECTION 3: Standard 4-Module Cumulative Earnings Breakdown */}
+        <ModuleEarningsBreakdown
+          items={moduleEarnings}
+          categoryInfo={categoryInfo}
+          loading={loading}
+        />
+
+        {/* Referral Sharing Tool */}
         <ReferralShareWidget referralCode={referralCode} loading={loading} />
 
-        {/* 5. Billing Statements & Payout Reports Table */}
+        {/* SECTION 4: Historical Payout Statements & Cycle Ledger */}
         <PayoutStatementsTable
           statements={statements}
           minPayoutAmount={minPayoutAmount}
           loading={loading}
         />
 
-        {/* 6. Admin / Partner Manager Payout Sheets (System Manager / Administrator only) */}
+        {/* Admin / Partner Manager Payout Sheets (System Manager / Administrator only) */}
         {isAdminManager && (
           <AdminPayoutSheetsPanel onSheetUpdated={fetchBillingDashboard} />
         )}

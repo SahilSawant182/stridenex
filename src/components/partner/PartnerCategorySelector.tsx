@@ -27,9 +27,6 @@ function rewardSummary(rs: OnboardingPartnerCategory["reward_structure"]): strin
   } else if (rs.type === "Flat Amount" && rs.flat_reward) {
     base = `${formatINR(rs.flat_reward)} / referral`;
   }
-  if (rs.conversion_bonus && rs.conversion_bonus > 0) {
-    base += `${base ? " + " : ""}${formatINR(rs.conversion_bonus)} bonus`;
-  }
   return base;
 }
 
