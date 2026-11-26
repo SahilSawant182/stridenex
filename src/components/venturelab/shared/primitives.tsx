@@ -271,7 +271,7 @@ export function Sheet({
         <Dialog.Content
           className={cn(
             "fixed inset-y-0 z-[81] flex w-full flex-col bg-white shadow-2xl",
-            
+
             side === "right"
               ? "right-0 vl-slide-in-right"
               : "left-0 vl-slide-in-left",
@@ -306,7 +306,9 @@ export function Sheet({
 /* Dropdown (Radix)                                                    */
 /* ------------------------------------------------------------------ */
 
-export const Dropdown = DropdownMenu.Root;
+export function Dropdown(props: React.ComponentProps<typeof DropdownMenu.Root>) {
+  return <DropdownMenu.Root modal={false} {...props} />;
+}
 export const DropdownTrigger = DropdownMenu.Trigger;
 
 export function DropdownContent({
