@@ -1,9 +1,9 @@
 "use client";
 
 import { formatDistanceToNow, parseISO } from "date-fns";
-import { Archive, ArchiveRestore, ArrowRight, Calendar, Copy, MoreVertical, Pencil, Flag } from "lucide-react";
+import { Archive, ArchiveRestore, ArrowRight, Calendar, Copy, MoreVertical, Pencil, Flag, Trash2 } from "lucide-react";
 import type { Venture } from "@/types/venturelab";
-import { STAGE_BADGE } from "@/lib/venturelab/constants";
+import { stageBadge } from "@/lib/venturelab/constants";
 import { initials, nextMilestone, ventureProgress, weekLabel } from "@/lib/venturelab/utils";
 import { cn } from "@/lib/utils";
 import {
@@ -21,7 +21,8 @@ import {
 } from "../shared/primitives";
 
 export interface VentureCardActions {
-  onRename: (v: Venture) => void;
+  onEdit: (v: Venture) => void;
+  onDelete: (v: Venture) => void;
   onArchiveToggle: (v: Venture) => void;
   onDuplicate: (v: Venture) => void;
 }
@@ -39,7 +40,7 @@ export default function VentureCard({
   actions?: VentureCardActions;
   showMilestone?: boolean;
 }) {
-  const progress = ventureProgress(venture);
+  const progress = venture.overallProgress ?? ventureProgress(venture);
   const next = nextMilestone(venture);
 
   return (
@@ -60,8 +61,8 @@ export default function VentureCard({
             {isActive && <span className="text-[11px] font-semibold uppercase tracking-wide text-[#0f0fbd]">Active</span>}
           </div>
           <div className="mt-1 flex flex-wrap gap-1.5">
-            <Badge className="bg-slate-100 text-slate-700 ring-slate-200">{venture.sector}</Badge>
-            <Badge className={STAGE_BADGE[venture.stage]}>{venture.stage}</Badge>
+            {venture.sector && <Badge className="bg-slate-100 text-slate-700 ring-slate-200">{venture.sector}</Badge>}
+            <Badge className={stageBadge(venture.stage)}>{venture.stage}</Badge>
             {venture.archived && <Badge className="bg-slate-800 text-white ring-slate-800">Archived</Badge>}
           </div>
         </div>
@@ -73,8 +74,8 @@ export default function VentureCard({
               </IconButton>
             </DropdownTrigger>
             <DropdownContent>
-              <DropdownItem onSelect={() => actions.onRename(venture)}>
-                <Pencil className="h-4 w-4" aria-hidden /> Rename
+              <DropdownItem onSelect={() => actions.onEdit(venture)}>
+                <Pencil className="h-4 w-4" aria-hidden /> Edit details
               </DropdownItem>
               <DropdownItem onSelect={() => actions.onDuplicate(venture)}>
                 <Copy className="h-4 w-4" aria-hidden /> Duplicate
@@ -84,12 +85,15 @@ export default function VentureCard({
                 {venture.archived ? <ArchiveRestore className="h-4 w-4" aria-hidden /> : <Archive className="h-4 w-4" aria-hidden />}
                 {venture.archived ? "Restore" : "Archive"}
               </DropdownItem>
+              <DropdownItem onSelect={() => actions.onDelete(venture)} tone="danger">
+                <Trash2 className="h-4 w-4" aria-hidden /> Delete
+              </DropdownItem>
             </DropdownContent>
           </Dropdown>
         )}
       </div>
 
-      <p className="mt-3 line-clamp-2 text-sm text-slate-600">{venture.description}</p>
+      <p className="mt-3 line-clamp-2 text-sm text-slate-600">{venture.description || "No tagline yet — add one from Edit details."}</p>
 
       <div className="mt-4">
         <div className="mb-1.5 flex items-center justify-between text-xs">

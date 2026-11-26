@@ -2,46 +2,76 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, FolderSearch, Plus } from "lucide-react";
-import { VENTURE_STAGES, type Venture, type VentureStageFilter } from "@/types/venturelab";
+import { AlertTriangle, Archive, FolderSearch, Loader2, Plus } from "lucide-react";
+import type { Venture, VentureStageFilter } from "@/types/venturelab";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/context/ToastContext";
 import { useVentureLab } from "../VentureLabProvider";
-import { EmptyState, PageHeader, VLButton } from "../shared/primitives";
-import { CreateVentureModal, RenameVentureModal } from "../shared/VentureFormModals";
+import { EmptyState, Modal, PageHeader, VLButton } from "../shared/primitives";
+import { CreateVentureModal, EditVentureModal } from "../shared/VentureFormModals";
 import VentureCard, { type VentureCardActions } from "../overview/VentureCard";
 
-const FILTERS: VentureStageFilter[] = ["All", ...VENTURE_STAGES];
+const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong. Please try again.");
 
 export default function VenturesView() {
   const router = useRouter();
   const { showToast } = useToast();
-  const { ventures, activeVenture, setActiveVenture, setArchived, duplicateVenture } = useVentureLab();
+  const { ventures, activeVenture, loading, loadError, refresh, setActiveVenture, setArchived, duplicateVenture, deleteVenture, syncVenture } =
+    useVentureLab();
   const [filter, setFilter] = useState<VentureStageFilter>("All");
   const [showArchived, setShowArchived] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [renaming, setRenaming] = useState<Venture | null>(null);
+  const [editing, setEditing] = useState<Venture | null>(null);
+  const [deleting, setDeleting] = useState<Venture | null>(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const pool = ventures.filter((v) => v.archived === showArchived);
-  const visible = pool.filter((v) => filter === "All" || v.stage === filter);
+  // Stage names come from the backend, so the filter pills are built from what exists.
+  const stages = Array.from(new Set(ventures.map((v) => v.stage)));
+  const filters: VentureStageFilter[] = ["All", ...stages];
+  const activeFilter = filters.includes(filter) ? filter : "All";
+  const visible = pool.filter((v) => activeFilter === "All" || v.stage === activeFilter);
   const countFor = (f: VentureStageFilter) => pool.filter((v) => f === "All" || v.stage === f).length;
   const archivedCount = ventures.filter((v) => v.archived).length;
 
+  /** Run a backend action, toasting success or the server's message. */
+  const run = async (v: Venture, task: () => Promise<void>, ok: string) => {
+    setBusyId(v.id);
+    try {
+      await task();
+      showToast(ok, "success");
+    } catch (e) {
+      showToast(errMsg(e), "error");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const actions: VentureCardActions = {
-    onRename: (v) => setRenaming(v),
-    onDuplicate: (v) => {
-      duplicateVenture(v.id);
-      showToast(`Duplicated ${v.name}`, "success");
-    },
-    onArchiveToggle: (v) => {
-      setArchived(v.id, !v.archived);
-      showToast(v.archived ? `${v.name} restored` : `${v.name} archived`, "info");
-    },
+    onEdit: (v) => setEditing(v),
+    onDuplicate: (v) => void run(v, () => duplicateVenture(v.id), `Duplicated ${v.name}`),
+    onArchiveToggle: (v) => void run(v, () => setArchived(v.id, !v.archived), v.archived ? `${v.name} restored` : `${v.name} archived`),
+    onDelete: (v) => setDeleting(v),
+  };
+
+  const confirmDelete = async () => {
+    if (!deleting) return;
+    setDeleteBusy(true);
+    try {
+      await deleteVenture(deleting.id);
+      showToast(`${deleting.name} deleted`, "info");
+      setDeleting(null);
+    } catch (e) {
+      showToast(errMsg(e), "error");
+    } finally {
+      setDeleteBusy(false);
+    }
   };
 
   const openVenture = (v: Venture) => {
-    if (v.archived) setArchived(v.id, false);
     setActiveVenture(v.id);
+    void syncVenture(v.id); // pull the latest details in the background
     router.push("/venturelab/overview");
   };
 
@@ -59,8 +89,8 @@ export default function VenturesView() {
 
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div role="group" aria-label="Filter ventures by stage" className="vl-scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 md:mx-0 md:px-0">
-          {FILTERS.map((f) => {
-            const active = filter === f;
+          {filters.map((f) => {
+            const active = activeFilter === f;
             return (
               <button
                 key={f}
@@ -88,18 +118,33 @@ export default function VenturesView() {
         </label>
       </div>
 
-      {visible.length === 0 ? (
+      {loading && ventures.length === 0 ? (
+        <div className="flex h-48 items-center justify-center text-slate-500" role="status">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden /> Loading your ventures…
+        </div>
+      ) : loadError && ventures.length === 0 ? (
+        <EmptyState
+          icon={<AlertTriangle className="h-7 w-7" />}
+          title="Couldn’t load your ventures"
+          body={loadError}
+          action={
+            <VLButton variant="accent" onClick={() => void refresh()}>
+              Try again
+            </VLButton>
+          }
+        />
+      ) : visible.length === 0 ? (
         <EmptyState
           icon={<FolderSearch className="h-7 w-7" />}
-          title={showArchived ? "No archived ventures here" : filter === "All" ? "No ventures yet" : `No ventures in ${filter}`}
+          title={showArchived ? "No archived ventures here" : activeFilter === "All" ? "No ventures yet" : `No ventures in ${activeFilter}`}
           body={
-            filter === "All"
+            activeFilter === "All"
               ? "Every big company started as a small idea. Create your first venture to begin."
-              : `None of your ${showArchived ? "archived " : ""}ventures are at the ${filter} stage yet. Keep building — or start something new.`
+              : `None of your ${showArchived ? "archived " : ""}ventures are at the ${activeFilter} stage yet. Keep building — or start something new.`
           }
           action={
             <div className="flex flex-wrap justify-center gap-2">
-              {filter !== "All" && (
+              {activeFilter !== "All" && (
                 <VLButton variant="outline" onClick={() => setFilter("All")}>
                   Show all ventures
                 </VLButton>
@@ -113,7 +158,7 @@ export default function VenturesView() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {visible.map((v, i) => (
-            <div key={v.id} className="vl-rise" style={{ animationDelay: `${i * 50}ms` }}>
+            <div key={v.id} className={cn("vl-rise", busyId === v.id && "pointer-events-none opacity-60")} aria-busy={busyId === v.id} style={{ animationDelay: `${i * 50}ms` }}>
               <VentureCard venture={v} isActive={v.id === activeVenture?.id} onOpen={openVenture} actions={actions} showMilestone={false} />
             </div>
           ))}
@@ -121,11 +166,26 @@ export default function VenturesView() {
       )}
 
       <CreateVentureModal open={createOpen} onOpenChange={setCreateOpen} />
-      <RenameVentureModal
-        ventureId={renaming?.id ?? null}
-        currentName={renaming?.name ?? ""}
-        onOpenChange={(o) => !o && setRenaming(null)}
-      />
+      <EditVentureModal venture={editing} onOpenChange={(o) => !o && setEditing(null)} />
+      <Modal
+        open={deleting !== null}
+        onOpenChange={(o) => !o && !deleteBusy && setDeleting(null)}
+        size="sm"
+        title="Delete venture?"
+        description={deleting ? `${deleting.name} will be permanently deleted. This can’t be undone.` : undefined}
+        footer={
+          <>
+            <VLButton variant="outline" onClick={() => setDeleting(null)} disabled={deleteBusy}>
+              Cancel
+            </VLButton>
+            <VLButton variant="danger" onClick={() => void confirmDelete()} disabled={deleteBusy}>
+              {deleteBusy && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />} {deleteBusy ? "Deleting…" : "Delete"}
+            </VLButton>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">Want to keep it around? Archive it instead — you can restore it any time.</p>
+      </Modal>
     </div>
   );
 }

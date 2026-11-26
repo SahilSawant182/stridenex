@@ -18,7 +18,9 @@ import {
   Lightbulb,
   Video,
   Calendar,
-  type LucideIcon
+  Mail,
+  Podcast,
+  type LucideIcon,
 } from "lucide-react";
 
 export interface NavItem {
@@ -64,7 +66,13 @@ export const navigationConfig: Record<string, NavCategory> = {
             icon: Users,
             description: "Guided by experience, driven by purpose",
           },
-        ]
+          {
+            label: "Careers",
+            href: "/careers",
+            icon: Briefcase,
+            description: "Explore career opportunities at StrideNex",
+          },
+        ],
       },
       {
         title: "Platform",
@@ -81,7 +89,7 @@ export const navigationConfig: Record<string, NavCategory> = {
             icon: Target,
             description: "Three pathways. One structured journey",
           },
-        ]
+        ],
       },
       {
         title: "Connect",
@@ -98,11 +106,11 @@ export const navigationConfig: Record<string, NavCategory> = {
             icon: Handshake,
             description: "Join our ecosystem",
             badge: "Join Us",
-            badgeColor: "accent"
+            badgeColor: "accent",
           },
-        ]
+        ],
       },
-    ]
+    ],
   },
 
   solutions: {
@@ -118,7 +126,7 @@ export const navigationConfig: Record<string, NavCategory> = {
             icon: Code,
             description: "Become industry-ready before you graduate",
             badge: "Popular",
-            badgeColor: "accent"
+            badgeColor: "accent",
           },
           {
             label: "Entrepreneur Development",
@@ -132,7 +140,7 @@ export const navigationConfig: Record<string, NavCategory> = {
             icon: GraduationCap,
             description: "Prepare for advanced academic excellence",
           },
-        ]
+        ],
       },
       {
         title: "For Institutes",
@@ -149,7 +157,7 @@ export const navigationConfig: Record<string, NavCategory> = {
             icon: TrendingUp,
             description: "Track student performance insights",
           },
-        ]
+        ],
       },
       {
         title: "For Industry",
@@ -166,9 +174,9 @@ export const navigationConfig: Record<string, NavCategory> = {
             icon: Handshake,
             description: "Collaborate on curriculum and projects",
           },
-        ]
+        ],
       },
-    ]
+    ],
   },
 
   pathways: {
@@ -184,7 +192,7 @@ export const navigationConfig: Record<string, NavCategory> = {
             icon: Code,
             description: "Job-ready capabilities through applied learning",
           },
-        ]
+        ],
       },
       {
         title: "Entrepreneur Track",
@@ -195,7 +203,7 @@ export const navigationConfig: Record<string, NavCategory> = {
             icon: Rocket,
             description: "From idea validation to venture readiness",
           },
-        ]
+        ],
       },
       {
         title: "Education Track",
@@ -206,9 +214,9 @@ export const navigationConfig: Record<string, NavCategory> = {
             icon: GraduationCap,
             description: "Guided specialization and profile strengthening",
           },
-        ]
+        ],
       },
-    ]
+    ],
   },
 
   outcomes: {
@@ -223,8 +231,8 @@ export const navigationConfig: Record<string, NavCategory> = {
             href: "/outcomes/students",
             icon: Users,
             description: "Real stories of career transformation",
-          }
-        ]
+          },
+        ],
       },
       {
         title: "For Institutes",
@@ -234,8 +242,8 @@ export const navigationConfig: Record<string, NavCategory> = {
             href: "/outcomes/institutes",
             icon: Building2,
             description: "Enhanced placement and reputation",
-          }
-        ]
+          },
+        ],
       },
       {
         title: "For Industry",
@@ -245,57 +253,93 @@ export const navigationConfig: Record<string, NavCategory> = {
             href: "/outcomes/industry",
             icon: Briefcase,
             description: "Reduced hiring risk, better talent",
-          }
-        ]
-      }
-    ]
+          },
+        ],
+      },
+    ],
   },
 
   blogsAndEvents: {
-    label: "Blogs & Events",
+    label: "Resources",
     icon: Newspaper,
     sections: [
       {
-        title: "Blogs",
+        title: "Read & Explore",
         items: [
           {
             label: "Blogs",
             href: "/blogs",
             icon: BookOpen,
-            description: "Read our latest blogs and updates",
-          }
-        ]
-      },
-      {
-        title: "Events",
-        items: [
+            description: "Tips, trends, and SkillPath best practices",
+          },
           {
-            label: "Events",
-            href: "/events",
-            icon: Calendar,
-            description: "Discover upcoming events and opportunities",
-          }
-        ]
+            label: "All Newsletters",
+            href: "/newsletters",
+            icon: Mail,
+            description: "Explore our latest newsletters, insights, and updates",
+          },
+          {
+            label: "Resource Library",
+            href: "/resource-library",
+            icon: BookOpen,
+            description: "Guides, templates, and toolkits",
+          },
+        ],
       },
       {
-        title: "Videos",
+        title: "Watch & Listen",
         items: [
           {
             label: "Our Videos",
             href: "/our-videos",
             icon: Video,
             description: "Watch our latest videos and insights",
-          }
-        ]
-      }
-    ]
+          },
+          {
+            label: "Webinar Library",
+            href: "/webinar-library",
+            icon: Video,
+            description: "On-demand webinars and events",
+          },
+          {
+            label: "The Right Connection",
+            href: "/the-right-connection",
+            icon: Podcast,
+            description: "Mentoring insights and conversations",
+          },
+        ],
+      },
+      {
+        title: "Stories & Events",
+        items: [
+          {
+            label: "Events",
+            href: "/events",
+            icon: Calendar,
+            description: "Discover upcoming events and opportunities",
+          },
+          {
+            label: "Mentor & Mentee Stories",
+            href: "/mentor-mentee-stories",
+            icon: Users,
+            description: "Real stories from real mentoring relationships",
+          },
+          {
+            label: "Case Studies",
+            href: "/case-studies",
+            icon: Briefcase,
+            description: "See how organizations succeed with StrideNex",
+          },
+        ],
+      },
+    ],
   },
 
   partner: {
     label: "Partner With Us",
     href: "/partner-with-us",
     icon: Handshake,
-    sections: []
+    sections: [],
   },
 
   join: {
@@ -311,8 +355,8 @@ export const navigationConfig: Record<string, NavCategory> = {
             href: "/signup?role=student",
             icon: GraduationCap,
             description: "Start your career journey",
-          }
-        ]
+          },
+        ],
       },
       {
         title: "For Institutes",
@@ -322,8 +366,8 @@ export const navigationConfig: Record<string, NavCategory> = {
             href: "/signup?role=college",
             icon: Building2,
             description: "Enhance placement success",
-          }
-        ]
+          },
+        ],
       },
       {
         title: "For Mentors",
@@ -333,8 +377,8 @@ export const navigationConfig: Record<string, NavCategory> = {
             href: "/signup?role=mentor",
             icon: Lightbulb,
             description: "Guide the next generation",
-          }
-        ]
+          },
+        ],
       },
       {
         title: "For Industry",
@@ -344,8 +388,8 @@ export const navigationConfig: Record<string, NavCategory> = {
             href: "/signup?role=industry",
             icon: Briefcase,
             description: "Access skilled talent",
-          }
-        ]
+          },
+        ],
       },
       {
         title: "For Partners",
@@ -355,23 +399,23 @@ export const navigationConfig: Record<string, NavCategory> = {
             href: "/partner-with-us",
             icon: Handshake,
             description: "Collaborate with us for mutual growth",
-          }
-        ]
-      }
-    ]
-  }
+          },
+        ],
+      },
+    ],
+  },
 };
 
 // Helper function to get badge color classes
-export const getBadgeColorClasses = (color: string = 'primary') => {
-  const colorMap: Record<string, { bg: string, text: string }> = {
-    primary: { bg: 'bg-primary/10', text: 'text-primary' },
-    accent: { bg: 'bg-accent/10', text: 'text-accent' },
-    purple: { bg: 'bg-purple-100', text: 'text-purple-600' },
-    green: { bg: 'bg-green-100', text: 'text-green-600' },
-    blue: { bg: 'bg-blue-100', text: 'text-blue-600' },
-    orange: { bg: 'bg-orange-100', text: 'text-orange-600' },
-    red: { bg: 'bg-red-100', text: 'text-red-600' },
+export const getBadgeColorClasses = (color: string = "primary") => {
+  const colorMap: Record<string, { bg: string; text: string }> = {
+    primary: { bg: "bg-primary/10", text: "text-primary" },
+    accent: { bg: "bg-accent/10", text: "text-accent" },
+    purple: { bg: "bg-purple-100", text: "text-purple-600" },
+    green: { bg: "bg-green-100", text: "text-green-600" },
+    blue: { bg: "bg-blue-100", text: "text-blue-600" },
+    orange: { bg: "bg-orange-100", text: "text-orange-600" },
+    red: { bg: "bg-red-100", text: "text-red-600" },
   };
   return colorMap[color] || colorMap.primary;
 };

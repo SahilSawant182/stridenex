@@ -171,7 +171,7 @@ export default function EventsTabContent() {
       const payload = {
         student: currentUser,
         event: event.name,
-        college: studentCollege || event.college || "", 
+        college: studentCollege || event.college || "",
         status: "Register"
       };
 
@@ -277,7 +277,7 @@ export default function EventsTabContent() {
 
       const response = await getCollegeEventList(college, email);
       const eventsList = response?.data?.events || response?.message?.data?.events || response?.events || (Array.isArray(response?.data) ? response.data : []);
-      
+
       if (Array.isArray(eventsList)) {
         const mappedEvents: Event[] = eventsList.map((item: any, index: number) => {
           const styles = getEventStyles(item.event_type);
@@ -353,7 +353,7 @@ export default function EventsTabContent() {
                 <BaseCard key={event.id} className="overflow-hidden hover:shadow-lg transition-all group">
                   <div className="p-5">
                     {/* Header with Type and Days Left */}
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex item s-start justify-between mb-4">
                       <div className="flex items-center gap-2">
                         <div className={`w-10 h-10 rounded-lg ${event.bgColor} flex items-center justify-center`}>
                           <Icon className={`w-5 h-5 ${event.color}`} />
@@ -392,12 +392,11 @@ export default function EventsTabContent() {
                       <Button
                         onClick={() => handleRegister(event)}
                         disabled={
-                          registeringId === event.name || 
-                          registeredEventIds.includes(event.name) || 
+                          registeringId === event.name ||
+                          registeredEventIds.includes(event.name) ||
                           event.registrationStatus === "Register"
                         }
-                        className={`flex-1 ${
-                          registeredEventIds.includes(event.name) || event.registrationStatus === "Register"
+                        className={`flex-1 ${registeredEventIds.includes(event.name) || event.registrationStatus === "Register"
                             ? 'bg-emerald-500 hover:bg-emerald-600'
                             : 'bg-orange-500 hover:bg-orange-600'
                           } text-white shadow-sm active:scale-95 transition-all font-bold rounded-xl`}
@@ -522,8 +521,8 @@ export default function EventsTabContent() {
       {/* Event Details Modal */}
       {selectedEventForDetails && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          
-          <motion.div 
+
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
@@ -536,7 +535,7 @@ export default function EventsTabContent() {
           >
             {/* Modal Header */}
             <div className={`p-6 ${selectedEventForDetails.bgColor} border-b ${selectedEventForDetails.borderColor} relative`}>
-              <button 
+              <button
                 onClick={() => setSelectedEventForDetails(null)}
                 className="absolute top-4 right-4 p-2 text-slate-500 hover:text-slate-800 bg-white/50 hover:bg-white rounded-full transition-colors font-bold"
               >
@@ -599,8 +598,8 @@ export default function EventsTabContent() {
 
             {/* Modal Footer */}
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setSelectedEventForDetails(null)}
                 className="font-bold border-slate-200"
               >
@@ -613,15 +612,14 @@ export default function EventsTabContent() {
                   handleRegister(eventToRegister);
                 }}
                 disabled={
-                  registeringId === selectedEventForDetails.name || 
-                  registeredEventIds.includes(selectedEventForDetails.name) || 
+                  registeringId === selectedEventForDetails.name ||
+                  registeredEventIds.includes(selectedEventForDetails.name) ||
                   selectedEventForDetails.registrationStatus === "Register"
                 }
-                className={`font-bold shadow-sm ${
-                  registeredEventIds.includes(selectedEventForDetails.name) || selectedEventForDetails.registrationStatus === "Register"
+                className={`font-bold shadow-sm ${registeredEventIds.includes(selectedEventForDetails.name) || selectedEventForDetails.registrationStatus === "Register"
                     ? 'bg-emerald-500 hover:bg-emerald-600'
                     : 'bg-orange-500 hover:bg-orange-600'
-                } text-white`}
+                  } text-white`}
               >
                 {registeredEventIds.includes(selectedEventForDetails.name) || selectedEventForDetails.registrationStatus === "Register" ? (
                   <><CheckCircle2 className="w-4 h-4 mr-2" /> Registered</>

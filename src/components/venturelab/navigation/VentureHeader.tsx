@@ -21,7 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BMC_BLOCKS, STAGE_BADGE, STRIDENEX_HOME, VENTURE_NAV } from "@/lib/venturelab/constants";
+import { BMC_BLOCKS, stageBadge, STRIDENEX_HOME, VENTURE_NAV } from "@/lib/venturelab/constants";
 import { allTasks, activeRoadmap, initials } from "@/lib/venturelab/utils";
 import type { BmcBlockId } from "@/types/venturelab";
 import { useVentureLab } from "../VentureLabProvider";
@@ -65,7 +65,7 @@ function GlobalSearch({ className, autoFocus, onDone }: { className?: string; au
     );
     ventures
       .filter((v) => !v.archived && (v.name.toLowerCase().includes(term) || v.sector.toLowerCase().includes(term)))
-      .forEach((v) => out.push({ key: `v-${v.id}`, label: v.name, sub: `${v.sector} · ${v.stage}`, href: "/venturelab/overview", kind: "venture", ventureId: v.id }));
+      .forEach((v) => out.push({ key: `v-${v.id}`, label: v.name, sub: [v.sector, v.stage].filter(Boolean).join(" · "), href: "/venturelab/overview", kind: "venture", ventureId: v.id }));
     if (activeVenture) {
       (Object.keys(activeVenture.canvas.blocks) as BmcBlockId[]).forEach((b) =>
         activeVenture.canvas.blocks[b]
@@ -175,7 +175,7 @@ function VentureSwitcher({ onCreate }: { onCreate: () => void }) {
             {activeVenture ? initials(activeVenture.name) : ready ? "?" : "…"}
           </span>
           <span className="min-w-0 truncate text-sm font-bold text-slate-900">{activeVenture?.name ?? (ready ? "No venture" : "Loading…")}</span>
-          {activeVenture && <Badge className={cn("hidden lg:inline-flex", STAGE_BADGE[activeVenture.stage])}>{activeVenture.stage}</Badge>}
+          {activeVenture && <Badge className={cn("hidden lg:inline-flex", stageBadge(activeVenture.stage))}>{activeVenture.stage}</Badge>}
           <ChevronDown className="h-4 w-4 shrink-0 text-slate-500 transition-transform group-data-[state=open]:rotate-180" aria-hidden />
         </button>
       </DropdownTrigger>
@@ -189,7 +189,7 @@ function VentureSwitcher({ onCreate }: { onCreate: () => void }) {
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold text-slate-900">{v.name}</span>
               <span className="block truncate text-xs text-slate-500">
-                {v.sector} · {v.stage}
+                {[v.sector, v.stage].filter(Boolean).join(" · ")}
               </span>
             </span>
             {v.id === activeVenture?.id && <Check className="h-4 w-4 text-[#0f0fbd]" aria-label="Active" />}
@@ -256,7 +256,7 @@ function Notifications() {
 }
 
 function UserMenu() {
-  const { activeVenture, resetDemoData } = useVentureLab();
+  const { activeVenture, refresh } = useVentureLab();
   const router = useRouter();
   const owner = activeVenture?.team.find((m) => m.isOwner);
   const name = owner?.name ?? "Founder";
@@ -279,8 +279,8 @@ function UserMenu() {
           <p className="truncate text-xs text-slate-500">{owner?.email}</p>
         </div>
         <DropdownSeparator />
-        <DropdownItem onSelect={resetDemoData}>
-          <RotateCcw className="h-4 w-4" aria-hidden /> Reset demo data
+        <DropdownItem onSelect={() => void refresh()}>
+          <RotateCcw className="h-4 w-4" aria-hidden /> Refresh ventures
         </DropdownItem>
         <DropdownItem onSelect={() => router.push(STRIDENEX_HOME)}>
           <LogOut className="h-4 w-4" aria-hidden /> Exit VentureLab

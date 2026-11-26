@@ -2,35 +2,48 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Rocket } from "lucide-react";
+import { Loader2, Rocket } from "lucide-react";
+import type { Venture } from "@/types/venturelab";
+import { useIndustrySectors } from "./useIndustrySectors";
 import { useVentureLab } from "../VentureLabProvider";
 import { FieldLabel, Modal, VLButton, inputClass } from "./primitives";
 import { useToast } from "@/context/ToastContext";
 
-const SECTORS = ["AgriTech", "EdTech", "HealthTech", "FinTech", "CleanTech", "E-commerce", "Social Impact", "SaaS", "Other"];
 
 export function CreateVentureModal({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const { createVenture } = useVentureLab();
   const { showToast } = useToast();
   const router = useRouter();
   const [name, setName] = useState("");
-  const [sector, setSector] = useState(SECTORS[0]);
+  const [sector, setSector] = useState("");
+  const sectorsState = useIndustrySectors();
   const [description, setDescription] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const reset = () => {
     setName("");
-    setSector(SECTORS[0]);
+    setSector("");
     setDescription("");
+    setError(null);
   };
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    createVenture({ name: name.trim(), sector, description: description.trim() || "A new venture — start with Idea Discovery." });
-    showToast(`${name.trim()} created. Let’s discover the idea.`, "success");
-    reset();
-    onOpenChange(false);
-    router.push("/venturelab/discovery");
+    if (!name.trim() || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await createVenture({ name: name.trim(), sector, description: description.trim() });
+      showToast(`${name.trim()} created. Let’s discover the idea.`, "success");
+      reset();
+      onOpenChange(false);
+      router.push("/venturelab/discovery");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create the venture.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -47,8 +60,8 @@ export function CreateVentureModal({ open, onOpenChange }: { open: boolean; onOp
           <VLButton variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </VLButton>
-          <VLButton type="submit" form="vl-create-venture" variant="accent" disabled={!name.trim()}>
-            <Rocket className="h-4 w-4" aria-hidden /> Create venture
+          <VLButton type="submit" form="vl-create-venture" variant="accent" disabled={!name.trim() || saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Rocket className="h-4 w-4" aria-hidden />} {saving ? "Creating…" : "Create venture"}
           </VLButton>
         </>
       }
@@ -68,15 +81,24 @@ export function CreateVentureModal({ open, onOpenChange }: { open: boolean; onOp
           />
         </div>
         <div>
-          <FieldLabel htmlFor="vl-venture-sector">Sector</FieldLabel>
-          <select id="vl-venture-sector" value={sector} onChange={(e) => setSector(e.target.value)} className={inputClass}>
-            {SECTORS.map((s) => (
+          <FieldLabel htmlFor="vl-venture-sector">Industry sector</FieldLabel>
+          <select id="vl-venture-sector" value={sector} onChange={(e) => setSector(e.target.value)} onFocus={sectorsState.ensureLoaded} onMouseDown={sectorsState.ensureLoaded} className={inputClass}>
+            <option value="">{sectorsState.loading ? "Loading sectors…" : "Select a sector"}</option>
+            {sectorsState.sectors.map((s) => (
               <option key={s}>{s}</option>
             ))}
           </select>
+          {sectorsState.error && (
+            <p className="mt-1 text-xs text-red-600">
+              {sectorsState.error}{" "}
+              <button type="button" onClick={sectorsState.retry} className="font-semibold underline">
+                Retry
+              </button>
+            </p>
+          )}
         </div>
         <div>
-          <FieldLabel htmlFor="vl-venture-desc">One-line pitch (optional)</FieldLabel>
+          <FieldLabel htmlFor="vl-venture-desc">Tagline (optional)</FieldLabel>
           <textarea
             id="vl-venture-desc"
             rows={3}
@@ -87,59 +109,111 @@ export function CreateVentureModal({ open, onOpenChange }: { open: boolean; onOp
             placeholder="What does it do, and for whom?"
           />
         </div>
+        {error && (
+          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        )}
       </form>
     </Modal>
   );
 }
 
-export function RenameVentureModal({
-  ventureId,
-  currentName,
+export function EditVentureModal({
+  venture,
   onOpenChange,
 }: {
-  ventureId: string | null;
-  currentName: string;
+  venture: Venture | null;
   onOpenChange: (o: boolean) => void;
 }) {
-  const { renameVenture } = useVentureLab();
+  const { editVenture } = useVentureLab();
   const { showToast } = useToast();
-  const [name, setName] = useState(currentName);
-  const [prevId, setPrevId] = useState(ventureId);
+  const [name, setName] = useState("");
+  const [sector, setSector] = useState("");
+  const sectorsState = useIndustrySectors();
+  const [description, setDescription] = useState("");
+  const [prevId, setPrevId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Reset the field whenever a different venture is opened.
-  if (ventureId !== prevId) {
-    setPrevId(ventureId);
-    setName(currentName);
+  // Load the venture's current values whenever a different one is opened.
+  if ((venture?.id ?? null) !== prevId) {
+    setPrevId(venture?.id ?? null);
+    if (venture) {
+      setName(venture.name);
+      setSector(venture.sector);
+      setDescription(venture.description);
+      setError(null);
+    }
   }
 
-  const submit = (e: React.FormEvent) => {
+  // Keep a venture's current sector selectable even if it isn't in the loaded list.
+  const sectors = venture?.sector && !sectorsState.sectors.includes(venture.sector) ? [venture.sector, ...sectorsState.sectors] : sectorsState.sectors;
+  const unchanged = !!venture && name.trim() === venture.name && sector === venture.sector && description.trim() === venture.description;
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!ventureId || !name.trim()) return;
-    renameVenture(ventureId, name.trim());
-    showToast("Venture renamed", "success");
-    onOpenChange(false);
+    if (!venture || !name.trim() || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await editVenture(venture.id, { name: name.trim(), sector, description: description.trim() });
+      showToast("Venture updated", "success");
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not update the venture.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <Modal
-      open={ventureId !== null}
+      open={venture !== null}
       onOpenChange={onOpenChange}
-      title="Rename venture"
-      size="sm"
+      title="Edit venture"
       footer={
         <>
           <VLButton variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </VLButton>
-          <VLButton type="submit" form="vl-rename-venture" disabled={!name.trim() || name.trim() === currentName}>
-            Save name
+          <VLButton type="submit" form="vl-edit-venture" disabled={!name.trim() || unchanged || saving}>
+            {saving && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />} {saving ? "Saving…" : "Save changes"}
           </VLButton>
         </>
       }
     >
-      <form id="vl-rename-venture" onSubmit={submit}>
-        <FieldLabel htmlFor="vl-rename-input">Venture name</FieldLabel>
-        <input id="vl-rename-input" autoFocus maxLength={60} value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
+      <form id="vl-edit-venture" onSubmit={submit} className="space-y-4">
+        <div>
+          <FieldLabel htmlFor="vl-edit-name">Venture name</FieldLabel>
+          <input id="vl-edit-name" autoFocus maxLength={60} value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
+        </div>
+        <div>
+          <FieldLabel htmlFor="vl-edit-sector">Industry sector</FieldLabel>
+          <select id="vl-edit-sector" value={sector} onChange={(e) => setSector(e.target.value)} onFocus={sectorsState.ensureLoaded} onMouseDown={sectorsState.ensureLoaded} className={inputClass}>
+            <option value="">{sectorsState.loading ? "Loading sectors…" : "Select a sector"}</option>
+            {sectors.map((x) => (
+              <option key={x}>{x}</option>
+            ))}
+          </select>
+          {sectorsState.error && (
+            <p className="mt-1 text-xs text-red-600">
+              {sectorsState.error}{" "}
+              <button type="button" onClick={sectorsState.retry} className="font-semibold underline">
+                Retry
+              </button>
+            </p>
+          )}
+        </div>
+        <div>
+          <FieldLabel htmlFor="vl-edit-desc">Tagline</FieldLabel>
+          <textarea id="vl-edit-desc" rows={3} maxLength={180} value={description} onChange={(e) => setDescription(e.target.value)} className={`${inputClass} py-2.5`} />
+        </div>
+        {error && (
+          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {error}
+          </p>
+        )}
       </form>
     </Modal>
   );

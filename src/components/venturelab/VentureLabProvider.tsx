@@ -1,10 +1,19 @@
 "use client";
 
-// Global VentureLab state. Stage 1 is front-end only: state is seeded from mock
-// data and persisted to localStorage so a student's edits survive reloads.
-// Swap the load/save functions for API calls when the backend lands.
+// Global VentureLab state. The venture list (name, sector, stage, tagline,
+// status, progress) is owned by the backend; canvas, roadmap and team are still
+// local-only extras keyed by the venture's document id and persisted to
+// localStorage until those tabs get their own APIs.
 
-import React, { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useAuth } from "@/context/AuthContext";
+import {
+  VENTURE_DEFAULT_STAGE,
+  VENTURE_STATUS_ACTIVE,
+  VENTURE_STATUS_ARCHIVED,
+  ventureService,
+  type ApiVenture,
+} from "@/services/venture.services";
 import type {
   BmcBlockId,
   MemberCategory,
@@ -17,21 +26,33 @@ import type {
   VentureNotification,
 } from "@/types/venturelab";
 import { createBlankVenture, templateMilestones } from "@/lib/venturelab/mockData";
-import { seedState, ventureStore, type PersistedState } from "@/lib/venturelab/store";
+import { ventureStore, type PersistedState } from "@/lib/venturelab/store";
 import { NEXT_STATUS, canvasEquals, cloneBlocks, nextVersionLabel, uid } from "@/lib/venturelab/utils";
 
 export interface VentureLabContextValue {
   ready: boolean;
+  /** True while the venture list is being fetched from the backend. */
+  loading: boolean;
+  /** Set when the list could not be loaded. */
+  loadError: string | null;
+  /** Re-fetch the venture list. */
+  refresh: () => Promise<void>;
   ventures: Venture[];
   activeVenture: Venture | null;
   notifications: VentureNotification[];
 
   // Ventures
   setActiveVenture: (id: string) => void;
-  createVenture: (input: { name: string; sector: string; description: string }) => string;
+  /** Resolves with the new venture's id; rejects with the backend's message. */
+  createVenture: (input: { name: string; sector: string; description: string }) => Promise<string>;
+  editVenture: (id: string, input: { name: string; sector: string; description: string }) => Promise<void>;
+  setArchived: (id: string, archived: boolean) => Promise<void>;
+  duplicateVenture: (id: string) => Promise<void>;
+  deleteVenture: (id: string) => Promise<void>;
+  /** Fetch one venture's latest details from the backend. */
+  syncVenture: (id: string) => Promise<void>;
+  /** Local-only working-title edit used by Idea Discovery (not sent to the backend yet). */
   renameVenture: (id: string, name: string) => void;
-  setArchived: (id: string, archived: boolean) => void;
-  duplicateVenture: (id: string) => void;
   updateVenture: (id: string, patch: Partial<Pick<Venture, "description" | "rawIdea" | "stage" | "sector">>) => void;
 
   // Canvas (active venture)
@@ -61,7 +82,6 @@ export interface VentureLabContextValue {
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
 
-  resetDemoData: () => void;
 }
 
 const VentureLabContext = createContext<VentureLabContextValue | null>(null);
@@ -82,12 +102,89 @@ const markCanvasDirty = (v: Venture) => {
   v.canvas.dirty = latest ? !canvasEquals(v.canvas.blocks, latest.blocks) : true;
 };
 
+const SECTOR_FALLBACK = ""; // venture has no sector yet
+
+/** Fold a backend row into a local venture, keeping local canvas/roadmap/team extras. */
+function applyApi(local: Venture, api: ApiVenture): Venture {
+  return {
+    ...local,
+    name: api.venture_name,
+    sector: api.industry_sector || SECTOR_FALLBACK,
+    stage: api.stage || VENTURE_DEFAULT_STAGE,
+    description: api.tagline ?? "",
+    archived: api.status === VENTURE_STATUS_ARCHIVED,
+    overallProgress: typeof api.overall_progress === "number" ? api.overall_progress : local.overallProgress,
+    createdAt: api.creation ? api.creation.replace(" ", "T") : local.createdAt,
+    updatedAt: api.modified ? api.modified.replace(" ", "T") : local.updatedAt,
+  };
+}
+
+const errorMessage = (e: unknown) => (e instanceof Error && e.message ? e.message : "Something went wrong. Please try again.");
+
 export function VentureLabProvider({ children }: { children: React.ReactNode }) {
   // Server render and first hydration pass see `null` (not ready); the client then reads storage.
   const snapshot = useSyncExternalStore(ventureStore.subscribe, ventureStore.getSnapshot, ventureStore.getServerSnapshot);
   const ready = snapshot !== null;
   const state = snapshot ?? EMPTY_STATE;
   const setState = ventureStore.update;
+
+  const { currentUser, fullName } = useAuth();
+  const [sync, setSync] = useState<{ loading: boolean; error: string | null }>({ loading: true, error: null });
+
+  /** Create the local scaffold for a backend row (owner = the signed-in student). */
+  const scaffold = useCallback(
+    (api: ApiVenture): Venture => {
+      const email = api.student_owner || currentUser || "";
+      const base = createBlankVenture(
+        { id: api.name, name: api.venture_name, sector: SECTOR_FALLBACK, stage: VENTURE_DEFAULT_STAGE, description: "" },
+        fullName || email.split("@")[0] || "Founder",
+        email,
+      );
+      return applyApi(base, api);
+    },
+    [currentUser, fullName],
+  );
+
+  /** Replace the venture list with the backend's, keeping local extras for ids we already know. */
+  const reload = useCallback(() => {
+    return ventureService.list().then(
+      (rows) => {
+        setState((s) => {
+          const byId = new Map(s.ventures.map((v) => [v.id, v]));
+          const ventures = rows.map((r) => {
+            const known = byId.get(r.name);
+            return known ? applyApi(known, r) : scaffold(r);
+          });
+          const activeVentureId = ventures.some((v) => v.id === s.activeVentureId) ? s.activeVentureId : null;
+          return { ...s, ventures, activeVentureId };
+        });
+        setSync({ loading: false, error: null });
+      },
+      (e: unknown) => setSync({ loading: false, error: errorMessage(e) }),
+    );
+  }, [scaffold, setState]);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
+
+  const refresh = useCallback(() => {
+    setSync({ loading: true, error: null });
+    return reload();
+  }, [reload]);
+
+  /** Upsert one backend row into the store. */
+  const upsertApi = useCallback(
+    (api: ApiVenture, makeActive = false) =>
+      setState((s) => {
+        const exists = s.ventures.some((v) => v.id === api.name);
+        const ventures = exists
+          ? s.ventures.map((v) => (v.id === api.name ? applyApi(v, api) : v))
+          : [scaffold(api), ...s.ventures];
+        return { ...s, ventures, activeVentureId: makeActive ? api.name : s.activeVentureId };
+      }),
+    [scaffold, setState],
+  );
 
   /** Immutable update of one venture via a mutable draft clone. */
   const mutate = useCallback((pickId: (s: PersistedState) => string | null, fn: (draft: Venture) => void) => {
@@ -112,9 +209,28 @@ export function VentureLabProvider({ children }: { children: React.ReactNode }) 
 
   const activeVenture = useMemo(() => resolveActive(state), [state]);
   const findActive = () => activeVenture;
+  /** Current backend-shaped view of a venture, used to fill gaps in partial update responses. */
+  const ventureFromStore = (id: string): ApiVenture | null => {
+    const v = state.ventures.find((x) => x.id === id);
+    return v
+      ? {
+          name: v.id,
+          venture_name: v.name,
+          tagline: v.description || null,
+          student_owner: currentUser,
+          stage: v.stage,
+          status: v.archived ? VENTURE_STATUS_ARCHIVED : VENTURE_STATUS_ACTIVE,
+          industry_sector: v.sector || null,
+          overall_progress: v.overallProgress ?? null,
+        }
+      : null;
+  };
 
   const value: VentureLabContextValue = {
     ready,
+    loading: sync.loading,
+    loadError: sync.error,
+    refresh,
     ventures: state.ventures,
     activeVenture,
     notifications: state.notifications,
@@ -122,38 +238,103 @@ export function VentureLabProvider({ children }: { children: React.ReactNode }) 
     /* ---------------- Ventures ---------------- */
     setActiveVenture: (id) => setState((s) => ({ ...s, activeVentureId: id })),
 
-    createVenture: (input) => {
-      const owner = findActive()?.team.find((m) => m.isOwner);
-      const v = createBlankVenture(input, owner?.name ?? "Founder", owner?.email ?? "");
-      setState((s) => ({ ...s, ventures: [v, ...s.ventures], activeVentureId: v.id }));
-      return v.id;
+    createVenture: async (input) => {
+      const created = await ventureService.create({
+        venture_name: input.name,
+        tagline: input.description || null,
+        student_owner: currentUser,
+        stage: VENTURE_DEFAULT_STAGE,
+        status: VENTURE_STATUS_ACTIVE,
+        industry_sector: input.sector || null,
+      });
+      if (!created.name) throw new Error("The venture was created but the server did not return its id. Refresh to see it.");
+      // Fill anything the response left out with what we sent.
+      const row: ApiVenture = {
+        student_owner: currentUser,
+        stage: VENTURE_DEFAULT_STAGE,
+        status: VENTURE_STATUS_ACTIVE,
+        tagline: input.description || null,
+        industry_sector: input.sector || null,
+        venture_name: input.name,
+        ...created,
+        name: created.name,
+      };
+      upsertApi(row, true);
+      return row.name;
     },
 
-    renameVenture: (id, name) => mutateVenture(id, (v) => (v.name = name)),
+    editVenture: async (id, input) => {
+      const updated = await ventureService.update({
+        name: id,
+        venture_name: input.name,
+        tagline: input.description || null,
+        industry_sector: input.sector || null,
+      });
+      upsertApi({
+        ...(ventureFromStore(id) ?? ({} as ApiVenture)),
+        name: id,
+        venture_name: input.name,
+        tagline: input.description || null,
+        industry_sector: input.sector || null,
+        ...updated,
+      });
+    },
 
-    setArchived: (id, archived) =>
+    setArchived: async (id, archived) => {
+      const status = archived ? VENTURE_STATUS_ARCHIVED : VENTURE_STATUS_ACTIVE;
+      await ventureService.update({ name: id, status });
       setState((s) => {
         const ventures = s.ventures.map((v) => (v.id === id ? { ...v, archived, updatedAt: new Date().toISOString() } : v));
         // If the active venture is archived, hop to the next live one.
         const activeVentureId =
           archived && s.activeVentureId === id ? ventures.find((v) => !v.archived)?.id ?? null : s.activeVentureId;
         return { ...s, ventures, activeVentureId };
-      }),
+      });
+    },
 
-    duplicateVenture: (id) =>
+    duplicateVenture: async (id) => {
+      const src = state.ventures.find((v) => v.id === id);
+      if (!src) return;
+      const created = await ventureService.create({
+        venture_name: `${src.name} (Copy)`,
+        tagline: src.description || null,
+        student_owner: currentUser,
+        stage: src.stage,
+        status: VENTURE_STATUS_ACTIVE,
+        industry_sector: src.sector || null,
+      });
+      if (!created?.name) throw new Error("The copy was created but the server did not return its id. Refresh to see it.");
+      upsertApi({
+        student_owner: currentUser,
+        stage: src.stage,
+        status: VENTURE_STATUS_ACTIVE,
+        tagline: src.description || null,
+        industry_sector: src.sector || null,
+        venture_name: `${src.name} (Copy)`,
+        ...created,
+        name: created.name,
+      });
+    },
+
+    deleteVenture: async (id) => {
+      await ventureService.remove(id);
       setState((s) => {
-        const src = s.ventures.find((v) => v.id === id);
-        if (!src) return s;
-        const copy = structuredClone(src);
-        copy.id = uid("v");
-        copy.name = `${src.name} (Copy)`;
-        copy.archived = false;
-        copy.createdAt = copy.updatedAt = new Date().toISOString();
-        const idx = s.ventures.findIndex((v) => v.id === id);
-        const ventures = [...s.ventures];
-        ventures.splice(idx + 1, 0, copy);
-        return { ...s, ventures };
-      }),
+        const ventures = s.ventures.filter((v) => v.id !== id);
+        const activeVentureId = s.activeVentureId === id ? ventures.find((v) => !v.archived)?.id ?? null : s.activeVentureId;
+        return { ...s, ventures, activeVentureId };
+      });
+    },
+
+    syncVenture: async (id) => {
+      try {
+        const api = await ventureService.details(id);
+        if (api?.name) upsertApi(api);
+      } catch {
+        /* the list data is still good enough to open the venture */
+      }
+    },
+
+    renameVenture: (id, name) => mutateVenture(id, (v) => (v.name = name)),
 
     updateVenture: (id, patch) => mutateVenture(id, (v) => Object.assign(v, patch)),
 
@@ -315,7 +496,6 @@ export function VentureLabProvider({ children }: { children: React.ReactNode }) 
     markAllNotificationsRead: () =>
       setState((s) => ({ ...s, notifications: s.notifications.map((n) => ({ ...n, read: true })) })),
 
-    resetDemoData: () => setState(() => seedState()),
   };
 
   return <VentureLabContext.Provider value={value}>{children}</VentureLabContext.Provider>;

@@ -264,12 +264,19 @@ export const ROADMAP_TEMPLATE_ORDER: RoadmapTemplateId[] = ["mvp-launch", "valid
 /* Badge styles (high-contrast pairs)                                  */
 /* ------------------------------------------------------------------ */
 
-export const STAGE_BADGE: Record<VentureStage, string> = {
+const STAGE_BADGES: Record<string, string> = {
+  Discovery: "bg-violet-50 text-violet-800 ring-violet-200",
   Ideation: "bg-violet-50 text-violet-800 ring-violet-200",
   Validation: "bg-amber-50 text-amber-800 ring-amber-200",
   Development: "bg-blue-50 text-[#0f0fbd] ring-blue-200",
+  Launch: "bg-emerald-50 text-emerald-800 ring-emerald-200",
   "Launch Ready": "bg-emerald-50 text-emerald-800 ring-emerald-200",
 };
+
+/** Badge colours for a backend stage name; unknown stages get a neutral style. */
+export function stageBadge(stage: VentureStage): string {
+  return STAGE_BADGES[stage] ?? "bg-slate-100 text-slate-700 ring-slate-200";
+}
 
 export const STATUS_BADGE: Record<TaskStatus, string> = {
   "To Do": "bg-slate-100 text-slate-700 ring-slate-200",
