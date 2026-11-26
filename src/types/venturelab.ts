@@ -5,18 +5,20 @@
 /* Ventures                                                            */
 /* ------------------------------------------------------------------ */
 
-export const VENTURE_STAGES = ["Ideation", "Validation", "Development", "Launch Ready"] as const;
-export type VentureStage = (typeof VENTURE_STAGES)[number];
+/** Stage names are owned by the backend (e.g. "Discovery"), so this is an open string. */
+export type VentureStage = string;
 
-export type VentureStageFilter = "All" | VentureStage;
+export type VentureStageFilter = string; // "All" or a stage name
 
 export interface Venture {
   id: string;
   name: string;
   sector: string;
   stage: VentureStage;
-  /** One-line pitch shown on venture cards. */
+  /** Tagline shown on venture cards. */
   description: string;
+  /** Backend overall_progress (0-100); falls back to roadmap maths when absent. */
+  overallProgress?: number;
   /** Step 0 of Idea Discovery — the founder's raw thought. */
   rawIdea: string;
   archived: boolean;

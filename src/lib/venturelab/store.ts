@@ -1,10 +1,9 @@
 // lib/venturelab/store.ts
 // Tiny external store for VentureLab state, read via useSyncExternalStore.
-// Stage 1 persists to localStorage; swap load/persist for API calls later.
+// Ventures are loaded from the backend; canvas/roadmap/team extras are still local.
 import type { Venture, VentureNotification } from "@/types/venturelab";
-import { createSeedNotifications, createSeedVentures } from "./mockData";
 
-const STORAGE_KEY = "stridenex:venturelab:v1";
+const STORAGE_KEY = "stridenex:venturelab:v2";
 
 export interface PersistedState {
   ventures: Venture[];
@@ -13,8 +12,7 @@ export interface PersistedState {
 }
 
 export function seedState(): PersistedState {
-  const ventures = createSeedVentures();
-  return { ventures, activeVentureId: ventures[0]?.id ?? null, notifications: createSeedNotifications() };
+  return { ventures: [], activeVentureId: null, notifications: [] };
 }
 
 function load(): PersistedState {

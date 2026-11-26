@@ -10,6 +10,8 @@ import { Card, PageHeader, VLButton } from "../shared/primitives";
 import LiveCanvasPreview from "./LiveCanvasPreview";
 import DiscoveryWizard, { LAST_STEP, blockForStep, firstOpenStep, isStepDone, stepTitle } from "./DiscoveryWizard";
 
+// The book state (raw thought + canvas answers) lives in the VentureLab store,
+// which persists to localStorage, until the story-persistence API exists.
 export default function DiscoveryView() {
   const router = useRouter();
   const { activeVenture } = useVentureLab();

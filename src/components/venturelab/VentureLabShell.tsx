@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Loader2, Rocket } from "lucide-react";
 import { VentureLabProvider, useVentureLab } from "./VentureLabProvider";
@@ -14,7 +14,10 @@ import { useLocalFlag } from "./shared/useLocalFlag";
 const COLLAPSE_KEY = "stridenex:venturelab:sidebar-collapsed";
 
 function ShellContent({ children }: { children: React.ReactNode }) {
-  const { ready, activeVenture } = useVentureLab();
+  const { ready, loading, loadError, refresh, activeVenture } = useVentureLab();
+  const pathname = usePathname();
+  // My Ventures manages its own empty/loading/error states (and must stay reachable with zero ventures).
+  const selfManaged = pathname.startsWith("/venturelab/ventures");
   const [collapsed, setCollapsed] = useLocalFlag(COLLAPSE_KEY);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -38,10 +41,23 @@ function ShellContent({ children }: { children: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <VentureHeader onOpenMobileNav={() => setMobileOpen(true)} />
         <main id="vl-main" className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          {!ready ? (
+          {!ready || (loading && !activeVenture && !selfManaged) ? (
             <div className="flex h-[60vh] items-center justify-center text-slate-500" role="status">
               <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden /> Loading your ventures…
             </div>
+          ) : selfManaged ? (
+            children
+          ) : !activeVenture && loadError ? (
+            <EmptyState
+              icon={<Rocket className="h-7 w-7" />}
+              title="Couldn’t load your ventures"
+              body={loadError}
+              action={
+                <VLButton variant="accent" onClick={() => void refresh()}>
+                  Try again
+                </VLButton>
+              }
+            />
           ) : !activeVenture ? (
             <EmptyState
               icon={<Rocket className="h-7 w-7" />}
