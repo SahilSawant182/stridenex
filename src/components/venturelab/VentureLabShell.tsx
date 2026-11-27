@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { ToastProvider } from "@/context/ToastContext";
 import { Loader2, Rocket } from "lucide-react";
 import { VentureLabProvider, useVentureLab } from "./VentureLabProvider";
 import VentureSidebar from "./navigation/VentureSidebar";
@@ -109,10 +110,12 @@ export default function VentureLabShell({ children }: { children: React.ReactNod
 
 function ShellInner({ children }: { children: React.ReactNode }) {
   return (
-    <VentureLabProvider>
-      <TooltipProvider delayDuration={150}>
-        <ShellContent>{children}</ShellContent>
-      </TooltipProvider>
-    </VentureLabProvider>
+    <ToastProvider position="top-right">
+      <VentureLabProvider>
+        <TooltipProvider delayDuration={150}>
+          <ShellContent>{children}</ShellContent>
+        </TooltipProvider>
+      </VentureLabProvider>
+    </ToastProvider>
   );
 }
