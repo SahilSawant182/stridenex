@@ -18,7 +18,10 @@ interface ToastContextType {
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
-export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ToastProvider: React.FC<{
+  children: React.ReactNode;
+  position?: "bottom-right" | "top-right";
+}> = ({ children, position = "bottom-right" }) => {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const showToast = useCallback((message: string, type: ToastType) => {
@@ -76,7 +79,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed bottom-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none max-w-sm w-full p-4">
+      <div className={`fixed ${position === "top-right" ? "top-5" : "bottom-5"} right-5 z-[9999] flex flex-col gap-3 pointer-events-none max-w-sm w-full p-4`}>
         <AnimatePresence>
           {toasts.map((toast) => {
             const styles = getToastStyles(toast.type);
