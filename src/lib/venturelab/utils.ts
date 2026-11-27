@@ -158,12 +158,15 @@ export function completedMilestones(v: Venture): number {
 /* Venture-level progress & journey                                    */
 /* ------------------------------------------------------------------ */
 
+/** Discovery is done once the generated canvas has customers and a value proposition. */
+const discoveryDone = (v: Venture) => v.canvas.blocks.cs.length > 0 && v.canvas.blocks.vp.length > 0;
+
 /**
  * Weighted progress: discovery 10%, canvas 40%, roadmap 40%, team 10%.
  * Kept simple and explainable so students can see how to move the needle.
  */
 export function ventureProgress(v: Venture): number {
-  const discovery = v.rawIdea.trim() ? 100 : 0;
+  const discovery = discoveryDone(v) ? 100 : 0;
   const canvas = canvasCompleteness(v.canvas.blocks);
   const roadmap = roadmapCompletion(activeRoadmap(v));
   const team = v.team.filter((m) => m.status === "Active").length >= 2 ? 100 : 0;
@@ -174,7 +177,7 @@ export function ventureProgress(v: Venture): number {
 export function journeySteps(v: Venture | null): JourneyStep[] {
   const done = v
     ? [
-        Boolean(v.rawIdea.trim()) && v.canvas.blocks.cs.length > 0 && v.canvas.blocks.vp.length > 0,
+        discoveryDone(v),
         canvasCompleteness(v.canvas.blocks) === 100,
         roadmapCompletion(activeRoadmap(v)) === 100,
         v.team.filter((m) => m.status === "Active" && m.canWrite).length >= 2 &&

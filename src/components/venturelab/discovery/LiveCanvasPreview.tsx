@@ -1,55 +1,65 @@
 "use client";
 
 import { Sparkles } from "lucide-react";
-import type { BmcBlockId, CanvasBlocks } from "@/types/venturelab";
+import type { BmcBlockId } from "@/types/venturelab";
 import { BMC_ACCENTS, BMC_BLOCKS, BMC_ICONS, BMC_STORY_ORDER } from "@/lib/venturelab/constants";
 import { cn } from "@/lib/utils";
 import { Card, ProgressBar } from "../shared/primitives";
 
 /**
- * A "shadow" canvas that lights up as the founder answers each wizard question.
+ * A "shadow" canvas that lights up as the founder answers each story chapter.
+ * Each chapter maps to one BMC block; blocks no chapter covers stay dim.
  * Always uses the true 10-column Osterwalder layout — it's a thumbnail.
  */
 export default function LiveCanvasPreview({
-  blocks,
+  itemCounts,
+  coveredBlocks,
   clarity,
+  answeredCount,
+  totalCount,
   focusBlock,
   onSelectBlock,
 }: {
-  blocks: CanvasBlocks;
+  /** Items added so far, per block. */
+  itemCounts: Partial<Record<BmcBlockId, number>>;
+  /** Blocks some chapter maps to (only these are clickable). */
+  coveredBlocks: Set<BmcBlockId>;
   clarity: number;
+  answeredCount: number;
+  totalCount: number;
   focusBlock: BmcBlockId | null;
   onSelectBlock: (id: BmcBlockId) => void;
 }) {
   return (
     <Card className="p-5">
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h2 className="flex items-center gap-1.5 text-base font-bold text-slate-900">
-            <Sparkles className="h-4 w-4 text-[#ff6b00]" aria-hidden /> Your canvas is unfolding
-          </h2>
-          <p className="text-sm text-slate-600">Each answer lights up a block of your business model.</p>
-        </div>
+      <div className="mb-4">
+        <h2 className="flex items-center gap-1.5 text-base font-bold text-slate-900">
+          <Sparkles className="h-4 w-4 text-[#ff6b00]" aria-hidden /> Your canvas is unfolding
+        </h2>
+        <p className="text-sm text-slate-600">Each chapter you answer lights up a block of your business model.</p>
       </div>
 
       <div className="vl-bmc-mini aspect-[16/10] w-full">
         {BMC_STORY_ORDER.map((id) => {
           const meta = BMC_BLOCKS[id];
           const Icon = BMC_ICONS[id];
-          const count = blocks[id].length;
+          const count = itemCounts[id] ?? 0;
           const lit = count > 0;
+          const covered = coveredBlocks.has(id);
           const focused = focusBlock === id;
           return (
             <button
               key={id}
               type="button"
               style={{ gridArea: id }}
+              disabled={!covered}
               onClick={() => onSelectBlock(id)}
-              aria-label={`${meta.name}: ${count} item${count === 1 ? "" : "s"}. Go to this question`}
+              aria-label={`${meta.name}: ${covered ? `${count} item${count === 1 ? "" : "s"}. Go to this chapter` : "not part of the story"}`}
               className={cn(
-                "relative flex min-h-11 flex-col items-start justify-between overflow-hidden rounded-lg border p-1.5 text-left transition-all duration-500 sm:p-2",
+                "relative flex min-h-11 flex-col items-start justify-between overflow-hidden rounded-lg border p-1.5 text-left transition-all duration-500 disabled:cursor-default sm:p-2",
                 lit ? "border-transparent text-white shadow-sm" : "border-dashed border-slate-300 bg-slate-50 text-slate-500",
                 lit && BMC_ACCENTS[id].soft,
+                !covered && "opacity-50",
                 focused && "ring-2 ring-[#ff6b00] ring-offset-2",
               )}
             >
@@ -72,8 +82,8 @@ export default function LiveCanvasPreview({
         <ProgressBar value={clarity} tone={clarity === 100 ? "success" : "accent"} label="Idea clarity" />
         <p className="mt-2 text-xs text-slate-500">
           {clarity === 100
-            ? "Every block has a first answer. Time to pressure-test it on the canvas."
-            : "Clarity grows as you answer the raw thought and each of the 9 blocks."}
+            ? "Every chapter is answered. Time to generate your canvas."
+            : `${answeredCount} of ${totalCount} chapters answered. Clarity grows with each one.`}
         </p>
       </div>
     </Card>

@@ -2,70 +2,170 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check } from "lucide-react";
-import { BMC_STORY_ORDER, REVEAL_FLAG_KEY } from "@/lib/venturelab/constants";
+import { AlertTriangle, ArrowRight, BookOpen, Check, Loader2 } from "lucide-react";
+import type { BmcBlockId } from "@/types/venturelab";
+import { discoveryStoryService, type CanvasItemPayload } from "@/services/discoveryStory.services";
+import { REVEAL_FLAG_KEY, bmcBlockIdByName } from "@/lib/venturelab/constants";
 import { cn } from "@/lib/utils";
+import { emptyCanvas, uid } from "@/lib/venturelab/utils";
+import { useToast } from "@/context/ToastContext";
 import { useVentureLab } from "../VentureLabProvider";
-import { Card, PageHeader, VLButton } from "../shared/primitives";
+import { Card, EmptyState, PageHeader, VLButton } from "../shared/primitives";
 import LiveCanvasPreview from "./LiveCanvasPreview";
-import DiscoveryWizard, { LAST_STEP, blockForStep, firstOpenStep, isStepDone, stepTitle } from "./DiscoveryWizard";
+import DiscoveryWizard, { reachableStep, summaryStep } from "./DiscoveryWizard";
+import { errMsg, isAnswered, useDiscoveryStory } from "./useDiscoveryStory";
 
-// The book state (raw thought + canvas answers) lives in the VentureLab store,
-// which persists to localStorage, until the story-persistence API exists.
 export default function DiscoveryView() {
-  const router = useRouter();
   const { activeVenture } = useVentureLab();
+  if (!activeVenture) return null;
+  // Keyed so switching ventures loads that venture's own story.
+  return <DiscoveryBody key={activeVenture.id} ventureId={activeVenture.id} ventureName={activeVenture.name} />;
+}
+
+function DiscoveryBody({ ventureId, ventureName }: { ventureId: string; ventureName: string }) {
+  const router = useRouter();
+  const { showToast } = useToast();
+  const { replaceCanvasBlocks } = useVentureLab();
+  const story = useDiscoveryStory(ventureId);
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
-  const [building, setBuilding] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
-  if (!activeVenture) return null;
-  const v = activeVenture;
-  const filled = BMC_STORY_ORDER.filter((id) => v.canvas.blocks[id].length > 0).length;
-  const clarity = Math.round(((v.rawIdea.trim().length > 10 ? 1 : 0) + filled) * 10);
-  const reach = firstOpenStep(v);
-  const started = clarity > 0;
+  const header = (actions?: React.ReactNode) => (
+    <PageHeader
+      title="Discover Your Startup Idea"
+      subtitle="Turn a raw thought into a Business Model Canvas — one chapter of your story at a time."
+      actions={actions}
+    />
+  );
+
+  if (story.loading) {
+    return (
+      <div className="space-y-6">
+        {header()}
+        <div className="flex h-64 items-center justify-center text-slate-500" role="status">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden /> Loading your story…
+        </div>
+      </div>
+    );
+  }
+
+  if (story.error) {
+    return (
+      <div className="space-y-6">
+        {header()}
+        <EmptyState
+          icon={<AlertTriangle className="h-7 w-7" />}
+          title="Couldn’t load Idea Discovery"
+          body={story.error}
+          action={
+            <VLButton variant="accent" onClick={story.retry}>
+              Try again
+            </VLButton>
+          }
+        />
+      </div>
+    );
+  }
+
+  if (story.chapters.length === 0) {
+    return (
+      <div className="space-y-6">
+        {header()}
+        <EmptyState icon={<BookOpen className="h-7 w-7" />} title="No story chapters yet" body="Discovery chapters haven’t been set up. Please check back soon." />
+      </div>
+    );
+  }
+
+  const last = summaryStep(story.chapters);
+  const reach = reachableStep(story);
+  const started = story.answeredCount > 0;
+
+  const chapterForBlock = (id: BmcBlockId) => story.chapters.findIndex((ch) => bmcBlockIdByName(ch.mapped_bmc_block) === id);
+  const itemCounts: Partial<Record<BmcBlockId, number>> = {};
+  const coveredBlocks = new Set<BmcBlockId>();
+  for (const ch of story.chapters) {
+    const id = bmcBlockIdByName(ch.mapped_bmc_block);
+    if (!id) continue;
+    coveredBlocks.add(id);
+    itemCounts[id] = (itemCounts[id] ?? 0) + story.draftOf(ch).points.length;
+  }
+  const focusBlock = open && step < last ? bmcBlockIdByName(story.chapters[step].mapped_bmc_block) : null;
 
   const openAt = (s: number) => {
     setStep(Math.min(s, reach));
     setOpen(true);
   };
 
-  const build = () => {
-    setBuilding(true);
+  const generate = async () => {
+    setGenerating(true);
     try {
-      window.sessionStorage.setItem(REVEAL_FLAG_KEY, "1");
-    } catch {
-      /* reveal is a nicety */
+      // Every answer point becomes its own canvas item.
+      const items: CanvasItemPayload[] = story.chapters.flatMap((ch) =>
+        story.draftOf(ch).points.map((point) => ({
+          bmc_block: ch.mapped_bmc_block,
+          item_text: point,
+          description: "Generated from Idea Discovery",
+          is_assumption: 1, // untested until customers confirm it
+        })),
+      );
+      await discoveryStoryService.createCanvas(ventureId, items);
+
+      // Store the latest answers (always marked synced_to_canvas = 1). The canvas
+      // already exists, so a failure here is reported but not fatal.
+      try {
+        await story.save();
+      } catch (e) {
+        showToast(`Canvas created, but your answers weren’t saved: ${errMsg(e)}`, "error");
+      }
+
+      // The Canvas tab shows the local canvas until it gets a read API, so mirror the
+      // generated canvas there — replacing, not appending, so re-running discovery is clean.
+      const blocks = emptyCanvas();
+      items.forEach((it) => {
+        const id = bmcBlockIdByName(it.bmc_block);
+        if (id) blocks[id].push({ id: uid("ci"), text: it.item_text, isAssumption: true });
+      });
+      replaceCanvasBlocks(blocks);
+      try {
+        window.sessionStorage.setItem(REVEAL_FLAG_KEY, "1");
+      } catch {
+        /* the reveal animation is a nicety */
+      }
+      showToast("Business Model Canvas generated successfully!", "success");
+      setOpen(false);
+      router.push("/venturelab/canvas");
+    } catch (e) {
+      showToast(`Couldn’t generate the canvas: ${errMsg(e)}`, "error");
+    } finally {
+      setGenerating(false);
     }
-    setTimeout(() => router.push("/venturelab/canvas"), 800);
   };
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Discover Your Startup Idea"
-        subtitle="Turn a raw thought into a Business Model Canvas — one focused question at a time."
-        actions={
-          <VLButton variant="accent" onClick={() => openAt(started ? reach : 0)}>
-            {started ? "Continue discovery" : "Start guided discovery"} <ArrowRight className="h-4 w-4" aria-hidden />
-          </VLButton>
-        }
-      />
+      {header(
+        <VLButton variant="accent" onClick={() => openAt(started ? reach : 0)}>
+          {started ? "Continue discovery" : "Start guided discovery"} <ArrowRight className="h-4 w-4" aria-hidden />
+        </VLButton>,
+      )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         <Card className="p-5">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-bold text-slate-900">Your guided path</h2>
-            <span className="rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-bold text-[#c2410c] ring-1 ring-inset ring-orange-200">{clarity}% clarity</span>
+            <span className="rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-bold text-[#c2410c] ring-1 ring-inset ring-orange-200">{story.clarity}% clarity</span>
           </div>
-          <p className="mt-1 text-sm text-slate-600">Eleven short pages take you from a raw thought to a complete canvas.</p>
+          <p className="mt-1 text-sm text-slate-600">
+            {story.chapters.length} short chapters take you from a raw thought to a complete story.
+          </p>
           <ol className="mt-3">
-            {Array.from({ length: LAST_STEP + 1 }, (_, s) => {
-              const done = isStepDone(v, s);
+            {Array.from({ length: last + 1 }, (_, s) => {
+              const ch = story.chapters[s];
+              const done = ch ? isAnswered(story.draftOf(ch)) : false;
               const locked = s > reach;
               return (
-                <li key={s}>
+                <li key={ch?.name ?? "summary"}>
                   <button
                     onClick={() => openAt(s)}
                     disabled={locked}
@@ -77,12 +177,20 @@ export default function DiscoveryView() {
                         done ? "bg-emerald-600 text-white" : s === reach ? "bg-[#ff6b00] text-white" : "bg-slate-200 text-slate-700",
                       )}
                     >
-                      {done ? <Check className="h-4 w-4" aria-hidden /> : s}
+                      {done ? <Check className="h-4 w-4" aria-hidden /> : ch ? ch.chapter_number : "★"}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm text-slate-900">
-                      <strong>{s === 0 ? "Start" : s === LAST_STEP ? "Finish" : `Step ${s}`}</strong> · {stepTitle(s)}
+                      {ch ? (
+                        <>
+                          <strong>Chapter {ch.chapter_number}</strong> · {ch.title}
+                        </>
+                      ) : (
+                        <>
+                          <strong>Finish</strong> · Your startup story
+                        </>
+                      )}
                     </span>
-                    {blockForStep(s) && <span className="text-xs tabular-nums text-slate-500">{v.canvas.blocks[blockForStep(s)!].length}</span>}
+                    {ch && story.draftOf(ch).points.length > 0 && <span className="text-xs tabular-nums text-slate-500">{story.draftOf(ch).points.length}</span>}
                   </button>
                 </li>
               );
@@ -90,10 +198,30 @@ export default function DiscoveryView() {
           </ol>
         </Card>
 
-        <LiveCanvasPreview blocks={v.canvas.blocks} clarity={clarity} focusBlock={open ? blockForStep(step) : null} onSelectBlock={(id) => openAt(BMC_STORY_ORDER.indexOf(id) + 1)} />
+        <LiveCanvasPreview
+          itemCounts={itemCounts}
+          coveredBlocks={coveredBlocks}
+          clarity={story.clarity}
+          answeredCount={story.answeredCount}
+          totalCount={story.chapters.length}
+          focusBlock={focusBlock}
+          onSelectBlock={(id) => {
+            const i = chapterForBlock(id);
+            if (i >= 0) openAt(i);
+          }}
+        />
       </div>
 
-      <DiscoveryWizard open={open} step={step} onStepChange={setStep} onClose={() => setOpen(false)} onBuild={build} building={building} />
+      <DiscoveryWizard
+        story={story}
+        ventureName={ventureName}
+        open={open}
+        step={step}
+        onStepChange={setStep}
+        onClose={() => setOpen(false)}
+        onGenerate={() => void generate()}
+        generating={generating}
+      />
     </div>
   );
 }

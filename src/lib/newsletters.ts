@@ -97,18 +97,47 @@ export async function fetchNewsletters(
 
 export async function fetchNewsletterDetail(id: string, signal?: AbortSignal) {
   const identifier = id.trim().replace(/\\+$/, "");
-  const params = new URLSearchParams({ identifier });
-  const response = await fetch(
-    `${NEWSLETTER_API}.get_newsletter_detail?${params.toString()}`,
-    { signal, cache: "no-store" },
-  );
-  const payload = await readApiMessage<NewsletterDetail>(response);
+  const fetchByIdentifier = async (value: string) => {
+    const params = new URLSearchParams({ identifier: value });
+    const response = await fetch(
+      `${NEWSLETTER_API}.get_newsletter_detail?${params.toString()}`,
+      { signal, cache: "no-store" },
+    );
+    const payload = await readApiMessage<NewsletterDetail>(response);
+    return payload.data?.id ? payload.data : null;
+  };
 
-  if (!payload.data?.id) {
-    throw new Error("This newsletter could not be found.");
+  const detail = await fetchByIdentifier(identifier).catch((error: unknown) => {
+    if (signal?.aborted) throw error;
+    return null;
+  });
+  if (detail) return detail;
+
+  // Newsletter emails use the public route (often a title slug), while the
+  // detail endpoint may only accept the record ID. Resolve route links through
+  // the listing API, then request the detail using the canonical ID.
+  const { items } = await fetchNewsletters(
+    { page: 1, pageSize: 100, search: identifier },
+    signal,
+  );
+  const normalizeRoute = (value: string) =>
+    decodeURIComponent(value).replace(/^\/+|\/+$/g, "").toLowerCase();
+  const requestedRoute = normalizeRoute(identifier);
+  const match = items.find((item) => {
+    const route = item.route || "";
+    return (
+      normalizeRoute(item.id) === requestedRoute ||
+      normalizeRoute(route) === requestedRoute ||
+      normalizeRoute(route.split("/").pop() || "") === requestedRoute
+    );
+  });
+
+  if (match && match.id !== identifier) {
+    const resolvedDetail = await fetchByIdentifier(match.id);
+    if (resolvedDetail) return resolvedDetail;
   }
 
-  return payload.data;
+  throw new Error("This newsletter could not be found.");
 }
 
 export async function subscribeToNewsletter(email: string) {
