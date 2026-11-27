@@ -202,6 +202,20 @@ export const BMC_BLOCKS: Record<BmcBlockId, BmcBlockMeta> = {
 /** Storytelling order used by the wizard and the "Replay Reveal" animation. */
 export const BMC_STORY_ORDER: BmcBlockId[] = ["cs", "vp", "ch", "cr", "rs", "kr", "ka", "kp", "co"];
 
+/** Map a backend block name ("Customer Segments") to its block id, case-insensitively. */
+const BMC_NAME_ALIASES: Record<string, BmcBlockId> = {
+  "key partnerships": "kp",
+  "value proposition": "vp",
+  "customer segment": "cs",
+  "revenue stream": "rs",
+  "cost structures": "co",
+};
+
+export function bmcBlockIdByName(name: string | null | undefined): BmcBlockId | null {
+  const n = (name ?? "").trim().toLowerCase();
+  return (Object.keys(BMC_BLOCKS) as BmcBlockId[]).find((id) => BMC_BLOCKS[id].name.toLowerCase() === n) ?? BMC_NAME_ALIASES[n] ?? null;
+}
+
 export const BMC_ICONS: Record<BmcBlockId, LucideIcon> = {
   cs: Users,
   vp: Gift,
@@ -317,23 +331,6 @@ export const CATEGORY_HINT: Record<MemberCategory, string> = {
   "Finance Lead": "Owns budgets, pricing and projections.",
   "Marketing & Outreach": "Runs outreach, interviews and campaigns.",
   "Advisor / Mentor": "Gives guidance and feedback — read only by default.",
-};
-
-/** "Load DairyConnect example" content for Idea Discovery (from the prototype). */
-export const DISCOVERY_EXAMPLE: { rawIdea: string; blocks: Record<BmcBlockId, string[]> } = {
-  rawIdea:
-    "Small dairy farmers lose money because they track livestock records, milk production, and vaccination dates manually on paper.",
-  blocks: {
-    cs: ["Small dairy farmers", "Medium-scale dairy farms", "Dairy cooperatives"],
-    vp: ["Simplified dairy farm management", "Automated vaccination reminders", "Milk production tracking"],
-    ch: ["Android mobile application", "Dairy cooperatives", "Farmer communities"],
-    cr: ["In-app support", "Farmer onboarding", "WhatsApp assistance"],
-    rs: ["Monthly subscription", "Annual subscription", "Cooperative partnerships"],
-    kr: ["Mobile application", "Cloud infrastructure", "Veterinary knowledge base"],
-    ka: ["Develop animal management software", "Provide vaccination reminders", "Generate milk production reports"],
-    kp: ["Local dairy cooperatives", "Veterinary clinics", "Animal feed suppliers"],
-    co: ["Application development", "Cloud hosting", "Customer support"],
-  },
 };
 
 /** sessionStorage flag: Discovery's "Build canvas" asks the canvas page to play the reveal. */

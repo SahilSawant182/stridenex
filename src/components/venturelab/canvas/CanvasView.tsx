@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { differenceInSeconds, formatDistanceStrict, parseISO } from "date-fns";
-import { Check, ChevronDown, CircleDot, Download, Eye, FlaskConical, History, Play, RotateCcw, Save } from "lucide-react";
+import { Check, ChevronDown, Compass, CircleDot, Download, Eye, FlaskConical, History, Play, RotateCcw, Save } from "lucide-react";
 import type { BmcBlockId } from "@/types/venturelab";
 import { BMC_BLOCKS, BMC_STORY_ORDER, REVEAL_FLAG_KEY } from "@/lib/venturelab/constants";
 import { canvasCompleteness, filledBlockCount } from "@/lib/venturelab/utils";
@@ -27,6 +28,7 @@ import BlockEditorDrawer from "./BlockEditorDrawer";
 import ExportCanvasModal from "./ExportCanvasModal";
 
 export default function CanvasView() {
+  const router = useRouter();
   const { activeVenture, saveCanvas, restoreCanvasVersion } = useVentureLab();
   const { showToast } = useToast();
   const now = useNow();
@@ -152,6 +154,9 @@ export default function CanvasView() {
         </div>
 
         <div className="vl-no-print flex flex-wrap gap-2">
+          <VLButton variant="outline" onClick={() => router.push("/venturelab/discovery")}>
+            <Compass className="h-4 w-4" aria-hidden /> Re-run Discovery Wizard
+          </VLButton>
           <VLButton variant="outline" onClick={replay} disabled={revealCount !== null}>
             <Play className="h-4 w-4" aria-hidden /> Replay Reveal
           </VLButton>

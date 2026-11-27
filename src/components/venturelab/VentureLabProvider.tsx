@@ -16,6 +16,7 @@ import {
 } from "@/services/venture.services";
 import type {
   BmcBlockId,
+  CanvasBlocks,
   MemberCategory,
   Milestone,
   RoadmapTask,
@@ -61,6 +62,8 @@ export interface VentureLabContextValue {
   toggleAssumption: (block: BmcBlockId, itemId: string) => void;
   saveCanvas: (note?: string) => string;
   restoreCanvasVersion: (versionId: string) => void;
+  /** Replace the working canvas (used when Idea Discovery builds a fresh one). */
+  replaceCanvasBlocks: (blocks: CanvasBlocks) => void;
 
   // Execution (active venture)
   setActiveTemplate: (id: RoadmapTemplateId) => void;
@@ -370,6 +373,12 @@ export function VentureLabProvider({ children }: { children: React.ReactNode }) 
       });
       return label;
     },
+
+    replaceCanvasBlocks: (blocks) =>
+      mutateActive((v) => {
+        v.canvas.blocks = cloneBlocks(blocks);
+        markCanvasDirty(v);
+      }),
 
     restoreCanvasVersion: (versionId) =>
       mutateActive((v) => {
