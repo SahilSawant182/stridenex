@@ -15,7 +15,6 @@ import {
   type ApiVenture,
 } from "@/services/venture.services";
 import type {
-  BmcBlockId,
   CanvasBlocks,
   MemberCategory,
   Milestone,
@@ -28,7 +27,7 @@ import type {
 } from "@/types/venturelab";
 import { createBlankVenture, templateMilestones } from "@/lib/venturelab/mockData";
 import { ventureStore, type PersistedState } from "@/lib/venturelab/store";
-import { NEXT_STATUS, canvasEquals, cloneBlocks, nextVersionLabel, uid } from "@/lib/venturelab/utils";
+import { NEXT_STATUS, cloneBlocks, uid } from "@/lib/venturelab/utils";
 
 export interface VentureLabContextValue {
   ready: boolean;
@@ -56,13 +55,9 @@ export interface VentureLabContextValue {
   renameVenture: (id: string, name: string) => void;
   updateVenture: (id: string, patch: Partial<Pick<Venture, "description" | "rawIdea" | "stage" | "sector">>) => void;
 
-  // Canvas (active venture)
-  addCanvasItem: (block: BmcBlockId, text: string, isAssumption?: boolean) => void;
-  removeCanvasItem: (block: BmcBlockId, itemId: string) => void;
-  toggleAssumption: (block: BmcBlockId, itemId: string) => void;
-  saveCanvas: (note?: string) => string;
-  restoreCanvasVersion: (versionId: string) => void;
-  /** Replace the working canvas (used when Idea Discovery builds a fresh one). */
+  // Canvas (active venture) — the server owns the canvas (see canvas/useCanvas.ts);
+  // this local copy is only a cache for Overview progress and header search.
+  /** Replace the cached canvas with the server's latest. */
   replaceCanvasBlocks: (blocks: CanvasBlocks) => void;
 
   // Execution (active venture)
@@ -98,11 +93,6 @@ function resolveActive(s: PersistedState): Venture | null {
 
 const touch = (v: Venture) => {
   v.updatedAt = new Date().toISOString();
-};
-
-const markCanvasDirty = (v: Venture) => {
-  const latest = v.canvas.versions[0];
-  v.canvas.dirty = latest ? !canvasEquals(v.canvas.blocks, latest.blocks) : true;
 };
 
 const SECTOR_FALLBACK = ""; // venture has no sector yet
@@ -341,51 +331,11 @@ export function VentureLabProvider({ children }: { children: React.ReactNode }) 
 
     updateVenture: (id, patch) => mutateVenture(id, (v) => Object.assign(v, patch)),
 
-    /* ---------------- Canvas ---------------- */
-    addCanvasItem: (block, text, isAssumption = false) =>
-      mutateActive((v) => {
-        const clean = text.trim();
-        if (!clean || v.canvas.blocks[block].some((i) => i.text.toLowerCase() === clean.toLowerCase())) return;
-        v.canvas.blocks[block].push({ id: uid("ci"), text: clean, isAssumption });
-        markCanvasDirty(v);
-      }),
-
-    removeCanvasItem: (block, itemId) =>
-      mutateActive((v) => {
-        v.canvas.blocks[block] = v.canvas.blocks[block].filter((i) => i.id !== itemId);
-        markCanvasDirty(v);
-      }),
-
-    toggleAssumption: (block, itemId) =>
-      mutateActive((v) => {
-        const it = v.canvas.blocks[block].find((i) => i.id === itemId);
-        if (it) it.isAssumption = !it.isAssumption;
-        markCanvasDirty(v);
-      }),
-
-    saveCanvas: (note) => {
-      const label = nextVersionLabel(findActive()?.canvas.versions[0]?.label);
-      mutateActive((v) => {
-        const now = new Date().toISOString();
-        v.canvas.versions.unshift({ id: uid("cv"), label, note: note || "Saved from canvas", savedAt: now, blocks: cloneBlocks(v.canvas.blocks) });
-        v.canvas.lastSavedAt = now;
-        v.canvas.dirty = false;
-      });
-      return label;
-    },
-
+    /* ---------------- Canvas (cache) ---------------- */
     replaceCanvasBlocks: (blocks) =>
       mutateActive((v) => {
         v.canvas.blocks = cloneBlocks(blocks);
-        markCanvasDirty(v);
-      }),
-
-    restoreCanvasVersion: (versionId) =>
-      mutateActive((v) => {
-        const ver = v.canvas.versions.find((x) => x.id === versionId);
-        if (!ver) return;
-        v.canvas.blocks = cloneBlocks(ver.blocks);
-        markCanvasDirty(v);
+        v.canvas.dirty = false;
       }),
 
     /* ---------------- Execution ---------------- */

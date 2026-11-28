@@ -162,7 +162,7 @@ export default function DiscoveryWizard({
           className="fixed inset-0 z-[81] flex flex-col items-center justify-center overflow-y-auto p-3 focus:outline-none sm:p-6"
         >
           <Dialog.Title className="sr-only">
-            Idea Discovery — {chapter ? `chapter ${chapter.chapter_number}: ${chapter.title}` : "your startup story"}
+            Idea Discovery — {chapter ? `chapter ${step + 1}: ${chapter.title}` : "your startup story"}
           </Dialog.Title>
 
           <IconButton
@@ -188,7 +188,7 @@ export default function DiscoveryWizard({
                     onClick={() => void goTo(s)}
                     disabled={s > reach || busy}
                     aria-current={s === step ? "step" : undefined}
-                    aria-label={`${ch ? `Chapter ${ch.chapter_number}: ${ch.title}` : "Your startup story"}${done ? " (done)" : s > reach ? " (locked)" : ""}`}
+                    aria-label={`${ch ? `Chapter ${s + 1}: ${ch.title}` : "Your startup story"}${done ? " (done)" : s > reach ? " (locked)" : ""}`}
                     className="group flex h-11 items-center disabled:cursor-not-allowed"
                   >
                     <span
@@ -213,7 +213,7 @@ export default function DiscoveryWizard({
             >
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-orange-50 px-2.5 py-0.5 text-xs font-bold text-[#c2410c] ring-1 ring-inset ring-orange-200">
-                  {chapter ? `Chapter ${chapter.chapter_number} of ${story.chapters.length} · ${chapter.mapped_bmc_block}` : "The end · Your startup story"}
+                  {chapter ? `Chapter ${step + 1} of ${story.chapters.length} · ${chapter.mapped_bmc_block}` : "The end · Your startup story"}
                 </span>
                 {BlockIcon && blockId && (
                   <span className={cn("flex h-6 w-6 items-center justify-center rounded-md", BMC_ACCENTS[blockId].icon)}>

@@ -31,6 +31,9 @@ export interface StoryAnswer {
 }
 
 export interface CanvasItemPayload {
+  /** The field create_bmc_canvas reads; a missing value silently falls back to Customer Segments. */
+  block_name: string;
+  /** Same value, kept for older spec readers. */
   bmc_block: string;
   item_text: string;
   description?: string;

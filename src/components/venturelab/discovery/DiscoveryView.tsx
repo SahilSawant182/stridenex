@@ -7,7 +7,6 @@ import type { BmcBlockId } from "@/types/venturelab";
 import { discoveryStoryService, type CanvasItemPayload } from "@/services/discoveryStory.services";
 import { REVEAL_FLAG_KEY, bmcBlockIdByName } from "@/lib/venturelab/constants";
 import { cn } from "@/lib/utils";
-import { emptyCanvas, uid } from "@/lib/venturelab/utils";
 import { useToast } from "@/context/ToastContext";
 import { useVentureLab } from "../VentureLabProvider";
 import { Card, EmptyState, PageHeader, VLButton } from "../shared/primitives";
@@ -25,7 +24,6 @@ export default function DiscoveryView() {
 function DiscoveryBody({ ventureId, ventureName }: { ventureId: string; ventureName: string }) {
   const router = useRouter();
   const { showToast } = useToast();
-  const { replaceCanvasBlocks } = useVentureLab();
   const story = useDiscoveryStory(ventureId);
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(0);
@@ -103,6 +101,7 @@ function DiscoveryBody({ ventureId, ventureName }: { ventureId: string; ventureN
       // Every answer point becomes its own canvas item.
       const items: CanvasItemPayload[] = story.chapters.flatMap((ch) =>
         story.draftOf(ch).points.map((point) => ({
+          block_name: ch.mapped_bmc_block,
           bmc_block: ch.mapped_bmc_block,
           item_text: point,
           description: "Generated from Idea Discovery",
@@ -119,14 +118,6 @@ function DiscoveryBody({ ventureId, ventureName }: { ventureId: string; ventureN
         showToast(`Canvas created, but your answers weren’t saved: ${errMsg(e)}`, "error");
       }
 
-      // The Canvas tab shows the local canvas until it gets a read API, so mirror the
-      // generated canvas there — replacing, not appending, so re-running discovery is clean.
-      const blocks = emptyCanvas();
-      items.forEach((it) => {
-        const id = bmcBlockIdByName(it.bmc_block);
-        if (id) blocks[id].push({ id: uid("ci"), text: it.item_text, isAssumption: true });
-      });
-      replaceCanvasBlocks(blocks);
       try {
         window.sessionStorage.setItem(REVEAL_FLAG_KEY, "1");
       } catch {
@@ -177,12 +168,12 @@ function DiscoveryBody({ ventureId, ventureName }: { ventureId: string; ventureN
                         done ? "bg-emerald-600 text-white" : s === reach ? "bg-[#ff6b00] text-white" : "bg-slate-200 text-slate-700",
                       )}
                     >
-                      {done ? <Check className="h-4 w-4" aria-hidden /> : ch ? ch.chapter_number : "★"}
+                      {done ? <Check className="h-4 w-4" aria-hidden /> : ch ? s + 1 : "★"}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm text-slate-900">
                       {ch ? (
                         <>
-                          <strong>Chapter {ch.chapter_number}</strong> · {ch.title}
+                          <strong>Chapter {s + 1}</strong> · {ch.title}
                         </>
                       ) : (
                         <>

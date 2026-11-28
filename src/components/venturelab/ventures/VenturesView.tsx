@@ -136,17 +136,39 @@ export default function VenturesView() {
       ) : visible.length === 0 ? (
         <EmptyState
           icon={<FolderSearch className="h-7 w-7" />}
-          title={showArchived ? "No archived ventures here" : activeFilter === "All" ? "No ventures yet" : `No ventures in ${activeFilter}`}
+          title={
+            activeFilter !== "All"
+              ? `No ${showArchived ? "archived " : ""}ventures in ${activeFilter}`
+              : showArchived
+                ? "Nothing archived yet"
+                : ventures.length === 0
+                  ? "No ventures yet"
+                  : "No active ventures"
+          }
           body={
-            activeFilter === "All"
-              ? "Every big company started as a small idea. Create your first venture to begin."
-              : `None of your ${showArchived ? "archived " : ""}ventures are at the ${activeFilter} stage yet. Keep building — or start something new.`
+            activeFilter !== "All"
+              ? `None of your ${showArchived ? "archived " : ""}ventures are at the ${activeFilter} stage yet. Keep building — or start something new.`
+              : showArchived
+                ? `Ventures you archive will show up here. You have ${ventures.length - archivedCount} active venture${ventures.length - archivedCount === 1 ? "" : "s"}.`
+                : ventures.length === 0
+                  ? "Every big company started as a small idea. Create your first venture to begin."
+                  : `All your ventures are archived (${archivedCount}). Restore one, or start something new.`
           }
           action={
             <div className="flex flex-wrap justify-center gap-2">
               {activeFilter !== "All" && (
                 <VLButton variant="outline" onClick={() => setFilter("All")}>
                   Show all ventures
+                </VLButton>
+              )}
+              {activeFilter === "All" && showArchived && ventures.length > archivedCount && (
+                <VLButton variant="outline" onClick={() => setShowArchived(false)}>
+                  Back to active ventures
+                </VLButton>
+              )}
+              {activeFilter === "All" && !showArchived && archivedCount > 0 && (
+                <VLButton variant="outline" onClick={() => setShowArchived(true)}>
+                  View archived ({archivedCount})
                 </VLButton>
               )}
               <VLButton variant="accent" onClick={() => setCreateOpen(true)}>

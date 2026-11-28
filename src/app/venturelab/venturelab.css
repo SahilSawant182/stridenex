@@ -35,12 +35,12 @@
 .vl-rise { animation: vl-rise 260ms ease-out both; }
 
 /* ---------- Business Model Canvas grid ----------
-   Desktop (>=1024px): authentic Osterwalder 10-column layout.
-   Tablet (768–1023px): 2-column stacked layout — keeps cards legible.
+   Desktop (>=1280px): authentic Osterwalder 10-column layout.
+   Tablet/small laptop (768–1279px): 2-column stacked layout — keeps cards legible.
    Mobile (<768px): single column, in storytelling order. */
 .vl-bmc-grid {
   display: grid;
-  gap: 12px;
+  gap: 14px;
   grid-template-columns: 1fr;
   grid-template-areas: "cs" "vp" "ch" "cr" "rs" "kr" "ka" "kp" "co";
 }
@@ -57,7 +57,7 @@
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .vl-bmc-grid {
     grid-template-columns: repeat(10, minmax(0, 1fr));
     grid-template-rows: minmax(200px, auto) minmax(200px, auto) minmax(170px, auto);
